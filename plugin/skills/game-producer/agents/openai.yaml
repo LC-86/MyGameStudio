@@ -1,0 +1,6 @@
+interface:
+  display_name: "Game-Producer"
+  short_description: "显式调用的制作统筹最小入口"
+  default_prompt: "Use $game-producer to update management records and delegate specialist work."
+policy:
+  allow_implicit_invocation: false

@@ -1,11 +1,11 @@
-# mygamestudio 0.1.0 来源与许可追溯
+# mygamestudio 0.2.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-02)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.1.0`(任务票 01 首个最小包)。
-- `skills/`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
+- 名称:`mygamestudio`,版本 `0.2.0`(任务票 02:新增运行保障受控写入与三个显式入口)。
+- `skills/`、`runtime/`、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
 ## internal/contracts/(业务合同,适配版)
@@ -16,8 +16,24 @@
 | `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;文末追加"包内说明"注明当前最小包仅实现 Game-Status 只读检查 |
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
+| `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Prototype 最小入口 |
+| `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Code 最小入口 |
 
 适配原则:不重写语义;所有改写点限于链接可达性与包内现状声明。更新这些文件时先对照设计仓库当前版本,再更新本 manifest 与 fingerprints.json。
+
+## internal/protocols/(运行保障接入协议)
+
+| 文件 | 来源 | 适配说明 |
+| --- | --- | --- |
+| `gate-protocol.md` | 本项目自有内容(任务票 02 新写) | 依据设计《运行保障合同》《工具拦截设计》与 codex 0.151.0 实测机制(会话沙箱 + 插件 MCP 通道)编写;供全部带写入的业务技能条件读取 |
+
+## runtime/ 与 .mcp.json(运行保障组件,本项目自有内容)
+
+- `runtime/mgs_runtime.py`:受控写入服务核心——执行绑定(令牌哈希登记)、资源策略(角色 ∩ 任务 ∩ 用途 ∩ 实际授权)、路径规范化(含符号链接逃逸拒绝)、预期版本校验、单写入者占用、审计(允许与拒绝均记录)。
+- `runtime/mcp_gate.py`:MCP stdio 服务器(`mgs-gate`),业务会话内的唯一写入通道;运行根经 `MGS_RUNTIME_ROOT` 环境变量注入,包内不含绝对路径。
+- `runtime/mgsrt_admin.py`:可信调度侧 CLI(策略初始化、实例签发与释放、状态查看),与工作实例通道分离。
+- `.mcp.json`:`mcpServers` 声明(`cwd: "."` 解析为安装后的插件根;`env_vars` 透传运行根;工具预先批准——拦截由服务端策略承担)。
+- 设计对应:组件职责对照设计《运行保障合同》的接口表;不承诺设计中尚未验收的能力(远端服务、GUI 程序、路径竞态全面覆盖等属后续票)。
 
 ## internal/methods/writing-for-agents/(内部通用方法)
 

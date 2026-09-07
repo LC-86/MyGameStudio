@@ -3,3 +3,6 @@
 .video_agent/
 out/
 .DS_Store
+.tmp/
+__pycache__/
+*.pyc

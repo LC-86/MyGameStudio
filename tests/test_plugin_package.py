@@ -67,44 +67,70 @@ def test_manifest() -> None:
         check(bool(interface.get(field)), f"plugin.json interface 缺少 {field}")
 
 
-def test_single_explicit_skill() -> None:
+def test_explicit_skills() -> None:
     skills_root = PLUGIN_ROOT / "skills"
     if not skills_root.is_dir():
         check(False, "缺少 skills/ 目录")
         return
+    expected = ["game-code", "game-producer", "game-prototype", "game-status"]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
-        skill_dirs == ["game-status"],
-        f"本票只应注册 game-status 一个技能入口,实际为 {skill_dirs}",
+        skill_dirs == expected,
+        f"任务票 02 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
-    skill_md = skills_root / "game-status" / "SKILL.md"
-    check(skill_md.is_file(), "game-status 缺少 SKILL.md")
-    text = skill_md.read_text()
-    match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
-    check(match is not None, "SKILL.md 必须有 YAML frontmatter")
-    if match:
-        frontmatter = match.group(1)
-        check(
-            re.search(r"^name:\s*game-status\s*$", frontmatter, re.MULTILINE) is not None,
-            "frontmatter name 必须是 game-status",
-        )
-        check(
-            re.search(r"^description:\s*\S", frontmatter, re.MULTILINE) is not None,
-            "frontmatter 必须有非空 description",
-        )
-    openai_yaml = skills_root / "game-status" / "agents" / "openai.yaml"
-    check(openai_yaml.is_file(), "game-status 缺少 agents/openai.yaml")
-    if openai_yaml.is_file():
-        yaml_text = openai_yaml.read_text()
-        check(
-            re.search(
-                r"allow_implicit_invocation:\s*false", yaml_text
+    for skill_name in expected:
+        skill_md = skills_root / skill_name / "SKILL.md"
+        check(skill_md.is_file(), f"{skill_name} 缺少 SKILL.md")
+        if not skill_md.is_file():
+            continue
+        text = skill_md.read_text()
+        match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+        check(match is not None, f"{skill_name} SKILL.md 必须有 YAML frontmatter")
+        if match:
+            frontmatter = match.group(1)
+            check(
+                re.search(rf"^name:\s*{skill_name}\s*$", frontmatter, re.MULTILINE)
+                is not None,
+                f"{skill_name} frontmatter name 必须是 {skill_name}",
             )
-            is not None,
-            "game-status 必须 allow_implicit_invocation: false(关闭普通对话自动触发)",
-        )
+            check(
+                re.search(r"^description:\s*\S", frontmatter, re.MULTILINE) is not None,
+                f"{skill_name} frontmatter 必须有非空 description",
+            )
+        openai_yaml = skills_root / skill_name / "agents" / "openai.yaml"
+        check(openai_yaml.is_file(), f"{skill_name} 缺少 agents/openai.yaml")
+        if openai_yaml.is_file():
+            yaml_text = openai_yaml.read_text()
+            check(
+                re.search(r"allow_implicit_invocation:\s*false", yaml_text) is not None,
+                f"{skill_name} 必须 allow_implicit_invocation: false(关闭普通对话自动触发)",
+            )
     reference = skills_root / "game-status" / "references" / "status-check.md"
     check(reference.is_file(), "game-status 缺少 references/status-check.md")
+
+
+def test_mcp_gate_config() -> None:
+    mcp_path = PLUGIN_ROOT / ".mcp.json"
+    check(mcp_path.is_file(), "缺少插件根 .mcp.json(mgs-gate 通道声明)")
+    if not mcp_path.is_file():
+        return
+    config = json.loads(mcp_path.read_text())
+    server = config.get("mcpServers", {}).get("mgs-gate")
+    check(server is not None, ".mcp.json 必须声明 mgs-gate 服务器")
+    if server is None:
+        return
+    check(server.get("command") == "python3", "mgs-gate command 应为 python3(按 PATH 解析)")
+    check(server.get("args") == ["runtime/mcp_gate.py"],
+          f"mgs-gate args 应为 runtime/mcp_gate.py,实际 {server.get('args')}")
+    check(server.get("cwd") == ".", "mgs-gate cwd 应为 .(解析为插件根,使相对 args 可用)")
+    check("MGS_RUNTIME_ROOT" in (server.get("env_vars") or []),
+          "mgs-gate 必须经 env_vars 透传 MGS_RUNTIME_ROOT(不在包内硬编码绝对路径)")
+    check(server.get("default_tools_approval_mode") == "approve",
+          "mgs-gate 工具应为预先批准模式(拦截由服务端策略承担,而非逐次审批)")
+    for rel in ("runtime/mcp_gate.py", "runtime/mgs_runtime.py", "runtime/mgsrt_admin.py"):
+        check((PLUGIN_ROOT / rel).is_file(), f"缺少运行保障组件 {rel}")
+    protocol = PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md"
+    check(protocol.is_file(), "缺少 internal/protocols/gate-protocol.md(受控写入协议)")
 
 
 def test_internal_material_provenance() -> None:
@@ -203,12 +229,44 @@ def test_sample_fixtures() -> None:
     )
 
 
+def test_role_scope_demo_fixture() -> None:
+    demo = REPO_ROOT / "samples" / "role-scope-demo"
+    for rel in (
+        "docs/mygamestudio/CONFIG.md",
+        "docs/mygamestudio/INDEX.md",
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/TECH_DESIGN.md",
+        "src/main.js",
+        "src/player.js",
+        "prototypes/README.md",
+        "README.md",
+    ):
+        check((demo / rel).is_file(), f"role-scope-demo 样例缺少 {rel}")
+    work = demo / "docs/mygamestudio/work"
+    for rel in ("01-status-ledger/task.md", "02-coin-magnet/task.md",
+                "03-dash-prototype/task.md"):
+        path = work / rel
+        check(path.is_file(), f"role-scope-demo 缺少 {rel}")
+        if path.is_file():
+            text = path.read_text()
+            check(
+                re.search(r"当前分流:\s*(needs-triage|needs-info|ready-for-agent|ready-for-human|wontfix)", text)
+                is not None,
+                f"role-scope-demo 任务 {rel} 缺少有效分流状态",
+            )
+            check(re.search(r"进度:\s*\S", text) is not None,
+                  f"role-scope-demo 任务 {rel} 缺少进度字段")
+
+
 def main() -> int:
     test_manifest()
-    test_single_explicit_skill()
+    test_explicit_skills()
+    test_mcp_gate_config()
     test_internal_material_provenance()
     test_no_dev_machine_paths()
     test_sample_fixtures()
+    test_role_scope_demo_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

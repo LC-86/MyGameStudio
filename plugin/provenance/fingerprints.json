@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.1.0 (任务票 01 最小包)",
+  "generated_for": "mygamestudio 0.2.0 (任务票 02 最小包)",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -9,9 +9,21 @@
       "license": "本项目自有内容(MIT)"
     },
     {
+      "path": "internal/contracts/design.md",
+      "sha256": "05117e2d04d040a1fd0c80888a8c05920e3179741e43170f7e8e413925d57215",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/design.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
       "path": "internal/contracts/management.md",
       "sha256": "517f45bf97c11e77c50535c9a56b1c38975bd63f0dbf7ac25a25815ed1253d55",
       "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/contracts/production.md",
+      "sha256": "86dd244e2a5e8d5fc36a1690268f4a1a40d70aa08695540253e58acdeca114b1",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -43,6 +55,12 @@
       "sha256": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
       "source": "github.com/mattpocock/skills @ 321658273cb1d20b76026717d027d505790106d4 skills/productivity/writing-for-agents/agents/openai.yaml(逐字节副本)",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/protocols/gate-protocol.md",
+      "sha256": "79880a79d651ad44d57f5bf0380700676f28f1d21737a00266fe9245e133fa42",
+      "source": "本项目自有内容:任务票 02 受控写入协议(依据设计文档运行保障合同与工具拦截设计新写)",
+      "license": "本项目自有内容(MIT)"
     }
   ]
 }

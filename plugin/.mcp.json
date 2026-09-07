@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mgs-gate": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["runtime/mcp_gate.py"],
+      "cwd": ".",
+      "env_vars": ["MGS_RUNTIME_ROOT"],
+      "default_tools_approval_mode": "approve"
+    }
+  }
+}
