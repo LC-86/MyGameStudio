@@ -1,0 +1,1 @@
+{"server": ["python3", "-B", "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/plugin/runtime/mcp_gate.py"], "timeout": 6.0, "pid": 54552, "initialize": "responded", "write": "timeout(no response within 6.0s)", "alive_after": true}

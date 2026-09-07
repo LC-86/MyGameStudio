@@ -1,0 +1,1 @@
+wrote 3088 chars to /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/03-indirect-write-failure/evidence/w1a-report.md

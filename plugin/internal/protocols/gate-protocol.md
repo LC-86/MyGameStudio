@@ -10,9 +10,23 @@
 ## 工具
 
 - `mgs_scope`(参数 `token`):返回本凭据的绑定身份(实例、任务、角色、用途)与有效可写范围。**提交任何写入前先调用一次。**
-- `mgs_write`(参数 `token`、`path`、`content`、可选 `expected_sha256`、`note`):把 `content` 作为**完整新内容**写入 `path`(项目根相对路径或绝对路径)。返回 `decision`(allow/deny)、`rule_stage`(granted/identity/path/task_grant/role_scope/purpose/version/occupancy)与 `reason`。
+- `mgs_write`(参数 `token`、`path`、`content`、可选 `expected_sha256`、`note`):把 `content` 作为**完整新内容**写入 `path`(项目根相对路径或绝对路径)。返回 `decision`(allow/deny)、`rule_stage`(granted/identity/path/task_grant/role_scope/purpose/version/occupancy/policy/race/audit)与 `reason`。
 
 工具的确切前缀名以会话工具列表中的 mgs-gate 服务器为准。
+
+## 拒绝依据(rule_stage)速查
+
+| rule_stage | 含义 | 常见来源 |
+| --- | --- | --- |
+| granted | 写入已生效 | — |
+| identity / task_grant / role_scope / purpose | 凭据、任务授权、角色范围或用途任一层不满足 | 越界写入 |
+| path | 目标路径逃逸项目根,或目标不是普通文件(管道、目录、符号链接等) | 直接或换链探针 |
+| version | 目标当前内容与 `expected_sha256` 不符 | 目标已被他人改动 |
+| occupancy | 资源正被其他实例写入 | 写入冲突 |
+| policy | 运行策略缺失、损坏或结构无效(失效闭合) | 检查器故障注入 |
+| race | 校验与落盘之间目标树被换链(失效闭合) | 路径竞态 |
+| audit | 落盘后审计/登记失败,写入已回滚(失效闭合) | 审计不可用 |
+| channel | mgs-gate 服务器未配置或内部错误(失效闭合) | 检查器缺失/崩溃 |
 
 ## 执行凭据
 
@@ -31,5 +45,7 @@
 ## 边界
 
 - 拒绝结果不是失败重试信号:越界写入被拒是运行保障在工作,报告它,不要换路径、换工具或请求放宽。
+- 路径在写入前会被规范化并解析符号链接;别名、链接或相对路径写法都不能把合法范围扩大到受保护资源。校验与落盘之间目标被换链会以 `race` 拒绝。
+- 检查器(mgs-gate 及其后的运行保障服务)缺失、损坏、崩溃时一律失效闭合:任何 `policy`/`race`/`audit`/`channel` 拒绝都表示写入**没有**生效;故障恢复后同一凭据可继续正常写入,不需要重新签发。
 - 本协议不授权任何外部动作(提交、推送、发布等)。
 - 审计与策略由运行保障维护,工作实例不修改策略、登记与审计文件(它们在会话沙箱之外)。

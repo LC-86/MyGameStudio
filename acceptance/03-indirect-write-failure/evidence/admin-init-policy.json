@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "policy": {
+    "version": 1,
+    "project_root": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-03/projects/role-scope-demo",
+    "roles": {
+      "producer": {
+        "resources": [
+          "docs/mygamestudio/PROJECT.md",
+          "docs/mygamestudio/INDEX.md",
+          "docs/mygamestudio/work/*/task.md"
+        ]
+      },
+      "design": {
+        "resources": [
+          "docs/mygamestudio/GAME_DESIGN.md",
+          "prototypes/**"
+        ]
+      },
+      "implement": {
+        "resources": [
+          "src/**",
+          "docs/mygamestudio/TECH_DESIGN.md",
+          "docs/mygamestudio/work/*/results/**"
+        ]
+      }
+    },
+    "purposes": {
+      "production": {
+        "restrict": null
+      },
+      "prototype": {
+        "restrict": [
+          "prototypes/**"
+        ]
+      }
+    }
+  }
+}

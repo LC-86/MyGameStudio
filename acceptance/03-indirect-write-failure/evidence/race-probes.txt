@@ -1,0 +1,8 @@
+file-symlink-alias: decision=deny rule_stage=task_grant target=docs/mygamestudio/GAME_DESIGN.md
+dir-symlink-alias: decision=deny rule_stage=task_grant target=docs/mygamestudio/GAME_DESIGN.md
+hardlink-alias: decision=allow rule_stage=granted target=src/hard.js
+hardlink-original-unchanged=True
+fifo-toctou-race: decision=deny rule_stage=race target=src/player.js
+outside-clean=True
+stale-version: decision=deny rule_stage=version target=src/player.js
+target-change-preserved=True

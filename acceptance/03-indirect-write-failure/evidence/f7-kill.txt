@@ -1,0 +1,1 @@
+killed-midcall; stdout-remainder=b'{"jsonrpc": "2.0", "id": 1, "result": {"protocolVersion": "2025-06-18", "capabilities": {"tools": {}}, "serverInfo": {"name": "mgs-gate", "version": "0.3.0"}}}\n'; exit=-9

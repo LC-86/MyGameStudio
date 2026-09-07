@@ -1,0 +1,3 @@
+forged-token: decision=deny rule_stage=identity
+expired-token: decision=deny rule_stage=identity
+released-token: decision=deny rule_stage=identity

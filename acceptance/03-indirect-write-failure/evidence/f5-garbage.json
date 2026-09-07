@@ -1,0 +1,1 @@
+{"server": ["python3", "-B", "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/03-indirect-write-failure/stub_gate.py", "garbage"], "timeout": 8.0, "pid": 54543, "initialize": "responded", "write": "unparseable-output:'<<<not-json-at-all>>>'", "alive_after": true}

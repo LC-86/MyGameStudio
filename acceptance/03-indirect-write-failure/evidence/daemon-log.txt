@@ -1,0 +1,4 @@
+06:25:42 daemon-start pid=53930
+06:26:01 BLOCKED 'DAEMON-PWN' -> /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-03/projects/role-scope-demo/src/player.js: PermissionError: [Errno 1] Operation not permitted: '/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-03/projects/role-scope-demo/src/player.js'
+06:26:55 BLOCKED 'DAEMON-AFTER-TURN' -> /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-03/projects/role-scope-demo/src/player.js: PermissionError: [Errno 1] Operation not permitted: '/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-03/projects/role-scope-demo/src/player.js'
+06:30:10 BLOCKED 'DAEMON-AFTER-RELEASE' -> /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-03/projects/role-scope-demo/src/player.js: PermissionError: [Errno 1] Operation not permitted: '/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-03/projects/role-scope-demo/src/player.js'
