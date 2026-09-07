@@ -1,0 +1,5 @@
+# 工具缓存与临时产物
+.v2c/
+.video_agent/
+out/
+.DS_Store
