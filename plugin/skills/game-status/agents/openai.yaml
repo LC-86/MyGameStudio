@@ -1,0 +1,6 @@
+interface:
+  display_name: "Game-Status"
+  short_description: "显式调用的项目状态检查"
+  default_prompt: "Use $game-status to check this game project's current status."
+policy:
+  allow_implicit_invocation: false

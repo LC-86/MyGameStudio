@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "generated_for": "mygamestudio 0.1.0 (任务票 01 最小包)",
+  "files": [
+    {
+      "path": "internal/contracts/common.md",
+      "sha256": "76c13fd2f73e38a316b1ee44e02f1ba3923726daebbeca75fd69eee9a076bda6",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/common.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/contracts/management.md",
+      "sha256": "517f45bf97c11e77c50535c9a56b1c38975bd63f0dbf7ac25a25815ed1253d55",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/contracts/records.md",
+      "sha256": "481d8f6359f000cb3b61696a4e9c639a456431d17dd016367ef4a55de57ad45f",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/records.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/contracts/task-triage.md",
+      "sha256": "a361620eda15b1eddbcac08d185222fb48ea28d3468984a1099843c66d10c56c",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/task-triage.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/methods/writing-for-agents/SKILL-MECHANICS.md",
+      "sha256": "c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059",
+      "source": "github.com/mattpocock/skills @ 321658273cb1d20b76026717d027d505790106d4 skills/productivity/writing-for-agents/SKILL-MECHANICS.md(逐字节副本)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/writing-for-agents/SKILL.md",
+      "sha256": "551adca942227b44192edba88acd4e8db911f0121ce58ad16944ccf6a896a74a",
+      "source": "github.com/mattpocock/skills @ 321658273cb1d20b76026717d027d505790106d4 skills/productivity/writing-for-agents/SKILL.md(逐字节副本)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/writing-for-agents/agents/openai.yaml",
+      "sha256": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
+      "source": "github.com/mattpocock/skills @ 321658273cb1d20b76026717d027d505790106d4 skills/productivity/writing-for-agents/agents/openai.yaml(逐字节副本)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+date: 2026-09-08T02:12:30+08:00
+codex: codex-cli 0.151.0
+os: macOS 26.5.1 (arm64)
+cwd-repo: /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio
+env-root: /tmp/mygamestudio-accept-01

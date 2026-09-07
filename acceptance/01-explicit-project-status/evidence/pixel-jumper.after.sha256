@@ -1,0 +1,15 @@
+83fb1b55f4b0520e574d2b1b558aa9f8970f4872b060c9398c7df259a9095df6  ./docs/mygamestudio/CONFIG.md
+50c264a9e6a9bf4f940a91befdf7b3a6d4769eda134ea6591925ce0b0f0250ff  ./docs/mygamestudio/GAME_DESIGN.md
+6505065bbfa5a0cbb684b1152b21e434d0a005af3857d923b7b79aeb7b6a7f61  ./docs/mygamestudio/INDEX.md
+4cee278912804a1dfc2a8ed46ae0ba10646adb2945fde5f6f742086c8b7283af  ./docs/mygamestudio/PROJECT.md
+3ca4ce9c9bd2d3fff198761adec58bec5bbc5427c4040ebe2a5def4b7e1b7cdc  ./docs/mygamestudio/evidence/playtest-20260906.md
+a91fb86b5946b8948dc03b932f7928386ab0312a131245834d97e8fb477d06d7  ./docs/mygamestudio/work/01-player-move/results/2026-09-06.md
+d5389d478cceffcc797b76dbe4ef974452ac979ff57d37904f29bd22831c4c97  ./docs/mygamestudio/work/01-player-move/task.md
+8fb2cf89e88ef1d5697c421b2d92932987b6632eb68b64f1e10b52d702857f51  ./docs/mygamestudio/work/02-double-jump/results/2026-09-07.md
+85c28043f3d7726bd53c10416bd8266e73500cb7da0f8298f8070e187f3e2bea  ./docs/mygamestudio/work/02-double-jump/task.md
+f17fadcda02b38cc0a3416946b578354fbb7cf864c50627cc0ce261abf3c5584  ./docs/mygamestudio/work/03-tileset-swap/task.md
+19f78a1cee7c02737d2052bda1fbcef57a85424077fbeb47b006ba6a2af1633c  ./docs/mygamestudio/work/04-audio-hookup/task.md
+c83c0e104810fa2e88426a42000bc45914bfc558baf5ac525aa6c7fb5729e133  ./docs/mygamestudio/work/05-score-screen/task.md
+4f0093fc1e726e6a78ed8895cc2ead920356e5b0f463c70296b14c17e7047013  ./src/main.html
+d72caf875390595db28572246fe383711a3ba8118e37c84e3939f45fe9a13f9a  ./src/main.js
+7d7f2b96f67a82cf69d3fdf2f1c562cada71d0aa54f36a8e2b142489487137c7  ./src/player.js

@@ -1,0 +1,7 @@
+{"name": "mygamestudio:game-status", "scope": "user", "pluginId": "mygamestudio@personal", "path": "/private/tmp/mygamestudio-accept-01/codex-home/plugins/cache/personal/mygamestudio/0.1.0/skills/game-status/SKILL.md"}
+{"name": "imagegen", "scope": "system", "pluginId": null, "path": "/private/tmp/mygamestudio-accept-01/codex-home/skills/.system/imagegen/SKILL.md"}
+{"name": "openai-docs", "scope": "system", "pluginId": null, "path": "/private/tmp/mygamestudio-accept-01/codex-home/skills/.system/openai-docs/SKILL.md"}
+{"name": "plugin-creator", "scope": "system", "pluginId": null, "path": "/private/tmp/mygamestudio-accept-01/codex-home/skills/.system/plugin-creator/SKILL.md"}
+{"name": "review-agent", "scope": "system", "pluginId": null, "path": "/private/tmp/mygamestudio-accept-01/codex-home/skills/.system/review-agent/SKILL.md"}
+{"name": "skill-creator", "scope": "system", "pluginId": null, "path": "/private/tmp/mygamestudio-accept-01/codex-home/skills/.system/skill-creator/SKILL.md"}
+{"name": "skill-installer", "scope": "system", "pluginId": null, "path": "/private/tmp/mygamestudio-accept-01/codex-home/skills/.system/skill-installer/SKILL.md"}
