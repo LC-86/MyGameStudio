@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.3.0 (任务票 03 最小包)",
+  "generated_for": "mygamestudio 0.4.0 (任务票 04 最小包)",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -16,14 +16,20 @@
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "517f45bf97c11e77c50535c9a56b1c38975bd63f0dbf7ac25a25815ed1253d55",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版)",
+      "sha256": "5144f12eaca149f66663e603eed0650541220baf2dd70d3b4f04ec698f9879d1",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径并更新包内说明)",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/production.md",
       "sha256": "86dd244e2a5e8d5fc36a1690268f4a1a40d70aa08695540253e58acdeca114b1",
       "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/contracts/project-configuration.md",
+      "sha256": "3c0d9220f0413b3610417fe1af45989659a8f4719c6557c0338eae481221efdc",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/project-configuration.md(适配版,任务票 04 随包)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -57,9 +63,105 @@
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
     },
     {
+      "path": "internal/proposals/project-layout.md",
+      "sha256": "101886bb77f6d6f66289e11aaf35b81eac85dbbeb0fd226834fd75f4b92bcd53",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/project-layout.md(适配版,任务票 04 随包)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/proposals/project-onboarding.md",
+      "sha256": "9120b9df24e8536d3afaa8f9a01e499d2f77223a046ad9310b2270a441f6e05e",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/project-onboarding.md(适配版,任务票 04 随包)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
       "path": "internal/protocols/gate-protocol.md",
       "sha256": "6d197abbecf700175643c842d506141dce91d776217f817fff9ed3e8a04ae59e",
       "source": "本项目自有内容:任务票 02 受控写入协议,任务票 03 补充失效闭合拒绝依据速查(依据设计文档运行保障合同与工具拦截设计)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/README.md",
+      "sha256": "3491a78a19ef96cba5219d164f2d663c6e86acd0faf01e4e6e0850dc30e95c82",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/README.md(适配版:链接改为包内路径)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/evidence/playtest.md",
+      "sha256": "ee4b8d41dcd89b3a45630dbf784b916a8aec92e5ff69054594e33403052acd1e",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/evidence/playtest.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/evidence/review.md",
+      "sha256": "a2c74c273ccf69b21148fe2aee546594769ebb1fb9477faa6a05c873f96ad59b",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/evidence/review.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/CONFIG.md",
+      "sha256": "e2ef6aabb5f65ae25f35ec634594d7320e2ceda1f44020892a843c4b600ab435",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/CONFIG.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/CONTEXT.md",
+      "sha256": "14fc717a39288d1434df1ad4fdaa3948062efbf7aced178d9fbd4a5a37b5d9b8",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/CONTEXT.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/GAME_DESIGN.md",
+      "sha256": "d7dbe67822ac74ee58cd5f08e8fa2a04c5713e4b0dc8fc6054d27c56e1b038a7",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/GAME_DESIGN.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/INDEX.md",
+      "sha256": "e964065e9406159854dfa86334638b31f007f0bfaf1c38805fdbbc4b0afd8fa4",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/INDEX.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/PROJECT.md",
+      "sha256": "66a87fbd738ff54a1d5a206e048dd710378181620fab0035c4622e6267660a38",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/PROJECT.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/TECH_DESIGN.md",
+      "sha256": "4cc9cf8ded8706fffee35b445339ff1b9610b36ff8de1cdab3784632909f110c",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/TECH_DESIGN.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/records/decision.md",
+      "sha256": "bbf880ec350c73d1c581acbc9de080caff36b25e6308a7602c03321d8d06e1d9",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/records/decision.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/records/onboarding.md",
+      "sha256": "b5531d1a39ae7900c2b72e20db6e9fd54ff6faf6c537df66bf73a904057598df",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/records/onboarding.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/records/research.md",
+      "sha256": "176d8027cf4f5db1d0f8eeaedc22bdd81da9f4ca4dd238cdd6a504417fa9d0e6",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/records/research.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/work/result.md",
+      "sha256": "3cc79cff113152264598ac2386aa416147778f81d30ed64a27a10a6b923aecc5",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/work/result.md(逐字节副本)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/work/task.md",
+      "sha256": "fb53996d586bb35eb14cd704663543743506c39d115e34eaccf8034882d3f0eb",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/work/task.md(逐字节副本)",
       "license": "本项目自有内容(MIT)"
     }
   ]

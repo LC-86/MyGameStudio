@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""最小插件包的确定性完整性检查(任务票 01)。
+"""最小插件包的确定性完整性检查(任务票 01 建立,票 02-04 扩展)。
 
 接缝说明:本脚本只覆盖可静态核实的包内约定——
 清单与技能形态、显式调用元信息、包内材料指纹与许可追溯、
-不依赖开发机绝对路径、未注册额外公共技能入口、预置样例结构。
-真实安装、显式调用与结果回读由 acceptance/01-explicit-project-status/ 的
+不依赖开发机绝对路径、未注册额外公共技能入口、预置样例结构、
+随包模板全集与本地任务后端模块接缝。
+真实安装、显式调用与结果回读由 acceptance/<票号>/ 的
 隔离验收流程覆盖,本脚本不替代。
 
 用法:python3 tests/test_plugin_package.py
@@ -72,11 +73,11 @@ def test_explicit_skills() -> None:
     if not skills_root.is_dir():
         check(False, "缺少 skills/ 目录")
         return
-    expected = ["game-code", "game-producer", "game-prototype", "game-status"]
+    expected = ["game-code", "game-init", "game-producer", "game-prototype", "game-status"]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 02 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 04 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -134,25 +135,26 @@ def test_mcp_gate_config() -> None:
 
 
 def test_internal_material_provenance() -> None:
+    """internal/ 与 templates/ 的适配材料必须与 fingerprints.json 一一对应。"""
+
     fingerprints = load_fingerprints()
-    internal_root = PLUGIN_ROOT / "internal"
-    if internal_root.is_dir():
-        internal_files = sorted(
-            str(path.relative_to(PLUGIN_ROOT))
-            for path in internal_root.rglob("*")
-            if path.is_file()
-        )
-    else:
-        check(False, "缺少 internal/ 目录")
-        internal_files = []
-    check(
-        set(internal_files) == set(fingerprints),
-        "internal/ 下的文件与 provenance/fingerprints.json 记录不一致:"
-        f"\n  仅在目录中: {sorted(set(internal_files) - set(fingerprints))}"
-        f"\n  仅在记录中: {sorted(set(fingerprints) - set(internal_files))}",
+    adapted_roots = (PLUGIN_ROOT / "internal", PLUGIN_ROOT / "templates")
+    adapted_files = sorted(
+        str(path.relative_to(PLUGIN_ROOT))
+        for root in adapted_roots
+        for path in root.rglob("*")
+        if path.is_file()
     )
-    for rel_path in internal_files:
-        entry = fingerprints[rel_path]
+    check(
+        set(adapted_files) == set(fingerprints),
+        "internal/ + templates/ 的文件与 provenance/fingerprints.json 记录不一致:"
+        f"\n  仅在目录中: {sorted(set(adapted_files) - set(fingerprints))}"
+        f"\n  仅在记录中: {sorted(set(fingerprints) - set(adapted_files))}",
+    )
+    for rel_path in adapted_files:
+        entry = fingerprints.get(rel_path)
+        if entry is None:
+            continue  # 集合差异已由上一条 check 记录
         actual = sha256(PLUGIN_ROOT / rel_path)
         check(
             actual == entry["sha256"],
@@ -259,6 +261,58 @@ def test_role_scope_demo_fixture() -> None:
                   f"role-scope-demo 任务 {rel} 缺少进度字段")
 
 
+def test_records_backend_module() -> None:
+    module = PLUGIN_ROOT / "records" / "mgs_records.py"
+    check(module.is_file(), "缺少 records/mgs_records.py(本地 Markdown 后端统一接口)")
+    if module.is_file():
+        text = module.read_text()
+        for seam in ("def load_config", "def list_tasks", "def read_task",
+                     "def verify_project"):
+            check(seam in text, f"records/mgs_records.py 缺少公开接缝 {seam}")
+
+
+def test_templates_and_game_init() -> None:
+    templates_root = PLUGIN_ROOT / "templates"
+    expected = sorted([
+        "README.md",
+        "project/CONFIG.md", "project/CONTEXT.md", "project/GAME_DESIGN.md",
+        "project/INDEX.md", "project/PROJECT.md", "project/TECH_DESIGN.md",
+        "work/result.md", "work/task.md",
+        "records/decision.md", "records/onboarding.md", "records/research.md",
+        "evidence/review.md", "evidence/playtest.md",
+    ])
+    actual = sorted(
+        str(path.relative_to(templates_root))
+        for path in templates_root.rglob("*") if path.is_file()
+    ) if templates_root.is_dir() else []
+    check(actual == expected,
+          f"templates/ 应为设计模板全集 {expected},实际 {actual}")
+    skill_md = PLUGIN_ROOT / "skills" / "game-init" / "SKILL.md"
+    check(skill_md.is_file(), "缺少 skills/game-init/SKILL.md")
+    if skill_md.is_file():
+        text = skill_md.read_text()
+        for ref in (
+            "../../internal/contracts/project-configuration.md",
+            "../../internal/proposals/project-onboarding.md",
+            "../../internal/proposals/project-layout.md",
+            "../../templates/README.md",
+            "../../internal/methods/writing-for-agents/SKILL.md",
+            "../../internal/protocols/gate-protocol.md",
+        ):
+            check(ref in text, f"game-init SKILL.md 应引用包内依据 {ref}")
+        check("不逐文件重复询问" in text, "game-init 应约定同一确认范围内不逐文件重复询问")
+        check("文档接入就绪" in text and "运行保障就绪" in text,
+              "game-init 报告结构应区分文档接入就绪与运行保障就绪")
+        check("规格拆单" in text, "game-init 应声明不做规格拆单")
+
+
+def test_stardust_dash_fixture() -> None:
+    sample = REPO_ROOT / "samples" / "stardust-dash"
+    check((sample / "README.md").is_file(), "stardust-dash 样例缺少 README.md")
+    check(not (sample / "docs").exists(),
+          "stardust-dash 是未初始化的新项目样例,不应包含 docs/ 结构")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -267,6 +321,9 @@ def main() -> int:
     test_no_dev_machine_paths()
     test_sample_fixtures()
     test_role_scope_demo_fixture()
+    test_records_backend_module()
+    test_templates_and_game_init()
+    test_stardust_dash_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

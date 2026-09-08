@@ -1,11 +1,11 @@
-# mygamestudio 0.2.0 来源与许可追溯
+# mygamestudio 0.4.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01-02)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-04)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.2.0`(任务票 02:新增运行保障受控写入与三个显式入口)。
-- `skills/`、`runtime/`、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
+- 名称:`mygamestudio`,版本 `0.4.0`(任务票 04:新增 Game-Init 初始化入口、随包模板与本地 Markdown 任务后端统一接口)。
+- `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
 ## internal/contracts/(业务合同,适配版)
@@ -13,13 +13,30 @@
 | 文件 | 来源 | 适配说明 |
 | --- | --- | --- |
 | `common.md` | 设计仓库 `contracts/common.md` | 仅将指向未随包设计文档的链接改为文字引用(标注"不随包");补写 writing-for-agents 的包内路径。语义与设计一致 |
-| `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;文末追加"包内说明"注明当前最小包仅实现 Game-Status 只读检查 |
+| `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;任务票 04 起 Game-Init 节改链包内协作配置合同与初始化流程,文末"包内说明"更新为已实现 Game-Init 新项目入口 |
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
 | `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Prototype 最小入口 |
 | `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Code 最小入口 |
+| `project-configuration.md` | 设计仓库 `contracts/project-configuration.md` | 任务票 04 新增;原文无外链,按包内现状补写文末"包内说明"(仅实现本地 Markdown 后端) |
 
 适配原则:不重写语义;所有改写点限于链接可达性与包内现状声明。更新这些文件时先对照设计仓库当前版本,再更新本 manifest 与 fingerprints.json。
+
+## internal/proposals/(流程与布局,任务票 04 新增)
+
+| 文件 | 来源 | 适配说明 |
+| --- | --- | --- |
+| `project-onboarding.md` | 设计仓库 `proposals/project-onboarding.md` | 指向未随包 issues 的链接改为文字引用;文末"包内说明"声明已实现范围(新项目 + 本地 Markdown) |
+| `project-layout.md` | 设计仓库 `proposals/project-layout.md` | 链接适配:运行保障合同改为包内受控写入协议的文字对应;模板入口改链包内 `templates/README.md` |
+
+## templates/(项目模板,任务票 04 新增)
+
+- `README.md`:设计仓库 `templates/README.md` 适配版,仅把指向未随包设计文档的链接改为包内路径或文字引用(标注"不随包")。
+- `project/`、`work/`、`records/`、`evidence/` 下全部模板文件为设计仓库对应文件的**逐字节副本**(设计模板正文本身不含外链),语义以设计仓库为准。
+
+## records/(本地 Markdown 任务后端,本项目自有内容)
+
+- `records/mgs_records.py`:统一回读接口——`load_config`/`list_tasks`/`read_task`/`verify_project` 及其 CLI。对应设计《工作记录合同》「后端接口」在本地 Markdown 后端上的最小实现;只读不写(项目写入一律经 mgs-gate),首版不支持 GitHub Issues 后端(明确报错,不静默降级)。确定性接缝检查见 `tests/test_records_backend.py`。
 
 ## internal/protocols/(运行保障接入协议)
 

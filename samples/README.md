@@ -9,3 +9,9 @@
 | `conflicting-records/` | 失败场景:资料冲突(INDEX 指向缺失文件、CONFIG 声明 github-issues 后端但存在本地任务、基线版本三方不一致) | 逐条列出冲突与影响,受影响结论降级或存疑 |
 
 验收执行方式见 `acceptance/01-explicit-project-status/runbook.md` 与 `run.sh`。
+
+## 后续任务票追加的样例
+
+- `role-scope-demo/`(票 02):金币跑者三角色三用途资源范围样例,含故意越权的任务文本声明;见 `acceptance/02-role-scoped-write/`。
+- `stardust-dash/`(票 04):新项目初始化目标——只有开发者 README(已定/未定事实与首个小任务请求),无任何 docs/mygamestudio 结构,供 Game-Init 从零探查;见 `acceptance/04-initialize-local-project/`。
+
