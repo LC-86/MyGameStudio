@@ -1,16 +1,18 @@
 # 受控写入协议(业务技能共用)
 
-状态:任务票 02 起随包提供的运行保障接入协议。适用于所有需要写入目标项目的业务步骤。
+状态:任务票 02 起随包提供的运行保障接入协议;任务票 11 起支持二进制资源载荷。适用于所有需要写入目标项目的业务步骤。
 
 ## 两层拦截(先读这段再动手)
 
-1. 会话沙箱:Codex 会话以 workspace-write 运行,只放开会话工作目录与 /tmp。**直接写项目文件(编辑器、重定向、脚本)会被操作系统拒绝(Operation not permitted),这是预期行为,不是故障**;不要尝试绕过。
+1. 会话沙箱:Codex 会话以 workspace-write 运行,只放开会话工作目录与 /tmp。**直接写项目文件(编辑器、重定向、脚本、音频或图像工具的输出)会被操作系统拒绝(Operation not permitted),这是预期行为,不是故障**;不要尝试绕过。
 2. 受控写入通道:所有项目写入通过本插件 `mgs-gate` MCP 服务器的工具提交,由运行保障服务逐次校验「角色 ∩ 任务 ∩ 用途 ∩ 实际授权」后落盘;允许与拒绝都进入审计日志。
 
 ## 工具
 
 - `mgs_scope`(参数 `token`):返回本凭据的绑定身份(实例、任务、角色、用途)与有效可写范围。**提交任何写入前先调用一次。**
-- `mgs_write`(参数 `token`、`path`、`content`、可选 `expected_sha256`、`note`):把 `content` 作为**完整新内容**写入 `path`(项目根相对路径或绝对路径)。返回 `decision`(allow/deny)、`rule_stage`(granted/identity/path/task_grant/role_scope/purpose/version/occupancy/policy/race/audit)与 `reason`。
+- `mgs_write`(参数 `token`、`path`、载荷 `content` 或 `content_base64` 恰一、可选 `expected_sha256`、`note`):把载荷作为**完整新内容**写入 `path`(项目根相对路径或绝对路径)。返回 `decision`(allow/deny)、`rule_stage`(granted/identity/path/task_grant/role_scope/purpose/version/occupancy/policy/race/audit)与 `reason`。
+  - 文本文件(代码、文档):`content`(UTF-8 字符串)。
+  - 二进制资源(音频、图像等):`content_base64`——先在会话工作区产出文件,再对其字节做 base64 编码(如 `base64 -i <文件>` 或 `python3 -c "import base64,sys;sys.stdout.write(base64.b64encode(open('<文件>','rb').read()).decode())"`),把编码串作为 `content_base64` 提交。**两种载荷走完全相同的授权交集、按字节的版本校验与审计,不因载荷形态放宽边界**;两者都给或都不给会被通道按参数错误拒绝(不落盘)。
 
 工具的确切前缀名以会话工具列表中的 mgs-gate 服务器为准。
 

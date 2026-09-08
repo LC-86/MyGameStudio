@@ -74,14 +74,14 @@ def test_explicit_skills() -> None:
         check(False, "缺少 skills/ 目录")
         return
     expected = [
-        "game-art", "game-code", "game-design", "game-implement", "game-init",
-        "game-plan", "game-producer", "game-prototype", "game-spec",
-        "game-status",
+        "game-art", "game-audio", "game-code", "game-design", "game-implement",
+        "game-init", "game-plan", "game-producer", "game-prototype",
+        "game-spec", "game-status",
     ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 10 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 11 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -1016,6 +1016,137 @@ def test_accept10_fixture() -> None:
                   f"accept-10 夹具 {rel} 应与票 09 终态逐字节一致")
 
 
+def test_game_audio_skill_content() -> None:
+    """任务票 11:Game-Audio 音频资源工作流的包内依据与关键纪律。"""
+
+    audio = PLUGIN_ROOT / "skills" / "game-audio" / "SKILL.md"
+    check(audio.is_file(), "缺少 skills/game-audio/SKILL.md")
+    if not audio.is_file():
+        return
+    text = audio.read_text(encoding="utf-8")
+    for ref in (
+        "../../internal/contracts/production.md",
+        "../../internal/contracts/common.md",
+        "../../internal/contracts/records.md",
+        "../../internal/protocols/gate-protocol.md",
+        "../../internal/methods/writing-for-agents/SKILL.md",
+        "../../templates/work/result.md",
+    ):
+        check(ref in text, f"game-audio SKILL.md 应引用包内依据 {ref}")
+    for concept in (
+        "声音用途",        # 输入:声音用途(触发时机与接入位置)
+        "体验意图",        # 输入:体验意图(情绪与强度边界)
+        "参考",            # 输入:参考(设计条目、决定、既有风格与规格)
+        "必要格式或时长",  # 输入:采样率/位深/声道/容器/秒数等约定
+        "输出位置",        # 输入:输出位置
+        "可用能力",        # 输入:可用能力(实际条件决定方法)
+        "不固定",          # 不固定生成服务、引擎或音频类型
+        "音频类型",        # 音效/音乐/语音等由任务约定
+        "mgs_scope",       # 写入前确认有效范围
+        "允许修改范围",    # 任务范围核对(以 mgs_scope 为准)
+        "缺口",            # 无制作/编辑/验证能力时报告具体缺口
+        "可接手材料",      # 缺口时交付可接手材料
+        "音频提示词",      # 不把提示词/建议/说明当已完成音频
+        "选曲建议",        # 同上
+        "文字说明",        # 同上
+        "不是已完成音频",  # 明确材料的定位
+        "来源或生成依据",  # 输出:合成命令与参数或素材来源
+        "接入信息",        # 输出:使用/接入信息
+        "播放或接入方式",  # 输出:可定位的播放与接入
+        "实际运行",        # 检查必须真实运行并记录输出
+        "会话工作区",      # 合成/检查在会话工作区,不直接写项目
+        "content_base64",  # 二进制音频经受控通道的载荷形态
+        "afplay",          # 本地可播放验证的示例命令
+        "ffprobe",         # 规格检查的示例命令
+        "待人工试听验收",  # 听感判断不虚构通过
+        "真实反馈",        # 听感/风格验收需要实际人工反馈
+        "验收待定",        # 未收到反馈时区分制作完成与验收待定
+        "制作完成",        # 区分表达的另一侧
+        "适配",            # 工具输入输出适配与角色资源策略分离
+        "资源策略",        # 分离的另一侧:策略由运行保障承担
+        "不被假定",        # 服务或 GUI 不被假定继承本地边界
+        "继承本地边界",    # 外部写入通路未验证不视为已受控
+        "results/",        # 结果落点
+        "进度",            # 任务进度与分流归统筹,直接调用不改
+        "不自动",          # 不自动提交、推送、发布
+        "受控",            # 新增命令执行路径保持受控
+    ):
+        check(concept in text, f"game-audio SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept11_fixture() -> None:
+    """任务票 11:预警决定与音频能力补齐注入夹具——07 收束、GAME_DESIGN/CONFIG
+    升 v3、10-warning-sfx 可独立开工,供音频资源任务执行验收使用(四层夹具
+    覆盖,不改样例本体)。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "11-audio-asset-delivery" / "fixtures"
+    for rel in (
+        "README.md",
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/CONFIG.md",
+        "docs/mygamestudio/records/decision-2026-09-08-warning-audio.md",
+        "docs/mygamestudio/work/07-warning-cue/task.md",
+        "docs/mygamestudio/work/10-warning-sfx/task.md",
+    ):
+        check((fixtures / rel).is_file(), f"accept-11 夹具缺少 {rel}")
+    design = fixtures / "docs/mygamestudio/GAME_DESIGN.md"
+    if design.is_file():
+        text = design.read_text(encoding="utf-8")
+        check("基线版本:v3" in text, "夹具 GAME_DESIGN 应为预警决定后的 v3")
+        check("预警" in text and "音频" in text,
+              "夹具 GAME_DESIGN v3 应包含音频预警条目")
+        check("decision-2026-09-08-warning-audio.md" in text,
+              "夹具 GAME_DESIGN v3 应引用音频预警决定")
+    config = fixtures / "docs/mygamestudio/CONFIG.md"
+    if config.is_file():
+        text = config.read_text(encoding="utf-8")
+        check("配置版本:v3" in text, "夹具 CONFIG 应为补齐音频执行条件后的 v3")
+        check("ffmpeg" in text and "afplay" in text,
+              "夹具 CONFIG v3 应记录本机音频合成/检查/试听能力")
+        check(re.search(r"尚未就绪的能力及影响\s*[:：]\s*无", text) is not None,
+              "夹具 CONFIG v3 的尚未就绪能力应清空(音频能力已补齐)")
+    decision = fixtures / "docs/mygamestudio/records/decision-2026-09-08-warning-audio.md"
+    if decision.is_file():
+        text = decision.read_text(encoding="utf-8")
+        check("已采纳" in text, "夹具音频预警决定应为已采纳状态")
+        check("10-warning-sfx" in text, "夹具决定应指向拆出的音频任务")
+    task07 = fixtures / "docs/mygamestudio/work/07-warning-cue/task.md"
+    if task07.is_file():
+        text = task07.read_text(encoding="utf-8")
+        check(re.search(r"进度(:|：)已完成", text) is not None,
+              "夹具 07 未决项收束后应为已完成")
+        check("decision-2026-09-08-warning-audio.md" in text,
+              "夹具 07 结果索引应引用决定记录")
+    task10 = fixtures / "docs/mygamestudio/work/10-warning-sfx/task.md"
+    if task10.is_file():
+        text = task10.read_text(encoding="utf-8")
+        check("任务身份:10-warning-sfx" in text or "任务身份：10-warning-sfx" in text,
+              "夹具 10 身份应为 10-warning-sfx")
+        check(re.search(r"进度(:|：)待执行", text) is not None,
+              "夹具 10 进度应为待执行(本票执行对象)")
+        for field in ("当前目标", "输入与基线", "本次交付", "允许修改范围",
+                      "所需能力", "完成标准", "执行责任", "验收方式", "依赖"):
+            check(f"- {field}" in text, f"夹具 10 工作请求应含字段 {field}")
+        check("WAV" in text and "44100" in text and "单声道" in text,
+              "夹具 10 应约定音频规格(容器/采样率/声道)")
+        check(re.search(r"0\.3-0\.8", text) is not None,
+              "夹具 10 应约定时长区间(0.3-0.8 秒)")
+        check("assets/audio/" in text, "夹具 10 输出位置应在 assets/audio/")
+        check("ffmpeg" in text, "夹具 10 所需能力应引用本机音频能力")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("预警" in text, "夹具 README 当前请求应指向海鸥预警音任务")
+        check("10-warning-sfx" in text, "夹具 README 应引用任务身份 10-warning-sfx")
+        check("ffmpeg" in text, "夹具 README 应提到本机音频能力确认")
+    # 样例本体保持 v1 未动(既有票验收可复现;11 用夹具覆盖)
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        check("基线版本:v1" in sample_design.read_text(encoding="utf-8"),
+              "samples/tide-pool 本体应保持 v1(11 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -1040,6 +1171,8 @@ def main() -> int:
     test_accept09_fixture()
     test_game_art_skill_content()
     test_accept10_fixture()
+    test_game_audio_skill_content()
+    test_accept11_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

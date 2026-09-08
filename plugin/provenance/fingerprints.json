@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.9.0 (任务票 09 最小包)",
+  "generated_for": "mygamestudio 0.11.0",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -22,8 +22,8 @@
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "570ad49a1eafb90500b79409ef40baa6046e85dc00b392a24da0e444bb8c8107",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 02 新增,任务票 09 更新包内说明为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流,任务票 10 更新为已实现 Game-Art 视觉资源工作流)",
+      "sha256": "6216cbdc4ceec688c48f16649b33b5d3d3249428ad334738ba1835ea3f73cd5d",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -148,8 +148,8 @@
     },
     {
       "path": "internal/protocols/gate-protocol.md",
-      "sha256": "6d197abbecf700175643c842d506141dce91d776217f817fff9ed3e8a04ae59e",
-      "source": "本项目自有内容:任务票 02 受控写入协议,任务票 03 补充失效闭合拒绝依据速查(依据设计文档运行保障合同与工具拦截设计)",
+      "sha256": "c129b87e6b87f6459007f6a8cd77d2432a0949ed37a7d8d3334780cafc93ecc1",
+      "source": "本项目自有内容(任务票 02 新写;任务票 11 补充二进制资源载荷 content_base64 用法)",
       "license": "本项目自有内容(MIT)"
     },
     {

@@ -349,9 +349,16 @@ class GateService:
             allowed.append(grant)
         return allowed
 
-    def write(self, token: str, path: str, content: str,
-              expected_sha256: str | None = None, note: str | None = None) -> dict:
-        """受控写入入口。任何拒绝都不触碰目标字节;检查器故障一律失效闭合。"""
+    def write(self, token: str, path: str, content: str = "",
+              expected_sha256: str | None = None, note: str | None = None,
+              *, data: bytes | None = None) -> dict:
+        """受控写入入口。任何拒绝都不触碰目标字节;检查器故障一律失效闭合。
+
+        载荷二选一:`content`(UTF-8 文本,沿用任务票 02 语义)或
+        `data`(原始字节,任务票 11 起供音频等二进制资源使用)。
+        两者语义一致——同一授权交集、同一字节级版本校验与审计;
+        通道层(mcp_gate)负责校验调用方恰提供其一。
+        """
 
         policy = self._policy()
         if policy is None:
@@ -380,7 +387,7 @@ class GateService:
                               f"purpose {record['purpose']} restricted to {restrict}: {rel}",
                               token, record, policy, rel, note)
 
-        data = content.encode("utf-8")
+        data = content.encode("utf-8") if data is None else data
         denial: tuple[str, str, str] | None = None
         result: dict | None = None
         with self._locked():
