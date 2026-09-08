@@ -10,7 +10,7 @@
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "955fda5114715be70394dd351bd386d2fd58c30c6b05a711e244e56af9646b2c",
+      "sha256": "ca94489fd6e1502d9a3b60d2f182dc165ff1f9af8d456ca75150d1a5eedc4532",
       "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/design.md(适配版)",
       "license": "本项目自有内容(MIT)"
     },

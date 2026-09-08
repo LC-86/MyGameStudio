@@ -1,4 +1,4 @@
-> 包内适配版(mygamestudio 0.2.0,任务票 02)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/design.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
+> 包内适配版(mygamestudio 0.7.0,任务票 02)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/design.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
 
 # 设计技能合同
 
@@ -32,4 +32,4 @@
 
 ## 包内说明
 
-当前包已实现的入口:Game-Prototype 最小入口(任务票 02,隔离原型区受控写入);Game-Design 最小入口(任务票 06,质询与决策地图两分支,内部方法 grill-with-docs/grilling/domain-modeling/wayfinder/research 已随包按需读取);Game-Spec 最小入口(任务票 06,把采纳决定整理为可执行规格并同步产品设计基线,含版本与采纳依据纪律、格式修正不触发新版本、目标或范围变化输出统筹同步交接)。实际写入一律经运行保障通道,见[受控写入协议](../protocols/gate-protocol.md)。
+当前包已实现的入口:Game-Prototype 完整入口(任务票 02 建立最小入口,任务票 07 升级为完整原型工作流:确认问题/范围/方法/输出位置、最小可检验实现、会话工作区运行观察、四类结论区分与 Game-Spec/Game-Implement 交接,隔离原型区受控写入);Game-Design 最小入口(任务票 06,质询与决策地图两分支,内部方法 grill-with-docs/grilling/domain-modeling/wayfinder/research 已随包按需读取);Game-Spec 最小入口(任务票 06,把采纳决定整理为可执行规格并同步产品设计基线,含版本与采纳依据纪律、格式修正不触发新版本、目标或范围变化输出统筹同步交接)。实际写入一律经运行保障通道,见[受控写入协议](../protocols/gate-protocol.md)。

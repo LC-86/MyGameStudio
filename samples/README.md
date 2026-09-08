@@ -18,3 +18,4 @@
 
 - `tide-pool/`(票 06):局部功能设计讨论样例——已接入项目;含历史已采纳决定(records/decision-2026-09-05-shell-streak,尚未同步基线)、真实格式缺陷(GAME_DESIGN 一处标题缺空格)、干扰生物被列在 PROJECT「本轮不包含」(采纳海鸥即构成范围变化)、代码事实(shellCount 单一计数);见 `acceptance/06-idea-to-current-spec/`。
 - `gear-city/`(票 06):多项未决问题样例——已接入项目;开发者对「每日挑战模式」想法列了四个未想清楚的问题,代码事实(硬编码关卡数组、无种子随机、无存档、无联网)供研究类决策工单引用;无 records/ 内容,决策地图由验收轮产生;见 `acceptance/06-idea-to-current-spec/`。
+- 票 07 未新增样例:复用 `tide-pool/` 并在 `acceptance/07-isolated-design-prototype/fixtures/` 注入「06 成果 + 统筹同步轮」覆盖层(GAME_DESIGN v2、海鸥决定与研究记录、PROJECT/CONFIG v2、prototypes/ 原型区、原型验证请求);样例本体保持票 06 可复现状态;见该目录 `runbook.md`。

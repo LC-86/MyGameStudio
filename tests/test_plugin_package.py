@@ -576,6 +576,119 @@ def test_gear_city_fixture() -> None:
                        "gear-city 任务 01")
 
 
+def test_prototype_skill_content() -> None:
+    """任务票 07:Game-Prototype 完整原型工作流的包内依据与关键纪律。"""
+
+    proto = PLUGIN_ROOT / "skills" / "game-prototype" / "SKILL.md"
+    check(proto.is_file(), "缺少 skills/game-prototype/SKILL.md")
+    if proto.is_file():
+        text = proto.read_text(encoding="utf-8")
+        for ref in (
+            "../../internal/contracts/design.md",
+            "../../internal/contracts/common.md",
+            "../../internal/protocols/gate-protocol.md",
+            "../../internal/methods/writing-for-agents/SKILL.md",
+        ):
+            check(ref in text, f"game-prototype SKILL.md 应引用包内依据 {ref}")
+        for concept in (
+            "要验证的设计问题",   # 输入:问题
+            "原型范围",           # 输入:范围
+            "输出位置",           # 输入:输出位置
+            "可用",               # 输入:可用方法/工具
+            "最小可检验实现",     # 合同措辞:选择足以验证问题的小实现
+            "不自动扩大",         # 不自动扩大到正式产品制作
+            "正式工程",           # 原型不写正式工程
+            "运行或查看方式",     # 合同措辞:输出含启动/查看方式
+            "已执行操作",         # 输出含实际执行的操作与结果
+            "原型观察", "设计判断", "尚未验证",   # 结论四类区分(前三)
+            "体验反馈",           # 第四类:需要人的体验反馈
+            "真实反馈", "待验收",  # 只引用真实反馈;未收到保留待验收
+            "Game-Spec", "Game-Implement",   # 交接对象
+            "复用或重写",         # 复用或重写由正式集成条件决定
+            "不等于正式产品",     # 原型可运行不等于正式产品已经实现
+            "mgs_scope",          # 写入前先确认有效范围
+            "更窄",               # 原型用途比角色范围更窄,差异如实报告
+            "会话工作区",         # 原型运行发生在会话工作区,不写项目
+        ):
+            check(concept in text, f"game-prototype SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept07_fixture() -> None:
+    """任务票 07:tide-pool 的 06 成果注入夹具——设计已采纳、参数待原型验证的
+    起始状态真实存在(覆盖 samples/tide-pool,不改动样例本体以保 06 可复现)。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "07-isolated-design-prototype" / "fixtures"
+    for rel in (
+        "README.md",
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/CONFIG.md",
+        "docs/mygamestudio/records/decision-2026-09-08-gull-swoop.md",
+        "docs/mygamestudio/records/research-2026-09-08-gull-facts.md",
+        "docs/mygamestudio/records/decision-2026-09-05-shell-streak.md",
+        "prototypes/README.md",
+    ):
+        check((fixtures / rel).is_file(), f"accept-07 夹具缺少 {rel}")
+    design = fixtures / "docs" / "mygamestudio" / "GAME_DESIGN.md"
+    if not design.is_file():
+        return
+    design_text = design.read_text(encoding="utf-8")
+    check("基线版本:v2" in design_text, "夹具 GAME_DESIGN 应为 06 产出的基线 v2")
+    check("连击" in design_text and "海鸥" in design_text,
+          "夹具 GAME_DESIGN v2 应纳入连击与海鸥两项采纳内容")
+    check("未实现" in design_text, "夹具 GAME_DESIGN 应标注新增能力未实现")
+    check("## 验证与未决项" in design_text,
+          "夹具 GAME_DESIGN 的格式缺陷应已修复(06 W3 结果)")
+    check("decision-2026-09-05-shell-streak" in design_text
+          and "decision-2026-09-08-gull-swoop" in design_text,
+          "夹具 GAME_DESIGN 变更索引应引用两份采纳依据")
+    check("预警" in design_text and "未决" in design_text,
+          "夹具 GAME_DESIGN 应保留「出现预警」未决项")
+    gull = (fixtures / "docs" / "mygamestudio" / "records"
+            / "decision-2026-09-08-gull-swoop.md")
+    if gull.is_file():
+        gull_text = gull.read_text(encoding="utf-8")
+        check("已采纳" in gull_text, "夹具海鸥决定记录应为已采纳")
+        check("未决" in gull_text, "夹具海鸥决定记录应保留预警未决")
+        check("开发者" in gull_text, "夹具海鸥决定记录应标注实际决定者")
+        check("统筹同步" in gull_text, "夹具海鸥决定记录应记录范围变化的统筹同步去向")
+    streak = (fixtures / "docs" / "mygamestudio" / "records"
+              / "decision-2026-09-05-shell-streak.md")
+    if streak.is_file():
+        streak_text = streak.read_text(encoding="utf-8")
+        check("已同步" in streak_text and "v2" in streak_text,
+              "夹具历史决定记录应已补记同步 v2")
+        check("选项 A" in streak_text, "夹具历史决定记录既有内容应保留")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        readme_text = readme.read_text(encoding="utf-8")
+        check("原型" in readme_text and "prototypes" in readme_text,
+              "夹具 README 当前请求应指向隔离原型验证")
+        check("窗口" in readme_text, "夹具 README 应提出拾回窗口的验证问题")
+        check("预警" in readme_text, "夹具 README 应保留预警的未决/试玩诉求")
+    project = fixtures / "docs" / "mygamestudio" / "PROJECT.md"
+    if project.is_file():
+        project_text = project.read_text(encoding="utf-8")
+        check("基线版本:v2" in project_text, "夹具 PROJECT 应为统筹同步后的 v2")
+        check("海鸥" in project_text, "夹具 PROJECT 应把海鸥纳入本轮范围")
+        check("干扰生物" not in project_text,
+              "夹具 PROJECT「本轮不包含」不应再列干扰生物(范围已同步)")
+    proto_area = fixtures / "prototypes" / "README.md"
+    if proto_area.is_file():
+        area_text = proto_area.read_text(encoding="utf-8")
+        check("不属于正式工程" in area_text,
+              "夹具原型区说明应声明不属于正式工程")
+        check("Game-Spec" in area_text,
+              "夹具原型区说明应说明结论经 Game-Spec 采纳后才进入正式规格")
+    # 夹具是覆盖层:samples/tide-pool 本体必须保持 06 验收所需的原始状态
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        sample_text = sample_design.read_text(encoding="utf-8")
+        check("基线版本:v1" in sample_text,
+              "samples/tide-pool 本体应保持 v1(06 验收可复现;07 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -592,6 +705,8 @@ def main() -> int:
     test_internal_methods_closure()
     test_tide_pool_fixture()
     test_gear_city_fixture()
+    test_prototype_skill_content()
+    test_accept07_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:
