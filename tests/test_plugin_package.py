@@ -73,11 +73,14 @@ def test_explicit_skills() -> None:
     if not skills_root.is_dir():
         check(False, "缺少 skills/ 目录")
         return
-    expected = ["game-code", "game-init", "game-producer", "game-prototype", "game-status"]
+    expected = [
+        "game-code", "game-design", "game-init", "game-producer",
+        "game-prototype", "game-spec", "game-status",
+    ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 04 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 06 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -367,6 +370,212 @@ def test_nebula_drift_fixture() -> None:
           "任务 01 应为进行中(其进行中工作正是矛盾来源之一)")
 
 
+def test_design_skills_content() -> None:
+    """任务票 06:Game-Design / Game-Spec 显式入口的包内依据与关键纪律。"""
+
+    design = PLUGIN_ROOT / "skills" / "game-design" / "SKILL.md"
+    check(design.is_file(), "缺少 skills/game-design/SKILL.md")
+    if design.is_file():
+        text = design.read_text(encoding="utf-8")
+        for ref in (
+            "../../internal/contracts/design.md",
+            "../../internal/contracts/common.md",
+            "../../internal/contracts/records.md",
+            "../../internal/protocols/gate-protocol.md",
+            "../../internal/methods/grill-with-docs/SKILL.md",
+            "../../internal/methods/wayfinder/SKILL.md",
+            "../../internal/methods/research/SKILL.md",
+            "../../internal/methods/writing-for-agents/SKILL.md",
+        ):
+            check(ref in text, f"game-design SKILL.md 应引用包内依据 {ref}")
+        for concept in (
+            "质询",            # 局部功能分支
+            "决策地图",        # 多项未决问题分支
+            "研究事实", "助手建议", "候选方案",   # 四类区分
+            "决定者",          # 采纳标注区分决定来源
+            "出处",            # 事实调查可追溯
+            "不冒充",          # 助手建议不冒充用户决定
+            "未决",            # 未决项保留
+            "Game-Spec",       # 基线同步归 Game-Spec,本入口不写基线
+            "公共入口",        # 内部方法不额外暴露公共入口
+        ):
+            check(concept in text, f"game-design SKILL.md 应覆盖概念:{concept}")
+
+    spec = PLUGIN_ROOT / "skills" / "game-spec" / "SKILL.md"
+    check(spec.is_file(), "缺少 skills/game-spec/SKILL.md")
+    if spec.is_file():
+        text = spec.read_text(encoding="utf-8")
+        for ref in (
+            "../../internal/contracts/design.md",
+            "../../internal/contracts/common.md",
+            "../../internal/contracts/records.md",
+            "../../internal/protocols/gate-protocol.md",
+            "../../internal/methods/writing-for-agents/SKILL.md",
+        ):
+            check(ref in text, f"game-spec SKILL.md 应引用包内依据 {ref}")
+        for concept in (
+            "基线版本",        # 实质变化递增版本
+            "采纳依据",        # 版本有可识别采纳依据
+            "格式修正", "不触发",   # 格式修改不算新产品要求
+            "统筹同步交接",    # 目标或范围变化输出交接
+            "不静默",          # 不静默修改项目目标
+            "未实现",          # 未实现内容不报告为实际功能
+            "边界情况", "完成标准", "技术约定",  # 可执行规格要素
+            "expected_sha256",  # 基线更新走版本校验
+            "决定者",          # 只取实际采纳内容
+            "已采纳",
+        ):
+            check(concept in text, f"game-spec SKILL.md 应覆盖概念:{concept}")
+
+
+def test_internal_methods_closure() -> None:
+    """任务票 06:设计分支内部方法随包闭包,且不注册为公共技能入口。"""
+
+    methods_root = PLUGIN_ROOT / "internal" / "methods"
+    expected_methods = {
+        "domain-modeling", "grill-with-docs", "grilling",
+        "research", "wayfinder", "writing-for-agents",
+    }
+    actual_methods = (
+        {p.name for p in methods_root.iterdir() if p.is_dir()}
+        if methods_root.is_dir() else set()
+    )
+    check(
+        actual_methods == expected_methods,
+        f"internal/methods 应为依赖闭包 {sorted(expected_methods)},实际 {sorted(actual_methods)}",
+    )
+    for name in sorted(expected_methods):
+        skill_md = methods_root / name / "SKILL.md"
+        check(skill_md.is_file(), f"内部方法 {name} 缺少 SKILL.md")
+    for rel in ("domain-modeling/CONTEXT-FORMAT.md", "domain-modeling/ADR-FORMAT.md"):
+        check((methods_root / rel).is_file(), f"内部方法闭包缺少 {rel}")
+    # 内部方法不得出现在公共技能目录(不额外暴露公共通用入口)
+    skills_root = PLUGIN_ROOT / "skills"
+    public_leak = expected_methods & {p.name for p in skills_root.iterdir()}
+    check(not public_leak, f"内部方法被注册为公共技能入口:{sorted(public_leak)}")
+
+
+def _check_task_record(path: Path, label: str) -> None:
+    check(path.is_file(), f"{label} 缺少 {path.name}")
+    if path.is_file():
+        text = path.read_text(encoding="utf-8")
+        check(
+            re.search(r"当前分流:\s*(needs-triage|needs-info|ready-for-agent|ready-for-human|wontfix)", text)
+            is not None,
+            f"{label} 缺少有效分流状态",
+        )
+        check(re.search(r"进度:\s*\S", text) is not None, f"{label} 缺少进度字段")
+        for key in ("当前目标", "完成标准", "执行责任"):
+            check(key in text, f"{label} 工作请求缺少 {key}")
+
+
+def test_tide_pool_fixture() -> None:
+    """任务票 06:局部功能质询样例——历史已采纳决定未同步基线、格式缺陷与
+    范围排除项真实存在,供设计讨论与规格整理验收使用。"""
+
+    sample = REPO_ROOT / "samples" / "tide-pool"
+    for rel in (
+        "README.md", "src/main.js", "src/index.html",
+        "docs/mygamestudio/CONFIG.md", "docs/mygamestudio/INDEX.md",
+        "docs/mygamestudio/PROJECT.md", "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/TECH_DESIGN.md",
+        "docs/mygamestudio/work/01-shell-collect/task.md",
+        "docs/mygamestudio/work/02-tide-timer/task.md",
+        "docs/mygamestudio/work/01-shell-collect/results/2026-09-04.md",
+        "docs/mygamestudio/records/decision-2026-09-03-core-loop.md",
+        "docs/mygamestudio/records/decision-2026-09-05-shell-streak.md",
+    ):
+        check((sample / rel).is_file(), f"tide-pool 样例缺少 {rel}")
+    design = sample / "docs" / "mygamestudio" / "GAME_DESIGN.md"
+    if not design.is_file():
+        return
+    design_text = design.read_text(encoding="utf-8")
+    check("基线版本:v1" in design_text, "tide-pool GAME_DESIGN 应为基线 v1")
+    check("##验证与未决项" in design_text,
+          "tide-pool GAME_DESIGN 应含真实格式缺陷(标题缺空格,供格式修正验收)")
+    check("连击" not in design_text,
+          "历史已采纳决定(贝壳连击)尚未同步进基线——样例必须保持未同步状态")
+    streak_path = (sample / "docs" / "mygamestudio" / "records"
+                   / "decision-2026-09-05-shell-streak.md")
+    if not streak_path.is_file():
+        return
+    streak = streak_path.read_text(encoding="utf-8")
+    check("已采纳" in streak, "历史决定记录应为已采纳状态")
+    check("未同步" in streak, "历史决定记录应标注尚未同步基线")
+    check("开发者" in streak, "历史决定记录应记录实际决定者")
+    project_path = sample / "docs" / "mygamestudio" / "PROJECT.md"
+    if not project_path.is_file():
+        return
+    project = project_path.read_text(encoding="utf-8")
+    check("本轮不包含" in project and "干扰" in project,
+          "tide-pool PROJECT 应把干扰生物列在本轮不包含(采纳海鸥即构成范围变化)")
+    main_js_path = sample / "src" / "main.js"
+    if not main_js_path.is_file():
+        return
+    main_js = main_js_path.read_text(encoding="utf-8")
+    check("shellCount" in main_js,
+          "tide-pool src/main.js 应含贝壳计数实现事实(供可追溯的事实调查)")
+    config_path = sample / "docs" / "mygamestudio" / "CONFIG.md"
+    if not config_path.is_file():
+        return
+    config = config_path.read_text(encoding="utf-8")
+    check("local-markdown" in config, "tide-pool CONFIG 应为本地 Markdown 后端")
+    for content in ("项目目标", "游戏需求", "技术设计"):
+        check(content in config, f"tide-pool CONFIG 文档映射缺少核心行:{content}")
+    _check_task_record(sample / "docs/mygamestudio/work/01-shell-collect/task.md",
+                       "tide-pool 任务 01")
+    _check_task_record(sample / "docs/mygamestudio/work/02-tide-timer/task.md",
+                       "tide-pool 任务 02")
+    result_path = (sample / "docs/mygamestudio/work/01-shell-collect"
+                   / "results/2026-09-04.md")
+    if not result_path.is_file():
+        return
+    result = result_path.read_text(encoding="utf-8")
+    check("01-shell-collect" in result, "结果记录应引用所属任务身份")
+    task01_path = sample / "docs/mygamestudio/work/01-shell-collect/task.md"
+    if not task01_path.is_file():
+        return
+    task01 = task01_path.read_text(encoding="utf-8")
+    check("结果索引" in task01, "任务 01 应有结果索引")
+
+
+def test_gear_city_fixture() -> None:
+    """任务票 06:多项未决问题样例——想法大雾多,供决策地图分支验收使用。"""
+
+    sample = REPO_ROOT / "samples" / "gear-city"
+    for rel in (
+        "README.md", "src/main.js", "src/index.html",
+        "docs/mygamestudio/CONFIG.md", "docs/mygamestudio/INDEX.md",
+        "docs/mygamestudio/PROJECT.md", "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/TECH_DESIGN.md",
+        "docs/mygamestudio/work/01-chapter-one/task.md",
+    ):
+        check((sample / rel).is_file(), f"gear-city 样例缺少 {rel}")
+    readme_path = sample / "README.md"
+    if not readme_path.is_file():
+        return
+    readme = readme_path.read_text(encoding="utf-8")
+    check("每日挑战" in readme, "gear-city README 应含每日挑战的松散想法")
+    check(readme.count("未想好") >= 3,
+          "gear-city README 应含至少三个开发者自己未想清楚的问题(多项未决)")
+    design_path = sample / "docs" / "mygamestudio" / "GAME_DESIGN.md"
+    if not design_path.is_file():
+        return
+    design = design_path.read_text(encoding="utf-8")
+    check("基线版本:v1" in design, "gear-city GAME_DESIGN 应为基线 v1(章节模式)")
+    check("章节" in design, "gear-city 当前基线应为章节式关卡")
+    check(not (sample / "docs" / "mygamestudio" / "records").exists()
+          or not any((sample / "docs" / "mygamestudio" / "records").iterdir()),
+          "gear-city 样例不应预置决策地图(由验收轮产生)")
+    main_js = (sample / "src" / "main.js").read_text(encoding="utf-8")
+    check("Math.random" in main_js,
+          "gear-city src/main.js 应含 Math.random 事实(研究类决策工单的本地依据)")
+    config = (sample / "docs" / "mygamestudio" / "CONFIG.md").read_text(encoding="utf-8")
+    check("local-markdown" in config, "gear-city CONFIG 应为本地 Markdown 后端")
+    _check_task_record(sample / "docs/mygamestudio/work/01-chapter-one/task.md",
+                       "gear-city 任务 01")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -379,6 +588,10 @@ def main() -> int:
     test_templates_and_game_init()
     test_stardust_dash_fixture()
     test_nebula_drift_fixture()
+    test_design_skills_content()
+    test_internal_methods_closure()
+    test_tide_pool_fixture()
+    test_gear_city_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

@@ -1,0 +1,38 @@
+== 基线文件 ==
+./README.md
+./docs/mygamestudio/CONFIG.md
+./docs/mygamestudio/GAME_DESIGN.md
+./docs/mygamestudio/INDEX.md
+./docs/mygamestudio/PROJECT.md
+./docs/mygamestudio/TECH_DESIGN.md
+./docs/mygamestudio/records/decision-2026-09-03-core-loop.md
+./docs/mygamestudio/records/decision-2026-09-05-shell-streak.md
+./docs/mygamestudio/work/01-shell-collect/results/2026-09-04.md
+./docs/mygamestudio/work/01-shell-collect/task.md
+./docs/mygamestudio/work/02-tide-timer/task.md
+./src/index.html
+./src/main.js
+== 终态文件 ==
+./README.md
+./docs/mygamestudio/CONFIG.md
+./docs/mygamestudio/GAME_DESIGN.md
+./docs/mygamestudio/INDEX.md
+./docs/mygamestudio/PROJECT.md
+./docs/mygamestudio/TECH_DESIGN.md
+./docs/mygamestudio/records/decision-2026-09-03-core-loop.md
+./docs/mygamestudio/records/decision-2026-09-05-shell-streak.md
+./docs/mygamestudio/records/decision-2026-09-08-gull-swoop.md
+./docs/mygamestudio/records/research-2026-09-08-gull-facts.md
+./docs/mygamestudio/work/01-shell-collect/results/2026-09-04.md
+./docs/mygamestudio/work/01-shell-collect/task.md
+./docs/mygamestudio/work/02-tide-timer/task.md
+./src/index.html
+./src/main.js
+== 新增 ==
+./docs/mygamestudio/records/decision-2026-09-08-gull-swoop.md
+./docs/mygamestudio/records/research-2026-09-08-gull-facts.md
+== 删除(应为空) ==
+
+== 修改 ==
+./docs/mygamestudio/GAME_DESIGN.md
+./docs/mygamestudio/records/decision-2026-09-05-shell-streak.md

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.4.0 (任务票 04 最小包)",
+  "generated_for": "mygamestudio 0.6.0 (任务票 06 最小包)",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -10,7 +10,7 @@
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "05117e2d04d040a1fd0c80888a8c05920e3179741e43170f7e8e413925d57215",
+      "sha256": "955fda5114715be70394dd351bd386d2fd58c30c6b05a711e244e56af9646b2c",
       "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/design.md(适配版)",
       "license": "本项目自有内容(MIT)"
     },
@@ -43,6 +43,78 @@
       "sha256": "a361620eda15b1eddbcac08d185222fb48ea28d3468984a1099843c66d10c56c",
       "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/task-triage.md(适配版)",
       "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/methods/domain-modeling/ADR-FORMAT.md",
+      "sha256": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
+      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/domain-modeling/CONTEXT-FORMAT.md",
+      "sha256": "17ab16ce783e4d2801ee52fd9acdf550cbf44de65ae76797a93943bbedf22a13",
+      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/domain-modeling/SKILL.md",
+      "sha256": "327a2b50620e2fd70abc6893cd6965e76b20f8d0adb0dc2c8d5eb3845efb643e",
+      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/domain-modeling/agents/openai.yaml",
+      "sha256": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b",
+      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/grill-with-docs/SKILL.md",
+      "sha256": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe",
+      "source": "本机 ~/.agents/skills/grill-with-docs 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/grill-with-docs/agents/openai.yaml",
+      "sha256": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9",
+      "source": "本机 ~/.agents/skills/grill-with-docs 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/grilling/SKILL.md",
+      "sha256": "10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2",
+      "source": "本机 ~/.agents/skills/grilling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/grilling/agents/openai.yaml",
+      "sha256": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b",
+      "source": "本机 ~/.agents/skills/grilling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/research/SKILL.md",
+      "sha256": "985569f15739c713d6784887c3d186d4ef9ac85bec5ad9c068d25bf0739928e4",
+      "source": "本机 ~/.agents/skills/research 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/research/agents/openai.yaml",
+      "sha256": "9b4c470d63221c1f68f22df70b83e2f12401b317babe0d1b7b5f24a974474d0d",
+      "source": "本机 ~/.agents/skills/research 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/wayfinder/SKILL.md",
+      "sha256": "fee6e1d0c50f0e736b4ef8a599060c959afae904c9a97d82c97f049fcc3aa0f1",
+      "source": "本机 ~/.agents/skills/wayfinder 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "internal/methods/wayfinder/agents/openai.yaml",
+      "sha256": "88bc81a11a6d52ac67aeaa76b8b619e387020d47c5133a4dd4927fd15c4ad073",
+      "source": "本机 ~/.agents/skills/wayfinder 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
     },
     {
       "path": "internal/methods/writing-for-agents/SKILL-MECHANICS.md",

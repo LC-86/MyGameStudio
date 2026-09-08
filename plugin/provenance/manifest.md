@@ -1,10 +1,10 @@
-# mygamestudio 0.5.0 来源与许可追溯
+# mygamestudio 0.6.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01-05)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-06)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.5.0`(任务票 05:Game-Init 扩展已有项目接手路径——只读现状分析、复用与补齐、混合文档拆分、中断恢复/重复运行与模板升级;任务票 04 建立的其余结构不变)。
+- 名称:`mygamestudio`,版本 `0.6.0`(任务票 06:新增 Game-Design 设计讨论入口与 Game-Spec 规格整理入口,设计分支内部方法闭包随包;任务票 01-05 建立的其余结构不变)。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
@@ -16,7 +16,7 @@
 | `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;任务票 04 起 Game-Init 节改链包内协作配置合同与初始化流程;任务票 05 更新文末"包内说明"为已实现新项目初始化与已有项目接手入口 |
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
-| `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Prototype 最小入口 |
+| `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;任务票 06 更新:grill-with-docs/wayfinder 改链包内方法路径,文末"包内说明"注明 Game-Design/Game-Spec 最小入口已实现 |
 | `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Code 最小入口 |
 | `project-configuration.md` | 设计仓库 `contracts/project-configuration.md` | 任务票 04 新增;原文无外链,按包内现状补写文末"包内说明"(仅实现本地 Markdown 后端) |
 
@@ -52,13 +52,13 @@
 - `.mcp.json`:`mcpServers` 声明(`cwd: "."` 解析为安装后的插件根;`env_vars` 透传运行根;工具预先批准——拦截由服务端策略承担)。
 - 设计对应:组件职责对照设计《运行保障合同》的接口表;不承诺设计中尚未验收的能力(远端服务、GUI 程序、路径竞态全面覆盖等属后续票)。
 
-## internal/methods/writing-for-agents/(内部通用方法)
+## internal/methods/(内部通用方法)
 
 - 来源:`github.com/mattpocock/skills`,仓库许可证 MIT(副本见 [licenses/mattpocock-skills-LICENSE.txt](licenses/mattpocock-skills-LICENSE.txt),版权 `Copyright (c) 2026 Matt Pocock`)。
-- 版本:上游 `main` 分支,最近触及该技能目录的提交 `321658273cb1d20b76026717d027d505790106d4`(2026-08-19,"Remove all em-dashes from the repo")。
-- 收录文件:`SKILL.md`、`SKILL-MECHANICS.md`、`agents/openai.yaml`,均为逐字节副本,与上游及本机 `~/.agents/skills/writing-for-agents/` 副本指纹一致(见 fingerprints.json)。
-- 适配说明:作为包内固定版本方法由业务步骤按条件读取,**不注册为公共技能入口**(不在 `skills/` 下);其 `agents/openai.yaml` 中的界面元数据随文件保留,不产生注册效果。`SKILL-MECHANICS.md` 中关于"user-invoked Skill 不能被其他 Skill 调用"的客户端机械规则,按设计《内部通用方法的最小依赖闭包》的适配结论执行:业务入口使用宿主已核实的调用契约,内部方法通过包内路径引用加载。
-- 选择理由(任务票 01 记录):共同合同要求文档写入步骤加载 writing-for-agents;Game-Status 的合同写入路径(同步管理记录)以其为必需方法,故最小包先随包提供该方法。
+- `writing-for-agents/`(任务票 01 收录):上游 `main` 分支,最近触及该技能目录的提交 `321658273cb1d20b76026717d027d505790106d4`(2026-08-19,"Remove all em-dashes from the repo")。收录文件:`SKILL.md`、`SKILL-MECHANICS.md`、`agents/openai.yaml`,均为逐字节副本,与上游及本机 `~/.agents/skills/writing-for-agents/` 副本指纹一致。
+- `grill-with-docs/`、`grilling/`、`domain-modeling/`(含 `CONTEXT-FORMAT.md`、`ADR-FORMAT.md`)、`wayfinder/`、`research/`(任务票 06 收录,共 12 文件):本机 `~/.agents/skills/` 对应目录逐字节副本(diff 为空);指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录的 SHA-256 全部一致。上游提交级核对未在本票重复执行(本机无上游 git 工作副本),以上游仓库当前发布内容为准。
+- 适配说明:全部作为包内固定版本方法由业务步骤按条件读取,**不注册为公共技能入口**(不在 `skills/` 下);其 `agents/openai.yaml` 中的界面元数据随文件保留,不产生注册效果。按依赖闭包研究的适配结论执行内部加载:业务入口使用宿主已核实的调用契约,内部方法通过包内路径引用加载;domain-modeling 的 CONTEXT/ADR 默认落点与 wayfinder 的 tracker/研究分支落点,由 Game-Design/Game-Spec 解析到项目 CONFIG 映射的位置并经 mgs-gate 写入,不自行改变治理文件、专业文档归属或 Git 授权。
+- 选择理由(任务票 06 记录):设计技能合同指定 Game-Design 局部需求复用 grill-with-docs、多项未决问题复用 wayfinder(其研究分支配合 research,grill-with-docs 组合 grilling 与 domain-modeling),故设计入口随包提供该闭包。
 
 ## 已核对事项
 
@@ -68,5 +68,5 @@
 
 ## 未包含
 
-- 其余五项通用方法(wayfinder、grilling、domain-modeling、research、grill-with-docs)及条件参考(prototype、code-review):按依赖闭包研究属后续票按需随包,当前最小包的已实现入口不引用它们。
+- 其余条件参考(prototype 三件套、code-review):按依赖闭包研究属可选固定参考,当前已实现入口不引用它们;原型验证走已实现的 Game-Prototype 入口。
 - 设计文档 proposals/research/issues 的其余文件:不在包内,合同适配版中以"不随包"文字引用。
