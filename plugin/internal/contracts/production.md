@@ -1,4 +1,4 @@
-> 包内适配版(mygamestudio 0.2.0,任务票 02)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/production.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
+> 包内适配版(mygamestudio 0.2.0 建立,任务票 09 更新包内说明)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/production.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
 
 # 制作技能合同
 
@@ -48,4 +48,4 @@
 
 ## 包内说明
 
-当前最小包(任务票 02)随包提供 Game-Code 的最小实现(正式工程受控写入);Game-Implement、Game-Art、Game-Audio、Game-Build 待后续任务票实现。实际写入一律经运行保障通道,见[受控写入协议](../protocols/gate-protocol.md)。
+当前最小包(任务票 09)随包提供 Game-Implement 的组织工作流(接手当前任务、组织专业工作、必要技术设计、集成与验证、结果交接)与 Game-Code 的完整代码工作流(实际任务与基线读取、技术设计细化、受控代码写入、匹配风险的行为检查与结果证据);Game-Art、Game-Audio、Game-Build 待后续任务票实现,已实现入口不伪装调用它们。实际写入一律经运行保障通道,见[受控写入协议](../protocols/gate-protocol.md)。

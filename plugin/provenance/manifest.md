@@ -1,10 +1,10 @@
-# mygamestudio 0.8.0 来源与许可追溯
+# mygamestudio 0.9.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01-08)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-09)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.8.0`(任务票 08:新增 Game-Plan 规格拆单入口——当前及近期原子任务、任务字段全集、五类分流、真实依赖与写入协调、重复拆解防护、统一接口回读;`records/mgs_records.py` 扩展依赖解析/循环检测与当前可开工集合;任务票 01-07 建立的其余结构不变)。
+- 名称:`mygamestudio`,版本 `0.9.0`(任务票 09:新增 Game-Implement 组织入口——接手当前任务、组织专业工作、必要技术设计、集成与验证、结果交接,并声明尚未实现的专业入口不伪装调用、不接管项目总体目标;Game-Code 由最小入口升级为完整代码工作流——实际任务与基线读取、技术设计细化、受控代码写入、匹配风险的行为检查与结果证据、未运行检查明确列出;任务票 01-08 建立的其余结构不变)。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
@@ -17,7 +17,7 @@
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
 | `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;任务票 06 更新:grill-with-docs/wayfinder 改链包内方法路径,文末"包内说明"注明 Game-Design/Game-Spec 最小入口已实现;任务票 07 更新:"包内说明"注明 Game-Prototype 完整原型工作流已实现 |
-| `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Code 最小入口 |
+| `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;任务票 09 更新文末"包内说明"为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流(Art/Audio/Build 待后续) |
 | `project-configuration.md` | 设计仓库 `contracts/project-configuration.md` | 任务票 04 新增;原文无外链,按包内现状补写文末"包内说明"(仅实现本地 Markdown 后端) |
 
 适配原则:不重写语义;所有改写点限于链接可达性与包内现状声明。更新这些文件时先对照设计仓库当前版本,再更新本 manifest 与 fingerprints.json。

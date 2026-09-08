@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.8.0 (任务票 08 最小包)",
+  "generated_for": "mygamestudio 0.9.0 (任务票 09 最小包)",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -22,8 +22,8 @@
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "86dd244e2a5e8d5fc36a1690268f4a1a40d70aa08695540253e58acdeca114b1",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版)",
+      "sha256": "f12d3551ed65af6fa4bc2636c9d55d9c5277214a11a2ed07dd1201dcd327e994",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 02 新增,任务票 09 更新包内说明为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流)",
       "license": "本项目自有内容(MIT)"
     },
     {

@@ -74,13 +74,13 @@ def test_explicit_skills() -> None:
         check(False, "缺少 skills/ 目录")
         return
     expected = [
-        "game-code", "game-design", "game-init", "game-plan",
+        "game-code", "game-design", "game-implement", "game-init", "game-plan",
         "game-producer", "game-prototype", "game-spec", "game-status",
     ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 08 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 09 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -788,6 +788,134 @@ def test_accept08_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(06 验收可复现;08 用夹具覆盖)")
 
 
+def test_production_skills_content() -> None:
+    """任务票 09:Game-Implement 组织入口与 Game-Code 完整工作流的依据与纪律。"""
+
+    impl = PLUGIN_ROOT / "skills" / "game-implement" / "SKILL.md"
+    check(impl.is_file(), "缺少 skills/game-implement/SKILL.md")
+    if impl.is_file():
+        text = impl.read_text(encoding="utf-8")
+        for ref in (
+            "../../internal/contracts/production.md",
+            "../../internal/contracts/common.md",
+            "../../internal/contracts/records.md",
+            "../../internal/protocols/gate-protocol.md",
+            "../../internal/methods/writing-for-agents/SKILL.md",
+            "../../templates/work/result.md",
+        ):
+            check(ref in text, f"game-implement SKILL.md 应引用包内依据 {ref}")
+        for concept in (
+            "当前任务",          # 输入:当前任务(引用或从可开工集合选取)
+            "统一接口",          # 经 mgs_records 读取任务/依赖/可开工
+            "允许修改范围",      # 开工前核对修改范围
+            "实际配置",          # 实现方法来自项目实际配置
+            "默认引擎",          # 样例技术选择不成为框架默认引擎
+            "专业技能",          # 组织:选择本任务需要的专业技能
+            "Game-Code",        # 代码路径的专业执行入口
+            "不伪装",            # 尚未实现的专业入口不伪装成已调用能力
+            "技术设计",          # 必要技术方案由制作实现维护
+            "冲突", "交回",      # 产品规则冲突/目标变化记录影响并交回
+            "不自行降低",        # 不自行降低要求
+            "集成",              # 组织集成与集成责任
+            "风险匹配",          # 与变更风险匹配的验证
+            "结果索引",          # 结果交接入口
+            "待验收",            # 独立审查/人工验收未完成保留待验收
+            "总体目标",          # 不接管项目总体目标或排期
+            "mgs_records",       # 统一接口
+            "expected_sha256",   # 更新走版本校验
+        ):
+            check(concept in text, f"game-implement SKILL.md 应覆盖概念:{concept}")
+
+    code = PLUGIN_ROOT / "skills" / "game-code" / "SKILL.md"
+    check(code.is_file(), "缺少 skills/game-code/SKILL.md")
+    if code.is_file():
+        text = code.read_text(encoding="utf-8")
+        for ref in (
+            "../../internal/contracts/production.md",
+            "../../internal/contracts/common.md",
+            "../../internal/contracts/records.md",
+            "../../internal/protocols/gate-protocol.md",
+            "../../internal/methods/writing-for-agents/SKILL.md",
+            "../../templates/work/result.md",
+        ):
+            check(ref in text, f"game-code SKILL.md 应引用包内依据 {ref}")
+        for concept in (
+            "实际任务",          # 读取实际任务而非凭记忆
+            "基线",              # 相关基线与版本
+            "依赖",              # 依赖核对
+            "允许修改范围",      # 修改范围核对(以 mgs_scope 为准)
+            "实际配置",          # 检查方式来自项目实际配置
+            "默认",              # 样例技术选择不成为默认约束
+            "技术设计",          # 必要时形成或细化技术设计
+            "expected_sha256",   # 更新走版本校验
+            "风险匹配",          # 选择与变更风险匹配的检查
+            "行为",              # 行为层检查优先
+            "会话工作区",        # 一次性检查脚本放会话工作区,不进项目
+            "实际运行",          # 检查必须真实运行并记录输出
+            "未运行",            # 未运行的检查明确列出
+            "不虚构",            # 不虚构检查通过
+            "待验收",            # 审查/人工验收未完成保留待验收
+            "成果位置", "适用",  # 结果记录要素
+            "冲突", "交回",      # 产品要求变化交回对应流程
+            "进度", "缺口",      # 失败或中断保存实际进度和缺口
+            "不自动",            # 普通实现不自动提交、推送、发布
+            "受控",              # 新增命令执行路径保持受控
+        ):
+            check(concept in text, f"game-code SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept09_fixture() -> None:
+    """任务票 09:票 08 拆单真实成果注入夹具——02 可独立开工、04 等待 02、
+    03 已收束,供代码任务执行验收使用(两层夹具覆盖,不改样例本体)。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "09-code-task-delivery" / "fixtures"
+    for rel in (
+        "README.md",
+        "docs/mygamestudio/work/02-tide-timer/task.md",
+        "docs/mygamestudio/work/03-gull-round-plan/task.md",
+        "docs/mygamestudio/work/03-gull-round-plan/results/2026-09-08.md",
+        "docs/mygamestudio/work/04-shell-combo/task.md",
+        "docs/mygamestudio/work/05-gull-swoop/task.md",
+        "docs/mygamestudio/work/06-gull-sprite/task.md",
+        "docs/mygamestudio/work/07-warning-cue/task.md",
+        "docs/mygamestudio/work/08-gull-playtest/task.md",
+        "docs/mygamestudio/work/09-future-scope/task.md",
+    ):
+        check((fixtures / rel).is_file(), f"accept-09 夹具缺少 {rel}")
+    task02 = fixtures / "docs/mygamestudio/work/02-tide-timer/task.md"
+    if task02.is_file():
+        text = task02.read_text(encoding="utf-8")
+        check("v2" in text, "夹具 02 应引用 GAME_DESIGN v2(票 08 W2 更新)")
+        check("01-shell-collect" in text and "已完成" in text,
+              "夹具 02 的依赖 01 应为已完成(02 可开工)")
+        check(re.search(r"进度(:|：)待执行", text) is not None,
+              "夹具 02 进度应为待执行(本票执行对象)")
+        check("倒计时" in text, "夹具 02 应为倒计时代码任务")
+    task04 = fixtures / "docs/mygamestudio/work/04-shell-combo/task.md"
+    if task04.is_file():
+        text = task04.read_text(encoding="utf-8")
+        check("02-tide-timer" in text,
+              "夹具 04 应依赖 02(完成 02 才解锁,接续位置真实)")
+    task03 = fixtures / "docs/mygamestudio/work/03-gull-round-plan/task.md"
+    if task03.is_file():
+        text = task03.read_text(encoding="utf-8")
+        check(re.search(r"进度(:|：)已完成", text) is not None,
+              "夹具 03 拆单管理任务应收束为已完成")
+        check("results/2026-09-08.md" in text, "夹具 03 结果索引应引用拆单结果")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("代码任务" in text, "夹具 README 当前请求应指向开工代码任务")
+        check("检查" in text and "证据" in text,
+              "夹具 README 应要求真实验证与可复现证据")
+    # 样例本体保持 v1 未动(06/07/08 验收可复现;09 用夹具覆盖)
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        check("基线版本:v1" in sample_design.read_text(encoding="utf-8"),
+              "samples/tide-pool 本体应保持 v1(09 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -808,6 +936,8 @@ def main() -> int:
     test_accept07_fixture()
     test_game_plan_skill_content()
     test_accept08_fixture()
+    test_production_skills_content()
+    test_accept09_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

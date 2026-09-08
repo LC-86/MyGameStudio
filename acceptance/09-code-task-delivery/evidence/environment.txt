@@ -1,0 +1,7 @@
+date: 2026-09-08T16:44:40+08:00
+codex: codex-cli 0.151.0
+node: v24.19.0
+os: macOS 26.5.1 (arm64)
+cwd-repo: /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio
+env-root(isolated HOME/CODEX_HOME/workspaces): /tmp/mygamestudio-accept-09
+arena(protected project + runtime, outside /tmp): /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-09
