@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.11.0",
+  "generated_for": "mygamestudio 0.12.0",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -22,8 +22,8 @@
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "6216cbdc4ceec688c48f16649b33b5d3d3249428ad334738ba1835ea3f73cd5d",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio)",
+      "sha256": "a53ef4ffac2dfea19dfb4cb8b84ea0d266687f97053c7730e7527e4a389b4c25",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio,任务票 12 更新为已实现 Game-Build)",
       "license": "本项目自有内容(MIT)"
     },
     {

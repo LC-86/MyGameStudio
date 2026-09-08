@@ -1,10 +1,10 @@
-# mygamestudio 0.11.0 来源与许可追溯
+# mygamestudio 0.12.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01-11)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-12)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.11.0`(任务票 11:新增 Game-Audio 音频资源专业入口——读取声音用途/体验意图/参考/必要格式或时长与输出范围,按项目实际能力选择制作或整理方法(不固定生成服务、引擎或音频类型),可播放性与约定规格检查真实运行并给出播放或接入方式,二进制音频经受控通道 base64 载荷写入,来源或生成依据、接入信息与检查结果落在任务 results/,听感与风格判断依据实际人工反馈且未收到反馈时区分制作完成与验收待定,无能力时报告缺口与可接手材料且不把音频提示词、选曲建议或文字说明标为已完成音频,工具适配与资源策略分离且音频处理工具直接写项目被拒、外部服务或 GUI 不被假定继承本地边界;同票为受控写入通道扩展 content_base64 二进制载荷(同一授权交集、按字节的版本校验与审计,参数错误失效闭合不落盘);任务票 01-10 建立的其余结构不变,原 0.10.0 描述:新增 Game-Art 视觉资源专业入口——读取视觉要求/用途/参考/约定格式与输出范围,按项目实际能力选择工具制作、编辑或整理资源(不固定生成服务、引擎或资源类型),规格检查真实运行并给出可定位预览,来源或生成依据、接入信息与验证证据落在任务 results/,人工审美验收未完成保留待验收,无能力时报告缺口与可接手材料,工具输入输出适配与角色资源策略分离且外部服务或 GUI 不被假定继承本地边界;任务票 01-09 建立的其余结构不变)。
+- 名称:`mygamestudio`,版本 `0.12.0`(任务票 12:新增 Game-Build 构建运行专业入口——读取指定成果或工程版本、当前构建与运行约定、目标格式及可用环境,从项目实际配置确定构建、导出与运行方式并明确输出格式及环境(不硬编码某个引擎或发布平台),实际构建或导出并启动约定入口,记录产物与源成果版本的 SHA-256 对应、日志和运行检查结果,构建脚本及其子进程在会话工作区或系统临时目录运行且输出只写获准位置、产物经 mgs-gate 受控通道写入获准构建输出区,失败、缺依赖、入口不可用或只有旧产物时如实报告且不把存在文件等同于本次构建成功,普通构建不自行上传、签名发布、部署或购买服务,必要工程配置变更保留技术依据并同步技术设计,结果与缺口落在任务 results/ 供 Review、Playtest 与后续集成读取且不启动完整试玩流程;同票把 game-implement 技能中「尚未实现的专业入口」示例清单同步为已实现现状(Art/Audio/Build 已实现,余 Review/Playtest);任务票 01-11 建立的其余结构不变,原 0.11.0 描述:新增 Game-Audio 音频资源专业入口与受控通道 content_base64 二进制载荷(同一授权交集、按字节的版本校验与审计,参数错误失效闭合不落盘),此处不再展开)。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
@@ -17,7 +17,7 @@
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
 | `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;任务票 06 更新:grill-with-docs/wayfinder 改链包内方法路径,文末"包内说明"注明 Game-Design/Game-Spec 最小入口已实现;任务票 07 更新:"包内说明"注明 Game-Prototype 完整原型工作流已实现 |
-| `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;任务票 09 更新文末"包内说明"为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流;任务票 10 更新为已实现 Game-Art 视觉资源工作流;任务票 11 更新为已实现 Game-Audio 音频资源工作流(Build 待后续) |
+| `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;任务票 09 更新文末"包内说明"为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流;任务票 10 更新为已实现 Game-Art 视觉资源工作流;任务票 11 更新为已实现 Game-Audio 音频资源工作流;任务票 12 更新为已实现 Game-Build 构建运行工作流(Review/Playtest 待后续) |
 | `project-configuration.md` | 设计仓库 `contracts/project-configuration.md` | 任务票 04 新增;原文无外链,按包内现状补写文末"包内说明"(仅实现本地 Markdown 后端) |
 
 适配原则:不重写语义;所有改写点限于链接可达性与包内现状声明。更新这些文件时先对照设计仓库当前版本,再更新本 manifest 与 fingerprints.json。

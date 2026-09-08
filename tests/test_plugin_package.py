@@ -74,14 +74,14 @@ def test_explicit_skills() -> None:
         check(False, "缺少 skills/ 目录")
         return
     expected = [
-        "game-art", "game-audio", "game-code", "game-design", "game-implement",
-        "game-init", "game-plan", "game-producer", "game-prototype",
-        "game-spec", "game-status",
+        "game-art", "game-audio", "game-build", "game-code", "game-design",
+        "game-implement", "game-init", "game-plan", "game-producer",
+        "game-prototype", "game-spec", "game-status",
     ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 11 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 12 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -1147,6 +1147,167 @@ def test_accept11_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(11 用夹具覆盖)")
 
 
+def test_game_build_skill_content() -> None:
+    """任务票 12:Game-Build 构建运行工作流的包内依据与关键纪律。"""
+
+    build = PLUGIN_ROOT / "skills" / "game-build" / "SKILL.md"
+    check(build.is_file(), "缺少 skills/game-build/SKILL.md")
+    if not build.is_file():
+        return
+    text = build.read_text(encoding="utf-8")
+    for ref in (
+        "../../internal/contracts/production.md",
+        "../../internal/contracts/common.md",
+        "../../internal/contracts/records.md",
+        "../../internal/protocols/gate-protocol.md",
+        "../../internal/methods/writing-for-agents/SKILL.md",
+        "../../templates/work/result.md",
+    ):
+        check(ref in text, f"game-build SKILL.md 应引用包内依据 {ref}")
+    for concept in (
+        "指定成果或工程版本",  # 输入:构建对象有明确版本
+        "构建与运行约定",      # 输入:当前约定(来自项目实际配置)
+        "目标格式",            # 输入:输出格式及环境
+        "可用环境",            # 输入:可用环境
+        "实际配置",            # 构建方式从项目实际配置读取
+        "不硬编码",            # 不硬编码某个引擎或发布平台
+        "输出格式",            # 明确输出格式及环境
+        "实际构建或导出",      # 构建、导出真实发生
+        "约定入口",            # 启动约定入口
+        "版本对应",            # 产物与源成果版本的对应
+        "日志",                # 构建与运行日志
+        "运行检查",            # 运行检查结果
+        "不把存在文件等同于本次构建成功",  # 旧产物/存在文件不算成功
+        "旧产物",              # 同上(缺依赖/入口不可用/只有旧产物如实报告)
+        "入口不可用",          # 同上
+        "子进程",              # 构建脚本及其子进程在已验证边界内
+        "会话工作区",          # 构建脚本放会话工作区,不进项目
+        "获准",                # 输出只写获准位置(构建输出区)
+        "同步技术设计",        # 约定变化同步技术设计
+        "技术依据",            # 必要工程配置变更保留技术依据
+        "不自行",              # 不自行上传、签名发布、部署或购买服务
+        "上传", "签名", "部署", "购买",  # 外部动作边界
+        "准确目标",            # 需要外部动作时列明准确目标
+        "缺口",                # 缺依赖/缺能力时报告具体缺口
+        "可接手材料",          # 缺口时交付可接手材料
+        "mgs_scope",           # 写入前确认有效范围
+        "允许修改范围",        # 任务范围核对(以 mgs_scope 为准)
+        "expected_sha256",     # 更新走版本校验
+        "content_base64",      # 二进制产物载荷
+        "实际运行",            # 检查必须真实运行并记录输出
+        "待验收",              # 约定审查/试玩未完成保留待验收
+        "Review", "Playtest",  # 结果供审查与试玩读取
+        "试玩流程",            # 不启动完整试玩流程
+        "适配",                # 工具输入输出适配与角色资源策略分离
+        "资源策略",            # 分离的另一侧:策略由运行保障承担
+        "不被假定",            # 外部构建服务或 GUI 不被假定继承本地边界
+        "继承本地边界",        # 外部写入通路未验证不视为已受控
+        "results/",            # 结果落点
+        "进度",                # 任务进度与分流归统筹,直接调用不改
+        "不自动",              # 不自动提交、推送、发布
+        "受控",                # 新增命令执行路径保持受控
+        "mgs_records",         # 统一接口
+    ):
+        check(concept in text, f"game-build SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept12_fixture() -> None:
+    """任务票 12:构建约定与可玩成果任务注入夹具——TECH_DESIGN v3 构建与导出
+    约定、CONFIG v4 构建运行能力、11-playable-build 可独立开工,供构建运行
+    任务执行验收使用(五层夹具覆盖,不改样例本体)。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "12-build-and-run-delivery" / "fixtures"
+    for rel in (
+        "README.md",
+        "docs/mygamestudio/TECH_DESIGN.md",
+        "docs/mygamestudio/CONFIG.md",
+        "docs/mygamestudio/work/11-playable-build/task.md",
+        "docs/mygamestudio/work/10-warning-sfx/task.md",
+        "docs/mygamestudio/work/10-warning-sfx/results/2026-09-08.md",
+        "assets/audio/gull_warning_rise.wav",
+    ):
+        check((fixtures / rel).is_file(), f"accept-12 夹具缺少 {rel}")
+    task10 = fixtures / "docs" / "mygamestudio" / "work" / "10-warning-sfx" / "task.md"
+    if task10.is_file():
+        text = task10.read_text(encoding="utf-8")
+        check(re.search(r"进度(:|：)待验收", text) is not None,
+              "夹具 10 进度应为待验收(票 11 终态承接,退出可开工集合)")
+    tech = fixtures / "docs" / "mygamestudio" / "TECH_DESIGN.md"
+    if tech.is_file():
+        text = tech.read_text(encoding="utf-8")
+        check("基线版本:v3" in text, "夹具 TECH_DESIGN 应为构建约定轮的 v3")
+        check("构建与导出" in text, "夹具 TECH_DESIGN v3 应含构建与导出约定")
+        check("build/" in text and "build/index.html" in text,
+              "夹具 TECH_DESIGN v3 应约定构建产物区 build/ 与入口 build/index.html")
+        check("字节一致" in text,
+              "夹具 TECH_DESIGN v3 应约定组装式导出为字节一致副本")
+        check("不引入" in text and "工具链" in text,
+              "夹具 TECH_DESIGN v3 应声明不为构建引入新工具链")
+        check("SHA-256" in text, "夹具 TECH_DESIGN v3 应约定版本对应留底(SHA-256)")
+        check("无头冒烟" in text and "node" in text,
+              "夹具 TECH_DESIGN v3 应约定无头冒烟检查方式")
+        check("http.server" in text or "静态服务" in text,
+              "夹具 TECH_DESIGN v3 应约定静态服务取回检查方式")
+        check("未被引用" in text and "assets" in text,
+              "夹具 TECH_DESIGN v3 应约定未被引用的 assets 源文件不进产物")
+    config = fixtures / "docs" / "mygamestudio" / "CONFIG.md"
+    if config.is_file():
+        text = config.read_text(encoding="utf-8")
+        check("配置版本:v4" in text, "夹具 CONFIG 应为补齐构建运行能力后的 v4")
+        check("node" in text and "http.server" in text,
+              "夹具 CONFIG v4 应记录本机构建运行能力(node 冒烟、python3 静态服务)")
+        check("build/" in text, "夹具 CONFIG v4 应把构建产物区 build/ 纳入执行条件")
+        check(re.search(r"尚未就绪的能力及影响\s*[:：]\s*无", text) is not None,
+              "夹具 CONFIG v4 的尚未就绪能力应清空(构建运行能力已补齐)")
+    task11 = fixtures / "docs" / "mygamestudio" / "work" / "11-playable-build" / "task.md"
+    if task11.is_file():
+        text = task11.read_text(encoding="utf-8")
+        check("任务身份:11-playable-build" in text or "任务身份：11-playable-build" in text,
+              "夹具任务身份应为 11-playable-build")
+        check(re.search(r"进度(:|：)待执行", text) is not None,
+              "夹具任务进度应为待执行(本票执行对象)")
+        for field in ("当前目标", "输入与基线", "本次交付", "允许修改范围",
+                      "所需能力", "完成标准", "执行责任", "验收方式", "依赖"):
+            check(f"- {field}" in text, f"夹具任务工作请求应含字段 {field}")
+        check("依赖:无" in text or "依赖：无" in text,
+              "夹具任务应无依赖(当前状态可独立构建,可开工)")
+        check("TECH_DESIGN v3" in text,
+              "夹具任务应引用 TECH_DESIGN v3(构建与导出约定,当前版本)")
+        check("GAME_DESIGN v3" in text,
+              "夹具任务应引用 GAME_DESIGN v3(当前版本,避免基线漂移)")
+        check("build/" in text and "build/index.html" in text,
+              "夹具任务输出位置应在 build/(入口 build/index.html)")
+        check("SHA-256" in text or "哈希" in text,
+              "夹具任务应要求产物与源文件的版本对应留底")
+        check("冒烟" in text, "夹具任务应要求无头冒烟运行检查")
+        check("src/" in text and "不修改" in text,
+              "夹具任务允许修改范围应排除 src/(构建不改源)")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("构建" in text or "打包" in text or "导出" in text,
+              "夹具 README 当前请求应指向可玩成果构建")
+        check("11-playable-build" in text, "夹具 README 应引用任务身份 11-playable-build")
+        check("ready" in text, "夹具 README 应说明选任务以统一接口 ready 输出为准")
+    # 承接票 11 终态的文件与验收终态逐字节一致(取自 .tmp/accept-11 未改动)
+    arena = REPO_ROOT / ".tmp" / "accept-11" / "projects" / "tide-pool"
+    for rel in (
+        "docs/mygamestudio/work/10-warning-sfx/task.md",
+        "docs/mygamestudio/work/10-warning-sfx/results/2026-09-08.md",
+        "assets/audio/gull_warning_rise.wav",
+    ):
+        arena_file = arena / rel
+        if arena_file.is_file() and (fixtures / rel).is_file():
+            check((fixtures / rel).read_bytes() == arena_file.read_bytes(),
+                  f"accept-12 夹具 {rel} 应与票 11 终态逐字节一致")
+    # 样例本体保持 v1 未动(既有票验收可复现;12 用夹具覆盖)
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        check("基线版本:v1" in sample_design.read_text(encoding="utf-8"),
+              "samples/tide-pool 本体应保持 v1(12 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -1173,6 +1334,8 @@ def main() -> int:
     test_accept10_fixture()
     test_game_audio_skill_content()
     test_accept11_fixture()
+    test_game_build_skill_content()
+    test_accept12_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:
