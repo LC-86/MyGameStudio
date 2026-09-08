@@ -14,4 +14,5 @@
 
 - `role-scope-demo/`(票 02):金币跑者三角色三用途资源范围样例,含故意越权的任务文本声明;见 `acceptance/02-role-scoped-write/`。
 - `stardust-dash/`(票 04):新项目初始化目标——只有开发者 README(已定/未定事实与首个小任务请求),无任何 docs/mygamestudio 结构,供 Game-Init 从零探查;见 `acceptance/04-initialize-local-project/`。
+- `nebula-drift/`(票 05):已有项目接手目标——含代码(src,实现 WASD 与二段推进)、资源、工程配置、旧文档(DESIGN_NOTES 已采纳「仅方向键/单次推进」,与实现真实矛盾)、混合职责 HANDBOOK 与旧格式本地任务 tasks/,无 docs/mygamestudio 结构;见 `acceptance/05-adopt-existing-project/`。
 

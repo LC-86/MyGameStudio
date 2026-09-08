@@ -1,10 +1,10 @@
-# mygamestudio 0.4.0 来源与许可追溯
+# mygamestudio 0.5.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01-04)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-05)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.4.0`(任务票 04:新增 Game-Init 初始化入口、随包模板与本地 Markdown 任务后端统一接口)。
+- 名称:`mygamestudio`,版本 `0.5.0`(任务票 05:Game-Init 扩展已有项目接手路径——只读现状分析、复用与补齐、混合文档拆分、中断恢复/重复运行与模板升级;任务票 04 建立的其余结构不变)。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
@@ -13,7 +13,7 @@
 | 文件 | 来源 | 适配说明 |
 | --- | --- | --- |
 | `common.md` | 设计仓库 `contracts/common.md` | 仅将指向未随包设计文档的链接改为文字引用(标注"不随包");补写 writing-for-agents 的包内路径。语义与设计一致 |
-| `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;任务票 04 起 Game-Init 节改链包内协作配置合同与初始化流程,文末"包内说明"更新为已实现 Game-Init 新项目入口 |
+| `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;任务票 04 起 Game-Init 节改链包内协作配置合同与初始化流程;任务票 05 更新文末"包内说明"为已实现新项目初始化与已有项目接手入口 |
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
 | `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;文末"包内说明"注明仅实现 Game-Prototype 最小入口 |
@@ -26,7 +26,7 @@
 
 | 文件 | 来源 | 适配说明 |
 | --- | --- | --- |
-| `project-onboarding.md` | 设计仓库 `proposals/project-onboarding.md` | 指向未随包 issues 的链接改为文字引用;文末"包内说明"声明已实现范围(新项目 + 本地 Markdown) |
+| `project-onboarding.md` | 设计仓库 `proposals/project-onboarding.md` | 指向未随包 issues 的链接改为文字引用;文末"包内说明"声明已实现范围(任务票 04:新项目 + 本地 Markdown;任务票 05 更新:增加已有项目接手路径) |
 | `project-layout.md` | 设计仓库 `proposals/project-layout.md` | 链接适配:运行保障合同改为包内受控写入协议的文字对应;模板入口改链包内 `templates/README.md` |
 
 ## templates/(项目模板,任务票 04 新增)

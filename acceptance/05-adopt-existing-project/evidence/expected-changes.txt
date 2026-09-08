@@ -1,0 +1,42 @@
+== 基线文件 ==
+./README.md
+./assets/sprites/ship.svg
+./assets/sprites/star.svg
+./docs/DESIGN_NOTES.md
+./docs/HANDBOOK.md
+./docs/TECH_NOTES.md
+./package.json
+./src/index.html
+./src/main.js
+./src/player.js
+./tasks/01-wire-jump/task.md
+./tasks/02-starfield-bg/task.md
+== 终态文件 ==
+./README.md
+./assets/sprites/ship.svg
+./assets/sprites/star.svg
+./docs/DESIGN_NOTES.md
+./docs/HANDBOOK.md
+./docs/TECH_NOTES.md
+./docs/mygamestudio/CONFIG.md
+./docs/mygamestudio/INDEX.md
+./docs/mygamestudio/PROJECT.md
+./docs/mygamestudio/records/onboarding-2026-09-08.md
+./package.json
+./src/index.html
+./src/main.js
+./src/player.js
+./tasks/01-wire-jump/task.md
+./tasks/02-starfield-bg/task.md
+== 新增(计划内:CONFIG/INDEX/PROJECT/接入记录) ==
+./docs/mygamestudio/CONFIG.md
+./docs/mygamestudio/INDEX.md
+./docs/mygamestudio/PROJECT.md
+./docs/mygamestudio/records/onboarding-2026-09-08.md
+== 删除(应为空) ==
+
+== 修改(计划内:README=用户手工,DESIGN_NOTES=设计拆分,两份任务=迁移+升级) ==
+./README.md
+./docs/DESIGN_NOTES.md
+./tasks/01-wire-jump/task.md
+./tasks/02-starfield-bg/task.md

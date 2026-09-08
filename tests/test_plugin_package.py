@@ -304,6 +304,19 @@ def test_templates_and_game_init() -> None:
         check("文档接入就绪" in text and "运行保障就绪" in text,
               "game-init 报告结构应区分文档接入就绪与运行保障就绪")
         check("规格拆单" in text, "game-init 应声明不做规格拆单")
+        # 任务票 05:接手已有项目的技能纪律
+        for concept in (
+            "已有项目",          # 已有项目分析分支
+            "实际行为", "已采纳", "历史内容", "缺口", "冲突", "未验证",  # 六类现状区分
+            "待决定",            # 矛盾交开发者决定
+            "混合",              # 混合职责文档
+            "拆分",              # 拆分或受控应用方案
+            "恢复", "重复运行",   # 中断恢复与重复运行
+            "模板升级",          # 模板升级流程
+        ):
+            check(concept in text, f"game-init SKILL.md 应覆盖接手已有项目概念:{concept}")
+        check("不自动" in text or "不得" in text,
+              "game-init 应明确不自动把实现采纳为产品意图")
 
 
 def test_stardust_dash_fixture() -> None:
@@ -311,6 +324,47 @@ def test_stardust_dash_fixture() -> None:
     check((sample / "README.md").is_file(), "stardust-dash 样例缺少 README.md")
     check(not (sample / "docs").exists(),
           "stardust-dash 是未初始化的新项目样例,不应包含 docs/ 结构")
+
+
+def test_nebula_drift_fixture() -> None:
+    """任务票 05:接手已有项目样例——结构完整且「实现与文档矛盾」真实存在。"""
+
+    sample = REPO_ROOT / "samples" / "nebula-drift"
+    for rel in (
+        "README.md", "package.json",
+        "src/index.html", "src/main.js", "src/player.js",
+        "assets/sprites/ship.svg", "assets/sprites/star.svg",
+        "docs/DESIGN_NOTES.md", "docs/TECH_NOTES.md", "docs/HANDBOOK.md",
+        "tasks/01-wire-jump/task.md", "tasks/02-starfield-bg/task.md",
+    ):
+        check((sample / rel).is_file(), f"nebula-drift 样例缺少 {rel}")
+    if not (sample / "docs" / "DESIGN_NOTES.md").is_file():
+        return
+    check(not (sample / "docs" / "mygamestudio").exists(),
+          "nebula-drift 是未接入的已有项目样例,不应包含 docs/mygamestudio")
+    design = (sample / "docs" / "DESIGN_NOTES.md").read_text(encoding="utf-8")
+    main_js = (sample / "src" / "main.js").read_text(encoding="utf-8")
+    player_js = (sample / "src" / "player.js").read_text(encoding="utf-8")
+    # 矛盾真实存在:设计笔记的已采纳要求 vs 代码实际行为
+    check("仅键盘方向键" in design and "不支持 WASD" in design,
+          "样例设计笔记应包含已采纳的「仅方向键、不支持 WASD」要求")
+    check("单次推进" in design,
+          "样例设计笔记应包含已采纳的「单次推进」要求")
+    check(("KeyW" in main_js or "KeyA" in main_js or "WASD" in main_js),
+          "样例 src/main.js 应实际支持 WASD 输入(与设计要求的矛盾必须真实)")
+    check(("二段" in player_js or "maxJumps" in player_js),
+          "样例 src/player.js 应实际实现二段推进(与设计要求的矛盾必须真实)")
+    # 混合职责文档真实存在:同一文件混合管理/设计/技术内容
+    handbook = (sample / "docs" / "HANDBOOK.md").read_text(encoding="utf-8")
+    for marker in ("当前目标", "玩法规则", "技术备注"):
+        check(marker in handbook, f"样例 HANDBOOK 应包含混合职责标记「{marker}」")
+    # 已有任务为旧格式(未迁移):自有状态词汇,非五类分流
+    for rel in ("tasks/01-wire-jump/task.md", "tasks/02-starfield-bg/task.md"):
+        text = (sample / rel).read_text(encoding="utf-8")
+        check("状态:" in text, f"{rel} 应为旧格式任务记录(状态: 行)")
+        check("当前分流:" not in text, f"{rel} 不应已是迁移后格式")
+    check("进行中" in (sample / "tasks" / "01-wire-jump" / "task.md").read_text(encoding="utf-8"),
+          "任务 01 应为进行中(其进行中工作正是矛盾来源之一)")
 
 
 def main() -> int:
@@ -324,6 +378,7 @@ def main() -> int:
     test_records_backend_module()
     test_templates_and_game_init()
     test_stardust_dash_fixture()
+    test_nebula_drift_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

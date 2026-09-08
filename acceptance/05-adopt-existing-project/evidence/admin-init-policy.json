@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "policy": {
+    "version": 1,
+    "project_root": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-05/projects/nebula-drift",
+    "roles": {
+      "producer": {
+        "resources": [
+          "docs/mygamestudio/INDEX.md",
+          "docs/mygamestudio/CONFIG.md",
+          "docs/mygamestudio/PROJECT.md",
+          "docs/mygamestudio/records/**",
+          "tasks/*/task.md"
+        ]
+      },
+      "design": {
+        "resources": [
+          "docs/DESIGN_NOTES.md"
+        ]
+      },
+      "implement": {
+        "resources": [
+          "docs/TECH_NOTES.md",
+          "src/**"
+        ]
+      }
+    },
+    "purposes": {
+      "production": {
+        "restrict": null
+      }
+    }
+  }
+}

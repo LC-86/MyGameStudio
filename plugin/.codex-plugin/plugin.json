@@ -1,7 +1,7 @@
 {
   "name": "mygamestudio",
-  "version": "0.4.0",
-  "description": "MyGameStudio 独立游戏开发工作流插件(最小验证包:Game-Status 状态检查 + 统筹/代码/原型三个受控写入入口 + 间接写入与检查故障失效闭合 + Game-Init 新项目本地初始化)",
+  "version": "0.5.0",
+  "description": "MyGameStudio 独立游戏开发工作流插件(最小验证包:Game-Status 状态检查 + 统筹/代码/原型三个受控写入入口 + 间接写入与检查故障失效闭合 + Game-Init 新项目初始化与已有项目接手)",
   "author": {
     "name": "MyGameStudio"
   },
@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "MyGameStudio",
     "shortDescription": "独立游戏开发工作流(最小验证包)",
-    "longDescription": "任务票 01-04 的最小插件包:Game-Status 显式状态检查;Game-Producer/Game-Code/Game-Prototype 三个显式入口经 mgs-gate 受控写入通道完成角色受限的项目写入(角色、任务、用途与实际授权取交集,允许与拒绝均留审计记录);写入落点锚定到目录描述符防路径竞态,策略缺失/损坏、审计不可用、通道故障一律失效闭合;Game-Init 显式初始化入口按清单确认后建立新项目的协作配置、核心文档与本地任务记录,并经统一接口回读核验。其余业务入口在后续任务票中补齐。",
+    "longDescription": "任务票 01-05 的最小插件包:Game-Status 显式状态检查;Game-Producer/Game-Code/Game-Prototype 三个显式入口经 mgs-gate 受控写入通道完成角色受限的项目写入(角色、任务、用途与实际授权取交集,允许与拒绝均留审计记录);写入落点锚定到目录描述符防路径竞态,策略缺失/损坏、审计不可用、通道故障一律失效闭合;Game-Init 显式初始化入口按清单确认后建立新项目的协作配置、核心文档与本地任务记录,并可接手已有项目(只读分析、复用有效资料、混合文档拆分、中断恢复、重复运行与模板升级),经统一接口回读核验。其余业务入口在后续任务票中补齐。",
     "developerName": "MyGameStudio",
     "category": "Productivity",
     "capabilities": [

@@ -1,6 +1,6 @@
 # 项目接入与初始化流程
 
-> 包内适配版(mygamestudio 0.4.0,任务票 04)。来源:插件设计仓库 `.scratch/mygamestudio-framework/proposals/project-onboarding.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
+> 包内适配版(mygamestudio 0.5.0,任务票 04 新增、05 更新说明)。来源:插件设计仓库 `.scratch/mygamestudio-framework/proposals/project-onboarding.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
 
 状态:接入策略、清单确认、恢复与重复运行规则已由用户在 Q32–Q34 确认。
 
@@ -54,4 +54,4 @@
 
 ---
 
-包内说明(任务票 04):本包已实现「新项目 + 本地 Markdown」路径;接手已有项目的深度分析与迁移、后端切换属任务票 05+,未实现不声称。包内统一回读接口为 `records/mgs_records.py`。
+包内说明(任务票 05 更新):本包已实现「新项目 + 本地 Markdown」与「接手已有项目 + 本地 Markdown」两条路径——只读现状分析(六类区分)、复用有效资料与任务来源、混合职责文档拆分、中断恢复、重复运行与模板升级;任务后端切换迁移与 GitHub Issues 后端属后续任务票,未实现不声称。包内统一回读接口为 `records/mgs_records.py`。

@@ -16,8 +16,8 @@
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "5144f12eaca149f66663e603eed0650541220baf2dd70d3b4f04ec698f9879d1",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径并更新包内说明)",
+      "sha256": "c946b69f3d43a7803d21b694740b36b95963c0dd3abf994ab47056da01714797",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -70,8 +70,8 @@
     },
     {
       "path": "internal/proposals/project-onboarding.md",
-      "sha256": "9120b9df24e8536d3afaa8f9a01e499d2f77223a046ad9310b2270a441f6e05e",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/project-onboarding.md(适配版,任务票 04 随包)",
+      "sha256": "8f85b3d7ec94f5a213f93113173ad6acb2ca43898f702b9d2654f023eabb2c0e",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/project-onboarding.md(适配版,任务票 04 随包,任务票 05 更新包内说明为已实现接手路径)",
       "license": "本项目自有内容(MIT)"
     },
     {
