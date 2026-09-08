@@ -593,6 +593,155 @@ def test_cli_deps_and_ready() -> None:
         check(result.returncode == 1, "CLI deps 存在未解析依赖应以退出码 1 表达")
 
 
+# ---------- 基线内容指纹与受影响任务(任务票 15) ----------
+
+FP_LINES = "内容指纹:sha256:{fp}。归一指纹:sha256:{np}。\n"
+
+
+def _register_fingerprint(path: Path, header_anchor: str) -> None:
+    """按技能登记纪律为一份基线登记双指纹(与实现同一规范化口径)。
+
+    登记方法:两条指纹先写 64 个 0(规范化后与占位等价),对全文分别计算
+    空白敏感指纹与空白归一指纹,把结果填回。
+    """
+
+    text = path.read_text(encoding="utf-8")
+    zeros = "0" * 64
+    marked = text.replace(header_anchor,
+                          header_anchor + FP_LINES.format(fp=zeros, np=zeros))
+    strict = mgs_records._canonical_fingerprint(marked)
+    norm = mgs_records._normalized_fingerprint(marked)
+    path.write_text(marked.replace(
+        FP_LINES.format(fp=zeros, np=zeros),
+        FP_LINES.format(fp=strict, np=norm)), encoding="utf-8")
+
+
+def test_baseline_report_states() -> None:
+    """内容指纹四态:一致/指纹未登记/格式修正漂移/实质变更漂移(任务票 15)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio"
+        # GAME_DESIGN:声明 v4 并登记指纹
+        design = docs / "GAME_DESIGN.md"
+        design.write_text(
+            "# 当前游戏需求与设计\n\n维护责任:方案设计。基线版本:v4。\n"
+            "\n- 回合时长 45 秒,结束即结算\n", encoding="utf-8")
+        _register_fingerprint(design, "基线版本:v4。")
+        report = mgs_records.baseline_report(root)
+        states = {d["path"].split("/")[-1]: d["status"] for d in report["docs"]}
+        check(states.get("GAME_DESIGN.md") == "一致",
+              f"登记指纹且内容未变应为一致,实际 {states}")
+        check(report["ok"] is True, "无实质变更时 baseline 应 ok")
+
+        # PROJECT 未登记指纹 → 指纹未登记(不判漂移)
+        check(states.get("PROJECT.md") == "指纹未登记",
+              f"未登记指纹的基线应报指纹未登记,实际 {states}")
+
+        # 格式修正(仅空白变化,无字符增删)→ 疑似格式修正,不作废(ok 保持)
+        design.write_text(
+            design.read_text(encoding="utf-8").replace(
+                "- 回合时长 45 秒,结束即结算\n",
+                "- 回合时长 45 秒,\t结束即结算\n"), encoding="utf-8")
+        report = mgs_records.baseline_report(root)
+        states = {d["path"].split("/")[-1]: d["status"] for d in report["docs"]}
+        check(states.get("GAME_DESIGN.md") == "内容已变(疑似格式修正)",
+              f"仅空白变化应判疑似格式修正,实际 {states}")
+        check(report["ok"] is True, "格式修正不应判为需要重审(ok 应保持 True)")
+
+        # 实质变更(字符增删,版本号未同步)→ 实质变更,ok False
+        design.write_text(
+            design.read_text(encoding="utf-8").replace(
+                "回合时长 45 秒", "回合时长 50 秒"), encoding="utf-8")
+        report = mgs_records.baseline_report(root)
+        states = {d["path"].split("/")[-1]: d["status"] for d in report["docs"]}
+        check(states.get("GAME_DESIGN.md") == "内容已变(实质变更)",
+              f"字符实质变化应判实质变更,实际 {states}")
+        check(report["ok"] is False, "存在实质变更未同步时 baseline 不应 ok")
+
+        # 文件缺失 → 文件缺失
+        (docs / "TECH_DESIGN.md").unlink()
+        report = mgs_records.baseline_report(root)
+        states = {d["path"].split("/")[-1]: d["status"] for d in report["docs"]}
+        check(states.get("TECH_DESIGN.md") == "文件缺失",
+              f"核心基线文件缺失应如实报告,实际 {states}")
+
+
+def test_baseline_report_affected_tasks() -> None:
+    """受影响任务识别:引用旧版本即列出;已完成/待验收保留完成事实语义。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio"
+        design = docs / "GAME_DESIGN.md"
+        design.write_text("# 当前游戏需求与设计\n\n基线版本:v4。\n", encoding="utf-8")
+        work = docs / "work"
+        (work / "05-gull-swoop").mkdir(parents=True)
+        (work / "05-gull-swoop" / "task.md").write_text(PLAN_TASK_TEMPLATE.format(
+            title="海鸥俯冲", identity="05-gull-swoop", triage="ready-for-agent",
+            progress="待执行", goal="实现海鸥俯冲", deliver="src 代码", scope="src/**",
+            capability="文件读写", executor="Agent(制作实现)", acceptance="行为检查",
+            deps="无", coordination="无", missing="无", index="(暂无)").replace(
+            "GAME_DESIGN v2「本轮可执行规格」",
+            "GAME_DESIGN v2「当前规则与流程」"), encoding="utf-8")
+        (work / "02-tide-timer").mkdir(parents=True)
+        (work / "02-tide-timer" / "task.md").write_text(PLAN_TASK_TEMPLATE.format(
+            title="潮汐倒计时", identity="02-tide-timer", triage="ready-for-agent",
+            progress="待验收", goal="实现倒计时", deliver="src 代码", scope="src/**",
+            capability="文件读写", executor="Agent(制作实现)", acceptance="行为检查",
+            deps="无", coordination="无", missing="无", index="(暂无)").replace(
+            "GAME_DESIGN v2「本轮可执行规格」",
+            "GAME_DESIGN v2;TECH_DESIGN v1"), encoding="utf-8")
+        (work / "06-fresh").mkdir(parents=True)
+        (work / "06-fresh" / "task.md").write_text(PLAN_TASK_TEMPLATE.format(
+            title="新任务", identity="06-fresh", triage="ready-for-agent",
+            progress="待执行", goal="新任务", deliver="示例", scope="src/**",
+            capability="文件读写", executor="Agent(制作实现)", acceptance="行为检查",
+            deps="无", coordination="无", missing="无", index="(暂无)").replace(
+            "GAME_DESIGN v2「本轮可执行规格」",
+            "GAME_DESIGN v4「当前规则与流程」与 PROJECT.md 当前目标"), encoding="utf-8")
+        report = mgs_records.baseline_report(root)
+        affected = {item["identity"]: item for item in report["affected_tasks"]}
+        check("05-gull-swoop" in affected,
+              f"引用 GAME_DESIGN v2(当前 v4)的任务应列为受影响,实际 {sorted(affected)}")
+        entry = affected.get("05-gull-swoop", {})
+        check(entry.get("ref_version") == "v2" and entry.get("current_version") == "v4",
+              f"受影响条目应记录引用版本与当前版本,实际 {entry}")
+        check(not entry.get("completion_fact"),
+              "待执行任务的受影响条目不应带完成事实说明")
+        check("02-tide-timer" in affected,
+              "待验收任务引用旧版本同样应列为受影响")
+        done_entry = affected.get("02-tide-timer", {})
+        check(done_entry.get("progress") == "待验收"
+              and "保留原版本" in (done_entry.get("completion_fact") or "")
+              and "不自动算作满足新目标" in (done_entry.get("completion_fact") or ""),
+              f"待验收受影响条目应声明完成事实保留语义,实际 {done_entry}")
+        check("06-fresh" not in affected,
+              "引用当前版本或无版本号引用的任务不应列为受影响")
+        check("版本号未同步" in report["note"] or "指纹" in report["note"],
+              "baseline 输出应附处理说明 note")
+
+
+def test_baseline_cli() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        result = run_cli("baseline", "--project", str(root))
+        check(result.returncode == 0,
+              f"CLI baseline 无实质变更应退出 0:{result.stdout[:200]}")
+        data = json.loads(result.stdout)
+        check(isinstance(data.get("docs"), list) and data["docs"],
+              "CLI baseline 应输出 docs 列表")
+        docs = root / "docs" / "mygamestudio"
+        design = docs / "GAME_DESIGN.md"
+        design.write_text("# 当前游戏需求与设计\n\n基线版本:v2。\n- 规则\n",
+                          encoding="utf-8")
+        _register_fingerprint(design, "基线版本:v2。")
+        design.write_text(design.read_text(encoding="utf-8") + "- 新增规则\n",
+                          encoding="utf-8")
+        result = run_cli("baseline", "--project", str(root))
+        check(result.returncode == 1, "CLI baseline 存在实质变更未同步应以退出码 1 表达")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

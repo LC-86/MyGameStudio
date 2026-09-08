@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MyGameStudio 运行保障:可信调度侧管理 CLI(任务票 02)。
+"""MyGameStudio 运行保障:可信调度侧管理 CLI(任务票 02,票 15 扩展)。
 
 策略维护与实例签发通道,与工作实例分离:业务 Skill 在会话内只能通过
 mgs-gate 的 mgs_scope/mgs_write 使用凭据,不能执行本 CLI 的任何操作
@@ -10,6 +10,7 @@ mgs-gate 的 mgs_scope/mgs_write 使用凭据,不能执行本 CLI 的任何操�
   mgsrt_admin.py create-instance --role producer --task T-01 \
       --purpose production --resource docs/mygamestudio/PROJECT.md [--ttl-mins 30]
   mgsrt_admin.py release-instance --id <instance_id>
+  mgsrt_admin.py reclaim-locks --id <instance_id>
   mgsrt_admin.py status
 """
 
@@ -70,6 +71,19 @@ def cmd_release_instance(args: argparse.Namespace) -> int:
     return 0 if result["found"] else 1
 
 
+def cmd_reclaim_locks(args: argparse.Namespace) -> int:
+    """回收旧实例遗留占用(任务票 15)。
+
+    顺序:先撤销旧执行能力(release-instance,或等有效期过去)再回收;
+    实例仍活跃时本操作拒绝并退出码 1。
+    """
+
+    service = GateService(args.runtime_root)
+    result = service.reclaim_locks(args.id)
+    print(json.dumps(result, ensure_ascii=False))
+    return 0 if result["ok"] else 1
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     service = GateService(args.runtime_root)
     instances = service._read_json("instances.json", [])  # noqa: SLF001
@@ -85,7 +99,15 @@ def cmd_status(args: argparse.Namespace) -> int:
             "released": record.get("released", False),
             "expired": now >= record.get("expires_at", 0),
         })
-    print(json.dumps({"instances": summary}, ensure_ascii=False, indent=2))
+    locks = service.list_locks()["locks"]
+    lock_summary = [
+        {"resource": rel, "instance_id": value.get("instance_id"),
+         "since": time.strftime("%Y-%m-%dT%H:%M:%S%z",
+                                time.localtime(value.get("since", 0)))}
+        for rel, value in sorted(locks.items())
+    ]
+    print(json.dumps({"instances": summary, "locks": lock_summary},
+                     ensure_ascii=False, indent=2))
     return 0
 
 
@@ -117,6 +139,11 @@ def main() -> int:
     p_release = sub.add_parser("release-instance")
     p_release.add_argument("--id", required=True)
     p_release.set_defaults(func=cmd_release_instance)
+
+    p_reclaim = sub.add_parser("reclaim-locks")
+    p_reclaim.add_argument("--id", required=True,
+                           help="旧实例 id;须已释放(release-instance)或已过期")
+    p_reclaim.set_defaults(func=cmd_reclaim_locks)
 
     p_status = sub.add_parser("status")
     p_status.set_defaults(func=cmd_status)

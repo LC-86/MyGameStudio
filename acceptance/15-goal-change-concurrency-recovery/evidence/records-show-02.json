@@ -1,0 +1,31 @@
+{
+  "identity": "02-tide-timer",
+  "title": "潮汐倒计时可视化",
+  "triage": "ready-for-agent",
+  "progress": "待验收",
+  "directory": "02-tide-timer",
+  "request": {
+    "当前目标": "把 PROJECT v2 单场景循环的 60 秒潮汐倒计时与结算边界以玩家可读方式呈现。",
+    "输入与基线": "PROJECT v2「当前目标」「本轮成果与安排」；GAME_DESIGN v2「当前规则与流程」「本轮可执行规格」；TECH_DESIGN v1；CONFIG v2；01-shell-collect 已完成结果。",
+    "本次交付": "倒计时提示条、最后 10 秒视觉强调，以及到 0 后停止刷新并进入结算的正式代码路径。",
+    "允许修改范围": "src/main.js、src/index.html；不修改设计、原型、资源与任务记录之外的文件。",
+    "所需能力": "CONFIG v2 已具备纯 HTML/JS、本地文件操作与浏览器手工运行；无需音频制作能力。",
+    "完成标准": "GAME_DESIGN v2 的 60 秒倒计时、到 0 后不再刷新、结算时结束进行中掉落与追回、只结算不判负等边界可逐项核对；提示条随剩余时间缩短且最后 10 秒有明显视觉变化；结果与检查证据写入本任务 results/。",
+    "执行责任": "Agent(制作实现)。",
+    "验收方式": "代码级检查 + 浏览器手工运行；独立审查者核对 GAME_DESIGN v2 的倒计时与结算边界，显示可读性由开发者试玩确认。",
+    "依赖": "01-shell-collect(已完成)。",
+    "依赖与写入协调": "本任务先接手 src/main.js、src/index.html 并保持单一写入者；完成后由 04-shell-combo 接手 src/main.js，05-gull-swoop 最后承担海鸥、连击与倒计时结算边界的集成责任。",
+    "尚缺信息": "无。"
+  },
+  "sections": {
+    "工作请求": true,
+    "结果索引": true,
+    "状态变化": true
+  },
+  "results": [
+    "results/2026-09-08-fix.md",
+    "results/2026-09-08.md"
+  ],
+  "result_index_text": "\n- results/2026-09-08.md：倒计时实现与代码级检查证据；浏览器手工运行、独立审查与开发者试玩待验收。\n\n- evidence/2026-09-08-review-02-tide-timer.md：2026-09-08 独立审查记录，登记明确规则违背、未覆盖项与修复交接。\n- evidence/2026-09-08-recheck-02-tide-timer.md：2026-09-08 修复后独立复核记录，登记 02 修复结论、11 版本对应与仍待人工及环境核对项。\n",
+  "path": "docs/mygamestudio/work/02-tide-timer/task.md"
+}

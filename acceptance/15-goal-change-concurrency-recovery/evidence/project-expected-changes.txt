@@ -1,0 +1,20 @@
+== 新增 ==
+./docs/mygamestudio/records/decision-2026-09-08-round-45s.md
+./docs/mygamestudio/work/12-game-design-v4/task.md
+./docs/mygamestudio/work/15-race-demo/results/expiry-probe.md
+./docs/mygamestudio/work/15-race-demo/results/orphan-probe.md
+./docs/mygamestudio/work/15-race-demo/results/par-a.md
+./docs/mygamestudio/work/15-race-demo/results/par-b.md
+./docs/mygamestudio/work/15-race-demo/results/race.md
+== 删除(应为空) ==
+
+== 修改 ==
+./docs/mygamestudio/GAME_DESIGN.md
+./docs/mygamestudio/PROJECT.md
+./docs/mygamestudio/work/02-tide-timer/task.md
+./docs/mygamestudio/work/04-shell-combo/task.md
+./docs/mygamestudio/work/05-gull-swoop/task.md
+./docs/mygamestudio/work/06-gull-sprite/task.md
+./docs/mygamestudio/work/08-gull-playtest/task.md
+./docs/mygamestudio/work/10-warning-sfx/task.md
+./docs/mygamestudio/work/11-playable-build/task.md

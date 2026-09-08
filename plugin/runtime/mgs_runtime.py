@@ -5,7 +5,8 @@
   令牌只以哈希形式落盘,身份、任务、用途、有效期与撤销状态由登记记录决定。
 - 资源策略:写入目标必须同时落入「角色允许范围 ∩ 任务授权 ∩ 执行用途 ∩ 实际授权」;
   工具参数中的自报身份文本不参与授权。
-- 调度与占用:同一资源同一时间只允许一个活跃实例写入。
+- 调度与占用:同一资源同一时间只允许一个活跃实例写入;占用按规范化后的
+  实际资源标识协调(别名、链接与相对路径写法不改变占用键)。
 - 结果核对:每次 scope/write(无论允许或拒绝)都追加可定位审计记录。
 
 任务票 03 增加的失效闭合与竞态防护:
@@ -16,6 +17,15 @@
   (rule_stage=race);目标非普通文件(管道/目录等)同样拒绝;
 - 落盘后的占用登记或审计追加失败时,已写入字节回滚并拒绝(rule_stage=audit),
   保证「无审计则无生效写入」;拒绝路径的审计追加失败不影响拒绝结果。
+
+任务票 15 增加的占用回收(list_locks/reclaim_locks,可信调度侧):
+- 失联、崩溃或任务到期后,先撤销旧实例的执行能力(release_instance 或等
+  有效期过去),再回收其遗留占用,新执行者方可接管;
+- 仍然活跃的实例(未释放且未过期)的占用不可回收——单写入者不因回收被打破;
+- 逐次写入都重新校验凭据:持续存活的进程在旧授权失效(释放或到期)后
+  不能凭旧令牌或旧占用记录继续写入;
+- 该接缝同时覆盖 release 流程中断在登记与占用两次落盘之间留下的
+  「已释放但仍持有占用」缺口。
 
 本模块只依赖 Python 标准库。MCP 通道与调度 CLI 是它的两个入口。
 """
@@ -258,6 +268,62 @@ class GateService:
                 "basis": {"channel": "trusted scheduler CLI (mgsrt_admin.py)"},
             })
         return {"released": instance_id, "found": found}
+
+    def list_locks(self) -> dict:
+        """回读当前写入占用(可信调度侧核对用)。"""
+
+        with self._locked():
+            locks = self._read_json(LOCKS_FILE, {})
+        return {"locks": locks}
+
+    def reclaim_locks(self, instance_id: str) -> dict:
+        """回收一个旧实例遗留的写入占用(任务票 15)。
+
+        顺序约束(运行保障合同「执行结束释放占用」):先撤销旧执行能力
+        (release_instance,或等待有效期过去),再回收占用。实例仍然活跃
+        (未释放且未过期)时拒绝回收——单写入者不因回收被打破;实例已不能
+        写入(released 或已过期)时,删除其全部占用记录,允许新执行者接管。
+        该接缝同时覆盖 release 流程中断在登记与占用两次落盘之间留下的
+        「已释放但仍持有占用」缺口。
+        """
+
+        with self._locked():
+            records = self._read_json(INSTANCES_FILE, [])
+            record = next((r for r in records
+                           if r.get("instance_id") == instance_id), None)
+            if record is None:
+                result = {"ok": False, "instance_id": instance_id, "found": False,
+                          "active": None, "reclaimed": 0,
+                          "reason": "unknown instance"}
+            elif (not record.get("released")
+                  and time.time() < record.get("expires_at", 0)):
+                result = {"ok": False, "instance_id": instance_id, "found": True,
+                          "active": True, "reclaimed": 0,
+                          "reason": "instance still active: revoke its execution "
+                                    "binding (release-instance) or wait for expiry "
+                                    "before reclaiming occupancy"}
+            else:
+                locks = self._read_json(LOCKS_FILE, {})
+                held = [p for p, v in locks.items()
+                        if v.get("instance_id") == instance_id]
+                for p in held:
+                    locks.pop(p, None)
+                self._write_json(LOCKS_FILE, locks)
+                result = {"ok": True, "instance_id": instance_id, "found": True,
+                          "active": False, "reclaimed": len(held),
+                          "reason": ("occupancy reclaimed; holder can no longer "
+                                     "write (released or expired)")}
+        self._audit({
+            "op": "locks/reclaim",
+            "decision": "record" if result["ok"] else "deny",
+            "rule_stage": "admin",
+            "reason": result["reason"],
+            "instance_id": instance_id, "task": None, "role": "scheduler",
+            "purpose": None, "target": None,
+            "note": {"reclaimed": result["reclaimed"]},
+            "basis": {"channel": "trusted scheduler CLI (mgsrt_admin.py)"},
+        })
+        return result
 
     # ---------- 工作实例侧 ----------
 

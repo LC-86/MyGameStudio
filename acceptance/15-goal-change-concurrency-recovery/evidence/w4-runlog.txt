@@ -1,0 +1,2 @@
+wrote 390 chars to /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/15-goal-change-concurrency-recovery/evidence/w4-report.md
+INTERRUPTED: killed after >= 1 audit allow(s)

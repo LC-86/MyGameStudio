@@ -1571,6 +1571,102 @@ def test_accept14_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(14 用夹具覆盖)")
 
 
+def test_goal_change_skills_content() -> None:
+    """任务票 15:目标变化/并发/中断恢复纪律在 producer/spec/status 的覆盖。"""
+
+    producer = PLUGIN_ROOT / "skills" / "game-producer" / "SKILL.md"
+    check(producer.is_file(), "缺少 skills/game-producer/SKILL.md")
+    if producer.is_file():
+        text = producer.read_text(encoding="utf-8")
+        for concept in (
+            "目标或范围变化",      # 影响检查触发条件
+            "影响检查",            # 先组织影响检查
+            "受影响基线",          # 识别受影响基线
+            "受影响任务",          # 识别受影响任务
+            "重新分流",            # 受影响任务进入重新分流
+            "完成事实",            # 原版本下完成事实保留
+            "不自动算作满足新目标",  # 完成事实不自动算作满足新目标
+            "基线采纳",            # 基线采纳归设计侧,统筹只识别与安排
+            "baseline",            # 统一接口内容指纹核对
+            "疑似格式修正",        # 格式修正分类
+            "不作废",              # 格式修正不作废成果与证据
+            "实质变更",            # 实质变更分类
+            "不自行修改该基线",    # 统筹不代设计修改基线
+            "交回开发者",          # 未确认变更交回开发者
+            "一个有效写入者",      # 单写入者
+            "集成责任",            # 独立资源并行时集成责任明确
+            "occupancy",           # 占用冲突处理
+            "version",             # 版本核对冲突处理
+            "不覆盖他人",          # 不覆盖他人已完成成果
+            "别名",                # 别名不能绕过占用
+            "中断恢复",            # 中断恢复纪律
+            "实际内容为准",        # 以实际文件内容为准
+            "用户修改",            # 用户后续修改保留
+            "只继续仍适用",        # 只继续仍适用的剩余工作
+            "不回滚",              # 不回滚用户修改
+            "mgs_records",         # 统一接口回读
+        ):
+            check(concept in text, f"game-producer SKILL.md 应覆盖概念:{concept}")
+
+    spec = PLUGIN_ROOT / "skills" / "game-spec" / "SKILL.md"
+    if spec.is_file():
+        text = spec.read_text(encoding="utf-8")
+        for concept in (
+            "内容指纹",    # 双指纹之一
+            "归一指纹",    # 双指纹之二
+            "64 个",       # 登记方法(先写 0 再回填)
+            "格式修正",    # 格式修正不触发新版本
+            "同步更新",    # 格式修正同步更新指纹
+            "baseline",    # 登记后经统一接口回读确认
+            "一致",        # 回读确认状态为一致
+        ):
+            check(concept in text, f"game-spec SKILL.md 应覆盖概念:{concept}")
+
+    status_ref = PLUGIN_ROOT / "skills" / "game-status" / "references" / "status-check.md"
+    if status_ref.is_file():
+        text = status_ref.read_text(encoding="utf-8")
+        for concept in (
+            "内容指纹",          # 状态检查核对内容指纹
+            "baseline",          # 经统一接口核对
+            "疑似格式修正",      # 格式修正不影响既有结论
+            "实质变更",          # 实质变更列入依据过时
+            "不自行改判",        # 不自行改判成果与证据有效性
+        ):
+            check(concept in text, f"status-check.md 应覆盖概念:{concept}")
+
+
+def test_accept15_fixture() -> None:
+    """任务票 15:目标变化/并发/中断恢复验收夹具——在票 14 布景之上叠加
+    开发者目标变化请求;承接的漂移事实在夹具栈中真实存在;不改样例本体。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "15-goal-change-concurrency-recovery" / "fixtures"
+    check((fixtures / "README.md").is_file(), "accept-15 夹具缺少 README.md")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("目标变化" in text or "目标或范围变化" in text,
+              "夹具 README 当前请求应为开发者目标变化请求")
+        check("45" in text, "夹具 README 应给出具体变化(回合时长 45 秒)")
+        check("追回" in text, "夹具 README 应触及追回窗口(可调参数化)")
+    # 布景承接的漂移事实:14 层夹具的 04/05 仍引用 GAME_DESIGN v2(当前 v3)
+    task05 = (REPO_ROOT / "acceptance" / "08-spec-to-local-tasks" / "fixtures"
+              / "docs" / "mygamestudio" / "work" / "05-gull-swoop" / "task.md")
+    if task05.is_file():
+        check("GAME_DESIGN v2" in task05.read_text(encoding="utf-8"),
+              "承接布景应保留 04/05 引用旧版本的真实漂移(票 09-14 遗留)")
+    design14 = (REPO_ROOT / "acceptance" / "11-audio-asset-delivery" / "fixtures"
+                / "docs" / "mygamestudio" / "GAME_DESIGN.md")
+    if design14.is_file():
+        check("基线版本:v3" in design14.read_text(encoding="utf-8"),
+              "承接布景的 GAME_DESIGN 当前应为 v3(票 11 后)")
+    # 样例本体保持 v1 未动
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        check("基线版本:v1" in sample_design.read_text(encoding="utf-8"),
+              "samples/tide-pool 本体应保持 v1(15 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -1603,6 +1699,8 @@ def main() -> int:
     test_accept13_fixture()
     test_game_playtest_skill_content()
     test_accept14_fixture()
+    test_goal_change_skills_content()
+    test_accept15_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

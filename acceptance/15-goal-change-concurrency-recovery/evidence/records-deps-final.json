@@ -1,0 +1,28 @@
+{
+  "edges": {
+    "01-shell-collect": [],
+    "02-tide-timer": [
+      "01-shell-collect"
+    ],
+    "03-gull-round-plan": [],
+    "04-shell-combo": [
+      "02-tide-timer"
+    ],
+    "05-gull-swoop": [
+      "04-shell-combo",
+      "06-gull-sprite"
+    ],
+    "06-gull-sprite": [],
+    "07-warning-cue": [],
+    "08-gull-playtest": [
+      "05-gull-swoop"
+    ],
+    "09-future-scope": [],
+    "10-warning-sfx": [],
+    "11-playable-build": [],
+    "12-game-design-v4": []
+  },
+  "unresolved": [],
+  "cycles": [],
+  "ok": true
+}

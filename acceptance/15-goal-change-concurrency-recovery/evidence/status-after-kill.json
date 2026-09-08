@@ -1,0 +1,153 @@
+{
+  "instances": [
+    {
+      "instance_id": "i-c4961355e748",
+      "role": "producer",
+      "task": "15-goal-change-impact",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/work/**"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-fb928a2e599f",
+      "role": "design",
+      "task": "15-spec-adopt",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/records/**"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-636de9001992",
+      "role": "producer",
+      "task": "15-unsynced-change-check",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/work/**"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-6612687eee77",
+      "role": "implement",
+      "task": "15-race-demo",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/work/15-race-demo/results/**"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-837eee55be9d",
+      "role": "implement",
+      "task": "15-race-demo",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/work/15-race-demo/results/**"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-17e535ffa567",
+      "role": "producer",
+      "task": "15-recovery-sync",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/work/**"
+      ],
+      "released": false,
+      "expired": false
+    },
+    {
+      "instance_id": "i-23f08518795b",
+      "role": "producer",
+      "task": "15-recovery-resume",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/work/**"
+      ],
+      "released": false,
+      "expired": false
+    },
+    {
+      "instance_id": "i-aa112ea437c1",
+      "role": "implement",
+      "task": "15-stale-input",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/work/15-race-demo/results/**"
+      ],
+      "released": false,
+      "expired": false
+    },
+    {
+      "instance_id": "i-8bcc1f213dbd",
+      "role": "implement",
+      "task": "15-parallel-a",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/work/15-race-demo/results/**"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-5ae2fc3aa931",
+      "role": "implement",
+      "task": "15-parallel-b",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/work/15-race-demo/results/**"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-f2d8dbb58b2b",
+      "role": "implement",
+      "task": "15-expiry-reclaim",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/work/15-race-demo/results/**"
+      ],
+      "released": false,
+      "expired": true
+    },
+    {
+      "instance_id": "i-caae84e8a293",
+      "role": "implement",
+      "task": "15-expiry-takeover",
+      "purpose": "production",
+      "resources": [
+        "docs/mygamestudio/work/15-race-demo/results/**"
+      ],
+      "released": true,
+      "expired": false
+    }
+  ],
+  "locks": [
+    {
+      "resource": "docs/mygamestudio/work/02-tide-timer/task.md",
+      "instance_id": "i-17e535ffa567",
+      "since": "2026-09-09T03:00:13+0800"
+    },
+    {
+      "resource": "docs/mygamestudio/work/15-race-demo/results/race.md",
+      "instance_id": "i-aa112ea437c1",
+      "since": "2026-09-09T02:56:47+0800"
+    }
+  ]
+}

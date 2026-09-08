@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""MyGameStudio 本地 Markdown 任务后端:统一回读接口(任务票 04,票 08 扩展)。
+"""MyGameStudio 本地 Markdown 任务后端:统一回读接口(任务票 04,票 08/15 扩展)。
 
 对应设计《工作记录合同》「后端接口」一节在本地 Markdown 后端上的最小实现:
 读取配置、列出任务、读取任务与结果、回读核验(票 04);关系解析与循环检测、
-当前可开工集合(票 08)。调用方只使用 CONFIG.md 配置后的入口,不硬编码
+当前可开工集合(票 08);核心基线内容指纹核对与受影响任务识别(票 15)。
+调用方只使用 CONFIG.md 配置后的入口,不硬编码
 work/ 或 .scratch/(配置路径可显式传入,默认值来自《项目目录模板》的默认布局)。
 
 边界:
@@ -21,12 +22,14 @@ work/ 或 .scratch/(配置路径可显式传入,默认值来自《项目目录�
   mgs_records.py show  --project <项目根> --task <任务身份> [--config ...]
   mgs_records.py deps  --project <项目根> [--config <CONFIG相对路径>]
   mgs_records.py ready --project <项目根> [--config <CONFIG相对路径>]
+  mgs_records.py baseline --project <项目根> [--config <CONFIG相对路径>]
   mgs_records.py verify --project <项目根> [--config <CONFIG相对路径>]
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -425,8 +428,128 @@ def startable_tasks(project_root: Path | str,
     return {"startable": startable, "blocked": blocked, "note": READY_NOTE}
 
 
+# ---------- 基线内容指纹与受影响任务(任务票 15) ----------
+
+# 基线登记两条指纹:内容指纹(空白敏感,任何变化都检出)与归一指纹(去空白,
+# 只对字符增删敏感)。两者配合把「仅排版/空白差异」判为疑似格式修正,
+# 字符增删判为实质变更(版本号未同步)。只有内容指纹时无法排除格式修正,
+# 按未登记完整处理,不臆断。
+_FINGERPRINT_RE = re.compile(r"内容指纹\s*[:：]\s*sha256:([0-9a-f]{64})")
+_NORMALIZED_FP_RE = re.compile(r"归一指纹\s*[:：]\s*sha256:([0-9a-f]{64})")
+# 规范化口径:全文中每处 sha256:<64 位十六进制> 都替换为固定占位再计算——
+# 指纹行自身的取值因此不参与哈希(登记时可先写 64 个 0 再回填,规范化结果相同)。
+_FP_SLOT_RE = re.compile(r"sha256:[0-9a-f]{64}")
+BASELINE_NOTE = (
+    "内容指纹用于发现手工修改或版本号未同步的情况;指纹变化先核对实际影响,"
+    "疑似格式修正不自动触发需求重审、不作废既有成果与证据;"
+    "实质变更需按实质影响处理(确认采纳则由该基线维护角色递增版本并更新指纹);"
+    "受影响任务重新分流,原版本下完成事实保留,不自动算作满足新目标。")
+
+
+def _canonical_fingerprint(text: str) -> str:
+    """空白敏感指纹:sha256:<64hex> 槽位以占位替换后取 SHA-256。"""
+
+    canonical = _FP_SLOT_RE.sub("sha256:<FP>", text)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def _normalized_fingerprint(text: str) -> str:
+    """空白归一指纹:槽位占位替换后去除全部空白再取 SHA-256。"""
+
+    canonical = _FP_SLOT_RE.sub("sha256:<FP>", text)
+    return hashlib.sha256("".join(canonical.split()).encode("utf-8")).hexdigest()
+
+
+def baseline_report(project_root: Path | str,
+                    config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """核对核心基线内容指纹并识别受影响任务(任务票 15)。
+
+    - 每份核心基线(goal/design/tech 文档映射行):声明的基线版本、登记的
+      内容指纹/归一指纹与当前值比对,报告 一致/指纹未登记/内容已变(疑似
+      格式修正)/内容已变(实质变更)/文件缺失;仅空白差异判疑似格式修正,
+      字符增删判实质变更(版本号未同步)。
+    - 受影响任务:「输入与基线」引用了当前版本之外的核心基线(带版本号比对)
+      的任务逐条列出;已完成/待验收条目附「保留原版本完成事实,不自动算作
+      满足新目标」说明。
+    - ok 仅在存在实质变更未同步时为 False;格式修正与版本引用过时不判 False
+      (后者由 ready 逐任务报告)。
+    """
+
+    root = Path(project_root)
+    config = _local_config(root, config_rel)
+    versions = _doc_baseline_versions(root, config)
+    grouped = _core_rows(config["docmap"])
+    docs: list[dict] = []
+    seen_paths: set[str] = set()
+    for key in ("goal", "design", "tech"):
+        for row in grouped[key]:
+            rel = row["path"]
+            if rel in seen_paths:
+                continue  # 重复映射位置只报一次(verify 另行判冲突)
+            seen_paths.add(rel)
+            path = root / rel
+            if not path.is_file():
+                docs.append({"path": rel, "content": row["content"],
+                             "role": row["role"], "declared_version": None,
+                             "recorded_fingerprint": None,
+                             "current_fingerprint": None,
+                             "status": "文件缺失",
+                             "note": "核心基线权威位置不存在"})
+                continue
+            text = path.read_text(encoding="utf-8")
+            version_match = re.search(r"基线版本\s*[:：]\s*v(\d+)", text)
+            declared = f"v{version_match.group(1)}" if version_match else None
+            strict_fp = _FINGERPRINT_RE.search(text)
+            norm_fp = _NORMALIZED_FP_RE.search(text)
+            current_strict = _canonical_fingerprint(text)
+            current_norm = _normalized_fingerprint(text)
+            if strict_fp is None or norm_fp is None:
+                status, note = "指纹未登记", (
+                    "该基线未完整登记内容指纹与归一指纹;由其维护角色在版本采纳"
+                    "或格式修正同步时登记,登记后可检测版本号未同步的手工内容变更")
+            elif strict_fp.group(1) == current_strict:
+                status, note = "一致", "内容与登记指纹一致"
+            elif norm_fp.group(1) == current_norm:
+                status, note = "内容已变(疑似格式修正)", (
+                    "仅空白/排版差异;不作废既有成果与证据,由维护角色在下一"
+                    "次基线更新时同步指纹")
+            else:
+                status, note = "内容已变(实质变更)", (
+                    "内容实质变化而版本号未同步;先核对实际影响,确认采纳由"
+                    "维护角色递增版本并更新指纹,受影响任务重新分流")
+            docs.append({"path": rel, "content": row["content"],
+                         "role": row["role"], "declared_version": declared,
+                         "recorded_fingerprint": (f"sha256:{strict_fp.group(1)}"
+                                                  if strict_fp else None),
+                         "current_fingerprint": f"sha256:{current_strict}",
+                         "status": status, "note": note})
+
+    tasks = list_tasks(root, config_rel)
+    affected: list[dict] = []
+    for task in tasks:
+        baseline_text = task["request"].get("输入与基线", "")
+        for name, ref in _BASELINE_REF_RE.findall(baseline_text or ""):
+            actual = versions.get(name) or versions.get(Path(name).stem)
+            if not actual or actual == f"v{ref}":
+                continue
+            entry = {"identity": task["identity"], "title": task["title"],
+                     "triage": task["triage"], "progress": task["progress"],
+                     "doc": name, "ref_version": f"v{ref}",
+                     "current_version": actual, "completion_fact": None}
+            if task["progress"] in ("已完成", "待验收"):
+                entry["completion_fact"] = (
+                    f"保留原版本 v{ref} 下完成事实,不自动算作满足新目标"
+                    f"({name} 当前 {actual})")
+            affected.append(entry)
+    return {"ok": all(d["status"] != "内容已变(实质变更)" for d in docs),
+            "docs": docs, "affected_tasks": affected, "note": BASELINE_NOTE}
+
+
 def _check(name: str, ok: bool, detail: str) -> dict:
     return {"name": name, "ok": bool(ok), "detail": detail}
+
+
+
 
 
 def _core_rows(docmap: list[dict]) -> dict[str, list[dict]]:
@@ -552,6 +675,9 @@ def _cli() -> int:
     sub.add_parser("deps", parents=[common],
                    help="解析任务依赖关系(未解析引用或循环时退出码 1)")
     sub.add_parser("ready", parents=[common], help="当前可开工集合及原因")
+    sub.add_parser("baseline", parents=[common],
+                   help="核心基线内容指纹核对与受影响任务"
+                        "(存在实质变更未同步时退出码 1)")
     sub.add_parser("verify", parents=[common], help="回读核验")
     args = parser.parse_args()
     root = Path(args.project)
@@ -568,6 +694,8 @@ def _cli() -> int:
             payload = task_dependencies(root, args.config)
         elif args.cmd == "ready":
             payload = startable_tasks(root, args.config)
+        elif args.cmd == "baseline":
+            payload = baseline_report(root, args.config)
         else:
             payload = verify_project(root, args.config)
     except RecordsError as exc:
@@ -577,6 +705,8 @@ def _cli() -> int:
     if args.cmd == "verify" and not payload["ok"]:
         return 1
     if args.cmd == "deps" and not payload["ok"]:
+        return 1
+    if args.cmd == "baseline" and not payload["ok"]:
         return 1
     return 0
 

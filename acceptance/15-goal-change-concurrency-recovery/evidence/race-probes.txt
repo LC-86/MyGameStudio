@@ -1,0 +1,12 @@
+== 真实并发竞争:两个独立 OS 进程同时写 docs/mygamestudio/work/15-race-demo/results/race.md ==
+proc-a: {"decision": "deny", "rule_stage": "occupancy", "target": "docs/mygamestudio/work/15-race-demo/results/race.md"}
+proc-b: {"decision": "allow", "rule_stage": "granted", "target": "docs/mygamestudio/work/15-race-demo/results/race.md"}
+winner=R2
+alias-self(胜者经 ./ 自写): {"decision": "allow", "rule_stage": "granted", "target": "docs/mygamestudio/work/15-race-demo/results/race.md"}
+alias-dot(败者经 ./ 别名): {"decision": "deny", "rule_stage": "occupancy", "target": "docs/mygamestudio/work/15-race-demo/results/race.md"}
+alias-link(败者经项目内符号链接别名): {"decision": "deny", "rule_stage": "occupancy", "target": "docs/mygamestudio/work/15-race-demo/results/race.md"}
+stale-input(过期 expected_sha256): {"decision": "deny", "rule_stage": "version", "target": "docs/mygamestudio/work/15-race-demo/results/race.md"}
+refresh(按实际内容重试): {"decision": "allow", "rule_stage": "granted", "target": "docs/mygamestudio/work/15-race-demo/results/race.md"}
+== 独立资源并行 ==
+par-a: {"decision": "allow", "rule_stage": "granted", "target": "docs/mygamestudio/work/15-race-demo/results/par-a.md"}
+par-b: {"decision": "allow", "rule_stage": "granted", "target": "docs/mygamestudio/work/15-race-demo/results/par-b.md"}

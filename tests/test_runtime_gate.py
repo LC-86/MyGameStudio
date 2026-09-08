@@ -478,6 +478,201 @@ def main() -> int:
                      "--resource", "docs/mygamestudio/evidence/**"],
             capture_output=True, text=True)
         check(proc.returncode != 0, "CLI 未知用途应被白名单拒绝")
+
+        # 23. 占用回收(任务票 15):先撤销旧执行能力,再回收占用。
+        #     活跃实例的占用不可回收(拒绝);释放/过期后才可回收;
+        #     回收后新执行者可接管同一资源。
+        race_root = root / "race-runtime"
+        race_project = root / "race-project"
+        (race_project / "docs/mygamestudio/work/15-race").mkdir(parents=True)
+        race_svc = GateService(race_root)
+        race_svc.init_policy(
+            project_root=race_project,
+            roles={"implement": ["docs/mygamestudio/work/15-race/**"]},
+            purposes={"production": None},
+        )
+        target = "docs/mygamestudio/work/15-race/notes.md"
+
+        def race_instance(task: str, ttl: int = 1800) -> tuple[str, str]:
+            inst = race_svc.create_instance(role="implement", task=task,
+                                            purpose="production",
+                                            resources=["docs/mygamestudio/work/15-race/**"],
+                                            ttl_seconds=ttl)
+            return inst.instance_id, inst.token
+
+        aid, atok = race_instance("T-hold")
+        res = race_svc.write(atok, target, "HOLDER\n")
+        check(res["decision"] == "allow", f"持有实例首写应成功,实际 {res}")
+        bid, btok = race_instance("T-takeover")
+        res = race_svc.write(btok, target, "TAKEOVER\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "occupancy",
+              f"占用期间新执行者写入应被拒,实际 {res}")
+        # 活跃实例的占用不可回收:拒绝并保持占用
+        result = race_svc.reclaim_locks(aid)
+        check(result["ok"] is False and result.get("active") is True,
+              f"活跃实例的占用回收应被拒绝,实际 {result}")
+        res = race_svc.write(btok, target, "TAKEOVER\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "occupancy",
+              "拒绝回收后占用应保持,新执行者仍被拒")
+        locks = race_svc.list_locks()
+        check(target in locks.get("locks", {})
+              and locks["locks"][target]["instance_id"] == aid,
+              f"list_locks 应回报当前占用,实际 {locks}")
+        # 释放(撤销执行能力)本身回收占用;再回收为幂等空操作
+        race_svc.release_instance(aid)
+        result = race_svc.reclaim_locks(aid)
+        check(result["ok"] is True and result["reclaimed"] == 0,
+              f"释放后重复回收应为幂等空操作,实际 {result}")
+        res = race_svc.write(btok, target, "TAKEOVER\n")
+        check(res["decision"] == "allow", f"释放后新执行者应可接管,实际 {res}")
+        race_svc.release_instance(bid)
+
+        # 24. 到期实例的悬挂占用:实例在有效期内取得占用后过期,
+        #     令牌失效(写被拒)但占用记录悬挂;回收按到期放行。
+        xid, xtok = race_instance("T-expire", ttl=1)
+        res = race_svc.write(xtok, target, "EXPIRE\n")
+        check(res["decision"] == "allow", f"短期实例首写应成功,实际 {res}")
+        time.sleep(1.2)
+        res = race_svc.write(xtok, target, "EXPIRE2\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "identity",
+              f"过期令牌写入应被拒(identity),实际 {res}")
+        kid, ktok = race_instance("T-takeover-expire")
+        res = race_svc.write(ktok, target, "TAKEOVER2\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "occupancy",
+              f"过期实例的占用仍应阻塞新执行者,实际 {res}")
+        result = race_svc.reclaim_locks(xid)
+        check(result["ok"] is True and result["reclaimed"] >= 1,
+              f"到期实例的占用回收应放行并释放,实际 {result}")
+        res = race_svc.write(ktok, target, "TAKEOVER2\n")
+        check(res["decision"] == "allow", f"回收后新执行者应可接管,实际 {res}")
+        race_svc.release_instance(kid)
+        result = race_svc.reclaim_locks("i-nonexistent")
+        check(result["ok"] is False and result["found"] is False,
+              f"未知实例回收应被拒,实际 {result}")
+
+        # 24b. 释放流程中断缺口:release_instance 在登记与占用两次落盘之间
+        #      崩溃会留下「已释放但仍持有占用」状态(直接构造该终态验证);
+        #      再次 release 不再处理(found=False),reclaim_locks 补上回收。
+        yid, ytok = race_instance("T-crashgap")
+        res = race_svc.write(ytok, target, "GAP\n")
+        check(res["decision"] == "allow", f"缺口演示实例首写应成功,实际 {res}")
+        with race_svc._locked():
+            records = race_svc._read_json("instances.json", [])
+            for record in records:
+                if record["instance_id"] == yid:
+                    record["released"] = True
+            race_svc._write_json("instances.json", records)
+            # 模拟:instances.json 落盘后、locks.json 落盘前进程被杀
+        res = race_svc.write(ytok, target, "GAP2\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "identity",
+              "已释放实例的令牌应立即失效(持续进程不能再写)")
+        zid, ztok = race_instance("T-takeover-gap")
+        res = race_svc.write(ztok, target, "TAKEOVER3\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "occupancy",
+              f"中断缺口下占用仍悬挂,实际 {res}")
+        release_result = race_svc.release_instance(yid)
+        check(release_result["found"] is False,
+              "再次 release 对已释放记录不再处理(found=False)")
+        res = race_svc.write(ztok, target, "TAKEOVER3\n")
+        check(res["decision"] == "deny",
+              "再次 release 不应顺带回收悬挂占用(现状),由回收接缝负责")
+        result = race_svc.reclaim_locks(yid)
+        check(result["ok"] is True and result["reclaimed"] >= 1,
+              f"回收接缝应补上中断缺口的占用回收,实际 {result}")
+        res = race_svc.write(ztok, target, "TAKEOVER3\n")
+        check(res["decision"] == "allow", f"缺口回收后新执行者应可接管,实际 {res}")
+        race_svc.release_instance(zid)
+
+        # 25. 真实并发竞争(任务票 15):两个独立进程经同一运行根同时写入同一
+        #     资源——文件锁串行化后恰一个有效写入者,另一个 occupancy 拒绝;
+        #     规范化路径(./ 与项目内符号链接别名)映射到同一占用;
+        #     过期输入(expected_sha256 不符)被拒,不覆盖他人成果;
+        #     独立资源并行写入互不阻塞。
+        driver = root / "race_driver.py"
+        driver.write_text(
+            "import json, sys\n"
+            "sys.path.insert(0, sys.argv[1])\n"
+            "from mgs_runtime import GateService\n"
+            "runtime_root, token, path, content, expected = sys.argv[2:]\n"
+            "svc = GateService(runtime_root)\n"
+            "res = svc.write(token, path, content,\n"
+            "                expected_sha256=(expected or None))\n"
+            "print(json.dumps(res))\n",
+            encoding="utf-8")
+        runtime_src = str(REPO_ROOT / "plugin" / "runtime")
+
+        def race_proc(token: str, path: str, content: str, expected: str = ""):
+            return subprocess.Popen(
+                [sys.executable, "-B", str(driver), runtime_src,
+                 str(race_root), token, path, content, expected],
+                stdout=subprocess.PIPE, text=True)
+
+        # 25a. 同一资源:两进程同时启动,恰一个 allow
+        race_target2 = "docs/mygamestudio/work/15-race/race.md"
+        cid, ctok = race_instance("T-race-a", ttl=1800)
+        did, dtok = race_instance("T-race-b", ttl=1800)
+        p1 = race_proc(ctok, race_target2, "FROM-A\n")
+        p2 = race_proc(dtok, race_target2, "FROM-B\n")
+        out1 = json.loads(p1.communicate(timeout=30)[0])
+        out2 = json.loads(p2.communicate(timeout=30)[0])
+        decisions = sorted([out1["decision"], out2["decision"]])
+        check(decisions == ["allow", "deny"],
+              f"并发竞争应恰有一个有效写入者,实际 {out1.get('decision')}/{out2.get('decision')}")
+        denied = out1 if out1["decision"] == "deny" else out2
+        allowed = out2 if out1["decision"] == "deny" else out1
+        check(denied["rule_stage"] == "occupancy",
+              f"竞争失败方应被占用拒绝,实际 {denied}")
+        check(allowed["rule_stage"] == "granted", f"竞争胜者应为 granted,实际 {allowed}")
+        final_content = (race_project / race_target2).read_text()
+        check(final_content in ("FROM-A\n", "FROM-B\n"),
+              f"最终内容应恰为胜者写入,实际 {final_content!r}")
+
+        # 25b. 规范化别名:竞争胜者持有占用后,经 ./ 折叠路径与项目内符号
+        #      链接别名写入同一资源,仍被占用拒绝(不能靠别名绕过单写入者)。
+        winner_token = ctok if out1["decision"] == "allow" else dtok
+        alias_dot = "docs/mygamestudio/work/15-race/./race.md"
+        res = race_svc.write(winner_token, alias_dot, "ALIAS\n")
+        check(res["decision"] == "allow",
+              "同一实例经 ./ 别名写自身占用资源应成功(同一占用者)")
+        loser_token = dtok if out1["decision"] == "allow" else ctok
+        res = race_svc.write(loser_token, alias_dot, "ALIAS\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "occupancy",
+              f"他方经 ./ 别名写被占资源应被拒,实际 {res}")
+        (race_project / "docs/mygamestudio/work/alias15").symlink_to("15-race")
+        res = race_svc.write(loser_token,
+                             "docs/mygamestudio/work/alias15/race.md", "ALIAS\n")
+        check(res["decision"] == "deny" and res["rule_stage"] == "occupancy",
+              f"项目内符号链接别名写被占资源应被拒(占用按规范化标识),实际 {res}")
+
+        # 25c. 过期输入:释放胜者后,新执行者持过期的 expected_sha256 写入
+        #      应被 version 拒绝,不覆盖他人已写入成果;以实际内容指纹重试才成功。
+        race_svc.release_instance(cid)
+        race_svc.release_instance(did)
+        final_content = (race_project / race_target2).read_text()
+        eid, etok = race_instance("T-stale")
+        stale = hashlib.sha256(b"never-existed").hexdigest()
+        res = race_svc.write(etok, race_target2, "STALE\n", expected_sha256=stale)
+        check(res["decision"] == "deny" and res["rule_stage"] == "version",
+              f"过期输入应被版本校验拒绝,实际 {res}")
+        check((race_project / race_target2).read_text() == final_content,
+              "被拒后他人成果字节应保持不变")
+        current = hashlib.sha256(
+            (race_project / race_target2).read_bytes()).hexdigest()
+        res = race_svc.write(etok, race_target2, "REFRESH\n",
+                             expected_sha256=current)
+        check(res["decision"] == "allow", f"按实际内容版本核对后写入应成功,实际 {res}")
+
+        # 25d. 独立资源并行:两进程同时写不同资源,互不阻塞
+        fid, ftok = race_instance("T-par-a")
+        gid, gtok = race_instance("T-par-b")
+        p1 = race_proc(ftok, "docs/mygamestudio/work/15-race/par-a.md", "PA\n")
+        p2 = race_proc(gtok, "docs/mygamestudio/work/15-race/par-b.md", "PB\n")
+        out1 = json.loads(p1.communicate(timeout=30)[0])
+        out2 = json.loads(p2.communicate(timeout=30)[0])
+        check(out1["decision"] == "allow" and out2["decision"] == "allow",
+              f"独立资源并行写入应互不阻塞,实际 {out1.get('decision')}/{out2.get('decision')}")
+        race_svc.release_instance(fid)
+        race_svc.release_instance(gid)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

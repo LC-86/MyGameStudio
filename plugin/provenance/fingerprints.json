@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.14.0",
+  "generated_for": "mygamestudio 0.15.0",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -16,8 +16,8 @@
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "dd3997a4dcc55d4e65b3b71f412c25f8e5c657ce0ba4e565715752af641b6ffe",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口)",
+      "sha256": "3a9a1f2d0753684b0d8c2d17528eddbea906a66844c7605cba00a3ce57ca9d60",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 15 更新包内说明为已实现 Game-Producer 影响检查/指纹核对/占用协调/中断恢复流程)",
       "license": "本项目自有内容(MIT)"
     },
     {
