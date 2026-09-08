@@ -329,6 +329,56 @@ def main() -> int:
         check((project / "assets/audio/ok.wav").read_bytes() == wav,
               "通道侧 base64 写入的字节应与原字节一致")
         svc.release_instance(yid)
+
+        # 21. 审查用途收窄(任务票 13):review 用途把同角色实例的可写集合限制到
+        #     策略 review.restrict(evidence/)。审查实例只写审查记录与证据,碰不到
+        #     待审成果;即使任务授权被放宽,purpose 层仍然封顶。
+        svc.init_policy(
+            project_root=project,
+            roles={
+                "producer": ["docs/mygamestudio/PROJECT.md"],
+                "design": ["docs/mygamestudio/GAME_DESIGN.md"],
+                "implement": ["src/**", "assets/**", "build/**",
+                              "docs/mygamestudio/work/*/results/**",
+                              "docs/mygamestudio/evidence/**"],
+            },
+            purposes={"production": None, "prototype": ["prototypes/**"],
+                      "review": ["docs/mygamestudio/evidence/**"]},
+        )
+        rid, rtok = new_instance(svc, "implement",
+                                 ["docs/mygamestudio/evidence/**"],
+                                 purpose="review", task="T-review")
+        res = svc.scope(rtok)
+        check(res["decision"] == "allow" and res["purpose"] == "review",
+              f"review 实例 scope 应成功并回读用途,实际 {res}")
+        check(res["allowed"] == ["docs/mygamestudio/evidence/**"],
+              f"review 实例有效范围应恰为 evidence/,实际 {res.get('allowed')}")
+        res = svc.write(rtok, "docs/mygamestudio/evidence/review-run.md",
+                        "# 审查记录\n", note="审查记录写入")
+        check(res["decision"] == "allow",
+              f"review 实例写 evidence/ 应成功,实际 {res}")
+        for target, label in (
+            ("src/player.js", "待审代码"),
+            ("docs/mygamestudio/work/01-status/results/x.md", "任务结果"),
+        ):
+            res = svc.write(rtok, target, "OVERWRITE\n", note="越界尝试")
+            check(res["decision"] == "deny" and res["rule_stage"] == "task_grant",
+                  f"review 实例写{label}应被任务授权层拒绝,实际 {res}")
+        # 放宽任务授权后 purpose 层仍封顶在 evidence/
+        rid2, rtok2 = new_instance(svc, "implement",
+                                   ["docs/mygamestudio/evidence/**", "src/**",
+                                    "docs/mygamestudio/work/*/results/**"],
+                                   purpose="review", task="T-review-wide")
+        check(svc.scope(rtok2)["allowed"] == ["docs/mygamestudio/evidence/**"],
+              "放宽授权后 review 实例有效范围仍应恰为 evidence/")
+        before_review = code.read_bytes()
+        res = svc.write(rtok2, "src/player.js", "OVERWRITE\n", note="越界尝试")
+        check(res["decision"] == "deny" and res["rule_stage"] == "purpose",
+              f"放宽授权后 review 用途写 src 应被 purpose 层拒绝,实际 {res}")
+        check(code.read_bytes() == before_review,
+              "被拒后待审代码字节应保持不变")
+        svc.release_instance(rid)
+        svc.release_instance(rid2)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

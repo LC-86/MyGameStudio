@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64" role="img" aria-labelledby="title desc">
+  <title id="title">Seagull diving</title>
+  <desc id="desc">Editable geometric seagull sprite in a steep diving pose on a transparent background.</desc>
+  <g id="gull-dive" stroke="#263238" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+    <path id="left-wing" d="M43 27 C31 26 18 31 10 42 C24 39 35 40 45 35 Z" fill="#f5f1df"/>
+    <path id="right-wing" d="M51 29 C61 20 70 12 84 9 C76 20 70 31 56 38 Z" fill="#f5f1df"/>
+    <path id="left-wing-shadow" d="M14 40 C25 35 35 33 43 32 C34 38 25 39 14 40 Z" fill="#cfd8d3" stroke="none"/>
+    <path id="right-wing-shadow" d="M80 13 C72 21 65 29 57 35 C63 25 70 18 80 13 Z" fill="#cfd8d3" stroke="none"/>
+    <path id="body" d="M39 27 C48 24 58 29 61 38 C60 45 55 52 49 57 C44 49 40 41 39 27 Z" fill="#fffaf0"/>
+    <path id="tail" d="M45 48 L38 55 L47 53 L50 61 L54 52 L63 53 L57 46 Z" fill="#f5f1df"/>
+    <circle id="head" cx="55" cy="34" r="6" fill="#fffaf0"/>
+    <circle id="eye" cx="57.5" cy="33" r="1.2" fill="#263238" stroke="none"/>
+    <path id="beak" d="M61 36 L70 41 L60 40 Z" fill="#e6a23c"/>
+    <path id="wing-mark-left" d="M17 38 C26 34 34 32 40 31" fill="none"/>
+    <path id="wing-mark-right" d="M78 15 C70 22 64 29 59 34" fill="none"/>
+  </g>
+</svg>

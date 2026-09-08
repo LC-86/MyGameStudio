@@ -1,0 +1,19 @@
+== SVG ==
+-- gull-glide.svg --
+tag: {http://www.w3.org/2000/svg}svg
+viewBox: 0 0 96 64 width: 96 height: 64
+full-width-opaque-rects: 0
+-- gull-dive.svg --
+tag: {http://www.w3.org/2000/svg}svg
+viewBox: 0 0 96 64 width: 96 height: 64
+full-width-opaque-rects: 0
+== WAV (ffprobe) ==
+codec_name=pcm_s16le
+sample_fmt=s16
+sample_rate=44100
+channels=1
+bits_per_sample=16
+format_name=wav
+duration=0.560000
+== WAV 完整解码 ==
+decode_exit=0

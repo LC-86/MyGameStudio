@@ -1,0 +1,13 @@
+== 新增(应恰为 evidence/ 5 个审查记录与 02 的修复说明) ==
+./docs/mygamestudio/evidence/2026-09-08-recheck-02-tide-timer.md
+./docs/mygamestudio/evidence/2026-09-08-review-02-tide-timer.md
+./docs/mygamestudio/evidence/2026-09-08-review-06-gull-sprite.md
+./docs/mygamestudio/evidence/2026-09-08-review-10-warning-sfx.md
+./docs/mygamestudio/evidence/2026-09-08-review-11-playable-build.md
+./docs/mygamestudio/work/02-tide-timer/results/2026-09-08-fix.md
+== 删除(应为空——受控通道无删除原语) ==
+
+== 修改(应仅 src 相关文件:main.js 与 index.html 必改;tide-extra.js 视修复处置可选) ==
+./src/index.html
+./src/main.js
+./src/tide-extra.js

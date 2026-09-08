@@ -76,12 +76,12 @@ def test_explicit_skills() -> None:
     expected = [
         "game-art", "game-audio", "game-build", "game-code", "game-design",
         "game-implement", "game-init", "game-plan", "game-producer",
-        "game-prototype", "game-spec", "game-status",
+        "game-prototype", "game-review", "game-spec", "game-status",
     ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 12 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 13 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -1308,6 +1308,152 @@ def test_accept12_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(12 用夹具覆盖)")
 
 
+def test_game_review_skill_content() -> None:
+    """任务票 13:Game-Review 独立审查工作流的包内依据与关键纪律。"""
+
+    review = PLUGIN_ROOT / "skills" / "game-review" / "SKILL.md"
+    check(review.is_file(), "缺少 skills/game-review/SKILL.md")
+    if not review.is_file():
+        return
+    text = review.read_text(encoding="utf-8")
+    for ref in (
+        "../../internal/contracts/verification.md",
+        "../../internal/contracts/common.md",
+        "../../internal/contracts/records.md",
+        "../../internal/protocols/gate-protocol.md",
+        "../../internal/methods/writing-for-agents/SKILL.md",
+        "../../templates/evidence/review.md",
+    ):
+        check(ref in text, f"game-review SKILL.md 应引用包内依据 {ref}")
+    for concept in (
+        "明确的待审成果和版本",  # 输入:待审对象必须明确
+        "当前要求与规范",        # 输入:规范与规格
+        "需要检查的范围",        # 输入:范围
+        "独立",                  # 独立于原执行上下文
+        "同专业",                # 按被审对象选择独立同专业执行实例
+        "不新增常设评审角色",     # 审查不增设常设角色
+        "作者总结",              # 不仅依赖作者总结
+        "直接读取",              # 直接读取规范、实际成果、规格与证据
+        "Standards", "Spec",     # 代码两轴
+        "两轴",                  # 两轴独立执行、分别呈现
+        "分别",                  # 分别呈现(不合并结论)
+        "待审版本",              # 固定待审版本
+        "文件清单",              # 完整范围用文件清单固定
+        "SHA-256",               # 版本指纹登记
+        "已提交", "暂存", "未暂存", "新建",  # 四类成果范围完整性
+        "HEAD",                  # 不以 HEAD/暂存区对比替代实际文件读取
+        "证据",                  # 每项问题关联具体证据
+        "影响",                  # 每项问题关联影响
+        "明确规则违背",          # 问题分类一
+        "专业判断",              # 问题分类二
+        "未能检查",              # 问题分类三
+        "不修改",                # 审查实例不修改待审专业成果
+        "修复",                  # 修复由对应制作或设计任务执行
+        "复核",                  # 修复后针对实际新版本复核
+        "新版本",                # 旧结论不挪作新版本通过证明
+        "不挪用",                # 同上
+        "覆盖限制",              # 未实现的运行能力标为覆盖限制
+        "不代验收",              # 报告生成不等于验收通过
+        "待验收",                # 审查后仍区分待人工验收
+        "evidence/",             # 审查记录与证据落点
+        "mgs_scope",             # 写入前确认有效范围
+        "mgs_write",             # 审查记录经受控通道写入
+        "实际运行",              # 能自动核验的检查实际运行
+        "审查记录",              # 写入仅限审查记录与证据
+        "mgs_records",           # 统一接口(读任务与规格引用)
+    ):
+        check(concept in text, f"game-review SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept13_fixture() -> None:
+    """任务票 13:独立审查验收夹具——承接票 10/12 真实交付物(06 海鸥 SVG
+    与结果、11 构建产物与待验收记录),使待验收成果完整可审,不改样例本体。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "13-independent-deliverable-review" / "fixtures"
+    for rel in (
+        "README.md",
+        "assets/gull-glide.svg",
+        "assets/gull-dive.svg",
+        "docs/mygamestudio/work/06-gull-sprite/task.md",
+        "docs/mygamestudio/work/06-gull-sprite/results/2026-09-08.md",
+        "docs/mygamestudio/work/11-playable-build/task.md",
+        "docs/mygamestudio/work/11-playable-build/results/2026-09-08.md",
+        "build/index.html",
+        "build/main.js",
+    ):
+        check((fixtures / rel).is_file(), f"accept-13 夹具缺少 {rel}")
+    # 06/11 任务记录为待验收态(审查对象,非开工对象)
+    for task_id in ("06-gull-sprite", "11-playable-build"):
+        task_md = (fixtures / "docs" / "mygamestudio" / "work" / task_id / "task.md")
+        if task_md.is_file():
+            text = task_md.read_text(encoding="utf-8")
+            check(re.search(r"进度(:|：)待验收", text) is not None,
+                  f"夹具 {task_id} 进度应为待验收(本票审查对象)")
+    # 06 结果记录中登记的 SVG 哈希与实际文件一致(审查输入的版本指纹可信)
+    results06 = (fixtures / "docs" / "mygamestudio" / "work" / "06-gull-sprite"
+                 / "results" / "2026-09-08.md")
+    if results06.is_file():
+        text = results06.read_text(encoding="utf-8")
+        for svg in ("gull-glide.svg", "gull-dive.svg"):
+            svg_path = fixtures / "assets" / svg
+            if svg_path.is_file():
+                check(sha256(svg_path) in text,
+                      f"夹具 06 结果记录应含 {svg} 的实际 SHA-256")
+        check("独立审查" in text, "夹具 06 结果记录应声明独立审查尚未进行")
+    # 11 结果记录登记的产物哈希与实际 build 文件一致
+    results11 = (fixtures / "docs" / "mygamestudio" / "work" / "11-playable-build"
+                 / "results" / "2026-09-08.md")
+    if results11.is_file():
+        text = results11.read_text(encoding="utf-8")
+        for prod in ("index.html", "main.js"):
+            prod_path = fixtures / "build" / prod
+            if prod_path.is_file():
+                check(sha256(prod_path) in text,
+                      f"夹具 11 结果记录应含 build/{prod} 的实际 SHA-256")
+    # 组装式导出=字节一致:build 产物应与持久夹具(票 09 交付后的 src)逐字节一致
+    src_fixture = REPO_ROOT / "acceptance" / "10-visual-asset-delivery" / "fixtures" / "src"
+    for prod in ("index.html", "main.js"):
+        build_file = fixtures / "build" / prod
+        src_file = src_fixture / prod
+        if build_file.is_file() and src_file.is_file():
+            check(build_file.read_bytes() == src_file.read_bytes(),
+                  f"夹具 build/{prod} 应与票 10 夹具 src/{prod} 逐字节一致"
+                  "(组装式导出,票 12 终态承接)")
+    # 承接票 10/12 验收终态的文件与 .tmp 终态逐字节一致(本机有 .tmp 时核对)
+    for arena_rel, rel in (
+        (".tmp/accept-10/projects/tide-pool/assets/gull-glide.svg", "assets/gull-glide.svg"),
+        (".tmp/accept-10/projects/tide-pool/assets/gull-dive.svg", "assets/gull-dive.svg"),
+        (".tmp/accept-10/projects/tide-pool/docs/mygamestudio/work/06-gull-sprite/task.md",
+         "docs/mygamestudio/work/06-gull-sprite/task.md"),
+        (".tmp/accept-10/projects/tide-pool/docs/mygamestudio/work/06-gull-sprite/results/2026-09-08.md",
+         "docs/mygamestudio/work/06-gull-sprite/results/2026-09-08.md"),
+        (".tmp/accept-12/projects/tide-pool/docs/mygamestudio/work/11-playable-build/task.md",
+         "docs/mygamestudio/work/11-playable-build/task.md"),
+        (".tmp/accept-12/projects/tide-pool/docs/mygamestudio/work/11-playable-build/results/2026-09-08.md",
+         "docs/mygamestudio/work/11-playable-build/results/2026-09-08.md"),
+        (".tmp/accept-12/projects/tide-pool/build/index.html", "build/index.html"),
+        (".tmp/accept-12/projects/tide-pool/build/main.js", "build/main.js"),
+    ):
+        arena_file = REPO_ROOT / arena_rel
+        if arena_file.is_file() and (fixtures / rel).is_file():
+            check((fixtures / rel).read_bytes() == arena_file.read_bytes(),
+                  f"accept-13 夹具 {rel} 应与验收终态逐字节一致")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("审查" in text, "夹具 README 当前请求应指向独立审查")
+        check("待验收" in text, "夹具 README 应说明审查对象为待验收成果")
+        for task_id in ("02-tide-timer", "06-gull-sprite", "10-warning-sfx",
+                        "11-playable-build"):
+            check(task_id in text, f"夹具 README 应引用待审任务 {task_id}")
+    # 样例本体保持 v1 未动(既有票验收可复现;13 用夹具覆盖)
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        check("基线版本:v1" in sample_design.read_text(encoding="utf-8"),
+              "samples/tide-pool 本体应保持 v1(13 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -1336,6 +1482,8 @@ def main() -> int:
     test_accept11_fixture()
     test_game_build_skill_content()
     test_accept12_fixture()
+    test_game_review_skill_content()
+    test_accept13_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

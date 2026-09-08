@@ -1,0 +1,2 @@
+SCRIPTS=main.js
+FIX-SMOKE-FAIL: 修复态 aria-valuemax=undefined(应 60)

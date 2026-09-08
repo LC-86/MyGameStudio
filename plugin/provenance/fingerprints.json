@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.12.0",
+  "generated_for": "mygamestudio 0.13.0",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -22,8 +22,8 @@
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "a53ef4ffac2dfea19dfb4cb8b84ea0d266687f97053c7730e7527e4a389b4c25",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio,任务票 12 更新为已实现 Game-Build)",
+      "sha256": "b799f38a278d8aef7fd9fd29076c3b294ccf8d63b46017bb0b47fe770aba8fbc",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio,任务票 12 更新为已实现 Game-Build,任务票 13 更新包内说明为已实现 Game-Review 并改链包内审查与试玩合同)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -42,6 +42,12 @@
       "path": "internal/contracts/task-triage.md",
       "sha256": "a361620eda15b1eddbcac08d185222fb48ea28d3468984a1099843c66d10c56c",
       "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/task-triage.md(适配版)",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/contracts/verification.md",
+      "sha256": "95f9ae2da2fa27c22f4cbb2e638abc12cfc9537e8e9bab2a69c0bcb5fc58133a",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/verification.md(适配版)",
       "license": "本项目自有内容(MIT)"
     },
     {
