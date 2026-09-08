@@ -1,0 +1,4 @@
+files: gull-dive.svg, gull-glide.svg
+gull-dive.svg: viewBox=0 0 96 64
+gull-glide.svg: viewBox=0 0 96 64
+recheck OK: 2 well-formed SVG, viewBox present, no full-canvas opaque background

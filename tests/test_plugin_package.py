@@ -74,13 +74,14 @@ def test_explicit_skills() -> None:
         check(False, "缺少 skills/ 目录")
         return
     expected = [
-        "game-code", "game-design", "game-implement", "game-init", "game-plan",
-        "game-producer", "game-prototype", "game-spec", "game-status",
+        "game-art", "game-code", "game-design", "game-implement", "game-init",
+        "game-plan", "game-producer", "game-prototype", "game-spec",
+        "game-status",
     ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 09 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 10 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -916,6 +917,105 @@ def test_accept09_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(09 用夹具覆盖)")
 
 
+def test_game_art_skill_content() -> None:
+    """任务票 10:Game-Art 视觉资源工作流的包内依据与关键纪律。"""
+
+    art = PLUGIN_ROOT / "skills" / "game-art" / "SKILL.md"
+    check(art.is_file(), "缺少 skills/game-art/SKILL.md")
+    if not art.is_file():
+        return
+    text = art.read_text(encoding="utf-8")
+    for ref in (
+        "../../internal/contracts/production.md",
+        "../../internal/contracts/common.md",
+        "../../internal/contracts/records.md",
+        "../../internal/protocols/gate-protocol.md",
+        "../../internal/methods/writing-for-agents/SKILL.md",
+        "../../templates/work/result.md",
+    ):
+        check(ref in text, f"game-art SKILL.md 应引用包内依据 {ref}")
+    for concept in (
+        "视觉要求",        # 输入:当前视觉要求
+        "用途",            # 输入:用途(在游戏中的接入位置)
+        "参考",            # 输入:参考(研究记录、既有风格)
+        "输出位置",        # 输入:输出位置
+        "可用能力",        # 输入:可用能力(实际条件决定工具)
+        "不固定",          # 不固定生成服务、引擎或资源类型
+        "资源类型",        # 图像/模型/动画/特效等资源类型
+        "mgs_scope",       # 写入前确认有效范围
+        "允许修改范围",    # 任务范围核对(以 mgs_scope 为准)
+        "缺口",            # 无制作/编辑/检查能力时报告具体缺口
+        "可接手材料",      # 缺口时交付可接手材料
+        "提示词",          # 不把提示词/参数/计划当最终成果
+        "不是最终成果",    # 明确提示词与计划的定位
+        "来源或生成依据",  # 输出:来源或生成依据
+        "接入信息",        # 输出:使用/接入信息
+        "预览",            # 输出:可定位预览
+        "实际运行",        # 检查必须真实运行并记录输出
+        "会话工作区",      # 检查脚本放会话工作区,不进项目
+        "待验收",          # 人工审美验收未完成保留待验收
+        "真实反馈",        # 审美验收需要真实反馈或明确等待项
+        "适配",            # 工具输入输出适配与角色资源策略分离
+        "资源策略",        # 分离的另一侧:策略由运行保障承担
+        "不被假定",        # 服务或 GUI 不被假定继承本地边界
+        "继承本地边界",    # 外部写入通路未验证不视为已受控
+        "results/",        # 结果落点
+        "进度",            # 任务进度与分流归统筹,直接调用不改
+        "不自动",          # 不自动提交、推送、发布
+        "受控",            # 新增命令执行路径保持受控
+    ):
+        check(concept in text, f"game-art SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept10_fixture() -> None:
+    """任务票 10:票 09 真实交付终态注入夹具——02 待验收、06 唯一可开工、
+    TECH_DESIGN v2 与新 src 就位,供视觉资源任务执行验收使用(三层夹具
+    覆盖,不改样例本体)。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "10-visual-asset-delivery" / "fixtures"
+    for rel in (
+        "README.md",
+        "docs/mygamestudio/TECH_DESIGN.md",
+        "src/main.js",
+        "src/index.html",
+        "docs/mygamestudio/work/02-tide-timer/task.md",
+        "docs/mygamestudio/work/02-tide-timer/results/2026-09-08.md",
+    ):
+        check((fixtures / rel).is_file(), f"accept-10 夹具缺少 {rel}")
+    tech = fixtures / "docs" / "mygamestudio" / "TECH_DESIGN.md"
+    if tech.is_file():
+        tech_text = tech.read_text(encoding="utf-8")
+        check("基线版本:v2" in tech_text, "夹具 TECH_DESIGN 应为票 09 产出的 v2")
+    task02 = fixtures / "docs" / "mygamestudio" / "work" / "02-tide-timer" / "task.md"
+    if task02.is_file():
+        text = task02.read_text(encoding="utf-8")
+        check(re.search(r"进度(:|：)待验收", text) is not None,
+              "夹具 02 进度应为待验收(票 09 终态)")
+    result02 = (fixtures / "docs" / "mygamestudio" / "work" / "02-tide-timer"
+                / "results" / "2026-09-08.md")
+    if result02.is_file():
+        text = result02.read_text(encoding="utf-8")
+        check("02-tide-timer" in text, "夹具 02 结果记录应引用所属任务身份")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("海鸥" in text, "夹具 README 当前请求应指向海鸥视觉资源任务")
+        check("06-gull-sprite" in text, "夹具 README 应引用任务身份 06-gull-sprite")
+    # 夹具与 09 终态的对应文件一致(取自验收终态未改动)
+    arena = REPO_ROOT / ".tmp" / "accept-09" / "projects" / "tide-pool"
+    for rel in (
+        "docs/mygamestudio/TECH_DESIGN.md",
+        "src/main.js",
+        "src/index.html",
+        "docs/mygamestudio/work/02-tide-timer/task.md",
+        "docs/mygamestudio/work/02-tide-timer/results/2026-09-08.md",
+    ):
+        arena_file = arena / rel
+        if arena_file.is_file() and (fixtures / rel).is_file():
+            check((fixtures / rel).read_bytes() == arena_file.read_bytes(),
+                  f"accept-10 夹具 {rel} 应与票 09 终态逐字节一致")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -938,6 +1038,8 @@ def main() -> int:
     test_accept08_fixture()
     test_production_skills_content()
     test_accept09_fixture()
+    test_game_art_skill_content()
+    test_accept10_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

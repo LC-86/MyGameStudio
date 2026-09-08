@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>潮池 Tide Pool</title>
+  <style>
+    body { margin: 0; background: #0b2a3a; color: #cfe8f3; font-family: monospace; }
+    canvas { display: block; margin: 0 auto; background: #14506b; }
+    #hud { max-width: 480px; box-sizing: border-box; margin: 0 auto; padding: 10px 12px; }
+    #hud-line { display: flex; justify-content: space-between; gap: 16px; }
+    #tide-status { transition: color 120ms ease; }
+    #tide-status.urgent { color: #fff1a8; font-weight: 800; text-transform: uppercase; }
+    #tide-track { height: 12px; margin-top: 8px; overflow: hidden; border: 2px solid #80c8dd; border-radius: 8px; background: #061a24; }
+    #tide-bar { width: 100%; height: 100%; background: #54c3df; transition: width 100ms linear, background-color 120ms ease; }
+    #hud.urgent #tide-track { border-width: 3px; border-color: #fff1a8; }
+    #hud.urgent #tide-bar { background: #f05d5e; }
+    #result { margin: 10px auto 0; padding: 10px; border: 2px solid #cfe8f3; text-align: center; font-size: 1.2rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div id="hud-line">
+      <span>贝壳：<span id="shells">0</span></span>
+      <span><span id="tide-status">距涨潮</span>：<span id="tide">60</span> 秒</span>
+    </div>
+    <div id="tide-track" role="progressbar" aria-label="潮汐剩余时间" aria-valuemin="0" aria-valuemax="60" aria-valuenow="60">
+      <div id="tide-bar"></div>
+    </div>
+    <div id="result" role="status" aria-live="polite" hidden></div>
+  </div>
+  <canvas id="game" width="480" height="320"></canvas>
+  <script src="main.js"></script>
+</body>
+</html>

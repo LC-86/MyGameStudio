@@ -22,8 +22,8 @@
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "f12d3551ed65af6fa4bc2636c9d55d9c5277214a11a2ed07dd1201dcd327e994",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 02 新增,任务票 09 更新包内说明为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流)",
+      "sha256": "570ad49a1eafb90500b79409ef40baa6046e85dc00b392a24da0e444bb8c8107",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 02 新增,任务票 09 更新包内说明为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流,任务票 10 更新为已实现 Game-Art 视觉资源工作流)",
       "license": "本项目自有内容(MIT)"
     },
     {

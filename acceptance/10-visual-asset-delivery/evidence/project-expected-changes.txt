@@ -1,0 +1,8 @@
+== 新增(应恰为 assets 两个 SVG 与 06 的结果记录) ==
+./assets/gull-dive.svg
+./assets/gull-glide.svg
+./docs/mygamestudio/work/06-gull-sprite/results/2026-09-08.md
+== 删除(应为空) ==
+
+== 修改(应仅 06 task.md) ==
+./docs/mygamestudio/work/06-gull-sprite/task.md

@@ -1,4 +1,4 @@
-> 包内适配版(mygamestudio 0.2.0 建立,任务票 09 更新包内说明)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/production.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
+> 包内适配版(mygamestudio 0.2.0 建立,任务票 09/10 更新包内说明)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/production.md`。本版仅把指向未随包设计文档的链接改为文字引用,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
 
 # 制作技能合同
 
@@ -48,4 +48,4 @@
 
 ## 包内说明
 
-当前最小包(任务票 09)随包提供 Game-Implement 的组织工作流(接手当前任务、组织专业工作、必要技术设计、集成与验证、结果交接)与 Game-Code 的完整代码工作流(实际任务与基线读取、技术设计细化、受控代码写入、匹配风险的行为检查与结果证据);Game-Art、Game-Audio、Game-Build 待后续任务票实现,已实现入口不伪装调用它们。实际写入一律经运行保障通道,见[受控写入协议](../protocols/gate-protocol.md)。
+当前最小包(任务票 10)随包提供 Game-Implement 的组织工作流(接手当前任务、组织专业工作、必要技术设计、集成与验证、结果交接)、Game-Code 的完整代码工作流(实际任务与基线读取、技术设计细化、受控代码写入、匹配风险的行为检查与结果证据)与 Game-Art 的视觉资源工作流(读取视觉要求/用途/参考/格式与输出范围,按项目实际能力制作或处理资源,规格检查真实运行并给出可定位预览,来源或生成依据、接入信息与验证证据落在任务 results/,人工审美验收未完成保留待验收,无能力时报告缺口与可接手材料);Game-Audio、Game-Build 待后续任务票实现,已实现入口不伪装调用它们。实际写入一律经运行保障通道,见[受控写入协议](../protocols/gate-protocol.md)。
