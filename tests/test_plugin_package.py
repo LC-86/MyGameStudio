@@ -74,13 +74,13 @@ def test_explicit_skills() -> None:
         check(False, "缺少 skills/ 目录")
         return
     expected = [
-        "game-code", "game-design", "game-init", "game-producer",
-        "game-prototype", "game-spec", "game-status",
+        "game-code", "game-design", "game-init", "game-plan",
+        "game-producer", "game-prototype", "game-spec", "game-status",
     ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 06 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 08 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -270,6 +270,7 @@ def test_records_backend_module() -> None:
     if module.is_file():
         text = module.read_text()
         for seam in ("def load_config", "def list_tasks", "def read_task",
+                     "def task_dependencies", "def startable_tasks",
                      "def verify_project"):
             check(seam in text, f"records/mgs_records.py 缺少公开接缝 {seam}")
 
@@ -689,6 +690,104 @@ def test_accept07_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(06 验收可复现;07 用夹具覆盖)")
 
 
+def test_game_plan_skill_content() -> None:
+    """任务票 08:Game-Plan 规格拆单入口的包内依据与关键纪律。"""
+
+    plan = PLUGIN_ROOT / "skills" / "game-plan" / "SKILL.md"
+    check(plan.is_file(), "缺少 skills/game-plan/SKILL.md")
+    if plan.is_file():
+        text = plan.read_text(encoding="utf-8")
+        for ref in (
+            "../../internal/contracts/management.md",
+            "../../internal/contracts/common.md",
+            "../../internal/contracts/records.md",
+            "../../internal/contracts/task-triage.md",
+            "../../internal/protocols/gate-protocol.md",
+            "../../internal/methods/writing-for-agents/SKILL.md",
+            "../../templates/work/task.md",
+        ):
+            check(ref in text, f"game-plan SKILL.md 应引用包内依据 {ref}")
+        for concept in (
+            "原子任务",          # 合同措辞:形成当前及近期的原子任务
+            "已采纳",            # 只拆已采纳规格,未决项不拆成可执行任务
+            "粗粒度",            # 远期工作保持合适粒度,不展开
+            "引用",              # 已有要求使用引用,不复制规格正文
+            "稳定身份",          # 身份稳定,排序变化不重命名
+            "完成标准", "执行责任", "验收方式",  # 逐项任务字段
+            "所需能力",          # 拆单轮附加字段(能力核对)
+            "真实依赖",          # 依赖只记录真正影响开工的任务
+            "集成",              # 共享成果写入协调与集成责任
+            "单一写入者",        # 同一可写成果单一修改者
+            "分流",              # 按五类分流安排
+            "needs-info",        # 输入不足的分流去向
+            "wontfix",           # 暂缓/依赖未完成不误写成 wontfix
+            "试玩",              # 需要人工试玩不阻止 Agent 制作
+            "不新建",            # 重复拆解不静默制造重复任务
+            "结果索引",          # 结果入口
+            "可开工",            # 当前可开工集合
+            "循环",              # 依赖可解析且无循环
+            "授权",              # ready-for-agent 不等于已获全部授权
+            "expected_sha256",   # 更新既有任务走版本校验
+            "mgs_records",       # 统一接口
+        ):
+            check(concept in text, f"game-plan SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept08_fixture() -> None:
+    """任务票 08:tide-pool 的 06/07 成果注入夹具——已采纳规格 v2 与原型结论
+    真实存在,供规格拆单验收使用(覆盖 samples/tide-pool,不改样例本体)。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "08-spec-to-local-tasks" / "fixtures"
+    for rel in (
+        "README.md",
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/CONFIG.md",
+        "docs/mygamestudio/records/decision-2026-09-08-gull-swoop.md",
+        "docs/mygamestudio/records/research-2026-09-08-gull-facts.md",
+        "prototypes/README.md",
+        "prototypes/gull-window/report.md",
+        "prototypes/gull-window/README.md",
+    ):
+        check((fixtures / rel).is_file(), f"accept-08 夹具缺少 {rel}")
+    design = fixtures / "docs" / "mygamestudio" / "GAME_DESIGN.md"
+    if design.is_file():
+        design_text = design.read_text(encoding="utf-8")
+        check("基线版本:v2" in design_text, "夹具 GAME_DESIGN 应为 06 产出的基线 v2")
+        check("海鸥" in design_text and "连击" in design_text,
+              "夹具 GAME_DESIGN v2 应纳入海鸥与连击采纳内容")
+        check("未决" in design_text, "夹具 GAME_DESIGN 应保留预警未决项")
+    project = fixtures / "docs" / "mygamestudio" / "PROJECT.md"
+    if project.is_file():
+        project_text = project.read_text(encoding="utf-8")
+        check("基线版本:v2" in project_text, "夹具 PROJECT 应为统筹同步后的 v2")
+        check("海鸥" in project_text, "夹具 PROJECT 应把海鸥纳入本轮范围")
+    config = fixtures / "docs" / "mygamestudio" / "CONFIG.md"
+    if config.is_file():
+        config_text = config.read_text(encoding="utf-8")
+        check("无音频制作能力" in config_text,
+              "夹具 CONFIG 应保留无音频制作能力(能力核对依据)")
+        check("prototypes" in config_text, "夹具 CONFIG 应含原型区执行条件")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        readme_text = readme.read_text(encoding="utf-8")
+        check("拆" in readme_text and "海鸥" in readme_text,
+              "夹具 README 当前请求应指向海鸥规格拆单")
+        check("原型" in readme_text, "夹具 README 应说明原型结论可用作拆单输入")
+    proto_report = fixtures / "prototypes" / "gull-window" / "report.md"
+    if proto_report.is_file():
+        report_text = proto_report.read_text(encoding="utf-8")
+        check("原型观察" in report_text and "待验收" in report_text,
+              "夹具原型验证记录应保留四类结论区分与待人工验收状态")
+    # 夹具是覆盖层:samples/tide-pool 本体必须保持 v1(06/07 验收可复现)
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        sample_text = sample_design.read_text(encoding="utf-8")
+        check("基线版本:v1" in sample_text,
+              "samples/tide-pool 本体应保持 v1(06 验收可复现;08 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -707,6 +806,8 @@ def main() -> int:
     test_gear_city_fixture()
     test_prototype_skill_content()
     test_accept07_fixture()
+    test_game_plan_skill_content()
+    test_accept08_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

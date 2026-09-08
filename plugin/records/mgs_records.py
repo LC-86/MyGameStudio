@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
-"""MyGameStudio 本地 Markdown 任务后端:统一回读接口(任务票 04)。
+"""MyGameStudio 本地 Markdown 任务后端:统一回读接口(任务票 04,票 08 扩展)。
 
 对应设计《工作记录合同》「后端接口」一节在本地 Markdown 后端上的最小实现:
-读取配置、列出任务、读取任务与结果、回读核验。调用方只使用 CONFIG.md
-配置后的入口,不硬编码 work/ 或 .scratch/(配置路径可显式传入,
-默认值来自《项目目录模板》的默认布局)。
+读取配置、列出任务、读取任务与结果、回读核验(票 04);关系解析与循环检测、
+当前可开工集合(票 08)。调用方只使用 CONFIG.md 配置后的入口,不硬编码
+work/ 或 .scratch/(配置路径可显式传入,默认值来自《项目目录模板》的默认布局)。
 
 边界:
 - 本模块只做读取与核验,不提供写入。项目内写入一律经运行保障受控通道
   (mgs-gate 的 mgs_write)完成;本模块的核验结果针对实际落盘内容。
 - 首版仅支持 local-markdown 后端;GitHub Issues 后端未实现,遇到时明确
   报不支持,不静默降级。
+- 开工集合是「记录可核对的开工条件」判断,不是授权:ready-for-agent
+  不等于依赖已完成或已获全部写入授权,开工前仍需按任务允许修改范围与
+  运行保障核对授权(startable_tasks 输出附此提示)。
 
 用法:
   mgs_records.py config --project <项目根> [--config <CONFIG相对路径>]
   mgs_records.py list  --project <项目根> [--config <CONFIG相对路径>]
   mgs_records.py show  --project <项目根> --task <任务身份> [--config ...]
+  mgs_records.py deps  --project <项目根> [--config <CONFIG相对路径>]
+  mgs_records.py ready --project <项目根> [--config <CONFIG相对路径>]
   mgs_records.py verify --project <项目根> [--config <CONFIG相对路径>]
 """
 
@@ -36,6 +41,16 @@ CORE_DOC_KEYS = {
     "tech": ("技术设计",),
 }
 TASK_REQUEST_KEYS = ("当前目标", "完成标准", "执行责任")
+# 拆单轮(任务票 08)任务记录应具备的完整字段;旧记录缺项不判 verify 失败,
+# 由 startable_tasks 逐任务给出可开工原因。
+PLAN_REQUEST_KEYS = ("当前目标", "输入与基线", "本次交付", "允许修改范围",
+                     "所需能力", "完成标准", "执行责任", "验收方式", "依赖")
+READY_NOTE = ("可开工=分流 ready 且记录字段完整且未完成依赖为空;这是开工条件核对,"
+              "不等于依赖已全部完成或已获全部写入授权——开工前按任务「允许修改范围」"
+              "与运行保障核对授权;能力与授权以实际执行环境为准。")
+# 身份 token 前面不能是数字或连字符:避免把「2026-09-08」这类日期从中间
+# 截断成假身份(026-09-08/09-08),制造假的未解析依赖。
+IDENTITY_RE = re.compile(r"(?<![\d-])\d{1,3}-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")
 
 
 class RecordsError(Exception):
@@ -222,6 +237,194 @@ def read_task(project_root: Path | str, task_id: str,
     return parsed
 
 
+# ---------- 关系解析与开工集合(任务票 08) ----------
+
+def _parse_dep_ids(value: str) -> list[str]:
+    """从「依赖」字段提取任务身份 token(逗号/顿号/分号分隔,含「无」等说明文字)。
+
+    身份形态沿用本地后端约定:NN-<slug>(如 04-gull-swoop);其余文字忽略。
+    """
+
+    if not value:
+        return []
+    return IDENTITY_RE.findall(value)
+
+
+def _find_cycles(edges: dict[str, list[str]]) -> list[list[str]]:
+    """DFS 检测有向图循环,返回循环路径(每个循环报一次)。"""
+
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color = {node: WHITE for node in edges}
+    cycles: list[list[str]] = []
+
+    def visit(node: str, path: list[str]) -> None:
+        color[node] = GRAY
+        for dep in edges.get(node, []):
+            if dep not in color:
+                continue  # 未解析依赖由 unresolved 报告
+            if color[dep] == GRAY:
+                index = path.index(dep)
+                cycles.append(path[index:] + [dep])
+            elif color[dep] == WHITE:
+                visit(dep, path + [dep])
+        color[node] = BLACK
+
+    for node in sorted(edges):
+        if color[node] == WHITE:
+            visit(node, [node])
+    return cycles
+
+
+def task_dependencies(project_root: Path | str,
+                      config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """解析任务依赖关系:边、未解析引用与循环(关系可解析且无循环为 ok)。"""
+
+    root = Path(project_root)
+    tasks = list_tasks(root, config_rel)
+    by_id = {task["identity"]: task for task in tasks}
+    edges: dict[str, list[str]] = {}
+    unresolved: list[dict] = []
+    for task in tasks:
+        deps = _parse_dep_ids(task["request"].get("依赖", ""))
+        edges[task["identity"]] = deps
+        for dep in deps:
+            if dep not in by_id:
+                unresolved.append({"identity": task["identity"], "dep": dep})
+    cycles = _find_cycles(edges)
+    return {"edges": edges, "unresolved": unresolved, "cycles": cycles,
+            "ok": not unresolved and not cycles}
+
+
+def _doc_baseline_versions(root: Path, config: dict) -> dict[str, str]:
+    """按文档映射建立可引用文档的当前逻辑版本表(如 GAME_DESIGN → "v2")。"""
+
+    versions: dict[str, str] = {}
+    for row in config["docmap"]:
+        path = root / row["path"]
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        match = re.search(r"基线版本\s*[:：]\s*v(\d+)", text)
+        if match:
+            versions[row["path"]] = f"v{match.group(1)}"
+            stem = Path(row["path"]).stem
+            versions.setdefault(stem, f"v{match.group(1)}")
+            versions.setdefault(str(Path(row["path"]).name), f"v{match.group(1)}")
+    return versions
+
+
+_BASELINE_REF_RE = re.compile(
+    r"([A-Za-z0-9_./-]+\.md|[A-Z][A-Z0-9_]+)\s*[（(]?\s*[vV](\d+)")
+
+
+def _baseline_drifts(versions: dict[str, str], value: str) -> list[str]:
+    """核对「输入与基线」中的文档版本引用与当前基线版本表,报告漂移。"""
+
+    drifts: list[str] = []
+    for name, ref in _BASELINE_REF_RE.findall(value or ""):
+        actual = versions.get(name) or versions.get(Path(name).stem)
+        if actual and actual != f"v{ref}":
+            drifts.append(f"基线版本漂移:{name} 当前 {actual},任务引用 v{ref}")
+    return drifts
+
+
+def _longest_common_text(a: str, b: str) -> str:
+    """两段文本的最长公共子串(短语能力重叠判断用,短字符串)。"""
+
+    best = ""
+    for start in range(len(a)):
+        for end in range(start + len(best) + 1, len(a) + 1):
+            piece = a[start:end]
+            if piece in b:
+                best = piece
+    return best
+
+
+_CAPABILITY_NEGATION_RE = re.compile(r"不需要|无需|不涉及|不依赖|不使用|没有|"
+                                     r"已就绪|已具备|均已|暂不需要")
+
+
+def _capability_gaps(config_text: str, phrases: str) -> list[str]:
+    """「所需能力」短语命中 CONFIG「尚未就绪的能力」说明时,报告能力未就绪。
+
+    否定式表述(如「本任务不需要音频制作能力」「所需能力均已就绪」)不视为
+    命中——记录在说该缺口不影响本任务(任务票 08 依真实拆单轮反馈补上)。
+    """
+
+    match = re.search(r"尚未就绪的能力及影响\s*[:：]\s*(.+)", config_text or "")
+    notready = (match.group(1).strip() if match else "")
+    if not notready or notready in ("无", "无。"):
+        return []
+    gaps: list[str] = []
+    for phrase in re.split(r"[,，、;；/]|以及|和|与", phrases or ""):
+        phrase = phrase.strip()
+        if len(phrase) < 2 or _CAPABILITY_NEGATION_RE.search(phrase):
+            continue
+        overlap = _longest_common_text(phrase, notready)
+        if len(overlap) >= 2 and any("\u4e00" <= ch <= "\u9fff" for ch in overlap):
+            gaps.append(f"能力未就绪:{phrase}(命中 CONFIG 尚未就绪能力说明)")
+    return gaps
+
+
+def startable_tasks(project_root: Path | str,
+                    config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """当前可开工集合:综合未完成依赖、输入、版本、能力与记录完整性。
+
+    ready-for-agent 不等于依赖已完成或已获全部授权——见返回 note;
+    wontfix 与非待执行任务保留在 blocked 侧可见,不静默消失。
+    """
+
+    root = Path(project_root)
+    config = _local_config(root, config_rel)
+    config_text = (root / config_rel).read_text(encoding="utf-8")
+    # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档)
+    versions = _doc_baseline_versions(root, config)
+    tasks = list_tasks(root, config_rel)
+    by_id = {task["identity"]: task for task in tasks}
+    graph = task_dependencies(root, config_rel)
+    startable: list[dict] = []
+    blocked: list[dict] = []
+    for task in tasks:
+        identity = task["identity"]
+        reasons: list[str] = []
+        triage = task["triage"]
+        if triage == "needs-triage":
+            reasons.append("分流:needs-triage(待核对当前目标后重新分流)")
+        elif triage == "needs-info":
+            missing = task["request"].get("尚缺信息", "")
+            reasons.append(f"输入不足:needs-info(尚缺信息:{missing or '未列明'})")
+        elif triage == "wontfix":
+            reasons.append("分流:wontfix(不再安排;原因见任务记录)")
+        if task["progress"] != "待执行":
+            reasons.append(f"进度:{task['progress'] or '缺失'}(非待执行)")
+        open_item = task["progress"] == "待执行" and triage != "wontfix"
+        if open_item:
+            for dep in graph["edges"].get(identity, []):
+                if dep not in by_id:
+                    reasons.append(f"依赖未解析:{dep}(任务不存在)")
+                elif by_id[dep]["progress"] != "已完成":
+                    reasons.append(
+                        f"依赖未完成:{dep}(进度:{by_id[dep]['progress'] or '缺失'})")
+            missing_fields = [key for key in PLAN_REQUEST_KEYS
+                              if not task["request"].get(key)]
+            if missing_fields:
+                reasons.append(f"任务记录缺字段:{'、'.join(missing_fields)}")
+            reasons.extend(_baseline_drifts(
+                versions, task["request"].get("输入与基线", "")))
+            reasons.extend(_capability_gaps(
+                config_text, task["request"].get("所需能力", "")))
+        entry = {"identity": identity, "title": task["title"], "triage": triage,
+                 "progress": task["progress"],
+                 "executor": task["request"].get("执行责任", ""),
+                 "reasons": reasons}
+        if (triage in ("ready-for-agent", "ready-for-human")
+                and task["progress"] == "待执行" and not reasons):
+            startable.append(entry)
+        else:
+            blocked.append(entry)
+    return {"startable": startable, "blocked": blocked, "note": READY_NOTE}
+
+
 def _check(name: str, ok: bool, detail: str) -> dict:
     return {"name": name, "ok": bool(ok), "detail": detail}
 
@@ -318,6 +521,17 @@ def verify_project(project_root: Path | str,
     checks.append(_check("results-consistent", not result_problems,
                          ";".join(result_problems) if result_problems
                          else "结果文件与结果索引互相一致"))
+
+    # 任务票 08:依赖关系可解析且无循环(旧记录无「依赖」字段时视为无依赖)
+    if is_local:
+        graph = task_dependencies(root, config_rel)
+        dep_problems = [f"{item['identity']} 依赖不存在任务 {item['dep']}"
+                        for item in graph["unresolved"]]
+        dep_problems += ["循环依赖:" + "->".join(cycle)
+                         for cycle in graph["cycles"]]
+        checks.append(_check("deps-consistent", not dep_problems,
+                             ";".join(dep_problems) if dep_problems
+                             else "依赖关系可解析且无循环"))
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
 
 
@@ -335,6 +549,9 @@ def _cli() -> int:
     sub.add_parser("list", parents=[common], help="列出任务")
     p_show = sub.add_parser("show", parents=[common], help="读取单个任务")
     p_show.add_argument("--task", required=True, help="任务身份")
+    sub.add_parser("deps", parents=[common],
+                   help="解析任务依赖关系(未解析引用或循环时退出码 1)")
+    sub.add_parser("ready", parents=[common], help="当前可开工集合及原因")
     sub.add_parser("verify", parents=[common], help="回读核验")
     args = parser.parse_args()
     root = Path(args.project)
@@ -347,6 +564,10 @@ def _cli() -> int:
                        for t in list_tasks(root, args.config)]
         elif args.cmd == "show":
             payload = read_task(root, args.task, args.config)
+        elif args.cmd == "deps":
+            payload = task_dependencies(root, args.config)
+        elif args.cmd == "ready":
+            payload = startable_tasks(root, args.config)
         else:
             payload = verify_project(root, args.config)
     except RecordsError as exc:
@@ -354,6 +575,8 @@ def _cli() -> int:
         return 2
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     if args.cmd == "verify" and not payload["ok"]:
+        return 1
+    if args.cmd == "deps" and not payload["ok"]:
         return 1
     return 0
 

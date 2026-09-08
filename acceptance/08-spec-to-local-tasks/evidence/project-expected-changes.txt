@@ -1,0 +1,13 @@
+== 新增(应恰为 8 个计划内文件) ==
+./docs/mygamestudio/work/03-gull-round-plan/results/2026-09-08.md
+./docs/mygamestudio/work/03-gull-round-plan/task.md
+./docs/mygamestudio/work/04-shell-combo/task.md
+./docs/mygamestudio/work/05-gull-swoop/task.md
+./docs/mygamestudio/work/06-gull-sprite/task.md
+./docs/mygamestudio/work/07-warning-cue/task.md
+./docs/mygamestudio/work/08-gull-playtest/task.md
+./docs/mygamestudio/work/09-future-scope/task.md
+== 删除(应为空) ==
+
+== 修改(应仅在 02/03/04/05 任务记录) ==
+./docs/mygamestudio/work/02-tide-timer/task.md

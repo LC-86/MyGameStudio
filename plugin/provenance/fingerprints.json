@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.6.0 (任务票 06 最小包)",
+  "generated_for": "mygamestudio 0.8.0 (任务票 08 最小包)",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -16,8 +16,8 @@
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "c946b69f3d43a7803d21b694740b36b95963c0dd3abf994ab47056da01714797",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口)",
+      "sha256": "dd3997a4dcc55d4e65b3b71f412c25f8e5c657ce0ba4e565715752af641b6ffe",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口)",
       "license": "本项目自有内容(MIT)"
     },
     {

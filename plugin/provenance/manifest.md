@@ -1,10 +1,10 @@
-# mygamestudio 0.7.0 来源与许可追溯
+# mygamestudio 0.8.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01-07)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-08)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.7.0`(任务票 07:Game-Prototype 升级为完整隔离原型工作流——确认问题/范围/方法/输出位置、最小可检验实现、会话工作区运行观察、四类结论区分与交接;任务票 01-06 建立的其余结构不变)。
+- 名称:`mygamestudio`,版本 `0.8.0`(任务票 08:新增 Game-Plan 规格拆单入口——当前及近期原子任务、任务字段全集、五类分流、真实依赖与写入协调、重复拆解防护、统一接口回读;`records/mgs_records.py` 扩展依赖解析/循环检测与当前可开工集合;任务票 01-07 建立的其余结构不变)。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
@@ -13,7 +13,7 @@
 | 文件 | 来源 | 适配说明 |
 | --- | --- | --- |
 | `common.md` | 设计仓库 `contracts/common.md` | 仅将指向未随包设计文档的链接改为文字引用(标注"不随包");补写 writing-for-agents 的包内路径。语义与设计一致 |
-| `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;任务票 04 起 Game-Init 节改链包内协作配置合同与初始化流程;任务票 05 更新文末"包内说明"为已实现新项目初始化与已有项目接手入口 |
+| `management.md` | 设计仓库 `contracts/management.md` | 链接适配同上;任务票 04 起 Game-Init 节改链包内协作配置合同与初始化流程;任务票 05 更新文末"包内说明"为已实现新项目初始化与已有项目接手入口;任务票 08 更新"包内说明"为已实现 Game-Plan 拆单入口 |
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
 | `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;任务票 06 更新:grill-with-docs/wayfinder 改链包内方法路径,文末"包内说明"注明 Game-Design/Game-Spec 最小入口已实现;任务票 07 更新:"包内说明"注明 Game-Prototype 完整原型工作流已实现 |
@@ -36,7 +36,8 @@
 
 ## records/(本地 Markdown 任务后端,本项目自有内容)
 
-- `records/mgs_records.py`:统一回读接口——`load_config`/`list_tasks`/`read_task`/`verify_project` 及其 CLI。对应设计《工作记录合同》「后端接口」在本地 Markdown 后端上的最小实现;只读不写(项目写入一律经 mgs-gate),首版不支持 GitHub Issues 后端(明确报错,不静默降级)。确定性接缝检查见 `tests/test_records_backend.py`。
+- `records/mgs_records.py`:统一回读接口——`load_config`/`list_tasks`/`read_task`/`verify_project`(任务票 04)与 `task_dependencies`/`startable_tasks`(任务票 08:依赖关系解析与循环检测、当前可开工集合,核对未完成依赖/输入/版本/能力并声明可开工不等于已获授权)及其 CLI。对应设计《工作记录合同》「后端接口」一节在本地 Markdown 后端上的实现;只读不写(项目写入一律经 mgs-gate,任务票 04 已记录该边界),首版不支持 GitHub Issues 后端(明确报错,不静默降级)。确定性接缝检查见 `tests/test_records_backend.py`。
+- 任务票 08 实现选择(记录供后续票引用):任务记录的「依赖」用工作请求中独立字段(以任务身份逐项列出)表达,供 `deps`/`ready` 确定性解析;「所需能力」字段引用 CONFIG 执行条件,命中"尚未就绪的能力"说明即列为不可开工原因;两者按模板实例化规则(包内 `templates/README.md` 第 4 条"专有字段仅在本轮需要时添加")由拆单轮添加,不改动设计模板的逐字节副本;旧记录无这两个字段时视为无依赖、不判 verify 失败。
 
 ## internal/protocols/(运行保障接入协议)
 
@@ -69,4 +70,5 @@
 ## 未包含
 
 - 其余条件参考(prototype 三件套、code-review):按依赖闭包研究属可选固定参考,当前已实现入口不引用它们;原型验证走已实现的 Game-Prototype 入口。
+- `to-tickets`、`to-spec`、`implement`:按包合同(Game-Spec、Game-Plan、Game-Implement 使用游戏侧独立协议,原方法仅作方法来源)与依赖闭包研究不随包。任务票 08 实现 Game-Plan 时未收录 `to-tickets`,游戏侧拆单协议(小成果可独立核验、真实依赖、Agent/Human 分工、项目目录映射、不用默认 ready-for-agent)直接写在 `skills/game-plan/SKILL.md` 及其包内依据中。
 - 设计文档 proposals/research/issues 的其余文件:不在包内,合同适配版中以"不随包"文字引用。
