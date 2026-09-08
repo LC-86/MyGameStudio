@@ -1,0 +1,6 @@
+== GET /index.html ==
+200
+index-fetch: 与产物逐字节一致
+== GET /main.js ==
+200
+main-fetch: 与产物逐字节一致

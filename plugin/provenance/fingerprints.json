@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.13.0",
+  "generated_for": "mygamestudio 0.14.0",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -22,8 +22,8 @@
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "b799f38a278d8aef7fd9fd29076c3b294ccf8d63b46017bb0b47fe770aba8fbc",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio,任务票 12 更新为已实现 Game-Build,任务票 13 更新包内说明为已实现 Game-Review 并改链包内审查与试玩合同)",
+      "sha256": "b95d34d477377a36baf12d1b0078f3046ef8434acbc729b477ce60c8dbeac1d2",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio,任务票 12 更新为已实现 Game-Build,任务票 13 更新包内说明为已实现 Game-Review 并改链包内审查与试玩合同,任务票 14 更新为 Review 与 Playtest 均已实现)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -46,8 +46,8 @@
     },
     {
       "path": "internal/contracts/verification.md",
-      "sha256": "95f9ae2da2fa27c22f4cbb2e638abc12cfc9537e8e9bab2a69c0bcb5fc58133a",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/verification.md(适配版)",
+      "sha256": "6d0e1f1fa8a1a8bccfe33a4f54a6c4530dc5e6f10fcbb040d60702c100716e82",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/verification.md(适配版;任务票 14 更新包内说明为 Game-Playtest 已实现)",
       "license": "本项目自有内容(MIT)"
     },
     {

@@ -75,13 +75,14 @@ def test_explicit_skills() -> None:
         return
     expected = [
         "game-art", "game-audio", "game-build", "game-code", "game-design",
-        "game-implement", "game-init", "game-plan", "game-producer",
-        "game-prototype", "game-review", "game-spec", "game-status",
+        "game-implement", "game-init", "game-plan", "game-playtest",
+        "game-producer", "game-prototype", "game-review", "game-spec",
+        "game-status",
     ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
     check(
         skill_dirs == expected,
-        f"任务票 13 后包内技能入口应为 {expected},实际为 {skill_dirs}",
+        f"任务票 14 后包内技能入口应为 {expected},实际为 {skill_dirs}",
     )
     for skill_name in expected:
         skill_md = skills_root / skill_name / "SKILL.md"
@@ -1454,6 +1455,122 @@ def test_accept13_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(13 用夹具覆盖)")
 
 
+def test_game_playtest_skill_content() -> None:
+    """任务票 14:Game-Playtest 试玩工作流的包内依据与关键纪律。"""
+
+    playtest = PLUGIN_ROOT / "skills" / "game-playtest" / "SKILL.md"
+    check(playtest.is_file(), "缺少 skills/game-playtest/SKILL.md")
+    if not playtest.is_file():
+        return
+    text = playtest.read_text(encoding="utf-8")
+    for ref in (
+        "../../internal/contracts/verification.md",
+        "../../internal/contracts/common.md",
+        "../../internal/contracts/records.md",
+        "../../internal/protocols/gate-protocol.md",
+        "../../internal/methods/writing-for-agents/SKILL.md",
+        "../../templates/evidence/playtest.md",
+    ):
+        check(ref in text, f"game-playtest SKILL.md 应引用包内依据 {ref}")
+    for concept in (
+        "明确的版本与入口",  # 输入:版本与入口必须明确
+        "场景",              # 输入:要检查的场景或问题
+        "适用要求",          # 输入:适用要求
+        "可用控制",          # 输入:可用控制工具
+        "人工参与约定",      # 输入:人工参与约定
+        "制定",              # 制定必要场景
+        "实际执行",          # 实际执行可用的检查
+        "输入", "观察",      # 记录输入与观察
+        "证据",              # 逐项记录证据
+        "试玩任务",          # 需要人时给出明确试玩任务
+        "回传要求",          # 反馈的回传要求
+        "实际反馈",          # 人工结论来自实际反馈
+        "来源",              # 实际反馈保留来源
+        "未反馈",            # 三态表达一
+        "明确通过",          # 三态表达二
+        "需要修改",          # 三态表达三
+        "SHA-256",           # 结果绑定实际测试版本(指纹)
+        "缺陷",              # 发现缺陷时输出交接
+        "交接",              # 交接返回执行流程
+        "不改产品基线",      # 不改产品基线来迁就观察结果
+        "尚未执行",          # 仅写了计划的部分明确尚未执行
+        "计划",              # 仅制定计划的工作明确标为计划
+        "运行状态",          # 运行状态和测试输出受本次用途限制
+        "测试输出",          # 同上
+        "GUI",               # 新增 GUI 通路不被假定继承本地边界
+        "MCP",               # 新增 MCP 通路同理
+        "未就绪",            # 未覆盖能力保持未就绪
+        "覆盖限制",          # 如实标注覆盖限制
+        "evidence/",         # 试玩记录与证据落点
+        "mgs_scope",         # 写入前确认有效范围
+        "mgs_write",         # 试玩记录经受控通道写入
+        "复测",              # 新修改/失败/疑点触发复测
+        "不代验收",          # 试玩记录不等于验收通过
+        "待验收",            # 人工项保持待验收
+        "统筹",              # 进度与分流归统筹
+        "mgs_records",       # 统一接口(读任务与约定)
+    ):
+        check(concept in text, f"game-playtest SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept14_fixture() -> None:
+    """任务票 14:试玩验收夹具——承接票 13 终态(evidence/ 5 份审查记录、02 修复
+    说明、tide-extra.js 处置残留),叠加开发者试玩请求;不改样例本体。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "14-playtest-and-human-feedback" / "fixtures"
+    for rel in (
+        "README.md",
+        "src/tide-extra.js",
+        "docs/mygamestudio/work/02-tide-timer/results/2026-09-08-fix.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-02-tide-timer.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-06-gull-sprite.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-10-warning-sfx.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-11-playable-build.md",
+        "docs/mygamestudio/evidence/2026-09-08-recheck-02-tide-timer.md",
+    ):
+        check((fixtures / rel).is_file(), f"accept-14 夹具缺少 {rel}")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("试玩" in text, "夹具 README 当前请求应指向试玩")
+        check("11-playable-build" in text, "夹具 README 应引用试玩对象 11-playable-build")
+        check("build/index.html" in text, "夹具 README 应给出运行入口 build/index.html")
+        check("人工" in text, "夹具 README 应说明人工体验判断的参与约定")
+        check("未收到" in text or "尚未收到" in text,
+              "夹具 README 应声明当前未收到任何真实人工反馈")
+        check("08-gull-playtest" in text,
+              "夹具 README 应引用等待真实人工反馈的 08-gull-playtest")
+    # 承接票 13 终态的文件与 .tmp 终态逐字节一致(本机有 .tmp 时核对)
+    a13 = ".tmp/accept-13/projects/tide-pool"
+    for rel in (
+        "src/tide-extra.js",
+        "docs/mygamestudio/work/02-tide-timer/results/2026-09-08-fix.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-02-tide-timer.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-06-gull-sprite.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-10-warning-sfx.md",
+        "docs/mygamestudio/evidence/2026-09-08-review-11-playable-build.md",
+        "docs/mygamestudio/evidence/2026-09-08-recheck-02-tide-timer.md",
+    ):
+        arena_file = REPO_ROOT / a13 / rel
+        if arena_file.is_file() and (fixtures / rel).is_file():
+            check((fixtures / rel).read_bytes() == arena_file.read_bytes(),
+                  f"accept-14 夹具 {rel} 应与票 13 终态逐字节一致")
+    # tide-extra.js 为票 13 的处置残留(解除引用且无副作用化),不再被入口引用
+    entry = REPO_ROOT / "acceptance" / "10-visual-asset-delivery" / "fixtures" / "src" / "index.html"
+    residue = fixtures / "src" / "tide-extra.js"
+    if entry.is_file() and residue.is_file():
+        check("tide-extra" not in entry.read_text(encoding="utf-8"),
+              "入口 index.html 不应引用 tide-extra.js(票 13 修复后的状态)")
+        check("已停用" in residue.read_text(encoding="utf-8"),
+              "tide-extra.js 应为票 13 处置后的无副作用残留")
+    # 样例本体保持 v1 未动(既有票验收可复现;14 用夹具覆盖)
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        check("基线版本:v1" in sample_design.read_text(encoding="utf-8"),
+              "samples/tide-pool 本体应保持 v1(14 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -1484,6 +1601,8 @@ def main() -> int:
     test_accept12_fixture()
     test_game_review_skill_content()
     test_accept13_fixture()
+    test_game_playtest_skill_content()
+    test_accept14_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

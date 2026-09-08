@@ -1,10 +1,10 @@
-# mygamestudio 0.13.0 来源与许可追溯
+# mygamestudio 0.14.0 来源与许可追溯
 
-本 manifest 记录最小包(任务票 01-13)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
+本 manifest 记录最小包(任务票 01-14)随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.13.0`(任务票 13:新增 Game-Review 独立审查专业入口——以独立于原执行上下文的同专业执行实例检查真实成果的规范与需求符合性,先固定待审版本与完整范围(文件清单与 SHA-256 指纹,含适用的已提交、暂存、未暂存与新建成果,直接读取工作区实际文件,不以 HEAD 或暂存区对比替代,不依赖作者总结),代码按 Standards 与 Spec 两轴独立执行、分别呈现,设计与资源按专业标准及需求符合性检查,每项问题关联具体证据与影响并区分明确规则违背、专业判断与未能检查,审查实例仅写审查记录和证据(项目 evidence/)不修改待审专业成果,修复由对应制作或设计任务执行,修复后针对实际新版本复核且旧结论不挪作新版本通过证明,未实现的运行能力标为覆盖限制且审查报告生成不等于验收通过;同票新增随包合同 internal/contracts/verification.md(审查与试玩合同适配版),并把 game-implement 技能中「尚未实现的专业入口」示例清单同步为现状(Review 已实现,余 Playtest);任务票 01-12 建立的其余结构不变,原 0.12.0 描述:新增 Game-Build 构建运行专业入口(从项目实际配置确定构建导出与运行方式、产物与源版本 SHA-256 对应、构建脚本及子进程在已验证边界内、不把存在文件等同于本次构建成功),此处不再展开)。
+- 名称:`mygamestudio`,版本 `0.14.0`(任务票 14:新增 Game-Playtest 试玩专业入口——针对明确版本与运行入口制定必要场景并实际执行可用检查(headless 可编程控制、无头冒烟、入口取回),逐项记录输入、观察、结果和证据,结果以 SHA-256 指纹绑定实际测试版本;需要人的手感、审美或体验判断时给出具体试玩任务与回传要求,人工结论只来自实际反馈并保留来源,未反馈、明确通过与需要修改分别表达,Agent 观察不冒充人工反馈;发现缺陷或目标变化输出相应交接,不改产品基线来迁就观察结果;运行状态和测试输出受本次用途限制(写入仅经 mgs-gate 落 evidence/,playtest 用途由策略收窄),真实浏览器 GUI 控制等新增 GUI/MCP 通路不被假定继承本地边界且未经验证保持未就绪;仅制定计划的场景明确标为尚未执行,试玩记录生成不等于验收通过,试玩结果供管理流程决定进度;同票把 game-implement 技能中「尚未实现的专业入口」示例清单与 verification/production 合同包内说明同步为现状(Playtest 已实现);任务票 01-13 建立的其余结构不变,原 0.13.0 描述:新增 Game-Review 独立审查专业入口——以独立于原执行上下文的同专业执行实例检查真实成果的规范与需求符合性,先固定待审版本与完整范围(文件清单与 SHA-256 指纹,含适用的已提交、暂存、未暂存与新建成果,直接读取工作区实际文件,不以 HEAD 或暂存区对比替代,不依赖作者总结),代码按 Standards 与 Spec 两轴独立执行、分别呈现,设计与资源按专业标准及需求符合性检查,每项问题关联具体证据与影响并区分明确规则违背、专业判断与未能检查,审查实例仅写审查记录和证据(项目 evidence/)不修改待审专业成果,修复由对应制作或设计任务执行,修复后针对实际新版本复核且旧结论不挪作新版本通过证明,未实现的运行能力标为覆盖限制且审查报告生成不等于验收通过;同票新增随包合同 internal/contracts/verification.md(审查与试玩合同适配版),并把 game-implement 技能中「尚未实现的专业入口」示例清单同步为现状(Review 已实现,余 Playtest);任务票 01-12 建立的其余结构不变,原 0.12.0 描述:新增 Game-Build 构建运行专业入口(从项目实际配置确定构建导出与运行方式、产物与源版本 SHA-256 对应、构建脚本及子进程在已验证边界内、不把存在文件等同于本次构建成功),此处不再展开;再前历史见 fingerprints.json source 字段)。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
@@ -17,8 +17,8 @@
 | `records.md` | 设计仓库 `contracts/records.md` | 仅链接适配 |
 | `task-triage.md` | 设计仓库 `proposals/task-triage.md` | 仅链接适配;上游提交核对信息保留原文 |
 | `design.md` | 设计仓库 `contracts/design.md` | 任务票 02 新增;链接适配同上;任务票 06 更新:grill-with-docs/wayfinder 改链包内方法路径,文末"包内说明"注明 Game-Design/Game-Spec 最小入口已实现;任务票 07 更新:"包内说明"注明 Game-Prototype 完整原型工作流已实现 |
-| `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;任务票 09 更新文末"包内说明"为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流;任务票 10 更新为已实现 Game-Art 视觉资源工作流;任务票 11 更新为已实现 Game-Audio 音频资源工作流;任务票 12 更新为已实现 Game-Build 构建运行工作流;任务票 13 更新"包内说明"中 Game-Review 状态为已实现(Playtest 待后续) |
-| `verification.md` | 设计仓库 `contracts/verification.md` | 任务票 13 新增;原文仅含指向共同合同的链接(包内同目录可达),无其他外链;文末"包内说明"声明已实现 Game-Review 独立审查工作流、Game-Playtest 待后续 |
+| `production.md` | 设计仓库 `contracts/production.md` | 任务票 02 新增;链接适配同上;任务票 09 更新文末"包内说明"为已实现 Game-Implement 组织工作流与 Game-Code 完整代码工作流;任务票 10 更新为已实现 Game-Art 视觉资源工作流;任务票 11 更新为已实现 Game-Audio 音频资源工作流;任务票 12 更新为已实现 Game-Build 构建运行工作流;任务票 13 更新"包内说明"中 Game-Review 状态为已实现;任务票 14 更新为 Review 与 Playtest 均已实现(试玩工作流见 verification.md) |
+| `verification.md` | 设计仓库 `contracts/verification.md` | 任务票 13 新增;原文仅含指向共同合同的链接(包内同目录可达),无其他外链;任务票 14 更新文末"包内说明"为已实现 Game-Review 与 Game-Playtest 两工作流 |
 | `project-configuration.md` | 设计仓库 `contracts/project-configuration.md` | 任务票 04 新增;原文无外链,按包内现状补写文末"包内说明"(仅实现本地 Markdown 后端) |
 
 适配原则:不重写语义;所有改写点限于链接可达性与包内现状声明。更新这些文件时先对照设计仓库当前版本,再更新本 manifest 与 fingerprints.json。

@@ -104,9 +104,11 @@ def main() -> int:
                           choices=["producer", "design", "implement"])
     p_create.add_argument("--task", required=True)
     p_create.add_argument("--purpose", default="production",
-                          choices=["production", "prototype", "review"],
+                          choices=["production", "prototype", "review", "playtest"],
                           help="执行用途;review 供独立审查实例签发"
-                               "(任务票 13:写入由策略 review.restrict 收窄到 evidence/)")
+                               "(任务票 13:写入由策略 review.restrict 收窄到 evidence/);"
+                               "playtest 供试玩实例签发"
+                               "(任务票 14:写入由策略 playtest.restrict 收窄到 evidence/)")
     p_create.add_argument("--resource", action="append", required=True,
                           help="任务授权资源模式,可重复")
     p_create.add_argument("--ttl-mins", type=int, default=30)
