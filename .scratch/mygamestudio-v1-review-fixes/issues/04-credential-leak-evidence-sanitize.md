@@ -82,3 +82,13 @@ R6 为审查方哈希核实（证据文件中两枚明文与隔离运行根登�
 **哈希映射**:旧 tip `2938eaa`→新 tip `f7698fa`(03-fix `498c1e0`→`475a691`);票面/记忆中先于本注引用的旧哈希(`e2af9a9`/`6b2444b`/`c46d5ed`/`f21a19a`/`498c1e0`/`2938eaa`)均指改写前链,完整旧链以备份 bundle 为准。
 
 **未执行**:推送远端(待用户创建私有仓库并明确授权);撤销/释放登记(待用户授权)。
+
+### 2026-09-09 — 撤销执行(用户授权)与收口
+
+用户授权「一并处理」后,经可信调度侧 CLI 对运行根执行两条登记的释放:
+
+- `mgsrt_admin.py release-instance --id i-6afae7e2cf67`(review/16-review-round-50s)→ `{"released": …, "found": true}`,登记 `released=true`。
+- `mgsrt_admin.py release-instance --id i-4de16a8a42e5`(producer/16-loop-sync)→ 同上,登记 `released=true`。
+- 执行后登记 `released=false` 实例数为 0(改前快照留存 `/tmp/mgs-instances-before-release.json`,本机临时)。两枚令牌本已按登记过期,本动作为卫生收口;运行根其余状态未动。
+
+至此本票四条用户决定相关的待办全部闭合:撤销已执行、Git 历史已按用户选择(选项 B)清理;票 17 第 7 条真实远端授权与票 18 会话级验收仍按各自票面保留。
