@@ -170,6 +170,9 @@ class FakeTransport:
         self.sub_issues: dict[int, list[int]] = {}
         self.repo_labels: list[str] = ["triage", "info", "agent-ready",
                                        "human-ready", "wont-do"]
+        # 交接可达检查用的绝对 URL → 状态码(未登记的绝对 URL 应答 404)
+        self.remote_refs: dict[str, int] = {}
+        self.auth_flags: list[bool | None] = []  # 每次调用的 auth 参数(凭据核对)
         self.sub_issues_supported = sub_issues_supported
         self.calls: list[tuple[str, str, dict | None]] = []
         self._fail: list[tuple[str, str, str]] = []   # (method, needle, kind)
@@ -219,10 +222,18 @@ class FakeTransport:
         return issue
 
     # ----- GitHub REST 子集 -----
-    def request(self, method: str, path: str, body: dict | None = None):
+    def request(self, method: str, path: str, body: dict | None = None,
+                *, auth: bool | None = None):
         self.calls.append((method, path, body))  # 故障注入的调用也已真实发出
+        self.auth_flags.append(auth)             # 可达探测应传 auth=False(不带凭据)
         self._guard(method, path)
         path = path.split("?", 1)[0]  # 查询串不参与路由
+        # 绝对 URL(交接可达检查;HTTP 替身转发时会带上前导 /)
+        if method == "GET" and re.match(r"^/?https?://", path):
+            url = path.lstrip("/")
+            if url in self.remote_refs:
+                return self.remote_refs[url], {}
+            return 404, {"message": f"stand-in has no {url}"}
         base = f"/repos/mygamestudio/issue-accept"
         if method == "GET" and path == base + "/issues":
             return 200, list(self.issues)
@@ -775,8 +786,8 @@ def test_handover_baseline_check() -> None:
         check("不可访问" in design.get("note", ""),
               "应声明不得宣称未发布本地资料已可远端访问")
         check(report["ok"] is False, "存在不可达基线引用时交接检查不应 ok")
-        # CONFIG 记录了已发布引用 → 该基线判可达(引用形式);三份都补齐才 ok
-        config_path = root / "docs" / "mygamestudio" / "CONFIG.md"
+        # CONFIG 记录了已发布引用 → 经实际检查通过才判可达;三份都检查通过才 ok
+        config_path = root / "docs/mygamestudio/CONFIG.md"
         config_path.write_text(config_path.read_text(encoding="utf-8").replace(
             "外部连接引用及已确认操作范围:" + AUTH,
             "外部连接引用及已确认操作范围:" + AUTH
@@ -784,12 +795,17 @@ def test_handover_baseline_check() -> None:
             "PROJECT.md=https://example.invalid/goal@v1,"
             "TECH_DESIGN.md=https://example.invalid/tech@v1"),
             encoding="utf-8")
+        fake.remote_refs = {
+            "https://example.invalid/design": 200,
+            "https://example.invalid/goal": 200,
+            "https://example.invalid/tech": 200,
+        }
         report = mgs_github.handover_baseline_check(root, transport=fake)
         docs = {entry["path"]: entry for entry in report["docs"]}
         design = docs.get("docs/mygamestudio/GAME_DESIGN.md", {})
         check(design.get("remote_reachable") is True,
-              "记录了已发布引用的基线应判可达(以引用形式)")
-        check(report["ok"] is True, "全部基线可达时交接检查 ok")
+              "记录了已发布引用且实际检查通过的基线应判可达")
+        check(report["ok"] is True, "全部基线经检查可达时交接检查 ok")
 
 
 # ---------- Slice E:统一接口 CLI(github 后端写操作子命令) ----------
@@ -922,6 +938,347 @@ def test_cli_local_backend_refuses_write_subcommands() -> None:
                      str(REPO_ROOT / "samples" / "role-scope-demo"))
     check(result.returncode != 0 and "github" in result.stdout,
           f"handover 应限定 github 后端:{result.stdout[:200]}")
+
+
+# ---------- 审查修复票 01:反例固化(修复前红、修复后绿) ----------
+
+def test_append_result_readback_failure_keeps_uncertain() -> None:
+    """S2:评论超时后回读本身失败 ≠ 确认不存在——保留未知状态、停止重发,
+    结果如实报告已尝试步骤与不确定结论(不虚报失败也不虚报成功)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake)
+        fake.drop("POST", "/comments")           # 首条评论已落地但响应超时
+        fake.fail("GET", "/comments", "timeout")  # 回读本身失败
+        try:
+            outcome = backend.append_result("01-alpha", "交付证据")
+        except mgs_github.GithubRecordsError as exc:  # 修复前:重发两次后报错
+            outcome = {"raised": str(exc)}
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 1,
+              f"回读失败时不得发出第二条创建请求,实际 {len(posts)} 次 POST")
+        check(len(fake.comments[1]) == 1,
+              f"替身应只有一条评论,实际 {len(fake.comments[1])} 条")
+        check(outcome.get("uncertain") is True
+              and outcome.get("published") is not True,
+              f"结果应保留未知状态且不虚报成功,实际 {outcome}")
+        readbacks = [a for a in outcome.get("attempts", [])
+                     if a.get("step") == "readback"]
+        check(readbacks and readbacks[-1].get("outcome") != "absent",
+              f"回读失败不得记作 absent(确认不存在),实际 {outcome.get('attempts')}")
+
+
+def test_publish_drafts_refuses_cross_repo_draft() -> None:
+    """S1:草稿记录的仓库与当前后端仓库不一致时拒绝发布该草稿——不发请求、
+    不标记已发布、如实报告;选择新后端不构成旧草稿的迁移授权。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        config = mgs_records.load_config(root)
+        old = {**config, "repo": {"host": "github.com", "owner": "old-owner",
+                                  "repo": "private-repo"},
+               "external": ("github.com/old-owner/private-repo:"
+                            "issues-write(已授权旧仓库)")}
+        offline = FakeTransport()
+        offline.offline()
+        previous = mgs_github.GithubBackend(old, offline, base / "shared-cache")
+        previous.create_task("09-private", "仅旧仓库的任务", {"当前目标": "旧仓库材料"})
+        fake = FakeTransport()
+        current = mgs_github.GithubBackend(config, fake, base / "shared-cache")
+        outcome = current.publish_drafts()
+        writes = [c[1] for c in fake.calls if c[0] == "POST"]
+        check(writes == [], f"跨仓库草稿不得发出任何远端写请求,实际 {writes}")
+        check(outcome["published_count"] == 0,
+              f"跨仓库草稿不得标记已发布,实际 {outcome}")
+        check(len(list((base / "shared-cache/drafts").glob("*.json"))) == 1,
+              "被拒草稿应原样保留在待发布目录(不移动、不删除)")
+        check(any("仓库" in str(r.get("outcome", ""))
+                  and "迁移" in str(r.get("outcome", ""))
+                  for r in outcome["results"]),
+              f"拒绝原因应说明仓库不一致且不构成迁移授权,实际 {outcome['results']}")
+
+
+def test_switch_github_to_local_consistency() -> None:
+    """S3:GitHub→本地迁移的计划目标、本地文件落点、CONFIG 任务根与返回
+    产出目录四者一致;统一接口能读到迁移后的任务。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        plan = mgs_github.plan_backend_switch(root, target="local-markdown",
+                                              transport=fake)
+        check(plan["repo"] == "docs/mygamestudio/work",
+              f"迁移清单目标位置应为本地任务根,实际 {plan.get('repo')}")
+        plan_path = base / "plan.json"
+        plan_path.write_text(json.dumps(plan, ensure_ascii=False), encoding="utf-8")
+        outcome = mgs_github.apply_backend_switch(
+            plan_path, confirmed=True, emit_dir=base / "emit",
+            project_root=root, transport=fake)
+        check(outcome["created"] == 1, f"应迁移一个任务,实际 {outcome}")
+        check(Path(outcome["emit_dir"]).is_dir(),
+              f"返回的产出目录必须实际存在,实际 {outcome.get('emit_dir')}")
+        config = mgs_records.load_config(base / "emit", "CONFIG.md")
+        check(config["backend"] == "local-markdown"
+              and config["task_root"] == "docs/mygamestudio/work",
+              f"新 CONFIG 后端与任务根应为本地任务根,实际 "
+              f"{config.get('backend')}/{config.get('task_root')}")
+        tasks = mgs_records.list_tasks(base / "emit", "CONFIG.md")
+        check([t["identity"] for t in tasks] == ["01-alpha"],
+              f"统一接口应能读取迁移后的任务,实际 {tasks}")
+        check((base / "emit/docs/mygamestudio/work/01-alpha/task.md").is_file(),
+              "本地任务文件应落在 CONFIG 声明的任务根下")
+
+
+def test_cli_reverse_migration_real_entry() -> None:
+    """S3:CLI 真实入口(子进程 + 真实 UrllibTransport 经本地 HTTP 替身)
+    执行一次 GitHub→本地反向迁移,读取通道在 CLI 内建立。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        server = _StandinServer(fake)
+        server.start()
+        try:
+            plan_path = base / "plan.json"
+            emit = base / "emit"
+            result = run_cli("switch-plan", "--project", str(root),
+                             "--target", "local-markdown", "--emit", str(plan_path),
+                             "--api-base", server.base)
+            check(result.returncode == 0,
+                  f"CLI switch-plan(反向)应成功:{result.stdout[:300]}"
+                  f"{result.stderr[:200]}")
+            if result.returncode != 0:
+                return
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            check(plan["repo"] == "docs/mygamestudio/work",
+                  f"CLI 迁移清单目标应为本地任务根,实际 {plan.get('repo')}")
+            result = run_cli("switch-apply", "--project", str(root),
+                             "--plan", str(plan_path), "--emit-dir", str(emit),
+                             "--confirmed", "--api-base", server.base)
+            check(result.returncode == 0,
+                  f"CLI switch-apply(反向)应成功:{result.stdout[:300]}"
+                  f"{result.stderr[:200]}")
+            outcome = json.loads(result.stdout)
+            check(outcome["created"] == 1 and Path(outcome["emit_dir"]).is_dir(),
+                  f"CLI 迁移应产出任务且返回目录存在,实际 {outcome}")
+            tasks = mgs_records.list_tasks(emit, "CONFIG.md")
+            check([t["identity"] for t in tasks] == ["01-alpha"],
+                  f"CLI 迁移后统一接口应能读取任务,实际 {tasks}")
+        finally:
+            server.stop()
+
+
+def test_handover_reachability_requires_executed_check() -> None:
+    """S4:可达性结论只能来自实际执行的检查——完全离线时不输出任何
+    「远端可达」;引用存在不等于检查通过;实际检查 404 亦不可达。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        config_path = root / "docs/mygamestudio/CONFIG.md"
+        config_path.write_text(config_path.read_text(encoding="utf-8") + "\n"
+            "已发布基线引用:GAME_DESIGN.md=https://example.invalid/design,"
+            "PROJECT.md=https://example.invalid/goal,"
+            "TECH_DESIGN.md=https://example.invalid/tech\n", encoding="utf-8")
+        offline = FakeTransport()
+        offline.offline()
+        report = mgs_github.handover_baseline_check(root, transport=offline)
+        check(all(doc["remote_reachable"] is False for doc in report["docs"]),
+              f"完全离线时不得输出任何远端可达,实际 "
+              f"{[d['remote_reachable'] for d in report['docs']]}")
+        check(report["ok"] is False, "离线时交接核对不应整体通过")
+        check(all("未验证" in doc.get("note", "") or "不可达" in doc.get("note", "")
+                  for doc in report["docs"]),
+              "未完成检查时应明确报告未验证/不可达")
+        check(len(offline.calls) == 3,
+              f"每份带引用的基线都应实际发起检查,实际 {len(offline.calls)} 次调用")
+        check(offline.auth_flags == [False, False, False],
+              f"可达探测不得携带凭据(auth=False),实际 {offline.auth_flags}")
+        # 在线但引用地址实际 404 → 检查执行了,结论是不可达
+        online = FakeTransport()
+        report = mgs_github.handover_baseline_check(root, transport=online)
+        check(all(doc["remote_reachable"] is False for doc in report["docs"])
+              and report["ok"] is False,
+              f"引用地址实际 404 时不得判可达,实际 "
+              f"{[d['remote_reachable'] for d in report['docs']]}")
+        # 无检查通道(transport=None)→ 引用存在也不得宣称可达
+        report = mgs_github.handover_baseline_check(root, transport=None)
+        check(all(doc["remote_reachable"] is False for doc in report["docs"]),
+              "无检查通道时不得以引用存在宣称可达")
+
+
+def test_startable_tasks_reports_cache_metadata() -> None:
+    """S5:统一开工接口传递缓存元信息(是否缓存、抓取时间、来源)——
+    断网时调用方能区分缓存推断与当前确认。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        cache = Path(tmp) / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        online = mgs_records.startable_tasks(root, transport=fake, cache_dir=cache)
+        meta = {key: online.get(key) for key in ("cached", "fetched_at", "source")}
+        check(meta["cached"] is False and meta["fetched_at"]
+              and meta["source"].get("backend") == "github-issues",
+              f"在线开工结果应携带当前确认元信息,实际 {meta}")
+        fake.offline()
+        offline = mgs_records.startable_tasks(root, transport=fake, cache_dir=cache)
+        meta = {key: offline.get(key) for key in ("cached", "fetched_at", "source")}
+        check(meta["cached"] is True and meta["fetched_at"]
+              and meta["source"].get("backend") == "github-issues",
+              f"断网开工结果应携带缓存标记、抓取时间与来源,实际 {meta}")
+        check([t["identity"] for t in offline["startable"]] == ["01-alpha"],
+              "断网时仍应基于缓存给出可开工集合(并明示缓存状态)")
+
+
+def test_draft_unique_identity_no_overwrite() -> None:
+    """S6:同秒两次不同操作的草稿互不覆盖;每个待发布操作有稳定唯一身份;
+    同一操作重复保存保持幂等(不产生重复重放)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        cache = Path(tmp) / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        backend.fetch_tasks()  # 在线抓取建立缓存(离线草稿路径需要)
+        fake.offline()
+        real_datetime = mgs_github._dt.datetime
+
+        class FixedDatetime(real_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2026, 9, 9, 1, 2, 3, tzinfo=tz)
+
+        mgs_github._dt.datetime = FixedDatetime
+        try:
+            one = backend.append_result("01-alpha", "证据一")
+            two = backend.append_result("01-alpha", "证据二")
+            again = backend.append_result("01-alpha", "证据二")
+        finally:
+            mgs_github._dt.datetime = real_datetime
+        check(one["draft"] != two["draft"],
+              f"同秒两次不同操作应产生两份独立草稿,实际同路径 {one['draft']}")
+        drafts = list((cache / "drafts").glob("*.json"))
+        check(len(drafts) == 2,
+              f"应恰有两份草稿(同一操作重复保存幂等),实际 {len(drafts)} 份")
+        remaining = {json.loads(path.read_text(encoding="utf-8"))
+                     ["args"]["result_markdown"] for path in drafts}
+        check(remaining == {"证据一", "证据二"},
+              f"两份草稿内容都应保留,实际 {remaining}")
+
+
+def test_verify_shared_core_validation_both_backends() -> None:
+    """核验建议 1:任务核心校验单一实现——同一份畸形任务(缺工作请求必填
+    字段)在本地与 GitHub 后端得到相同核验结论。"""
+
+    malformed = {"输入与基线": "GAME_DESIGN v1", "依赖": "无"}
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务", request=dict(malformed))
+        report = mgs_records.verify_project(root, transport=fake)
+        github_check = next((c for c in report["checks"]
+                             if c["name"] == "tasks-valid"), {})
+        check(github_check.get("ok") is False,
+              f"GitHub 后端应核对工作请求必填字段,实际 {github_check}")
+        check(all(key in (github_check.get("detail") or "")
+                  for key in ("当前目标", "完成标准", "执行责任")),
+              f"缺失的工作请求字段应逐项报告,实际 {github_check.get('detail')}")
+    with tempfile.TemporaryDirectory() as tmp:
+        local = make_local_project(Path(tmp))
+        task_path = local / "docs/mygamestudio/work/01-alpha/task.md"
+        task_path.write_text("".join(
+            line for line in task_path.read_text(encoding="utf-8").splitlines(True)
+            if not any(line.startswith(f"- {key}:") for key in
+                       ("当前目标", "完成标准", "执行责任"))), encoding="utf-8")
+        report = mgs_records.verify_project(local)
+        local_check = next((c for c in report["checks"]
+                            if c["name"] == "tasks-valid"), {})
+        check(local_check.get("ok") is False
+              and all(key in (local_check.get("detail") or "")
+                      for key in ("当前目标", "完成标准", "执行责任")),
+              f"本地后端应得到相同核验结论,实际 {local_check}")
+        check((github_check.get("ok") is False) == (local_check.get("ok") is False),
+              "两后端对同一畸形任务必须得出一致结论")
+
+
+def test_update_change_note_three_paths() -> None:
+    """核验建议 2:安排更新说明三路一致(在线执行/草稿保存/重放),
+    重放后不回退默认文案「安排更新」。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        cache = Path(tmp) / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        # 1) 在线执行
+        result = backend.update_task("01-alpha", {"进度": "执行中"},
+                                     change_note="冲刺轮安排")
+        check("冲刺轮安排" in result["readback"]["body"],
+              "在线执行的说明应写入正文状态变化")
+        # 2) 草稿保存:说明随草稿参数保留
+        fake.offline()
+        draft = backend.update_task("01-alpha", {"进度": "待验收"},
+                                    change_note="验收轮安排")
+        saved = json.loads(Path(draft["draft"]).read_text(encoding="utf-8"))
+        check(saved["args"].get("change_note") == "验收轮安排",
+              f"草稿应保存自定义说明,实际 {saved['args']}")
+        # 3) 重放:说明随重放传递
+        fake._offline = False
+        published = backend.publish_drafts()
+        check(published["published_count"] == 1,
+              f"草稿应发布成功:{published['results']}")
+        body = fake.issues[0]["body"]
+        check("验收轮安排" in body,
+              f"重放后正文应保留原说明(不回退默认文案),实际正文含默认文案:"
+              f"{'安排更新' in body}")
+
+
+def test_reachability_probe_carries_no_credentials() -> None:
+    """S4/Spec 复查:可达探测访问第三方引用地址不得携带 API 凭据;
+    正常 API 调用默认仍携带凭据。"""
+
+    captured: dict = {}
+
+    class FakeResponse:
+        status = 200
+
+        def read(self):
+            return b"{}"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(req, timeout=None):
+        captured["headers"] = dict(req.headers)
+        return FakeResponse()
+
+    original = mgs_github.urlopen
+    mgs_github.urlopen = fake_urlopen
+    try:
+        transport = mgs_github.UrllibTransport("https://api.example", "secret-token")
+        status, _ = transport.request("GET", "https://third.example.invalid/doc",
+                                      auth=False)
+        check(status == 200, f"探测应返回应答状态,实际 {status}")
+        check("Authorization" not in captured.get("headers", {}),
+              f"可达探测不得携带 Authorization,实际头 {captured.get('headers')}")
+        transport.request("GET", "/repos/o/r/issues")  # 默认仍带凭据
+        check(captured["headers"].get("Authorization") == "Bearer secret-token",
+              "正常 API 调用默认仍携带凭据(auth 语义不变)")
+    finally:
+        mgs_github.urlopen = original
 
 
 def main() -> int:

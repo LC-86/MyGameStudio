@@ -40,6 +40,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
 import hashlib
 import json
 import os
@@ -54,6 +55,10 @@ if __name__ == "__main__" and "mgs_records" not in sys.modules:  # pragma: no co
     sys.modules["mgs_records"] = sys.modules[__name__]
 
 DEFAULT_CONFIG_REL = "docs/mygamestudio/CONFIG.md"
+# 本地 Markdown 任务根(《项目目录模板》默认布局;github→local 迁移的
+# 目标任务根,与 CONFIG 任务根、文件落点、返回路径共用同一常量;
+# 与解析后的 task_root 同为无尾斜杠形态)
+DEFAULT_TASK_ROOT = "docs/mygamestudio/work"
 CANONICAL_LABELS = ("needs-triage", "needs-info", "ready-for-agent",
                     "ready-for-human", "wontfix")
 CORE_DOC_KEYS = {
@@ -229,17 +234,32 @@ def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_RE
 
 def _tasks_for(project_root: Path, config_rel: str, *, transport=None,
                api_base: str | None = None,
-               cache_dir: Path | str | None = None) -> tuple[dict, list[dict]]:
-    """按 CONFIG 后端取规范化任务列表。返回 (config, tasks)。"""
+               cache_dir: Path | str | None = None) -> tuple[dict, list[dict], dict]:
+    """按 CONFIG 后端取规范化任务列表。返回 (config, tasks, 读取元信息)。
+
+    读取元信息(审查修复票 01/S5):是否缓存、抓取时间与来源——离线回缓存
+    与在线当前确认是两种不同状态,统一接口必须能把两者区分传递到顶层结果,
+    调用方才能判断是否在依据旧状态安排工作。
+    """
 
     config = load_config(project_root, config_rel)
     if config["backend"] == "local-markdown":
-        return config, list_tasks(project_root, config_rel)
+        meta = {"cached": False,
+                "fetched_at": _dt.datetime.now().astimezone().isoformat(
+                    timespec="seconds"),
+                "source": {"backend": "local-markdown",
+                           "task_root": config["task_root"]}}
+        return config, list_tasks(project_root, config_rel), meta
     if config["backend"] == "github-issues":
         payload = github_backend(project_root, config_rel, transport=transport,
                                  api_base=api_base,
                                  cache_dir=cache_dir).fetch_tasks()
-        return config, payload["tasks"]
+        meta = {"cached": bool(payload.get("cached")),
+                "fetched_at": payload.get("fetched_at"),
+                "source": payload.get("source")}
+        if meta["cached"]:
+            meta["cache_note"] = payload.get("note", "")
+        return config, payload["tasks"], meta
     raise RecordsError(
         f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
 
@@ -489,6 +509,8 @@ def startable_tasks(project_root: Path | str,
     ready-for-agent 不等于依赖已完成或已获全部授权——见返回 note;
     wontfix 与非待执行任务保留在 blocked 侧可见,不静默消失。
     双后端同语义(任务来源经 CONFIG 分发;核心基线与执行条件仍读本地文档)。
+    顶层携带任务读取元信息(cached/fetched_at/source,断网回缓存时另附
+    cache_note)——缓存推断与当前确认可区分(审查修复票 01/S5)。
     """
 
     root = Path(project_root)
@@ -499,8 +521,9 @@ def startable_tasks(project_root: Path | str,
     config_text = (root / config_rel).read_text(encoding="utf-8")
     # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档)
     versions = _doc_baseline_versions(root, config)
-    tasks = _tasks_for(root, config_rel, transport=transport, api_base=api_base,
-                       cache_dir=cache_dir)[1]
+    _config, tasks, fetch_meta = _tasks_for(
+        root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
     by_id = {task["identity"]: task for task in tasks}
     graph = task_dependencies(root, config_rel, transport=transport,
                               api_base=api_base, cache_dir=cache_dir)
@@ -544,7 +567,9 @@ def startable_tasks(project_root: Path | str,
             startable.append(entry)
         else:
             blocked.append(entry)
-    return {"startable": startable, "blocked": blocked, "note": READY_NOTE}
+    result = {"startable": startable, "blocked": blocked, "note": READY_NOTE}
+    result.update(fetch_meta)
+    return result
 
 
 # ---------- 基线内容指纹与受影响任务(任务票 15) ----------
@@ -670,7 +695,7 @@ def baseline_report(project_root: Path | str,
             "docs": docs, "affected_tasks": affected, "note": BASELINE_NOTE}
 
 
-def _check(name: str, ok: bool, detail: str) -> dict:
+def check_item(name: str, ok: bool, detail: str) -> dict:
     return {"name": name, "ok": bool(ok), "detail": detail}
 
 
@@ -686,6 +711,87 @@ def _core_rows(docmap: list[dict]) -> dict[str, list[dict]]:
             if any(word in row["content"] for word in keywords):
                 grouped[key].append(row)
     return grouped
+
+
+# ---------- 两后端共享的核心校验(审查修复票 01/核验建议 1) ----------
+# 同一份规范化任务(本地 work/task.md 与 GitHub Issue 正文是同一记录格式)
+# 在两个后端必须得到相同核验结论:标签映射、核心文档映射、任务核心字段
+# (身份形态、五类分流、进度、工作请求必填字段)与依赖关系在此单一实现;
+# 各后端只保留存储特有检查(本地:目录一致性、结果文件与索引;GitHub:
+# 远端标签实际存在、评论一致性、标签与正文冲突、关闭原因、身份重复)。
+
+def label_mapping_checks(labels: dict) -> list[dict]:
+    """五类标签映射:语义齐全且不冲突。"""
+
+    missing = [name for name in CANONICAL_LABELS if name not in labels]
+    project_labels = [labels.get(name, "") for name in CANONICAL_LABELS]
+    conflicts = sorted({label for label in project_labels
+                        if project_labels.count(label) > 1})
+    return [
+        check_item("labels-complete", not missing,
+               f"缺失语义:{missing}" if missing else "五类语义齐全"),
+        check_item("labels-no-conflict", not conflicts,
+               f"多语义映射到同一标签:{conflicts}" if conflicts else "映射无冲突"),
+    ]
+
+
+def docmap_checks(root: Path, docmap: list[dict]) -> list[dict]:
+    """核心文档映射:三类齐全、每类唯一当前维护位置且实际存在。"""
+
+    grouped = _core_rows(docmap)
+    core_missing = [key for key, rows in grouped.items() if not rows]
+    duplicate_types = [key for key, rows in grouped.items() if len(rows) > 1]
+    core_paths = [row["path"] for rows in grouped.values() for row in rows]
+    duplicate_paths = sorted({p for p in core_paths if core_paths.count(p) > 1})
+    unique_ok = not duplicate_types and not duplicate_paths
+    missing_paths = [row["path"] for row in
+                     (grouped["goal"] + grouped["design"] + grouped["tech"])
+                     if not (root / row["path"]).is_file()]
+    return [
+        check_item("docmap-core-rows", not core_missing,
+               f"缺少核心文档行:{core_missing}" if core_missing
+               else "目标/设计/技术三类齐全(核心设计保留本地 Markdown 位置)"),
+        check_item("docmap-unique-authority", unique_ok,
+               f"重复类型:{duplicate_types} 重复位置:{duplicate_paths}"
+               if not unique_ok else "每类核心内容唯一当前维护位置"),
+        check_item("docmap-paths-exist", not missing_paths,
+               f"权威位置不存在:{missing_paths}" if missing_paths
+               else "核心文档实际存在"),
+    ]
+
+
+def task_core_problems(task: dict, where: str) -> list[str]:
+    """规范化任务的核心校验:身份形态、五类分流、进度、工作请求必填字段。
+
+    where 是问题条目的定位前缀(本地为任务目录名,远端为 #Issue号)。
+    """
+
+    problems: list[str] = []
+    identity = task["identity"]
+    if not identity or not IDENTITY_RE.fullmatch(identity):
+        problems.append(f"{where}:正文身份缺失或不合规({identity!r})")
+    if task["triage"] not in CANONICAL_LABELS:
+        problems.append(f"{where}:分流 {task['triage']!r} 不在五类之内")
+    if not task["progress"]:
+        problems.append(f"{where}:缺少进度")
+    for key in TASK_REQUEST_KEYS:
+        if not task["request"].get(key):
+            problems.append(f"{where}:工作请求缺少 {key}")
+    return problems
+
+
+def dependency_problems(tasks: list[dict]) -> list[str]:
+    """依赖关系可解析且无循环(入参为规范化任务列表,双后端同语义)。"""
+
+    edges = {task["identity"]: _parse_dep_ids(
+                 task["request"].get("依赖", "")) for task in tasks}
+    seen = {task["identity"] for task in tasks}
+    problems = [f"{identity} 依赖不存在任务 {dep}"
+                for identity, deps in edges.items() for dep in deps
+                if dep not in seen]
+    problems += ["循环依赖:" + "->".join(cycle)
+                 for cycle in _find_cycles(edges)]
+    return problems
 
 
 def verify_project(project_root: Path | str,
@@ -705,64 +811,33 @@ def verify_project(project_root: Path | str,
     try:
         config = load_config(root, config_rel)
     except RecordsError as exc:
-        return {"ok": False, "checks": [_check("config-present", False, str(exc))]}
-    checks.append(_check("config-present", True, str(root / config_rel)))
+        return {"ok": False, "checks": [check_item("config-present", False, str(exc))]}
+    checks.append(check_item("config-present", True, str(root / config_rel)))
     if config["backend"] == "github-issues":
         return github_backend(root, config_rel, transport=transport,
                               api_base=api_base, cache_dir=cache_dir).verify(root)
     if config["backend"] != "local-markdown":
-        checks.append(_check("backend-local-markdown", False,
+        checks.append(check_item("backend-local-markdown", False,
                              f"backend={config['backend']} 未实现"))
         return {"ok": False, "checks": checks}
-    is_local = True
-    checks.append(_check("backend-local-markdown", is_local,
+    checks.append(check_item("backend-local-markdown", True,
                          f"backend={config['backend']}"))
     task_root = _task_root(root, config)
-    checks.append(_check("task-root-exists", task_root.is_dir(),
+    checks.append(check_item("task-root-exists", task_root.is_dir(),
                          str(task_root)))
 
-    labels = config["labels"]
-    missing = [name for name in CANONICAL_LABELS if name not in labels]
-    checks.append(_check("labels-complete", not missing,
-                         f"缺失语义:{missing}" if missing else "五类语义齐全"))
-    project_labels = [labels.get(name, "") for name in CANONICAL_LABELS]
-    conflicts = sorted({label for label in project_labels
-                        if project_labels.count(label) > 1})
-    checks.append(_check("labels-no-conflict", not conflicts,
-                         f"多语义映射到同一标签:{conflicts}" if conflicts else "映射无冲突"))
+    # 标签映射与核心文档映射:两后端共享的单一实现(审查修复票 01/核验建议 1)
+    checks += label_mapping_checks(config["labels"])
+    checks += docmap_checks(root, config["docmap"])
 
-    grouped = _core_rows(config["docmap"])
-    core_missing = [key for key, rows in grouped.items() if not rows]
-    checks.append(_check("docmap-core-rows", not core_missing,
-                         f"缺少核心文档行:{core_missing}" if core_missing
-                         else "目标/设计/技术三类齐全"))
-    duplicate_types = [key for key, rows in grouped.items() if len(rows) > 1]
-    core_paths = [row["path"] for rows in grouped.values() for row in rows]
-    duplicate_paths = sorted({p for p in core_paths if core_paths.count(p) > 1})
-    unique_ok = not duplicate_types and not duplicate_paths
-    checks.append(_check("docmap-unique-authority", unique_ok,
-                         f"重复类型:{duplicate_types} 重复位置:{duplicate_paths}"
-                         if not unique_ok else "每类核心内容唯一当前维护位置"))
-    missing_paths = [row["path"] for row in
-                     (grouped["goal"] + grouped["design"] + grouped["tech"])
-                     if not (root / row["path"]).is_file()]
-    checks.append(_check("docmap-paths-exist", not missing_paths,
-                         f"权威位置不存在:{missing_paths}" if missing_paths
-                         else "核心文档实际存在"))
-
-    tasks = list_tasks(root, config_rel) if is_local else []
+    tasks = list_tasks(root, config_rel)
     task_problems: list[str] = []
     for task in tasks:
         if task["identity"] != task["directory"]:
             task_problems.append(f"{task['directory']}:身份 {task['identity']!r} 与目录不一致")
-        if task["triage"] not in CANONICAL_LABELS:
-            task_problems.append(f"{task['directory']}:分流 {task['triage']!r} 不在五类之内")
-        if not task["progress"]:
-            task_problems.append(f"{task['directory']}:缺少进度")
-        for key in TASK_REQUEST_KEYS:
-            if not task["request"].get(key):
-                task_problems.append(f"{task['directory']}:工作请求缺少 {key}")
-    checks.append(_check("tasks-valid", not task_problems,
+        # 任务核心字段:两后端共享的单一实现(含工作请求必填字段)
+        task_problems += task_core_problems(task, task["directory"])
+    checks.append(check_item("tasks-valid", not task_problems,
                          ";".join(task_problems) if task_problems
                          else f"{len(tasks)} 个任务结构有效"))
 
@@ -781,20 +856,15 @@ def verify_project(project_root: Path | str,
             if not referenced or "(暂无)" in index_text:
                 result_problems.append(
                     f"{task['directory']}:结果文件存在但结果索引未引用")
-    checks.append(_check("results-consistent", not result_problems,
+    checks.append(check_item("results-consistent", not result_problems,
                          ";".join(result_problems) if result_problems
                          else "结果文件与结果索引互相一致"))
 
-    # 任务票 08:依赖关系可解析且无循环(旧记录无「依赖」字段时视为无依赖)
-    if is_local:
-        graph = task_dependencies(root, config_rel)
-        dep_problems = [f"{item['identity']} 依赖不存在任务 {item['dep']}"
-                        for item in graph["unresolved"]]
-        dep_problems += ["循环依赖:" + "->".join(cycle)
-                         for cycle in graph["cycles"]]
-        checks.append(_check("deps-consistent", not dep_problems,
-                             ";".join(dep_problems) if dep_problems
-                             else "依赖关系可解析且无循环"))
+    # 依赖关系可解析且无循环(两后端共享;旧记录无「依赖」字段时视为无依赖)
+    dep_problems = dependency_problems(tasks)
+    checks.append(check_item("deps-consistent", not dep_problems,
+                         ";".join(dep_problems) if dep_problems
+                         else "依赖关系可解析且无循环"))
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
 
 
@@ -850,6 +920,9 @@ def _cli() -> int:
     p_update.add_argument("--task", required=True, help="任务身份")
     p_update.add_argument("--field", action="append", default=[],
                           help="字段 键=值(进度/工作请求字段),可重复")
+    p_update.add_argument("--change-note", default=None,
+                          help="安排更新说明(写入状态变化;缺省「安排更新」;"
+                               "与草稿保存/重放共用同一参数)")
     p_update.add_argument("--expected-body-sha256", default=None,
                           help="预期远端正文 SHA-256(不符则拒绝,不覆盖他人改动)")
     p_append = sub.add_parser(
@@ -906,6 +979,17 @@ def _cli() -> int:
     remote = {"transport": None, "api_base": args.api_base,
               "cache_dir": args.cache_dir}
 
+    def read_transport(config: dict):
+        """CLI 子命令所需的真实读取通道(审查修复票 01/S3、S4):反向
+        switch-plan 要读取 github 源任务,handover 要实际执行可达检查;
+        --api-base/环境变量可指向本地替身,不注入测试桩。"""
+
+        import mgs_github  # noqa: PLC0415
+
+        return mgs_github.UrllibTransport(
+            api_base=mgs_github.api_base_for(config, args.api_base),
+            token=mgs_github.token_from_env())
+
     def github_only(action: str):
         import mgs_github  # noqa: PLC0415
 
@@ -916,10 +1000,7 @@ def _cli() -> int:
                 "本地 Markdown 后端的项目内写入一律经 mgs-gate 受控通道"
                 "(mgs_write),本 CLI 不提供绕过")
         return mgs_github.GithubBackend(
-            config, mgs_github.UrllibTransport(
-                api_base=mgs_github.api_base_for(config, args.api_base),
-                token=mgs_github.token_from_env()),
-            args.cache_dir)
+            config, read_transport(config), args.cache_dir)
 
     try:
         if args.cmd == "config":
@@ -948,7 +1029,8 @@ def _cli() -> int:
                 raise RecordsError("update 至少需要一个 --field")
             payload = github_only("update").update_task(
                 args.task, _parse_fields(args.field),
-                expected_body_sha256=args.expected_body_sha256)
+                expected_body_sha256=args.expected_body_sha256,
+                change_note=args.change_note or "安排更新")
         elif args.cmd == "append-result":
             text = (Path(args.file).read_text(encoding="utf-8") if args.file
                     else args.text)
@@ -973,13 +1055,16 @@ def _cli() -> int:
                 raise RecordsError(
                     f"handover 仅用于 github-issues 后端的远端交接核对"
                     f"(当前 {config['backend']})")
-            payload = mgs_github.handover_baseline_check(root, args.config)
+            # 可达性结论只能来自实际执行的检查(S4):建立真实读取通道
+            payload = mgs_github.handover_baselinecheck_item(
+                root, args.config, transport=read_transport(config))
         elif args.cmd == "switch-plan":
             import mgs_github  # noqa: PLC0415
 
+            config = load_config(root, args.config)
             payload = mgs_github.plan_backend_switch(
                 root, target=args.target, repo=args.repo,
-                transport=None, cache_dir=args.cache_dir)
+                transport=read_transport(config), cache_dir=args.cache_dir)
             if args.emit:
                 Path(args.emit).write_text(
                     json.dumps(payload, ensure_ascii=False, indent=2),

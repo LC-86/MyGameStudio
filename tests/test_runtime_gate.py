@@ -573,6 +573,59 @@ def review_fix_section(root: Path) -> None:
           "R1-remote:被拒的远端写入不得发出任何远端调用")
 
 
+def records_review_fix_section(root: Path) -> None:
+    """审查修复批(票 01-fix)在运行时通道侧的反例固化,先红后绿。
+
+    - 核验建议 2(在线执行路径):安排更新说明经通道传递到远端正文,
+      不回退默认文案;
+    - S2(通道级):评论超时且回读失败 → 结果不确定;通道如实回报,
+      不包装成「已保存草稿」的拒绝,也不发第二条创建请求。
+    """
+
+    sys.path.insert(0, str(REPO_ROOT / "tests"))
+    import test_github_backend as gh_fixtures  # noqa: PLC0415
+
+    base = root / "t01"
+    project = gh_fixtures.make_github_project(base / "project")
+    svc = GateService(base / "runtime")
+    resources = ["github://github.com/mygamestudio/issue-accept/issues/**"]
+    svc.init_policy(project, {"producer": resources}, {"production": None})
+    inst = svc.create_instance("producer", "T-01x", "production", resources)
+    svc._write_json("remote.json", {"github": {
+        "api_base": "http://unused.invalid", "token_env": "MGS_TEST_UNUSED",
+        "cache_dir": str(base / "cache")}})
+    fake = gh_fixtures.FakeTransport()
+    fake.seed_issue("01-task", "Existing")
+
+    # 核验建议 2(在线执行路径):说明随通道动作参数传递
+    res = svc.remote_record(inst.token, "update",
+                            {"identity": "01-task",
+                             "fields": {"进度": "执行中"},
+                             "change_note": "通道轮安排"},
+                            transport=fake)
+    check(res["decision"] == "allow", f"通道内安排更新应放行,实际 {res}")
+    check("通道轮安排" in fake.issues[0]["body"],
+          "通道在线路径的更新说明应写入远端正文状态变化(不回退默认文案)")
+
+    # S2(通道级):回读失败 → 结果不确定,如实回报
+    fake.drop("POST", "/comments")
+    fake.fail("GET", "/comments", "timeout")
+    comments_before = len(fake.comments[1])
+    res = svc.remote_record(inst.token, "append-result",
+                            {"identity": "01-task",
+                             "result_markdown": "回读失败"},
+                            transport=fake)
+    posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+    check(len(posts) == comments_before + 1,
+          f"回读失败后不得重发评论,实际共 {len(posts)} 次 POST(此前 "
+          f"{comments_before} 次)")
+    check(res.get("decision") == "uncertain"
+          and res.get("result", {}).get("uncertain") is True,
+          f"通道应如实回报结果不确定(不虚报成功也不包装成拒绝),实际 {res}")
+    check("草稿" not in json.dumps(res.get("note") or {}, ensure_ascii=False),
+          "不确定结果不得被包装成「已保存草稿」的拒绝")
+
+
 def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="mgs02-gate-test-"))
     try:
@@ -1180,6 +1233,10 @@ def main() -> int:
 
         # 34+. 审查修复批(票 02-fix):R1–R4 反例固化
         review_fix_section(root)
+
+        # 35+. 审查修复批(票 01-fix):通道侧反例固化(说明三路一致/
+        #      不确定结果如实回报)
+        records_review_fix_section(root)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

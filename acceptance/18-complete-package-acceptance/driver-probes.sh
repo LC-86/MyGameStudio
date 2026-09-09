@@ -248,9 +248,11 @@ $CLIBIN switch-apply --project "$PROJ_G" --plan "$ARENA/switch-plan.json" \
 check_json "apply 创建两个远端任务" "$EVIDENCE_DIR/driver-switch-apply.json" "data['created'] == 2"
 cp "$GH_EMIT/CONFIG.md" "$PROJ_G/docs/mygamestudio/CONFIG.md"
 $CLIBIN create $PFLAGS --identity 03-storm-warning --title "风暴预警" \
-  --field "当前目标=风暴预警" > /dev/null 2>&1
+  --field "当前目标=风暴预警" --field "完成标准=预警可见" \
+  --field "执行责任=Agent(制作实现)" > /dev/null 2>&1
 $CLIBIN create $PFLAGS --identity 04-fog-layer --title "海雾层" \
-  --field "当前目标=海雾层" > /dev/null 2>&1
+  --field "当前目标=海雾层" --field "完成标准=海雾可见" \
+  --field "执行责任=Agent(制作实现)" > /dev/null 2>&1
 
 cat > "$ARENA/gh-policy.json" <<EOF
 {

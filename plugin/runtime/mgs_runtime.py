@@ -78,8 +78,8 @@ class Instance:
 def _remote_summary(result: dict) -> str:
     """远端操作结果的一句话摘要(进审计 note,不含凭据)。"""
 
-    keys = ("created", "adopted", "issue_number", "published", "comment_id",
-            "close_reason", "state_reason", "draft")
+    keys = ("created", "adopted", "issue_number", "published", "uncertain",
+            "comment_id", "close_reason", "state_reason", "draft")
     return ",".join(f"{key}={result[key]}" for key in keys if key in result) \
         or "ok"
 
@@ -991,7 +991,23 @@ class GateService:
                 except mgs_github.GithubRecordsError as exc:
                     denial = ("remote_upstream", str(exc), None)
                 else:
-                    if not result.get("published", True) and not result.get("created"):
+                    if result.get("uncertain"):
+                        # S2:远端动作已执行但结果未确认(请求超时且回读失败,
+                        # 适配器已停止重发)——如实回报不确定,不虚报成功,
+                        # 也不包装成拒绝或「已保存草稿」;调用方应先回读确认
+                        # 再决定是否重试(R4 同一原则:不把已发生的远端结果
+                        # 包装成未执行的拒绝)。
+                        outcome = {
+                            **self._remote_base(op, record, policy,
+                                                resource, note),
+                            "decision": "uncertain", "rule_stage": "granted",
+                            "reason": ("remote action executed but outcome "
+                                       "unconfirmed (readback failed; resend "
+                                       "stopped to avoid duplication)"),
+                            "result": result,
+                        }
+                    elif not result.get("published", True) \
+                            and not result.get("created"):
                         # 适配器保存了草稿(离线):按未发布表达,不冒充已发布
                         denial = ("remote_upstream",
                                   "远端不可用:已保存未发布草稿(标明来源与状态;"
@@ -1006,6 +1022,7 @@ class GateService:
                                       "config-scope intersection",
                             "result": result,
                         }
+                    if outcome is not None:
                         # R4:结果审计追加失败不否认已发生的远端结果——如实
                         # 回报并标注未记录(调用方不误判重试),也不静默丢弃
                         # 记录责任;意图条目已持久,可据此对账缺失的结果记录。

@@ -1,2 +1,2 @@
-1aa195f950b27ec405a8066b06b1fbab6f7f577b5463f5a6d1c070a737763e8a  mygamestudio-0.18.0.tar.gz
-cb8a41a4d638f8ef6acf6c5d873959399a2abd6c6439f086f49d8ee014ed5aad  package-manifest.txt
+a79f98a8efd209649d683b868ca161c6a1be6106d3343fcf69fdbf61759a5cb2  mygamestudio-0.18.0.tar.gz
+22dad91bbe74cb9e8a1b37753cdc58cd7f7ce09df2cfe603a163c689893282c8  package-manifest.txt
