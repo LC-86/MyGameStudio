@@ -43,7 +43,7 @@ CONFIG_TEMPLATE = """# 测试项目:协作配置
 ## 任务来源
 
 - 后端:{backend}
-- 当前位置:docs/mygamestudio/work/(每任务一目录,task.md 为工作请求与状态)
+- 当前位置:{location}
 - 任务读取规则:本地 Markdown 后端约定
 - 外部连接引用及已确认操作范围:无
 
@@ -189,6 +189,7 @@ def make_plan_project(root: Path) -> Path:
 
 
 def make_project(root: Path, *, backend: str = "local-markdown",
+                 repo: str = "github.com/mygamestudio/issue-accept",
                  label_rows: str | None = None, extra_task: bool = True,
                  with_core_docs: bool = True) -> Path:
     """在临时目录搭建一个最小可核验项目(CONFIG + 核心文档 + 一个任务)。"""
@@ -197,8 +198,12 @@ def make_project(root: Path, *, backend: str = "local-markdown",
     docs.mkdir(parents=True)
     if label_rows is None:
         label_rows = "\n".join(f"| {name} | {name} |" for name in FIVE_LABELS)
+    location = (repo if backend == "github-issues"
+                else "docs/mygamestudio/work/"
+                     "(每任务一目录,task.md 为工作请求与状态)")
     (docs / "CONFIG.md").write_text(
-        CONFIG_TEMPLATE.format(backend=backend, label_rows=label_rows), encoding="utf-8")
+        CONFIG_TEMPLATE.format(backend=backend, location=location,
+                               label_rows=label_rows), encoding="utf-8")
     if with_core_docs:
         for name in ("PROJECT.md", "GAME_DESIGN.md", "TECH_DESIGN.md"):
             (docs / name).write_text(f"# {name}\n\n测试内容\n", encoding="utf-8")
@@ -238,15 +243,38 @@ def test_load_config_missing() -> None:
 
 def test_unsupported_backend() -> None:
     with tempfile.TemporaryDirectory() as tmp:
-        make_project(Path(tmp), backend="github-issues")
+        make_project(Path(tmp), backend="gitlab-issues")
         config = mgs_records.load_config(Path(tmp))
-        check(config["backend"] == "github-issues", "load_config 应原样回报后端")
+        check(config["backend"] == "gitlab-issues", "load_config 应原样回报后端")
         try:
             mgs_records.list_tasks(Path(tmp))
         except mgs_records.RecordsError:
             check(True, "")
         else:
-            check(False, "非 local-markdown 后端执行本地任务操作应报不支持")
+            check(False, "未实现后端执行任务操作应报不支持")
+
+
+def test_github_backend_does_not_read_local_tasks() -> None:
+    """任务票 17:github-issues 后端的任务操作走远端,不读本地 work/ 目录,
+    远端不可用时报错并声明不静默切本地,而不是回退读取本地任务。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp), backend="github-issues",
+                            repo="github.com/mygamestudio/issue-accept")
+        config = mgs_records.load_config(root)
+        check(config["backend"] == "github-issues"
+              and config["repo"]["repo"] == "issue-accept",
+              "github 后端配置应解析出仓库坐标")
+        try:
+            mgs_records.list_tasks(root)
+        except mgs_records.RecordsError as exc:
+            message = str(exc)
+            check("远端" in message or "缓存" in message,
+                  f"github 后端不可用错误应说明远端/缓存:{message}")
+            check("docs/mygamestudio/work" not in message,
+                  "错误不应指向本地任务根(不静默切本地)")
+        else:
+            check(False, "远端不可用且无缓存时应报错,而非返回本地任务")
 
 
 def test_list_tasks_on_sample() -> None:

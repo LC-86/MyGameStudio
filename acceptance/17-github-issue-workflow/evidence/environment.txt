@@ -1,0 +1,10 @@
+date: 2026-09-09T12:02:10+08:00
+codex: codex-cli 0.151.0
+gh(只读版本检测,未调用任何远端): gh version 2.88.1 (2026-03-12)
+os: macOS 26.5.1 (arm64)
+python: Python 3.14.4
+cwd-repo: /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio
+env-root(isolated HOME/CODEX_HOME/workspaces): /tmp/mygamestudio-accept-17
+arena(project + runtime + stand-in + emit): /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-17
+remote: 本地替身 standin_github.py(127.0.0.1 动态端口,非真实 GitHub)
+sandbox-profiles: W1/W2 默认 workspace-write(未放开网络);W3 第二套 CODEX_HOME 显式 network_access=true

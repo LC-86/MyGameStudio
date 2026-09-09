@@ -1,0 +1,8 @@
+{
+  "pluginId": "mygamestudio@personal",
+  "name": "mygamestudio",
+  "marketplaceName": "personal",
+  "version": "0.17.0",
+  "installedPath": "/private/tmp/mygamestudio-accept-17/codex-home2/plugins/cache/personal/mygamestudio/0.17.0",
+  "authPolicy": "ON_INSTALL"
+}

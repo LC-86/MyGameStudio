@@ -1,0 +1,22 @@
+{
+  "created": 2,
+  "results": [
+    {
+      "identity": "01-harbor-timer",
+      "created": true,
+      "adopted": false,
+      "issue_number": 1,
+      "published": null
+    },
+    {
+      "identity": "02-crane-sprite",
+      "created": true,
+      "adopted": false,
+      "issue_number": 2,
+      "published": null
+    }
+  ],
+  "emit_dir": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-17/switch-emit",
+  "config_emitted": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-17/switch-emit/CONFIG.md",
+  "note": "apply 只创建目标侧任务并产出新 CONFIG 内容;项目 CONFIG 由经确认的应用步骤经 mgs-gate 写入(唯一当前来源),旧记录保留为只读历史,身份映射已留档。"
+}

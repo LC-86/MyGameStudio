@@ -1790,6 +1790,58 @@ def test_accept16_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(16 用夹具覆盖)")
 
 
+def test_github_issue_workflow_content() -> None:
+    """任务票 17:GitHub Issues 任务后端的包内组件与关键纪律。"""
+
+    module = PLUGIN_ROOT / "records" / "mgs_github.py"
+    check(module.is_file(), "缺少 records/mgs_github.py(GitHub Issues 后端适配器)")
+    if module.is_file():
+        text = module.read_text(encoding="utf-8")
+        for seam in ("def parse_repo_location", "def parse_remote_authorizations",
+                     "class GithubBackend", "def create_task", "def update_task",
+                     "def set_triage", "def append_result", "def set_relations",
+                     "def set_parent", "def close_task", "def publish_drafts",
+                     "def plan_backend_switch", "def apply_backend_switch",
+                     "def handover_baseline_check"):
+            check(seam in text, f"records/mgs_github.py 缺少公开接缝 {seam}")
+        for concept in ("issues-write", "不等于批准远端写入", "不静默切换本地后端",
+                        "未发布草稿", "避免重复创建", "关闭 Issue 不自动等于验证通过"):
+            check(concept in text, f"mgs_github.py 应覆盖概念:{concept}")
+    skill_md = PLUGIN_ROOT / "skills" / "game-init" / "SKILL.md"
+    if skill_md.is_file():
+        text = skill_md.read_text(encoding="utf-8")
+        for concept in ("host/owner/repository",       # 明确坐标(任务票 17 AC1)
+                        "标签映射",                     # 五类标签映射
+                        "不把设计文档复制进每个 Issue",   # 核心设计留本地 Markdown
+                        "不自动授权远端写入",           # 选择后端不等于授权(AC4)
+                        "issues-write",                 # 授权记录形态
+                        "mgs_remote",                   # 会话内受控远端通道
+                        "不直连",                       # 不直连远端
+                        "先回读再重试",                 # 超时回读(AC5)
+                        "未发布草稿",                   # 草稿标注
+                        "不静默改用本地后端",           # 不静默切后端
+                        "switch-plan",                  # 迁移清单(AC6)
+                        "handover",                     # 交接基线可达
+                        "不可访问"):                    # 未发布资料不宣称可达
+            check(concept in text, f"game-init SKILL.md 应覆盖概念:{concept}")
+    protocol = PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md"
+    if protocol.is_file():
+        text = protocol.read_text(encoding="utf-8")
+        for concept in ("mgs_remote", "remote_scope", "remote_upstream",
+                        "不等于批准远端写入", "未发布草稿", "expected_body_sha256"):
+            check(concept in text, f"gate-protocol.md 应覆盖概念:{concept}")
+    admin = PLUGIN_ROOT / "runtime" / "mgsrt_admin.py"
+    if admin.is_file():
+        text = admin.read_text(encoding="utf-8")
+        check("set-remote-config" in text and "token_env" in text,
+              "mgsrt_admin 应提供 set-remote-config(凭据只登记环境变量名)")
+    manifest_path = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"
+    manifest = json.loads(manifest_path.read_text())
+    check(manifest.get("version") == "0.17.0", "任务票 17 后包版本应为 0.17.0")
+    check("github-issues-backend" in manifest.get("keywords", []),
+          "plugin.json keywords 应含 github-issues-backend")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -1826,6 +1878,7 @@ def main() -> int:
     test_accept15_fixture()
     test_producer_loop_skills_content()
     test_accept16_fixture()
+    test_github_issue_workflow_content()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

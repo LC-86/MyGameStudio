@@ -28,8 +28,8 @@
     },
     {
       "path": "internal/contracts/project-configuration.md",
-      "sha256": "3c0d9220f0413b3610417fe1af45989659a8f4719c6557c0338eae481221efdc",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/project-configuration.md(适配版,任务票 04 随包)",
+      "sha256": "a9afccc4837c5ed8d7bdc6b9ee6b37a2d0f940c5f506f605c8d55951f92cc1aa",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/project-configuration.md(适配版,任务票 04 随包;任务票 17 更新包内说明为双后端已实现:GitHub Issues 适配、仓库级授权边界与 mgs_remote 受控通道)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -154,8 +154,8 @@
     },
     {
       "path": "internal/protocols/gate-protocol.md",
-      "sha256": "c129b87e6b87f6459007f6a8cd77d2432a0949ed37a7d8d3334780cafc93ecc1",
-      "source": "本项目自有内容(任务票 02 新写;任务票 11 补充二进制资源载荷 content_base64 用法)",
+      "sha256": "cf88e845af47fdae84882f087c6a721bd1017184bd199281a7c1eb06ef062b16",
+      "source": "本项目自有内容(任务票 02 新写;任务票 11 补充二进制资源载荷 content_base64 用法;任务票 17 增加受控远端任务操作 mgs_remote 一节)",
       "license": "本项目自有内容(MIT)"
     },
     {

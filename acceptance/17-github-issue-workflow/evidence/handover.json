@@ -1,0 +1,36 @@
+{
+  "ok": false,
+  "docs": [
+    {
+      "path": "docs/mygamestudio/PROJECT.md",
+      "content": "项目目标与范围",
+      "role": "制作统筹",
+      "local_exists": true,
+      "version": "v1",
+      "published_ref": null,
+      "remote_reachable": false,
+      "note": "本地未发布资料:远端执行者不可访问,不得宣称已可远端访问;发布资料仍需对应授权"
+    },
+    {
+      "path": "docs/mygamestudio/GAME_DESIGN.md",
+      "content": "游戏需求与设计",
+      "role": "方案设计",
+      "local_exists": true,
+      "version": "v1",
+      "published_ref": null,
+      "remote_reachable": false,
+      "note": "本地未发布资料:远端执行者不可访问,不得宣称已可远端访问;发布资料仍需对应授权"
+    },
+    {
+      "path": "docs/mygamestudio/TECH_DESIGN.md",
+      "content": "技术设计",
+      "role": "制作实现",
+      "local_exists": true,
+      "version": "v1",
+      "published_ref": null,
+      "remote_reachable": false,
+      "note": "本地未发布资料:远端执行者不可访问,不得宣称已可远端访问;发布资料仍需对应授权"
+    }
+  ],
+  "note": "本地尚未发布的基线可以供本机执行者引用,但必须标明资料位置和版本;不能声称远端执行者已可访问。准备远端交接时确认引用可达,发布资料仍需对应授权。"
+}

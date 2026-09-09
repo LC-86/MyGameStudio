@@ -1,10 +1,10 @@
 # 受控写入协议(业务技能共用)
 
-状态:任务票 02 起随包提供的运行保障接入协议;任务票 11 起支持二进制资源载荷。适用于所有需要写入目标项目的业务步骤。
+状态:任务票 02 起随包提供的运行保障接入协议;任务票 11 起支持二进制资源载荷;任务票 17 起增加受控远端任务操作 `mgs_remote`。适用于所有需要写入目标项目或操作其任务后端的业务步骤。
 
 ## 两层拦截(先读这段再动手)
 
-1. 会话沙箱:Codex 会话以 workspace-write 运行,只放开会话工作目录与 /tmp。**直接写项目文件(编辑器、重定向、脚本、音频或图像工具的输出)会被操作系统拒绝(Operation not permitted),这是预期行为,不是故障**;不要尝试绕过。
+1. 会话沙箱:Codex 会话以 workspace-write 运行,只放开会话工作目录与 /tmp。**直接写项目文件(编辑器、重定向、脚本、音频或图像工具的输出)会被操作系统拒绝(Operation not permitted),这是预期行为,不是故障**;不要尝试绕过。默认配置下直连外部网络(含 GitHub API)同样被拒绝——远端任务操作经下述 `mgs_remote` 受控通道提交(网络画像见该节)。
 2. 受控写入通道:所有项目写入通过本插件 `mgs-gate` MCP 服务器的工具提交,由运行保障服务逐次校验「角色 ∩ 任务 ∩ 用途 ∩ 实际授权」后落盘;允许与拒绝都进入审计日志。
 
 ## 工具
@@ -16,6 +16,21 @@
 
 工具的确切前缀名以会话工具列表中的 mgs-gate 服务器为准。
 
+## 远端任务操作(任务票 17)
+
+项目任务后端为 GitHub Issues 时,远端操作统一经 `mgs_remote` 提交,并按宿主沙箱配置呈现两种**真实画像**(codex 0.151.0 实测;凭据经运行根 `remote.json` 指定的环境变量读取,不落盘、不进项目记录):
+
+- **默认画像(workspace-write,未放开网络;实测 codex 0.151.0)**:会话沙箱没有外网,直连远端被操作系统拒绝——工作实例不存在绕过通道的直连路径;mgs-gate 服务器进程由宿主按插件清单启动、**不在会话沙箱内**,保持网络可达,因此 `mgs_remote` 在默认画像即可完成受控读写。凭据经 `.mcp.json` 的 `env_vars` 从宿主环境透传给 mgs-gate。
+- **网络放开画像(宿主显式配置 `[sandbox_workspace_write] network_access = true`)**:`mgs_remote` 行为不变;差别在**会话本身获得网络**。实测会话 shell 继承宿主环境——若远端凭据也在宿主环境变量中,会话即可携凭据直连远端(替身实测返回 200),单机部署无法技术隔离。放开网络属于部署决策,须与凭据隔离措施一起评估;默认基线是默认画像(会话禁网 + 通道独占网络)。
+
+工具与校验:
+
+- `mgs_remote`(参数 `token`、`action`、`payload` 对象):`action` ∈ read / create / update / set-triage / set-relations / set-parent / close / append-result;`payload` 携带 `identity` 与各操作参数(如 `fields`、`result_markdown`、`label`、`deps`、`reason`,更新可带 `expected_body_sha256` 做远端正文版本校验)。
+- 逐次校验「凭据 ∩ 任务授权 ∩ 角色范围 ∩ 用途 ∩ 项目 CONFIG 仓库级 issues-write 授权」;资源粒度:`github://<host>/<owner>/<repo>/issues`(读取/创建)、`.../issues/<身份>`(正文/分流/关系/关闭)、`.../issues/<身份>/comments`(结果评论)。
+- **选择 GitHub 后端不等于批准远端写入**:CONFIG「外部访问」未按 `host/owner/repository:issues-write(说明)` 记录授权时,一切远端写操作按 `remote_scope` 拒绝(此校验不依赖网络可达)。
+- 上游不可用一律失效闭合(`remote_upstream`),不绕行直连;缓存目录可用时保存**未发布草稿**并在返回中标明,由调度侧在远端可用后重放发布。
+- 超时或结果不确定由适配器先按任务身份回读再重试,避免重复创建;返回的 `result` 含回读内容与尝试历史。
+
 ## 拒绝依据(rule_stage)速查
 
 | rule_stage | 含义 | 常见来源 |
@@ -23,6 +38,8 @@
 | granted | 写入已生效 | — |
 | identity / task_grant / role_scope / purpose | 凭据、任务授权、角色范围或用途任一层不满足 | 越界写入 |
 | path | 目标路径逃逸项目根,或目标不是普通文件(管道、目录、符号链接等) | 直接或换链探针 |
+| remote_scope | 项目 CONFIG 未对目标仓库记录 issues-write 授权,或项目不是 GitHub Issues 后端 | 远端任务操作越权 |
+| remote_upstream | 远端不可用或操作未确认(失效闭合;可存未发布草稿) | 上游故障注入 |
 | version | 目标当前内容与 `expected_sha256` 不符 | 目标已被他人改动 |
 | occupancy | 资源正被其他实例写入 | 写入冲突 |
 | policy | 运行策略缺失、损坏或结构无效(失效闭合) | 检查器故障注入 |

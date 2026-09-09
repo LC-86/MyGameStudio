@@ -84,6 +84,23 @@ def cmd_reclaim_locks(args: argparse.Namespace) -> int:
     return 0 if result["ok"] else 1
 
 
+def cmd_set_remote_config(args: argparse.Namespace) -> int:
+    """写入远端通道配置(任务票 17)。凭据不接受值——只登记环境变量名,
+    由 mgs-gate 服务器进程从该环境变量读取;凭据不落盘、不进项目记录。"""
+
+    service = GateService(args.runtime_root)
+    channel: dict = {"api_base": args.api_base, "token_env": args.token_env}
+    if args.cache_dir:
+        channel["cache_dir"] = args.cache_dir
+    path = Path(args.runtime_root) / "remote.json"
+    path.write_text(json.dumps({"github": channel}, ensure_ascii=False, indent=2),
+                    encoding="utf-8")
+    print(json.dumps({"ok": True, "remote": {"github": channel},
+                      "note": "凭据经环境变量注入(token_env),本文件不保存令牌值"},
+                     ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     service = GateService(args.runtime_root)
     instances = service._read_json("instances.json", [])  # noqa: SLF001
@@ -147,6 +164,19 @@ def main() -> int:
 
     p_status = sub.add_parser("status")
     p_status.set_defaults(func=cmd_status)
+
+    p_remote = sub.add_parser(
+        "set-remote-config",
+        help="写入 GitHub 远端通道配置(任务票 17;凭据只登记环境变量名)")
+    p_remote.add_argument("--api-base", required=True,
+                          help="API 端点(github.com → https://api.github.com;"
+                               "本地替身/企业实例填实际端点)")
+    p_remote.add_argument("--token-env", required=True,
+                          help="承载凭据的环境变量名(如 MGS_GITHUB_TOKEN);"
+                               "不接受令牌值")
+    p_remote.add_argument("--cache-dir", default=None,
+                          help="离线缓存与未发布草稿目录(可选)")
+    p_remote.set_defaults(func=cmd_set_remote_config)
 
     args = parser.parse_args()
     if not args.runtime_root:

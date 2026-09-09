@@ -1,0 +1,62 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "name": "config-present",
+      "ok": true,
+      "detail": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-17/projects/harbor-run/docs/mygamestudio/CONFIG.md"
+    },
+    {
+      "name": "backend-github-coordinates",
+      "ok": true,
+      "detail": "github.com/mygamestudio/issue-accept"
+    },
+    {
+      "name": "labels-complete",
+      "ok": true,
+      "detail": "五类语义齐全"
+    },
+    {
+      "name": "labels-no-conflict",
+      "ok": true,
+      "detail": "映射无冲突"
+    },
+    {
+      "name": "docmap-core-rows",
+      "ok": true,
+      "detail": "目标/设计/技术三类齐全(核心设计保留本地 Markdown 位置)"
+    },
+    {
+      "name": "docmap-unique-authority",
+      "ok": true,
+      "detail": "每类核心内容唯一当前维护位置"
+    },
+    {
+      "name": "docmap-paths-exist",
+      "ok": true,
+      "detail": "核心文档实际存在"
+    },
+    {
+      "name": "tasks-valid",
+      "ok": true,
+      "detail": "4 个远端任务结构有效"
+    },
+    {
+      "name": "deps-consistent",
+      "ok": true,
+      "detail": "依赖关系可解析且无循环"
+    },
+    {
+      "name": "labels-remote-present",
+      "ok": true,
+      "detail": "五类映射标签在仓库实际存在"
+    },
+    {
+      "name": "results-consistent",
+      "ok": true,
+      "detail": "评论结果与所属任务、结果索引互相一致"
+    }
+  ],
+  "offline": false,
+  "skipped": []
+}

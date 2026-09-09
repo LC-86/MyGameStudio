@@ -1,6 +1,6 @@
 # 项目协作配置合同
 
-> 包内适配版(mygamestudio 0.4.0,任务票 04)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/project-configuration.md`。本版仅按包内现状补写说明,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
+> 包内适配版(mygamestudio 0.4.0 建立,任务票 17 更新包内说明)。来源:插件设计仓库 `.scratch/mygamestudio-framework/contracts/project-configuration.md`。本版仅按包内现状补写说明,语义与设计一致;文件指纹与来源见包内 `provenance/manifest.md`。
 
 Game-Init 负责本合同,相当于把原 setup 的项目协作配置能力整合进游戏接入流程。参考探查和确认方法,不直接运行原始 setup 的默认写入。
 
@@ -42,4 +42,4 @@ CONFIG.md 是协作配置,不是运行时权限凭证。具体执行仍由运行
 
 ---
 
-包内说明(任务票 04):本包当前只实现本地 Markdown 后端及其统一回读接口(`records/mgs_records.py`,读取/列出/读取任务/回读核验,不提供写入——项目写入一律经 mgs-gate 受控通道);GitHub Issues 后端及其切换迁移未实现,不声称可用。CONFIG.md 按本合同与[项目目录模板](../proposals/project-layout.md)实例化。
+包内说明(任务票 17 更新):本包实现两种任务后端——本地 Markdown 与 GitHub Issues:`records/mgs_records.py` 提供读取配置/列出/读取任务/依赖/可开工/基线/回读核验的双后端统一接口;`records/mgs_github.py` 提供 GitHub Issues 后端适配(创建、安排更新、结果追加、关系与分流、关闭语义、离线缓存与未发布草稿、后端切换迁移清单与交接基线可达核对)。远端写入只在项目 CONFIG 按本合同记录明确仓库授权(`host/owner/repository:issues-write(说明)`)后执行;会话内经 mgs-gate 的 `mgs_remote` 受控通道(见 [受控写入协议](../protocols/gate-protocol.md)),凭据不进项目记录。真实远端写入验收仅在明确授权的测试仓库执行(未获授权时保留待办,不声称已验证)。CONFIG.md 按本合同与[项目目录模板](../proposals/project-layout.md)实例化。

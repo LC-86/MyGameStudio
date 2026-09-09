@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """MyGameStudio 受控写入通道:MCP stdio 服务器(任务票 02 建立,任务票 03 加固,
-任务票 11 扩展二进制资源载荷)。
+任务票 11 扩展二进制资源载荷,任务票 17 增加受控远端任务操作 mgs_remote)。
 
 这是业务 Skill 在 Codex 会话内提交写入意图的唯一入口。服务器进程由
 Codex 按插件 .mcp.json 启动,运行在会话沙箱之外;真实拦截分两层:
 - 会话沙箱:模型直接写项目文件会被操作系统拒绝(workspace-write 只放开
-  会话工作目录与 /tmp);
+  会话工作目录与 /tmp),默认配置下直连外部网络同样被拒绝——远端操作
+  只能经本通道(本服务器进程不在会话沙箱内,保持网络可达);
 - 本通道:写入必须携带可信调度层签发的执行凭据,并逐次通过
   「角色 ∩ 任务 ∩ 用途 ∩ 实际授权」检查,允许与拒绝都写审计日志。
 
@@ -19,6 +20,14 @@ Codex 按插件 .mcp.json 启动,运行在会话沙箱之外;真实拦截分两�
 `content_base64`(base64 编码的字节);两者恰提供其一,参数错误一律按
 channel 失效闭合拒绝,不落盘。解码后的字节写入与文本走同一授权交集、
 版本校验与审计,不因载荷形态放宽边界。
+
+任务票 17 的 mgs_remote:远端任务操作(读取/创建/安排更新/结果追加/关系/
+分流/关闭)不在会话内直连 GitHub,而经本通道提交;本服务器进程由宿主按
+插件清单启动、不在会话沙箱内(默认画像下会话无外网而本通道保持可达);
+运行侧再叠加项目 CONFIG 的仓库级 issues-write 授权核对(remote_scope),
+上游不可用失效闭合(remote_upstream,可存未发布草稿)。凭据从运行根
+remote.json 指定的环境变量读取(经 .mcp.json env_vars 透传),不落盘、
+不进项目记录。
 
 运行根(MGS_RUNTIME_ROOT)由启动环境经 env_vars 传入,包内不含绝对路径。
 """
@@ -76,6 +85,37 @@ TOOLS = [
                 "note": {"type": "string", "description": "写入说明,仅进审计记录,不参与授权"},
             },
             "required": ["token", "path"],
+        },
+    },
+    {
+        "name": "mgs_remote",
+        "description": (
+            "受控远端任务操作(任务票 17):对项目配置的 GitHub Issues 后端执行"
+            "读取/创建/安排更新/结果追加/关系/分流/关闭。会话不直连远端——"
+            "操作经本通道逐次校验「凭据 ∩ 任务授权 ∩ 角色范围 ∩ CONFIG 仓库级"
+            "授权」后由运行侧执行;上游不可用一律失效闭合(可保存未发布草稿),"
+            "不绕行。凭据来自运行根配置指定的环境变量,不进项目记录。"
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "token": {"type": "string", "description": "执行凭据"},
+                "action": {
+                    "type": "string",
+                    "enum": ["read", "create", "update", "set-triage",
+                             "set-relations", "set-parent", "close",
+                             "append-result"],
+                    "description": "远端任务操作",
+                },
+                "payload": {
+                    "type": "object",
+                    "description": "操作参数:{identity, title, request, fields, "
+                                   "label, deps, parent, reason, note, "
+                                   "result_markdown, expected_body_sha256, "
+                                   "config_rel(可选)}",
+                },
+            },
+            "required": ["token", "action", "payload"],
         },
     },
 ]
@@ -151,6 +191,16 @@ def _handle_tools_call(service: GateService | None, name: str, args: dict) -> di
             note=args.get("note"),
             **payload_kwargs,
         )
+    elif name == "mgs_remote":
+        payload = args.get("payload")
+        if not isinstance(payload, dict):
+            return _channel_deny(
+                name, "payload error: payload must be a JSON object "
+                      "(fail closed, nothing executed)")
+        result = service.remote_record(
+            token=str(args.get("token", "")),
+            action=str(args.get("action", "")),
+            payload=payload)
     else:
         return {
             "content": [{"type": "text", "text": json.dumps(

@@ -39,6 +39,7 @@ import os
 import re
 import secrets
 import stat
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -60,6 +61,15 @@ class Instance:
     created_at: float
     expires_at: float
     released: bool = False
+
+
+def _remote_summary(result: dict) -> str:
+    """远端操作结果的一句话摘要(进审计 note,不含凭据)。"""
+
+    keys = ("created", "adopted", "issue_number", "published", "comment_id",
+            "close_reason", "state_reason", "draft")
+    return ",".join(f"{key}={result[key]}" for key in keys if key in result) \
+        or "ok"
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -98,6 +108,14 @@ def _pattern_matches(pattern: str, rel_path: str) -> bool:
 
 def _match_any(patterns: list[str], rel_path: str) -> bool:
     return any(_pattern_matches(p, rel_path) for p in patterns)
+
+
+def _remote_match(patterns: list[str], resource: str) -> bool:
+    """远端资源授权匹配:直接命中,或被「本资源及其子树」的 ** 授权覆盖
+    (集合资源 github://…/issues 由 …/issues/** 类授权涵盖,任务票 17)。"""
+
+    return (_match_any(patterns, resource)
+            or _match_any(patterns, resource + "/**"))
 
 
 class GateService:
@@ -620,7 +638,7 @@ class GateService:
 
     def _deny(self, op: str, rule_stage: str, reason: str, token: str,
               record: dict | None, policy: dict, path: str,
-              note: str | None = None) -> dict:
+              note: dict | str | None = None) -> dict:
         result = {
             "op": op,
             "decision": "deny",
@@ -643,3 +661,209 @@ class GateService:
             # 拒绝结果本身已失效闭合;审计不可用不应把拒绝变成崩溃
             pass
         return result
+
+    # ---------- 受控远端任务操作(任务票 17:mgs_remote) ----------
+
+    REMOTE_ACTIONS = {
+        # action → 资源粒度(issues 集合 / 单任务正文 / 单任务评论)
+        "read": "collection", "create": "collection",
+        "update": "task", "set-triage": "task", "set-relations": "task",
+        "set-parent": "task", "close": "task",
+        "append-result": "comments",
+    }
+
+    def _remote_channel(self) -> dict | None:
+        """读取远端通道配置(可信调度侧维护的 runtime_root/remote.json)。
+
+        {"github": {"api_base": ..., "token_env": ..., "cache_dir": ...}}
+        凭据只经 token_env 指定的环境变量读取,不落盘、不进项目记录。
+        缺失或结构无效返回 None(调用方失效闭合)。
+        """
+
+        path = self.runtime_root / "remote.json"
+        if not path.is_file():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            channel = data.get("github")
+        except (OSError, ValueError):
+            return None
+        if not isinstance(channel, dict) or not channel.get("api_base") \
+                or not channel.get("token_env"):
+            return None
+        return channel
+
+    def remote_record(self, token: str, action: str, payload: dict,
+                      *, transport=None) -> dict:
+        """受控远端任务操作入口(工作实例在会话内经 mgs-gate 提交)。
+
+        逐次校验:凭据(身份)→ 远端通道配置(channel)→ 项目 CONFIG 后端
+        与仓库级 issues-write 授权(remote_scope)→ 任务授权(task_grant)
+        → 角色范围(role_scope)→ 用途(purpose),全通过后才经适配器执行;
+        上游不可用失效闭合(remote_upstream,不绕行直连;缓存目录可用时
+        由适配器保存未发布草稿并在结果中回报)。允许与拒绝都进审计。
+        """
+
+        op = f"remote:{action}"
+        policy = self._policy()
+        if policy is None:
+            return self._deny(op, "policy",
+                              "runtime policy missing, corrupt or malformed "
+                              "(fail closed)", token, None, {}, action)
+        record, reason = self._resolve_instance(token)
+        if record is None:
+            return self._deny(op, "identity", reason, token, None, policy, action)
+        if action not in self.REMOTE_ACTIONS:
+            return self._deny(op, "channel", f"unknown remote action {action!r}",
+                              token, record, policy, action)
+        channel = self._remote_channel()
+        if channel is None:
+            return self._deny(
+                op, "channel",
+                "remote channel config missing or malformed "
+                "(runtime_root/remote.json; fail closed)",
+                token, record, policy, action)
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "records"))
+        import mgs_github  # noqa: PLC0415
+        import mgs_records  # noqa: PLC0415
+
+        project_root = Path(policy["project_root"])
+        config_rel = str(payload.get("config_rel") or mgs_records.DEFAULT_CONFIG_REL)
+        try:
+            config = mgs_records.load_config(project_root, config_rel)
+        except mgs_records.RecordsError as exc:
+            return self._deny(op, "remote_scope",
+                              f"项目协作配置不可读:{exc}", token, record,
+                              policy, action)
+        if config["backend"] != "github-issues" or not config.get("repo"):
+            return self._deny(
+                op, "remote_scope",
+                f"项目任务后端为 {config['backend']!r},远端通道仅服务 "
+                "github-issues 后端项目", token, record, policy, action)
+        repo = config["repo"]
+        allowed, auth_note = mgs_github._authorization_for(config, "issues-write")
+        if not allowed:
+            return self._deny(op, "remote_scope", auth_note, token, record,
+                              policy, action)
+
+        identity = str(payload.get("identity") or "")
+        granularity = self.REMOTE_ACTIONS[action]
+        if granularity == "collection":
+            resource = f"github://{repo['host']}/{repo['owner']}/{repo['repo']}/issues"
+        elif granularity == "task":
+            if not identity:
+                return self._deny(op, "channel", "缺少 identity", token, record,
+                                  policy, action)
+            resource = (f"github://{repo['host']}/{repo['owner']}/{repo['repo']}"
+                        f"/issues/{identity}")
+        else:
+            if not identity:
+                return self._deny(op, "channel", "缺少 identity", token, record,
+                                  policy, action)
+            resource = (f"github://{repo['host']}/{repo['owner']}/{repo['repo']}"
+                        f"/issues/{identity}/comments")
+        if not _remote_match(record.get("resources", []), resource):
+            return self._deny(op, "task_grant",
+                              f"remote resource not granted to task "
+                              f"{record['task']}: {resource}",
+                              token, record, policy, resource)
+        role_pats = policy.get("roles", {}).get(record["role"], {}).get("resources", [])
+        if not _remote_match(role_pats, resource):
+            return self._deny(op, "role_scope",
+                              f"role {record['role']} may not write: {resource}",
+                              token, record, policy, resource)
+        restrict = policy.get("purposes", {}).get(record["purpose"], {}).get("restrict")
+        if restrict is not None and not _remote_match(restrict, resource):
+            return self._deny(op, "purpose",
+                              f"purpose {record['purpose']} restricted to "
+                              f"{restrict}: {resource}",
+                              token, record, policy, resource)
+
+        env_token = os.environ.get(channel["token_env"], "").strip()
+        active_transport = transport or mgs_github.UrllibTransport(
+            api_base=channel["api_base"], token=env_token or None)
+        backend = mgs_github.GithubBackend(
+            config, active_transport, channel.get("cache_dir"))
+        try:
+            result = self._run_remote_action(backend, action, payload)
+        except mgs_github.TransportError as exc:
+            # 上游故障:失效闭合;适配器已在可用缓存目录保存未发布草稿的
+            # 操作由各动作内部处理,这里兜底离线草稿
+            draft = None
+            if exc.kind == "offline" and channel.get("cache_dir"):
+                draft = backend._save_draft(  # noqa: SLF001 - 通道内聚
+                    self._draft_op_for(action), dict(payload), str(exc))
+            return self._deny(op, "remote_upstream",
+                              f"remote upstream unavailable (fail closed): {exc}",
+                              token, record, policy, resource,
+                              note={"draft": draft} if draft else None)
+        except mgs_github.GithubRecordsError as exc:
+            return self._deny(op, "remote_upstream", str(exc), token, record,
+                              policy, resource)
+        if not result.get("published", True) and not result.get("created"):
+            # 适配器保存了草稿(离线):按未发布表达,不冒充已发布
+            entry = self._deny(op, "remote_upstream",
+                               "远端不可用:已保存未发布草稿(标明来源与状态;"
+                               "不视为已发布,不静默切换本地后端)",
+                               token, record, policy, resource,
+                               note={"draft": result.get("draft")})
+            return entry
+        outcome = {
+            "op": op, "decision": "allow", "rule_stage": "granted",
+            "reason": "granted by identity+task+role+purpose+config-scope "
+                      "intersection",
+            "instance_id": record["instance_id"], "task": record["task"],
+            "role": record["role"], "purpose": record["purpose"],
+            "target": resource, "basis": self._basis(policy),
+            "note": {"action": action, "repo":
+                     f"{repo['host']}/{repo['owner']}/{repo['repo']}"},
+            "result": result,
+        }
+        self._audit({key: value for key, value in outcome.items()
+                     if key != "result"}
+                    | {"note": {"summary": _remote_summary(result),
+                                **outcome["note"]}})
+        return outcome
+
+    @staticmethod
+    def _draft_op_for(action: str) -> str:
+        return {"create": "create_task", "update": "update_task",
+                "set-triage": "set_triage", "set-relations": "set_relations",
+                "set-parent": "set_parent", "close": "close_task",
+                "append-result": "append_result", "read": "read"}.get(
+                    action, action)
+
+    @staticmethod
+    def _run_remote_action(backend, action: str, payload: dict) -> dict:
+        if action == "read":
+            return {"published": True,
+                    "task": backend.read_task(str(payload["identity"]))}
+        if action == "create":
+            return backend.create_task(
+                str(payload["identity"]), str(payload.get("title", "")),
+                dict(payload.get("request") or {}),
+                triage=str(payload.get("triage", "needs-triage")),
+                progress=str(payload.get("progress", "待执行")))
+        if action == "update":
+            return backend.update_task(
+                str(payload["identity"]), dict(payload.get("fields") or {}),
+                expected_body_sha256=payload.get("expected_body_sha256"),
+                change_note=str(payload.get("change_note", "安排更新")))
+        if action == "set-triage":
+            return backend.set_triage(str(payload["identity"]),
+                                      str(payload["label"]))
+        if action == "set-relations":
+            return backend.set_relations(str(payload["identity"]),
+                                         list(payload.get("deps") or []))
+        if action == "set-parent":
+            return backend.set_parent(str(payload["identity"]),
+                                      payload.get("parent"))
+        if action == "close":
+            return backend.close_task(str(payload["identity"]),
+                                      str(payload["reason"]),
+                                      note=str(payload.get("note", "")))
+        if action == "append-result":
+            return backend.append_result(str(payload["identity"]),
+                                         str(payload.get("result_markdown", "")))
+        raise ValueError(f"unknown action {action}")

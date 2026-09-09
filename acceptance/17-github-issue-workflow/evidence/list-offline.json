@@ -1,0 +1,23 @@
+[
+  {
+    "identity": "01-harbor-timer",
+    "title": "倒计时最后十秒提示",
+    "triage": "ready-for-agent",
+    "progress": "已完成",
+    "cached_read": true
+  },
+  {
+    "identity": "02-crane-sprite",
+    "title": "起重机静态贴图",
+    "triage": "ready-for-agent",
+    "progress": "不再执行",
+    "cached_read": true
+  },
+  {
+    "identity": "03-storm-warning",
+    "title": "风暴预警",
+    "triage": "needs-triage",
+    "progress": "待执行",
+    "cached_read": true
+  }
+]
