@@ -97,3 +97,7 @@
 **重放发现并修复一处真实缺陷(先红后绿)**:github 后端 CLI `handover` 端到端路径崩溃——`mgs_records.py` 调用 `mgs_github.handover_baselinecheck_item`(不存在;正确名 `handover_baseline_check`),为票 01-fix(S4,提交 ceaacf0)改名漏改 CLI 调用点;崩溃退出码恰为 1,会伪装成「不可达基线」结论(重放首轮即被 JSON 文本检查抓住)。既有测试均直调函数或只测非 github 后端拒绝分支,故五套件全绿未覆盖。修复:调用点改名(一行);回归 `test_cli_github_handover_end_to_end`(经 CLI 真实入口,锚定 JSON 输出+退出码 1+「不可访问/不得宣称」语义)先红后绿。
 
 **回归**:dist 交付包重建(mgs_records.py 变更);五项静态套件 + 33 项驱动回归全过;driver 证据随最终代码刷新。第 7 条勾选,本票整票通过。
+
+### 2026-09-09 — 第二轮独立复审影响本票结论
+
+复审(报告:[../../mygamestudio-v1-review2-fixes/evidence/review-2.md](../../mygamestudio-v1-review2-fixes/evidence/review-2.md))核实:第 7 条真实远端终态与留档一致(gh 只读复算 22 项判据全过)、handover 修复经绿→红→绿变异成立。但新增 SP-1(P1,CONFIG 授权撤销后在途远端写入)、SP-2(评论部分成功误报 deny 且重试重复)、SP-3(草稿跨仓库幂等缺失)三项与运行保障/github 后端相关的新反例。本票勾选状态不动;按复审口径,「整票通过」应理解为「原验收与终态核验成立」,完整远端授权/结果语义闭合以修复批 [review2 票 01/02](../../mygamestudio-v1-review2-fixes/issues/) 完成为准。

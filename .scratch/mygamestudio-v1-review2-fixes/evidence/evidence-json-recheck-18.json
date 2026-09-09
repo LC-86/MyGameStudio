@@ -1,0 +1,87 @@
+[
+  {
+    "description": "注册面恰好 14 个业务入口(名称与设计一致)",
+    "file": "skills-surface.json",
+    "status": "pass"
+  },
+  {
+    "description": "本插件之外无其他插件技能混入",
+    "file": "skills-surface.json",
+    "status": "pass"
+  },
+  {
+    "description": "U1 后统一接口 verify 通过(旧版包完成初始化)",
+    "file": "upg-verify-after-u1.json",
+    "status": "pass"
+  },
+  {
+    "description": "安装副本 diff 恰为 0.17.0→当前交付的变更集(git 推导,依赖变化可发现)",
+    "file": "upgrade-changed-set.json",
+    "status": "pass"
+  },
+  {
+    "description": "升级未改写客户端治理(marketplace/policy/instances 字节不变)",
+    "file": "upg-governance-check.json",
+    "status": "pass"
+  },
+  {
+    "description": "config.toml 除 codex 自管插件启用段外内容不变(且插件段仅 mygamestudio)",
+    "file": "upg-governance-check.json",
+    "status": "pass"
+  },
+  {
+    "description": "P1 后可开工集合恰为 02(依赖重排生效)",
+    "file": "p-ready-after-p1.json",
+    "status": "pass"
+  },
+  {
+    "description": "apply 在替身创建两个远端任务",
+    "file": "gh-switch-apply.json",
+    "status": "pass"
+  },
+  {
+    "description": "替身有 4 个远端任务(01/02 迁移 + 03/04 新建)",
+    "file": "gh-state-before-turn.json",
+    "status": "pass"
+  },
+  {
+    "description": "G1 经通道把 04 更新为执行中",
+    "file": "gh-state-after-g1.json",
+    "status": "pass"
+  },
+  {
+    "description": "G1 结果评论经通道发布(04 恰 1 条结果评论)",
+    "file": "gh-state-after-g1.json",
+    "status": "pass"
+  },
+  {
+    "description": "G1 越界更新 01 未生效(仍待执行)",
+    "file": "gh-state-after-g1.json",
+    "status": "pass"
+  },
+  {
+    "description": "G1 越界评论 02 未生效(无评论)",
+    "file": "gh-state-after-g1.json",
+    "status": "pass"
+  },
+  {
+    "description": "远端恢复后草稿重放发布",
+    "file": "gh-publish-drafts.json",
+    "status": "pass"
+  },
+  {
+    "description": "发布后 03 进度为执行中(离线草稿闭环)",
+    "file": "gh-state-after-publish.json",
+    "status": "pass"
+  },
+  {
+    "description": "github 后端统一接口 verify 通过",
+    "file": "gh-verify-final.json",
+    "status": "pass"
+  },
+  {
+    "description": "回收后运行根占用清空",
+    "file": "reg-status-final.json",
+    "status": "pass"
+  }
+]

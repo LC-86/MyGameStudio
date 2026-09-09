@@ -1,0 +1,37 @@
+PASS: 安装副本就绪
+PASS: 安装副本与仓库 plugin/ 逐字节一致
+PASS: 策略初始化
+PASS: scope 返回绑定身份与范围
+PASS: 合法专业写入 allow
+PASS: 写入实际生效
+PASS: 角色越界写入 deny(role_scope)
+PASS: 窄授权实例写授权文件 allow
+PASS: 同资源第二写入者 deny(occupancy)
+PASS: 占用拒绝后目标未被覆盖(仍是 i2 内容)
+PASS: 任务粒度越界 deny(task_grant)
+PASS: 换链路径 deny(path)
+PASS: 策略损坏失效闭合 deny(policy)
+PASS: 策略损坏期间未落盘
+PASS: 策略恢复为原字节
+PASS: 恢复后同一凭据继续写入(无需重签发)
+PASS: 已释放实例旧令牌 deny(identity)
+PASS: 旧令牌写入未生效
+PASS: 活跃实例占用回收被拒(退出码非 0)
+PASS: 回收后运行根占用清空
+PASS: 远端通道配置登记(只收环境变量名)
+PASS: 迁移清单识别写授权
+PASS: apply 创建两个远端任务
+PASS: 受控远端读取 allow(经通道)
+PASS: 受控远端安排更新 allow
+PASS: 受控远端结果评论 allow
+PASS: 远端越权更新他人任务 deny(task_grant)
+PASS: 上游失联失效闭合 deny(remote_upstream)
+PASS: 失联期间未静默转本地(无本地 03 目录)
+PASS: 远端恢复后草稿重放发布
+PASS: 发布后 04 进度待验收(离线草稿经重放生效)
+PASS: 04 的结果评论经通道在远端(恰 1 条)
+PASS: github 后端 verify 通过
+
+================ 驱动式回归汇总 ================
+PASS: 33  FAIL: 0
+声明:本脚本为确定性驱动(无模型调用);会话级证据以 run.sh 真实 turn 为准。

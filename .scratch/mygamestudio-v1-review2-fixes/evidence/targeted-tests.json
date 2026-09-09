@@ -1,0 +1,62 @@
+[
+  {
+    "name": "test_append_result_readback_failure_keeps_uncertain",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_append_result_readback_failure_keeps_uncertain\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_switch_github_to_local_consistency",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_switch_github_to_local_consistency\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_cli_reverse_migration_real_entry",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_cli_reverse_migration_real_entry\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_handover_reachability_requires_executed_check",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_handover_reachability_requires_executed_check\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_startable_tasks_reports_cache_metadata",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_startable_tasks_reports_cache_metadata\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_draft_unique_identity_no_overwrite",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_draft_unique_identity_no_overwrite\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_verify_shared_core_validation_both_backends",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_verify_shared_core_validation_both_backends\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_update_change_note_three_paths",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_update_change_note_three_paths\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "test_reachability_probe_carries_no_credentials",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"test_reachability_probe_carries_no_credentials\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  },
+  {
+    "name": "records_review_fix_section",
+    "returncode": 0,
+    "result": "{\n  \"name\": \"records_review_fix_section\",\n  \"failures\": []\n}\n",
+    "stderr": ""
+  }
+]

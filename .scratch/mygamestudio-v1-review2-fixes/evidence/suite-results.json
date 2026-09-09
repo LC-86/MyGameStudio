@@ -1,0 +1,27 @@
+[
+  {
+    "suite": "plugin_package",
+    "exit_code": 0,
+    "log": "/tmp/mygamestudio-review-2-zgbhMN/test_plugin_package.log"
+  },
+  {
+    "suite": "runtime_gate",
+    "exit_code": 0,
+    "log": "/tmp/mygamestudio-review-2-zgbhMN/test_runtime_gate.log"
+  },
+  {
+    "suite": "runtime_boundaries",
+    "exit_code": 0,
+    "log": "/tmp/mygamestudio-review-2-zgbhMN/test_runtime_boundaries.log"
+  },
+  {
+    "suite": "records_backend",
+    "exit_code": 0,
+    "log": "/tmp/mygamestudio-review-2-zgbhMN/test_records_backend.log"
+  },
+  {
+    "suite": "github_backend",
+    "exit_code": 0,
+    "log": "/tmp/mygamestudio-review-2-zgbhMN/test_github_backend.log"
+  }
+]

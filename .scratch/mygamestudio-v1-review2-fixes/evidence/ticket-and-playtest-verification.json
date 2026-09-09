@@ -1,0 +1,58 @@
+{
+  "tickets": [
+    {
+      "path": ".scratch/mygamestudio-v1-review-fixes/issues/01-records-backend-review-fixes.md",
+      "checked": 6,
+      "unchecked": 0
+    },
+    {
+      "path": ".scratch/mygamestudio-v1-review-fixes/issues/02-runtime-gate-review-fixes.md",
+      "checked": 5,
+      "unchecked": 0
+    },
+    {
+      "path": ".scratch/mygamestudio-v1-review-fixes/issues/03-package-byte-reproducibility.md",
+      "checked": 5,
+      "unchecked": 0
+    },
+    {
+      "path": ".scratch/mygamestudio-v1-review-fixes/issues/04-credential-leak-evidence-sanitize.md",
+      "checked": 5,
+      "unchecked": 0
+    },
+    {
+      "path": ".scratch/mygamestudio-v1/issues/16-producer-complete-loop.md",
+      "checked": 7,
+      "unchecked": 0
+    },
+    {
+      "path": ".scratch/mygamestudio-v1/issues/17-github-issue-workflow.md",
+      "checked": 7,
+      "unchecked": 0
+    },
+    {
+      "path": ".scratch/mygamestudio-v1/issues/18-complete-package-acceptance.md",
+      "checked": 7,
+      "unchecked": 0
+    }
+  ],
+  "playtest": {
+    "build_path": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-16/projects/tide-pool/build/main.js",
+    "sha256": "cb1bfd3f021abed96b5becbe9f42140a0c1ed41727581f1e498746134c812933",
+    "asset_path_references": 0,
+    "svg_references": 0,
+    "wav_references": 0,
+    "arrow_keys": [
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown"
+    ],
+    "assets_exist": [
+      ".tmp/accept-16/projects/tide-pool/assets/gull-dive.svg",
+      ".tmp/accept-16/projects/tide-pool/assets/gull-glide.svg",
+      ".tmp/accept-16/projects/tide-pool/assets/audio/gull_warning_rise.wav"
+    ],
+    "human_feedback_source": ".scratch/mygamestudio-v1/issues/16-producer-complete-loop.md:93"
+  }
+}

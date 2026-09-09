@@ -1,0 +1,115 @@
+[
+  {
+    "description": "五个项目标签已预建(新仓库另含平台默认标签,属正常)",
+    "file": "real-remote-labels.json",
+    "status": "pass"
+  },
+  {
+    "description": "切换前本地后端 verify 通过",
+    "file": "real-remote-verify-local.json",
+    "status": "pass"
+  },
+  {
+    "description": "apply 在真实 GitHub 创建两个任务",
+    "file": "real-remote-apply.json",
+    "status": "pass"
+  },
+  {
+    "description": "远端依赖解析 ok",
+    "file": "real-remote-deps-after-switch.json",
+    "status": "pass"
+  },
+  {
+    "description": "真实创建 03-storm-warning 成功",
+    "file": "real-remote-create-03.json",
+    "status": "pass"
+  },
+  {
+    "description": "重复创建既有身份被收养(不新建)",
+    "file": "real-remote-create-dup.json",
+    "status": "pass"
+  },
+  {
+    "description": "正确指纹更新成功且回读一致",
+    "file": "real-remote-update-03.json",
+    "status": "pass"
+  },
+  {
+    "description": "依赖写成明确可解析引用(#Issue号 身份)",
+    "file": "real-remote-set-relations.json",
+    "status": "pass",
+    "expanded_shell_variable": {
+      "N1": 1
+    }
+  },
+  {
+    "description": "deps 解析引用回身份且 ok",
+    "file": "real-remote-deps-relations.json",
+    "status": "pass"
+  },
+  {
+    "description": "父子关系落在受支持的模式(原生优先,不可用回退正文引用)",
+    "file": "real-remote-set-parent.json",
+    "status": "pass"
+  },
+  {
+    "description": "set-triage 标签与正文同步为 ready-for-agent",
+    "file": "real-remote-set-triage.json",
+    "status": "pass"
+  },
+  {
+    "description": "ready 可开工集合为 01/02(03 进行中被阻塞)",
+    "file": "real-remote-ready.json",
+    "status": "pass"
+  },
+  {
+    "description": "结果评论发布并登记索引",
+    "file": "real-remote-append-result-01.json",
+    "status": "pass"
+  },
+  {
+    "description": "评论结果可回读且引用所属任务",
+    "file": "real-remote-append-result-01.json",
+    "status": "pass"
+  },
+  {
+    "description": "完成关闭为 completed 且进度同步",
+    "file": "real-remote-close-01.json",
+    "status": "pass"
+  },
+  {
+    "description": "不再执行关闭为 not_planned",
+    "file": "real-remote-close-02.json",
+    "status": "pass"
+  },
+  {
+    "description": "github 后端 verify 整体通过(真实远端)",
+    "file": "real-remote-verify-github.json",
+    "status": "pass"
+  },
+  {
+    "description": "真实仓库恰 3 个任务(无重复创建)",
+    "file": "real-remote-gh-issues.json",
+    "status": "pass"
+  },
+  {
+    "description": "01/02 关闭理由与进度语义正确(completed/not_planned)",
+    "file": "real-remote-gh-issues.json",
+    "status": "pass"
+  },
+  {
+    "description": "03 带 agent-ready 标签(分流落标签)",
+    "file": "real-remote-gh-issues.json",
+    "status": "pass"
+  },
+  {
+    "description": "01 的结果评论真实存在且含任务身份",
+    "file": "real-remote-gh-comments.json",
+    "status": "pass"
+  },
+  {
+    "description": "原生父子关系在平台侧可见(1 的 sub_issues 含 3)",
+    "file": "real-remote-gh-subissues.json",
+    "status": "pass"
+  }
+]

@@ -1,0 +1,6 @@
+PASS: mygamestudio-0.18.0.tar.gz 干净副本隔离重建与交付物逐字节一致
+PASS: package-manifest.txt 干净副本隔离重建与交付物逐字节一致
+PASS: SHA256SUMS.txt 干净副本隔离重建与交付物逐字节一致
+PASS: 交付包与重建包的 tar 成员均无 PAX 扩展头(平台扩展元数据已排除)
+PASS: 同源重打包字节可复现性验证全部通过
+交付包 SHA-256: cb5ff8e7f2292b1e2a316c7ba69207068ab36f103bdb1eefecebcf6aec81c611

@@ -1,0 +1,14 @@
+{
+  "g_o_credential_blindspot": {
+    "sanitizer_left_synthetic_token": true,
+    "original_leak_check_exit": 0,
+    "independent_scanner_exit": 1,
+    "independent_scanner_output": "扫描文件数:1\n比对来源:登记 token_hash 1 项;ARENA 令牌文件 0 个\n发现 1 处已登记/已保存凭据的明文——证据不得入库,先脱敏并重扫:\n  - /tmp/mygamestudio-review-2-zgbhMN/acceptance-probe-fixture/evidence/injected.json:1: 已登记实例凭据明文 instance=synthetic-go role=None task=None\n"
+  },
+  "r1_path_event_anchor": {
+    "report_contains_result": false,
+    "events_have_mcp_call": false,
+    "synthetic_event_decision": "allow",
+    "original_check_output": "PASS"
+  }
+}

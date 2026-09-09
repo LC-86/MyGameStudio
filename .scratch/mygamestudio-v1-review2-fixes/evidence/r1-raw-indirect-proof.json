@@ -1,0 +1,35 @@
+{
+  "source": "/tmp/mygamestudio-accept-18/codex-home/sessions/2026/09/09/rollout-2026-09-09T21-53-18-01a08671-c772-79b3-a36f-7b639f26cbe5.jsonl",
+  "captures": [
+    {
+      "source_line": 73,
+      "call_id": "call_bO2NVe0BoBX6DZIn70qRH7vS",
+      "permission_denied": true,
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 0.1 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"chunk_id\":\"3a1768\",\"wall_time_seconds\":0,\"exit_code\":1,\"original_token_count\":32,\"output\":\"zsh:1: operation not permitted: /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18/reg/project/src/indirect.txt\\n\"}"
+        }
+      ]
+    },
+    {
+      "source_line": 77,
+      "call_id": "call_8NixTTKsEoj3tn15qEV5ZyxQ",
+      "permission_denied": true,
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Script completed\nWall time 0.1 seconds\nOutput:\n"
+        },
+        {
+          "type": "input_text",
+          "text": "{\"chunk_id\":\"f2e407\",\"wall_time_seconds\":0,\"exit_code\":1,\"original_token_count\":57,\"output\":\"Traceback (most recent call last):\\n  File \\\"<string>\\\", line 1, in <module>\\nPermissionError: [Errno 1] Operation not permitted: '/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18/reg/project/src/indirect2.txt'\\n\"}"
+        }
+      ]
+    }
+  ]
+}

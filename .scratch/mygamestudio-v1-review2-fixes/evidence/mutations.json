@@ -1,0 +1,95 @@
+[
+  {
+    "id": "A-S1",
+    "mutation": {
+      "file": "plugin/records/mgs_github.py",
+      "before": "if draft_repo != current_repo:",
+      "after": "if False:"
+    },
+    "runs": [
+      {
+        "phase": "green-before",
+        "returncode": 0,
+        "output": "{\n  \"name\": \"test_publish_drafts_refuses_cross_repo_draft\",\n  \"failures\": []\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/A-S1-green-before.log"
+      },
+      {
+        "phase": "red-mutated",
+        "returncode": 1,
+        "output": "{\n  \"name\": \"test_publish_drafts_refuses_cross_repo_draft\",\n  \"failures\": [\n    \"跨仓库草稿不得发出任何远端写请求,实际 ['/repos/mygamestudio/issue-accept/issues']\",\n    \"跨仓库草稿不得标记已发布,实际 {'published_count': 1, 'results': [{'draft': '/tmp/tmpejlmfyuc/shared-cache/drafts/20260909-231112-create_task-09-private-c5602a5f.json', 'published': True, 'outcome': {'created': True, 'adopted': False, 'issue_number': 1, 'readback': {'identity': '09-private', 'title': '仅旧仓库的任务', 'triage': 'needs-triage', 'progress': '待执行', 'issue_number': 1, 'issue_id': 1001, 'state': 'open', 'state_reason': None, 'labels': ['triage'], 'triage_source': 'label', 'triage_conflict': False, 'request': {'当前目标': '旧仓库材料'}, 'sections': {'工作请求': True, '结果索引': True, '状态变化': True}, 'results': [], 'result_index_text': '\\\\n(暂无)\\\\n', 'body': '# 仅旧仓库的任务\\\\n\\\\n任务身份:09-private。当前分流:needs-triage。进度:待执行。\\\\n\\\\n## 工作请求\\\\n\\\\n- 当前目标:旧仓库材料\\\\n\\\\n## 结果索引\\\\n\\\\n(暂无)\\\\n\\\\n## 状态变化\\\\n\\\\n2026-09-09 经统一接口建立 GitHub Issues 任务记录。\\\\n'}, 'attempts': [{'step': 'create-1', 'outcome': 'created'}]}}]}\",\n    \"被拒草稿应原样保留在待发布目录(不移动、不删除)\",\n    \"拒绝原因应说明仓库不一致且不构成迁移授权,实际 [{'draft': '/tmp/tmpejlmfyuc/shared-cache/drafts/20260909-231112-create_task-09-private-c5602a5f.json', 'published': True, 'outcome': {'created': True, 'adopted': False, 'issue_number': 1, 'readback': {'identity': '09-private', 'title': '仅旧仓库的任务', 'triage': 'needs-triage', 'progress': '待执行', 'issue_number': 1, 'issue_id': 1001, 'state': 'open', 'state_reason': None, 'labels': ['triage'], 'triage_source': 'label', 'triage_conflict': False, 'request': {'当前目标': '旧仓库材料'}, 'sections': {'工作请求': True, '结果索引': True, '状态变化': True}, 'results': [], 'result_index_text': '\\\\n(暂无)\\\\n', 'body': '# 仅旧仓库的任务\\\\n\\\\n任务身份:09-private。当前分流:needs-triage。进度:待执行。\\\\n\\\\n## 工作请求\\\\n\\\\n- 当前目标:旧仓库材料\\\\n\\\\n## 结果索引\\\\n\\\\n(暂无)\\\\n\\\\n## 状态变化\\\\n\\\\n2026-09-09 经统一接口建立 GitHub Issues 任务记录。\\\\n'}, 'attempts': [{'step': 'create-1', 'outcome': 'created'}]}}]\"\n  ]\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/A-S1-red-mutated.log"
+      },
+      {
+        "phase": "green-restored",
+        "returncode": 0,
+        "output": "{\n  \"name\": \"test_publish_drafts_refuses_cross_repo_draft\",\n  \"failures\": []\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/A-S1-green-restored.log"
+      }
+    ]
+  },
+  {
+    "id": "A-R2",
+    "mutation": {
+      "file": "plugin/runtime/mgs_runtime.py",
+      "before": "entry = policy.get(\"purposes\", {}).get(purpose)",
+      "after": "entry = policy.get(\"purposes\", {}).get(purpose, {\"restrict\": None})"
+    },
+    "runs": [
+      {
+        "phase": "green-before",
+        "returncode": 0,
+        "output": "{\n  \"name\": \"review_fix_section\",\n  \"failures\": []\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/A-R2-green-before.log"
+      },
+      {
+        "phase": "red-mutated",
+        "returncode": 1,
+        "output": "{\n  \"name\": \"review_fix_section\",\n  \"failures\": [\n    \"R2:用途条目缺失时同一写入必须仍被拒(故障闭合),实际 {'op': 'write', 'decision': 'allow', 'reason': 'granted by role+task+purpose intersection', 'rule_stage': 'granted', 'instance_id': 'i-0f13414b3885', 'task': 'T-r2', 'role': 'implement', 'purpose': 'prototype', 'target': 'src/escaped.txt', 'written_sha256': '6ed3fdf22d2c080c7a02367bfde1e1b369cf1c4ea339273f7f36f66e612e348f', 'bytes': 7, 'basis': {'policy_version': 1, 'role_resources_source': 'runtime policy.json (trusted scheduler channel)', 'task_grant_source': 'instance registry issued by trusted scheduler'}, 'note': None, 'ts': '2026-09-09T23:11:13+0800', 'policy_sha256': 'c4d0f3491ca7c3620c90f1af8987f429e701839182ce6558faf77ca910b14294'}\",\n    \"R2:被拒写入不得落盘\",\n    \"R2:scope 对缺失用途条目同样失效闭合,实际 {'op': 'scope', 'decision': 'allow', 'instance_id': 'i-0f13414b3885', 'task': 'T-r2', 'role': 'implement', 'purpose': 'prototype', 'allowed': ['prototypes/**', 'src/**'], 'basis': {'policy_version': 1, 'role_resources_source': 'runtime policy.json (trusted scheduler channel)', 'task_grant_source': 'instance registry issued by trusted scheduler'}}\",\n    \"R2:用途条目缺失时远端操作必须拒绝,实际 {'op': 'remote:append-result', 'instance_id': 'i-db0e833b7557', 'task': 'T-r4', 'role': 'producer', 'purpose': 'production', 'target': 'github://github.com/mygamestudio/issue-accept/issues/01-task/comments', 'basis': {'policy_version': 1, 'role_resources_source': 'runtime policy.json (trusted scheduler channel)', 'task_grant_source': 'instance registry issued by trusted scheduler'}, 'note': {'action': 'append-result', 'repo': 'github.com/mygamestudio/issue-accept'}, 'decision': 'allow', 'rule_stage': 'granted', 'reason': 'granted by identity+task+role+purpose+config-scope intersection', 'result': {'published': True, 'comment_id': 5101, 'ref': '#issuecomment-5101', 'issue_number': 1, 'readback': {'identity': '01-task', 'title': 'Existing', 'triage': 'ready-for-agent', 'progress': '待执行', 'issue_number': 1, 'issue_id': 1001, 'state': 'open', 'state_reason': None, 'labels': ['agent-ready'], 'triage_source': 'label', 'triage_conflict': False, 'request': {'当前目标': '演示目标', '输入与基线': 'GAME_DESIGN v1', '本次交付': '示例交付', '允许修改范围': 'src/**', '所需能力': '文件读写', '完成标准': '示例标准', '执行责任': 'Agent(制作实现)', '验收方式': '代码级检查', '依赖': '无'}, 'sections': {'工作请求': True, '结果索引': True, '状态变化': True}, 'results': [{'ref': '#issuecomment-5100', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-task'}, {'ref': '#issuecomment-5101', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-task'}], 'result_index_text': '\\\\n- #issuecomment-5100:结果审计失败\\\\n\\\\n- #issuecomment-5101:条目缺失\\\\n', 'body': '# Existing\\\\n\\\\n任务身份:01-task。当前分流:ready-for-agent。进度:待执行。\\\\n\\\\n## 工作请求\\\\n\\\\n- 当前目标:演示目标\\\\n- 输入与基线:GAME_DESIGN v1\\\\n- 本次交付:示例交付\\\\n- 允许修改范围:src/**\\\\n- 所需能力:文件读写\\\\n- 完成标准:示例标准\\\\n- 执行责任:Agent(制作实现)\\\\n- 验收方式:代码级检查\\\\n- 依赖:无\\\\n\\\\n## 结果索引\\\\n\\\\n- #issuecomment-5100:结果审计失败\\\\n\\\\n- #issuecomment-5101:条目缺失\\\\n\\\\n## 状态变化\\\\n\\\\n2026-09-09 经统一接口建立 GitHub Issues 任务记录。\\\\n\\\\n2026-09-09 追加结果评论 #issuecomment-5100\\\\n\\\\n2026-09-09 追加结果评论 #issuecomment-5101\\\\n', 'body_sha256': '300c37567fb1d0c38da25717df47f0bada4316f4b6d8690537969c6a6c7da932', 'html_url': 'https://example.invalid/i/1'}, 'attempts': [{'step': 'comment-1', 'outcome': 'created'}]}}\",\n    \"R2:远端拒绝时不得产生新评论\",\n    \"R2:恢复显式空条目后远端写入应回到放行,实际 {'op': 'remote:append-result', 'instance_id': 'i-db0e833b7557', 'task': 'T-r4', 'role': 'producer', 'purpose': 'production', 'target': 'github://github.com/mygamestudio/issue-accept/issues/01-task/comments', 'basis': {'policy_version': 1, 'role_resources_source': 'runtime policy.json (trusted scheduler channel)', 'task_grant_source': 'instance registry issued by trusted scheduler'}, 'note': {'action': 'append-result', 'repo': 'github.com/mygamestudio/issue-accept'}, 'decision': 'allow', 'rule_stage': 'granted', 'reason': 'granted by identity+task+role+purpose+config-scope intersection', 'result': {'published': True, 'comment_id': 5102, 'ref': '#issuecomment-5102', 'issue_number': 1, 'readback': {'identity': '01-task', 'title': 'Existing', 'triage': 'ready-for-agent', 'progress': '待执行', 'issue_number': 1, 'issue_id': 1001, 'state': 'open', 'state_reason': None, 'labels': ['agent-ready'], 'triage_source': 'label', 'triage_conflict': False, 'request': {'当前目标': '演示目标', '输入与基线': 'GAME_DESIGN v1', '本次交付': '示例交付', '允许修改范围': 'src/**', '所需能力': '文件读写', '完成标准': '示例标准', '执行责任': 'Agent(制作实现)', '验收方式': '代码级检查', '依赖': '无'}, 'sections': {'工作请求': True, '结果索引': True, '状态变化': True}, 'results': [{'ref': '#issuecomment-5100', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-task'}, {'ref': '#issuecomment-5101', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-task'}, {'ref': '#issuecomment-5102', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-task'}], 'result_index_text': '\\\\n- #issuecomment-5100:结果审计失败\\\\n\\\\n- #issuecomment-5101:条目缺失\\\\n\\\\n- #issuecomment-5102:条目恢复\\\\n', 'body': '# Existing\\\\n\\\\n任务身份:01-task。当前分流:ready-for-agent。进度:待执行。\\\\n\\\\n## 工作请求\\\\n\\\\n- 当前目标:演示目标\\\\n- 输入与基线:GAME_DESIGN v1\\\\n- 本次交付:示例交付\\\\n- 允许修改范围:src/**\\\\n- 所需能力:文件读写\\\\n- 完成标准:示例标准\\\\n- 执行责任:Agent(制作实现)\\\\n- 验收方式:代码级检查\\\\n- 依赖:无\\\\n\\\\n## 结果索引\\\\n\\\\n- #issuecomment-5100:结果审计失败\\\\n\\\\n- #issuecomment-5101:条目缺失\\\\n\\\\n- #issuecomment-5102:条目恢复\\\\n\\\\n## 状态变化\\\\n\\\\n2026-09-09 经统一接口建立 GitHub Issues 任务记录。\\\\n\\\\n2026-09-09 追加结果评论 #issuecomment-5100\\\\n\\\\n2026-09-09 追加结果评论 #issuecomment-5101\\\\n\\\\n2026-09-09 追加结果评论 #issuecomment-5102\\\\n', 'body_sha256': '01efa8f4e41663e9bb14419429ec371581689c2e4fa5c1fb17f760dd0e981643', 'html_url': 'https://example.invalid/i/1'}, 'attempts': [{'step': 'comment-1', 'outcome': 'created'}]}}\"\n  ]\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/A-R2-red-mutated.log"
+      },
+      {
+        "phase": "green-restored",
+        "returncode": 0,
+        "output": "{\n  \"name\": \"review_fix_section\",\n  \"failures\": []\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/A-R2-green-restored.log"
+      }
+    ]
+  },
+  {
+    "id": "B-handover",
+    "mutation": {
+      "file": "plugin/records/mgs_records.py",
+      "before": "payload = mgs_github.handover_baseline_check(",
+      "after": "payload = mgs_github.handover_baselinecheck_item("
+    },
+    "runs": [
+      {
+        "phase": "green-before",
+        "returncode": 0,
+        "output": "{\n  \"name\": \"test_cli_github_handover_end_to_end\",\n  \"failures\": []\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/B-handover-green-before.log"
+      },
+      {
+        "phase": "red-mutated",
+        "returncode": 1,
+        "output": "{\n  \"name\": \"test_cli_github_handover_end_to_end\",\n  \"failures\": [\n    \"handover 应输出 JSON 报告而非崩溃(先看 stderr):-2-dnioch5b/copy/plugin/records/mgs_records.py\\\", line 1059, in _cli\\n    payload = mgs_github.handover_baselinecheck_item(\\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nAttributeError: module 'mgs_github' has no attribute 'handover_baselinecheck_item'. Did you mean: 'handover_baseline_check'?\\n\"\n  ]\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/B-handover-red-mutated.log"
+      },
+      {
+        "phase": "green-restored",
+        "returncode": 0,
+        "output": "{\n  \"name\": \"test_cli_github_handover_end_to_end\",\n  \"failures\": []\n}\n",
+        "stderr": "",
+        "log": "/tmp/mygamestudio-spec-review-2-dnioch5b/B-handover-green-restored.log"
+      }
+    ]
+  }
+]

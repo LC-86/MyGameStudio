@@ -1,0 +1,152 @@
+{
+  "id": "R4-partial-remote-result-misreported",
+  "first": {
+    "op": "remote:append-result",
+    "decision": "deny",
+    "reason": "remote upstream unavailable (fail closed): timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+    "rule_stage": "remote_upstream",
+    "instance_id": "i-a3f4154446f9",
+    "task": "T",
+    "role": "producer",
+    "purpose": "production",
+    "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+    "basis": {
+      "policy_version": 1,
+      "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+      "task_grant_source": "instance registry issued by trusted scheduler"
+    },
+    "note": null,
+    "ts": "2026-09-09T23:14:08+0800",
+    "policy_sha256": "ae4d9f9d81f51ec86e8e4f481fa77508b46b4229919fc9df4722f00b4f9f6ca3"
+  },
+  "comments_after_first": 1,
+  "second_decision": "allow",
+  "comments_after_retry": 2,
+  "audit": [
+    {
+      "op": "policy/init",
+      "decision": "record",
+      "rule_stage": "admin",
+      "reason": "policy written via trusted scheduler channel",
+      "instance_id": null,
+      "task": null,
+      "role": "scheduler",
+      "purpose": null,
+      "target": "policy.json",
+      "note": null,
+      "basis": {
+        "channel": "trusted scheduler CLI (mgsrt_admin.py)"
+      },
+      "ts": "2026-09-09T23:14:08+0800",
+      "policy_sha256": "ae4d9f9d81f51ec86e8e4f481fa77508b46b4229919fc9df4722f00b4f9f6ca3"
+    },
+    {
+      "op": "instance/create",
+      "decision": "record",
+      "rule_stage": "admin",
+      "reason": "execution binding issued by trusted scheduler",
+      "instance_id": "i-a3f4154446f9",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": null,
+      "note": {
+        "resources": [
+          "github://github.com/mygamestudio/issue-accept/issues/**"
+        ]
+      },
+      "basis": {
+        "channel": "trusted scheduler CLI (mgsrt_admin.py)"
+      },
+      "ts": "2026-09-09T23:14:08+0800",
+      "policy_sha256": "ae4d9f9d81f51ec86e8e4f481fa77508b46b4229919fc9df4722f00b4f9f6ca3"
+    },
+    {
+      "op": "remote:append-result",
+      "instance_id": "i-a3f4154446f9",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "intent",
+      "rule_stage": "granted",
+      "reason": "remote write intent recorded before execution",
+      "ts": "2026-09-09T23:14:08+0800",
+      "policy_sha256": "ae4d9f9d81f51ec86e8e4f481fa77508b46b4229919fc9df4722f00b4f9f6ca3"
+    },
+    {
+      "op": "remote:append-result",
+      "decision": "deny",
+      "reason": "remote upstream unavailable (fail closed): timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+      "rule_stage": "remote_upstream",
+      "instance_id": "i-a3f4154446f9",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": null,
+      "ts": "2026-09-09T23:14:08+0800",
+      "policy_sha256": "ae4d9f9d81f51ec86e8e4f481fa77508b46b4229919fc9df4722f00b4f9f6ca3"
+    },
+    {
+      "op": "remote:append-result",
+      "instance_id": "i-a3f4154446f9",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "intent",
+      "rule_stage": "granted",
+      "reason": "remote write intent recorded before execution",
+      "ts": "2026-09-09T23:14:08+0800",
+      "policy_sha256": "ae4d9f9d81f51ec86e8e4f481fa77508b46b4229919fc9df4722f00b4f9f6ca3"
+    },
+    {
+      "op": "remote:append-result",
+      "instance_id": "i-a3f4154446f9",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "summary": "issue_number=1,published=True,comment_id=5101",
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection",
+      "ts": "2026-09-09T23:14:08+0800",
+      "policy_sha256": "ae4d9f9d81f51ec86e8e4f481fa77508b46b4229919fc9df4722f00b4f9f6ca3"
+    }
+  ],
+  "observed_bug": true
+}

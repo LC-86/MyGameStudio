@@ -1,0 +1,518 @@
+{
+  "review": "MyGameStudio v1 second independent review",
+  "date": "2026-09-09",
+  "repo": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+  "review_commit": "d9343329d4f16c20f4391890896b91ac29e81c00",
+  "diff_base": "31dabfd",
+  "actual_head_start": "b89b548f59336f57f63df70bda331bc204bd12de",
+  "actual_head_end": "b89b548f59336f57f63df70bda331bc204bd12de",
+  "status_start": "",
+  "status_end": "",
+  "head_unchanged": true,
+  "worktree_clean": true,
+  "actual_head_difference": "Only review-2-handoff.md added after d934332",
+  "delivery_decision": "not_ready_for_v1_completion_or_release",
+  "standards": {
+    "hard_violations": 0,
+    "judgment_findings": [
+      {
+        "priority": 3,
+        "title": "Repeated Switches action dispatch remains duplicated; change_note behavior fixed",
+        "file": "plugin/runtime/mgs_runtime.py",
+        "line": 1055,
+        "second_file": "plugin/records/mgs_github.py",
+        "second_line": 1029
+      }
+    ]
+  },
+  "spec": {
+    "count": 6,
+    "P1": 1,
+    "P2": 5,
+    "findings": [
+      {
+        "id": "SP-1",
+        "priority": 1,
+        "title": "远端请求使用锁外 CONFIG 授权快照，撤销完成后仍写入",
+        "file": "plugin/runtime/mgs_runtime.py",
+        "line_start": 953,
+        "line_end": 965,
+        "related": [
+          "R1"
+        ],
+        "spec": [
+          {
+            "file": ".scratch/mygamestudio-framework/contracts/records.md",
+            "line": 39
+          },
+          {
+            "file": ".scratch/mygamestudio-v1-review-fixes/issues/02-runtime-gate-review-fixes.md",
+            "line": 15
+          }
+        ],
+        "probe": "extra_probes.py:remote-config-revoke-inflight"
+      },
+      {
+        "id": "SP-2",
+        "priority": 2,
+        "title": "已发布评论的后续索引故障仍被包装成未执行拒绝",
+        "file": "plugin/runtime/mgs_runtime.py",
+        "line_start": 981,
+        "line_end": 992,
+        "related": [
+          "S2",
+          "R4"
+        ],
+        "spec": [
+          {
+            "file": ".scratch/mygamestudio-framework/contracts/runtime.md",
+            "line": 16
+          },
+          {
+            "file": ".scratch/mygamestudio-framework/contracts/records.md",
+            "line": 39
+          }
+        ],
+        "probe": "partial_remote_probe.py"
+      },
+      {
+        "id": "SP-3",
+        "priority": 2,
+        "title": "草稿幂等身份未含仓库，跨仓库同秒相同请求丢失",
+        "file": "plugin/records/mgs_github.py",
+        "line_start": 542,
+        "line_end": 557,
+        "related": [
+          "S1",
+          "S6"
+        ],
+        "spec": [
+          {
+            "file": ".scratch/mygamestudio-v1-review-fixes/issues/01-records-backend-review-fixes.md",
+            "line": 20
+          },
+          {
+            "file": ".scratch/mygamestudio-framework/contracts/project-configuration.md",
+            "line": 37
+          }
+        ],
+        "probe": "extra_probes.py:S6-cross-repo-idempotence"
+      },
+      {
+        "id": "SP-4",
+        "priority": 2,
+        "title": "独立扫描忽略部分缺失扫描目标并退出成功",
+        "file": "acceptance/16-producer-complete-loop/secret_scan.py",
+        "line_start": 84,
+        "line_end": 92,
+        "related": [
+          "R6"
+        ],
+        "spec": [
+          {
+            "file": ".scratch/mygamestudio-v1-review-fixes/issues/04-credential-leak-evidence-sanitize.md",
+            "line": 22
+          }
+        ],
+        "probe": "missing-scan-target.json (exact command in report)"
+      },
+      {
+        "id": "SP-5",
+        "priority": 2,
+        "title": "票18新增g_o实例不在脱敏及泄漏检查名单，注入明文仍通过",
+        "file": "acceptance/18-complete-package-acceptance/run.sh",
+        "line_start": 388,
+        "line_end": 394,
+        "secondary_line": 940,
+        "evidence": "acceptance-probes.json:g_o_credential_blindspot",
+        "actual_current_leak_found": false
+      },
+      {
+        "id": "SP-6",
+        "priority": 2,
+        "title": "R1新增事件关键词分支可把agentMessage中的allow示例当作实际path拒绝",
+        "file": "acceptance/18-complete-package-acceptance/run.sh",
+        "line_start": 857,
+        "line_end": 860,
+        "evidence": "acceptance-probes.json:r1_path_event_anchor",
+        "actual_saved_mcp_deny_verified": true
+      }
+    ]
+  },
+  "validation": {
+    "static_suites": [
+      {
+        "suite": "plugin_package",
+        "exit_code": 0,
+        "log": "/tmp/mygamestudio-review-2-zgbhMN/test_plugin_package.log"
+      },
+      {
+        "suite": "runtime_gate",
+        "exit_code": 0,
+        "log": "/tmp/mygamestudio-review-2-zgbhMN/test_runtime_gate.log"
+      },
+      {
+        "suite": "runtime_boundaries",
+        "exit_code": 0,
+        "log": "/tmp/mygamestudio-review-2-zgbhMN/test_runtime_boundaries.log"
+      },
+      {
+        "suite": "records_backend",
+        "exit_code": 0,
+        "log": "/tmp/mygamestudio-review-2-zgbhMN/test_records_backend.log"
+      },
+      {
+        "suite": "github_backend",
+        "exit_code": 0,
+        "log": "/tmp/mygamestudio-review-2-zgbhMN/test_github_backend.log"
+      }
+    ],
+    "driver": {
+      "pass": 33,
+      "fail": 0,
+      "exit_code": 0,
+      "log": "driver-probes.log"
+    },
+    "reproducibility": {
+      "pass": true,
+      "package_sha256": "cb5ff8e7f2292b1e2a316c7ba69207068ab36f103bdb1eefecebcf6aec81c611",
+      "three_artifacts_byte_equal": true,
+      "pax_headers": 0,
+      "log": "reproducible.log"
+    },
+    "mutations": [
+      {
+        "id": "A-S1",
+        "exit_codes": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "id": "A-R2",
+        "exit_codes": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "id": "B-handover",
+        "exit_codes": [
+          0,
+          1,
+          0
+        ]
+      }
+    ],
+    "extra_standards_mutation": "standards-probe-results.json",
+    "remote_readonly": {
+      "private": true,
+      "issues": {
+        "1": "closed/completed",
+        "2": "closed/not_planned",
+        "3": "open/agent-ready"
+      },
+      "subissues_of_1": [
+        3
+      ],
+      "issue_1_comments": [
+        "result",
+        "closure note"
+      ],
+      "saved_json_predicates": {
+        "pass": 22,
+        "fail": 0
+      },
+      "historical_38_pass_summary_not_reexecuted": true
+    },
+    "session_evidence": {
+      "turns": [
+        {
+          "name": "n1",
+          "thread_id": "01a0865e-7c81-7b43-95ee-937ba81fdebf",
+          "uuid7_time_utc": "2026-09-09T13:32:14.337000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 0,
+          "command_executions": 8
+        },
+        {
+          "name": "u1",
+          "thread_id": "01a0865f-817d-7901-93ee-1330a12962dd",
+          "uuid7_time_utc": "2026-09-09T13:33:21.149000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 10,
+          "command_executions": 7
+        },
+        {
+          "name": "u2",
+          "thread_id": "01a08663-61c7-7cb2-a251-1e5eba8633ac",
+          "uuid7_time_utc": "2026-09-09T13:37:35.175000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 2,
+          "command_executions": 12
+        },
+        {
+          "name": "p1",
+          "thread_id": "01a08666-2872-78f2-bca0-1876e00813ca",
+          "uuid7_time_utc": "2026-09-09T13:40:37.106000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 6,
+          "command_executions": 22
+        },
+        {
+          "name": "p2",
+          "thread_id": "01a0866b-3346-7c11-a788-820ae9e73cf7",
+          "uuid7_time_utc": "2026-09-09T13:46:07.558000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 3,
+          "command_executions": 14
+        },
+        {
+          "name": "p3",
+          "thread_id": "01a0866d-ec92-72c2-af9d-3043c9165571",
+          "uuid7_time_utc": "2026-09-09T13:49:06.066000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 0,
+          "command_executions": 7
+        },
+        {
+          "name": "g1",
+          "thread_id": "01a08670-7ad5-7651-900d-97ee9868a8f1",
+          "uuid7_time_utc": "2026-09-09T13:51:53.557000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 8,
+          "command_executions": 1
+        },
+        {
+          "name": "r1",
+          "thread_id": "01a08671-c772-79b3-a36f-7b639f26cbe5",
+          "uuid7_time_utc": "2026-09-09T13:53:18.706000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 7,
+          "command_executions": 2
+        },
+        {
+          "name": "r1b",
+          "thread_id": "01a08673-9409-75a1-bd7e-075cf75c359a",
+          "uuid7_time_utc": "2026-09-09T13:55:16.617000+00:00",
+          "turn_completions": 1,
+          "status": "completed",
+          "error": null,
+          "report_equals_deduplicated_agent_messages": true,
+          "mcp_calls": 1,
+          "command_executions": 0
+        }
+      ],
+      "upgrade": {
+        "old_files": 79,
+        "new_files": 79,
+        "old_snapshot_matches_git_0_17": true,
+        "new_install_matches_current_source": true,
+        "observed_changed": [
+          ".codex-plugin/plugin.json",
+          "provenance/fingerprints.json",
+          "provenance/manifest.md",
+          "records/mgs_github.py",
+          "records/mgs_records.py",
+          "runtime/mgs_runtime.py",
+          "templates/project/CONFIG.md"
+        ],
+        "git_expected": [
+          ".codex-plugin/plugin.json",
+          "provenance/fingerprints.json",
+          "provenance/manifest.md",
+          "records/mgs_github.py",
+          "records/mgs_records.py",
+          "runtime/mgs_runtime.py",
+          "templates/project/CONFIG.md"
+        ],
+        "match": true,
+        "only_in_one_side": []
+      },
+      "audits": [
+        {
+          "file": "audit-p.jsonl",
+          "rows": 12,
+          "timestamps_nondecreasing": true
+        },
+        {
+          "file": "audit-gh.jsonl",
+          "rows": 15,
+          "timestamps_nondecreasing": true
+        },
+        {
+          "file": "audit-reg.jsonl",
+          "rows": 18,
+          "timestamps_nondecreasing": true
+        },
+        {
+          "file": "audit-upg.jsonl",
+          "rows": 14,
+          "timestamps_nondecreasing": true
+        }
+      ],
+      "closure_log": {
+        "path": "/tmp/mgs-accept-18-closure.log",
+        "individual_pass_count": 137,
+        "individual_fail_count": 0
+      }
+    },
+    "secret_scan": {
+      "known_token_hashes": 68,
+      "working_files": 1238,
+      "project_files": 512,
+      "tar_files": 79,
+      "object_count": 2091,
+      "blob_count": 1478,
+      "findings": [],
+      "r6_release_live": [
+        {
+          "instance_id": "i-6afae7e2cf67",
+          "released": true,
+          "expires_at": 1788932783.319071
+        },
+        {
+          "instance_id": "i-4de16a8a42e5",
+          "released": true,
+          "expires_at": 1788933350.350326
+        }
+      ]
+    },
+    "shipped_secret_scan": {
+      "exit_code": 0,
+      "files": 1425,
+      "known_token_hashes": 68
+    },
+    "history_rewrite": {
+      "old_commit_count": 23,
+      "new_commit_count": 23,
+      "same_hash_commits": 16,
+      "all_commit_pairs_only_exact_redactions": true,
+      "unchanged_commits_description": "initial repository commit plus tickets 1-15; rewrite starts at ticket 16",
+      "handoff_discrepancy": "handoff says all commits after ticket 7 changed; bundle comparison instead shows tickets 8-15 also unchanged"
+    },
+    "playtest": {
+      "build_path": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-16/projects/tide-pool/build/main.js",
+      "sha256": "cb1bfd3f021abed96b5becbe9f42140a0c1ed41727581f1e498746134c812933",
+      "asset_path_references": 0,
+      "svg_references": 0,
+      "wav_references": 0,
+      "arrow_keys": [
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown"
+      ],
+      "assets_exist": [
+        ".tmp/accept-16/projects/tide-pool/assets/gull-dive.svg",
+        ".tmp/accept-16/projects/tide-pool/assets/gull-glide.svg",
+        ".tmp/accept-16/projects/tide-pool/assets/audio/gull_warning_rise.wav"
+      ],
+      "human_feedback_source": ".scratch/mygamestudio-v1/issues/16-producer-complete-loop.md:93"
+    }
+  },
+  "acceptance_asset_review": [
+    {
+      "item": 1,
+      "topic": "OLD_COMMIT",
+      "fixture_defect_valid": true,
+      "semantic_weakening": false
+    },
+    {
+      "item": 2,
+      "topic": "git-derived upgrade changes",
+      "fixture_defect_valid": true,
+      "semantic_weakening": false,
+      "observed_changed_files": 7
+    },
+    {
+      "item": 3,
+      "topic": "dedicated G offline grant",
+      "fixture_defect_valid": true,
+      "semantic_weakening": false,
+      "remaining_issue": "SP-5"
+    },
+    {
+      "item": 4,
+      "topic": "required task fields",
+      "fixture_defect_valid": true,
+      "semantic_weakening": false
+    },
+    {
+      "item": 5,
+      "topic": "R role grant intersection",
+      "fixture_defect_valid": true,
+      "semantic_weakening": false
+    },
+    {
+      "item": 6,
+      "topic": "report vocabulary and raw-event fallback",
+      "fixture_defect_valid": true,
+      "semantic_weakening": "R1 raw-event fallback only",
+      "remaining_issue": "SP-6",
+      "current_G1_failed_connection_verified": true,
+      "current_R1_mcp_deny_path_verified": true
+    }
+  ],
+  "unverified": [
+    "No model rounds reexecuted; nine final rounds verified from evidence only",
+    "runA-runD complete process logs and exact historical model cost unavailable in located material; five-run statement not independently verified",
+    "No real remote write replay; historical initial-empty precondition/38 exit statuses not independently reexecuted",
+    "Present green-red-green proves regression sensitivity, not original historical run ordering",
+    "Secret scan is limited to known registered execution hashes and listed service-token patterns, not arbitrary unknown secrets",
+    "No new human playtest/audio/art judgment or daily client installation/release performed"
+  ],
+  "boundaries": {
+    "real_remote_writes": 0,
+    "acceptance_model_calls": 0,
+    "real_repo_file_writes": 0,
+    "commits": 0,
+    "pushes": 0,
+    "system_or_user_client_config_writes": 0
+  },
+  "command_categories": [
+    "read-only Git rev-parse/status/log/diff/show/archive/ls-tree/for-each-ref/reflog/cat-file/bundle list-heads",
+    "local clone/fetch/archive into /tmp only; local history-copy deletion after verification",
+    "rg/cat/sed/nl/file inventory and Python read-only parsing/hashing",
+    "five Python test suites in /tmp with bytecode disabled",
+    "isolated Codex plugin add and MCP driver to localhost stand-in, no model turns",
+    "targeted mutation/restore and injected failures with fake transports in /tmp",
+    "bash dist/verify-reproducible.sh in /tmp; isolated archive build, cmp and PAX inspection",
+    "gh api --method GET repository/issues/labels/comments/sub_issues/current main",
+    "registered-hash/service-pattern scanning of tracked files, acceptance projects, tar members, and all local Git blobs",
+    "review JSON/Markdown generated under /tmp only"
+  ],
+  "outputs": {
+    "requested_repo_paths_written": false,
+    "reason": "Requested report paths are not Git-ignored; writing them would violate explicit clean-status/zero-worktree-change boundary. Clarification was requested; reports prepared under /tmp.",
+    "report": "/tmp/mygamestudio-review-2-zgbhMN/review-2.md",
+    "summary": "/tmp/mygamestudio-review-2-zgbhMN/verification-summary-2.json",
+    "evidence_dir": "/tmp/mygamestudio-review-2-zgbhMN"
+  }
+}
