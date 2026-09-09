@@ -526,9 +526,12 @@ class GithubBackend:
     def _save_draft(self, op: str, args: dict, cause: str) -> dict:
         """远端不可用时保存未发布草稿(标明来源与状态;不视为已发布)。
 
-        每个待发布操作带稳定且唯一的身份(操作+参数的内容哈希,审查修复
-        票 01/S6):同秒两次不同操作互不覆盖;同一操作重复保存幂等(只保留
-        一份,重放不重复);绝不覆盖内容不同的既有草稿。
+        每个待发布操作带稳定且唯一的身份(操作+参数+**目标仓库**的内容
+        哈希;审查修复票 01/S6、review2-02/SP-3):同秒两次不同操作互不
+        覆盖;同一操作重复保存幂等(只保留一份,重放不重复);绝不覆盖
+        内容不同的既有草稿。目标仓库纳入身份与幂等比较——同一缓存目录
+        服务多个各有授权的仓库时,跨仓库的同参数请求各存各的草稿,
+        不得把新仓库请求当作旧仓库草稿的幂等重放而丢弃。
         """
 
         if self.cache_dir is None:
@@ -539,8 +542,10 @@ class GithubBackend:
         drafts.mkdir(parents=True, exist_ok=True)
         stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
         identity = re.sub(r"[^A-Za-z0-9._-]", "-", str(args.get("identity", "na")))
+        repo_str = _repo_str(self.repo)
         digest = hashlib.sha256(json.dumps(
-            {"op": op, "args": args}, ensure_ascii=False, sort_keys=True)
+            {"op": op, "args": args, "repo": repo_str},
+            ensure_ascii=False, sort_keys=True)
             .encode("utf-8")).hexdigest()[:8]
 
         def candidate(index: int | None = None) -> Path:
@@ -554,8 +559,10 @@ class GithubBackend:
                 prior = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 prior = None
-            if prior and prior.get("op") == op and prior.get("args") == args:
-                # 同一待发布操作重复保存:保留既有草稿,不产生第二份(重放幂等)
+            if prior and prior.get("op") == op and prior.get("args") == args \
+                    and prior.get("repo") == repo_str:
+                # 同一待发布操作(含目标仓库)重复保存:保留既有草稿,
+                # 不产生第二份(重放幂等)
                 return {"published": False, "status": "未发布草稿",
                         "draft": str(path), "cause": cause, "note": DRAFT_NOTE,
                         "idempotent": True}
@@ -566,7 +573,7 @@ class GithubBackend:
             path = candidate(index)
         path.write_text(json.dumps({
             "op": op, "args": args, "status": "未发布草稿",
-            "repo": _repo_str(self.repo),
+            "repo": repo_str,
             "created_at": _dt.datetime.now().astimezone().isoformat(timespec="seconds"),
             "cause": cause, "note": DRAFT_NOTE,
         }, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -760,7 +767,19 @@ class GithubBackend:
 
     def append_result(self, identity: str, result_markdown: str) -> dict:
         """追加结果:发布评论(带任务身份前缀)并把评论登记进正文结果索引。
-        评论超时同样先回读(已发布的评论不重复发)。"""
+
+        防重复与部分成功语义:
+        - 发布前先按评论正文回读,已存在同文评论即**收养**(不发第二条);
+          「评论已发布而索引未完成」的请求重试时因此只补索引,不重复发布
+          (与 create_task 的读前收养同一纪律);
+        - 评论请求超时先回读,区分「回读确认不存在」(才允许重试一次)与
+          「回读失败」——后者保留不确定状态并停止重发,不存草稿(审查修复
+          票 01/S2);
+        - 评论已真实发布而结果索引更新失败:如实回报**部分成功**——携带
+          已发布评论身份与索引未完成状态,不整体报错(审查修复票
+          review2-02/SP-2;runtime 合同:已写入待表达,不把已发生的远端
+          结果包装成未执行的失败)。
+        """
 
         self._authorize_write()
         try:
@@ -778,7 +797,29 @@ class GithubBackend:
         comment_body = f"任务:{identity}\n\n{result_markdown}"
         comment = None
         attempts: list[dict] = []
+        # 读前回读:同文评论已存在即收养(重试只补索引,不重复发布)。
+        # 读前回读本身失败时本次尚未发布任何内容,按首试语义继续尝试发布;
+        # 「回读失败停止重发」(S2)针对的是发布超时之后的结果不确定。
+        try:
+            status, comments = self.transport.request(
+                "GET", f"{_repo_path(self.repo)}/issues/{number}"
+                       "/comments?per_page=100")
+        except TransportError as exc:
+            attempts.append({"step": "read-first", "outcome": exc.kind,
+                             "detail": str(exc)})
+        else:
+            if status == 200 and isinstance(comments, list):
+                hit = next((c for c in comments
+                            if c.get("body") == comment_body), None)
+                if hit is not None:
+                    comment = hit
+                    attempts.append({"step": "read-first", "outcome": "exists"})
+            else:
+                attempts.append({"step": "read-first", "outcome": "bad_response",
+                                 "detail": f"list comments HTTP {status}"})
         for index in range(2):
+            if comment is not None:
+                break
             try:
                 status, created = self.transport.request(
                     "POST", f"{_repo_path(self.repo)}/issues/{number}/comments",
@@ -840,17 +881,37 @@ class GithubBackend:
         body = issue.get("body") or ""
         index_lines = [line for line in _section_lines(body, "结果索引")
                        if line.strip() != "(暂无)"]
-        index_lines.append(f"- {ref}:{excerpt}")
-        new_body = _edit_body(body, index_lines=index_lines,
-                              append_change=f"{_today()} 追加结果评论 {ref}")
-        status, updated = self.transport.request(
-            "PATCH", f"{_repo_path(self.repo)}/issues/{number}", {"body": new_body})
-        if status != 200:
-            raise GithubRecordsError(f"结果索引更新失败:HTTP {status}(评论已发布 {ref})")
+        already_indexed = any(ref in line for line in index_lines)
+        if not already_indexed:
+            index_lines.append(f"- {ref}:{excerpt}")
+        new_body = _edit_body(
+            body, index_lines=index_lines,
+            append_change=None if already_indexed
+            else f"{_today()} 追加结果评论 {ref}")
+        try:
+            status, _updated = self.transport.request(
+                "PATCH", f"{_repo_path(self.repo)}/issues/{number}",
+                {"body": new_body})
+            if status != 200:
+                raise TransportError("bad_response", f"update HTTP {status}")
+        except TransportError as exc:
+            # SP-2:评论已真实发布,结果索引更新失败 ≠ 整体失败。如实回报
+            # 部分成功:携带已发布评论身份与索引未完成状态;恢复后重试同一
+            # 请求经「读前收养」只补索引,不再重复发布评论。
+            attempts.append({"step": "index-patch", "outcome": exc.kind,
+                             "detail": str(exc)})
+            return {"published": True, "partial": True,
+                    "comment_id": comment.get("id"), "ref": ref,
+                    "issue_number": number, "index_updated": False,
+                    "attempts": attempts,
+                    "note": ("部分成功:结果评论已发布("
+                             f"{ref}),但正文结果索引更新未完成({exc});"
+                             "重试同一请求只会收养既有评论并补齐索引,"
+                             "不会重复发布")}
         readback = self.read_task(identity)
         return {"published": True, "comment_id": comment.get("id"),
                 "ref": ref, "issue_number": number, "readback": readback,
-                "attempts": attempts}
+                "attempts": attempts, "index_updated": True}
 
     def set_relations(self, identity: str, deps: list[str]) -> dict:
         """设置依赖(阻塞关系):写成「#Issue号 身份」的明确可解析引用,
@@ -1026,36 +1087,51 @@ class GithubBackend:
         return {"published_count": sum(1 for r in results if r.get("published")),
                 "results": results}
 
+    def execute_op(self, op: str, args: dict) -> dict:
+        """按操作名把参数分发到对应写操作(公开接缝)。
+
+        在线执行(运行时受控通道 mgs_remote)与草稿重放(publish_drafts)
+        共用这同一份动作参数分发(第二轮复审 ST-1 判断性建议的采纳:
+        参数行为不再两处维护,一条路径上的参数语义变更两路同时生效)。
+        未登记的操作名按错误拒绝,不猜测执行。
+        """
+
+        if op == "create_task":
+            return self.create_task(
+                str(args["identity"]), str(args.get("title", "")),
+                dict(args.get("request") or {}),
+                triage=str(args.get("triage", "needs-triage")),
+                progress=str(args.get("progress", "待执行")))
+        if op == "update_task":
+            return self.update_task(
+                str(args["identity"]), dict(args.get("fields") or {}),
+                expected_body_sha256=args.get("expected_body_sha256"),
+                change_note=str(args.get("change_note", "安排更新")))
+        if op == "set_triage":
+            return self.set_triage(str(args["identity"]), str(args["label"]))
+        if op == "append_result":
+            return self.append_result(str(args["identity"]),
+                                      str(args.get("result_markdown", "")))
+        if op == "set_relations":
+            return self.set_relations(str(args["identity"]),
+                                      list(args.get("deps") or []))
+        if op == "set_parent":
+            return self.set_parent(str(args["identity"]), args.get("parent"))
+        if op == "close_task":
+            return self.close_task(str(args["identity"]), str(args["reason"]),
+                                   note=str(args.get("note", "")))
+        raise GithubRecordsError(f"unknown op {op}")
+
     def _replay_draft(self, draft: dict) -> dict:
         op, args = draft["op"], draft.get("args", {})
         try:
-            if op == "create_task":
-                outcome = self.create_task(args["identity"], args["title"],
-                                           args.get("request", {}),
-                                           triage=args.get("triage", "needs-triage"),
-                                           progress=args.get("progress", "待执行"))
-            elif op == "update_task":
-                outcome = self.update_task(
-                    args["identity"], args.get("fields", {}),
-                    expected_body_sha256=args.get("expected_body_sha256"),
-                    change_note=args.get("change_note", "安排更新"))
-            elif op == "set_triage":
-                outcome = self.set_triage(args["identity"], args["label"])
-            elif op == "append_result":
-                outcome = self.append_result(args["identity"],
-                                             args["result_markdown"])
-            elif op == "set_relations":
-                outcome = self.set_relations(args["identity"], args.get("deps", []))
-            elif op == "set_parent":
-                outcome = self.set_parent(args["identity"], args.get("parent"))
-            elif op == "close_task":
-                outcome = self.close_task(args["identity"], args["reason"],
-                                          note=args.get("note", ""))
-            else:
-                return {"published": False, "outcome": f"unknown op {op}"}
+            outcome = self.execute_op(op, args)
         except (GithubRecordsError, TransportError) as exc:
             return {"published": False, "outcome": f"仍失败:{exc}"}
-        return {"published": bool(outcome.get("published", outcome.get("created"))),
+        # 部分成功(如评论已发布而结果索引未完成,SP-2)不算完成:保留草稿,
+        # 下次重放经「读前收养」只补未完成部分,不重复发布
+        return {"published": bool(outcome.get("published", outcome.get("created"))
+                                 and not outcome.get("partial")),
                 "outcome": outcome}
 
     # ----- 回读核验 -----

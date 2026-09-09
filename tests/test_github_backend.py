@@ -1316,6 +1316,168 @@ def test_reachability_probe_carries_no_credentials() -> None:
         mgs_github.urlopen = original
 
 
+# ---------- 第二轮审查修复票 review2-02:反例固化(修复前红、修复后绿) ----------
+
+def test_append_result_partial_success_and_retry_completion() -> None:
+    """SP-2:评论已真实发布而结果索引更新超时——部分成功如实保留(携带
+    已发布评论身份与索引未完成状态,不整体报错);恢复后重试同一请求只
+    收养既有评论并补齐索引,替身评论数恰 1(不重复发布)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake)
+        fake.fail("PATCH", "/issues/1", "timeout")  # 评论 POST 成功后索引 PATCH 超时
+        try:
+            first = backend.append_result("01-alpha", "交付证据")  # 修复前:直接抛出
+        except (mgs_github.TransportError, mgs_github.GithubRecordsError) as exc:
+            first = {"raised": str(exc)}
+        check(first.get("published") is True and first.get("partial") is True,
+              f"评论已发布的部分成功应如实保留(不整体报错),实际 {first}")
+        check(first.get("comment_id") is not None,
+              f"结果应携带已发布评论身份,实际 {first}")
+        check(first.get("index_updated") is False,
+              f"未完成部分(结果索引)应如实表达,实际 {first}")
+        check(len(fake.comments[1]) == 1,
+              f"首次调用替身应已有 1 条评论,实际 {len(fake.comments[1])} 条")
+        check(f"#issuecomment-{first.get('comment_id')}"
+              not in (fake.issues[0].get("body") or ""),
+              "索引 PATCH 超时后正文不应已含该评论引用")
+        # 恢复后重试同一请求:只收养既有评论并补齐索引
+        fake._fail = []
+        second = backend.append_result("01-alpha", "交付证据")
+        check(second.get("published") is True
+              and second.get("index_updated") is True,
+              f"恢复后重试应完成索引并如实回报,实际 {second}")
+        check(second.get("comment_id") == first.get("comment_id"),
+              f"重试应收养既有评论(同一评论身份),实际 {second.get('comment_id')}"
+              f" vs {first.get('comment_id')}")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 1,
+              f"重试不得再发评论 POST(全程恰 1 次),实际 {len(posts)} 次")
+        check(len(fake.comments[1]) == 1,
+              f"替身评论数应恰 1(不重复发布),实际 {len(fake.comments[1])} 条")
+        check(f"#issuecomment-{first.get('comment_id')}"
+              in (fake.issues[0].get("body") or ""),
+              "重试后结果索引应补齐该评论引用")
+        # 已完成后的再次重试仍幂等:评论数与索引均不再变化
+        third = backend.append_result("01-alpha", "交付证据")
+        check(third.get("published") is True
+              and third.get("index_updated") is True
+              and third.get("comment_id") == first.get("comment_id"),
+              f"完成后的重复请求应幂等(收养既有评论),实际 {third}")
+        check(len(fake.comments[1]) == 1, "幂等重试后评论数仍应恰 1")
+
+
+def test_append_result_draft_replay_partial_keeps_draft() -> None:
+    """SP-2 草稿重放侧:重放中评论已发布而索引更新失败属部分成功——草稿
+    保留(不算完成),下次重放收养既有评论只补索引;全程评论数恰 1。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        cache = Path(tmp) / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        backend.fetch_tasks()  # 在线建立缓存(离线草稿路径需要)
+        fake.offline()
+        draft = backend.append_result("01-alpha", "离线证据")
+        check(draft.get("published") is False and draft.get("draft"),
+              f"离线追加结果应保存草稿,实际 {draft}")
+        # 恢复但索引 PATCH 超时:重放得到部分成功,草稿保留待下次补齐
+        fake._offline = False
+        fake.fail("PATCH", "/issues/1", "timeout")
+        first = backend.publish_drafts()
+        check(first["published_count"] == 0,
+              f"部分成功不算完成(草稿保留),实际 {first}")
+        check(len(fake.comments[1]) == 1,
+              f"重放应已发布 1 条评论,实际 {len(fake.comments[1])} 条")
+        check(len(list((cache / "drafts").glob("*.json"))) == 1,
+              "部分成功的草稿应保留在待发布目录")
+        # 故障清除后再次重放:收养既有评论,只补索引
+        fake._fail = []
+        second = backend.publish_drafts()
+        check(second["published_count"] == 1,
+              f"恢复后重放应补齐索引并完成,实际 {second}")
+        check(len(fake.comments[1]) == 1,
+              f"补齐重放不得重复发布评论(仍恰 1 条),"
+              f"实际 {len(fake.comments[1])} 条")
+        check(not list((cache / "drafts").glob("*.json")),
+              "完成后的草稿应移出待发布目录")
+        check("#issuecomment-" in (fake.issues[0].get("body") or "")
+              and "离线证据" in (fake.issues[0].get("body") or ""),
+              "结果索引应补齐该评论引用")
+
+
+def test_draft_identity_includes_repo_cross_repo() -> None:
+    """SP-3:草稿身份含目标仓库——同一秒、同一缓存目录、两个各有授权的仓库
+    保存同参数的离线创建,两份草稿各自保存(互不顶替、不得误报幂等);
+    发布各归各仓;同仓库同参数重复保存的幂等语义不回退(S6)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        config = mgs_records.load_config(root)
+        old = {**config, "repo": {"host": "github.com", "owner": "old-owner",
+                                  "repo": "private-repo"},
+               "external": ("github.com/old-owner/private-repo:"
+                            "issues-write(已授权旧仓库)")}
+        offline = FakeTransport()
+        offline.offline()
+        previous = mgs_github.GithubBackend(old, offline, base / "shared-cache")
+        current = mgs_github.GithubBackend(config, offline, base / "shared-cache")
+        real_datetime = mgs_github._dt.datetime
+
+        class FixedDatetime(real_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls(2026, 9, 9, 1, 2, 3, tzinfo=tz)
+
+        mgs_github._dt.datetime = FixedDatetime
+        try:
+            a = previous.create_task("09-same", "same title",
+                                     {"当前目标": "same goal"})
+            z = current.create_task("09-same", "same title",
+                                    {"当前目标": "same goal"})
+            again = current.create_task("09-same", "same title",
+                                        {"当前目标": "same goal"})
+        finally:
+            mgs_github._dt.datetime = real_datetime
+        check(a.get("draft") and z.get("draft") and a["draft"] != z["draft"],
+              f"两仓库同秒同参数的草稿身份应不同(身份含仓库),"
+              f"实际 {a.get('draft')} / {z.get('draft')}")
+        check(z.get("idempotent") is not True,
+              f"跨仓库请求不是同一操作的重放,不得按幂等顶替,实际 {z}")
+        drafts = [json.loads(p.read_text(encoding="utf-8"))
+                  for p in (base / "shared-cache/drafts").glob("*.json")]
+        check(len(drafts) == 2,
+              f"两仓库应各存各的草稿,实际 {len(drafts)} 份:"
+              f"{[d.get('repo') for d in drafts]}")
+        check({d.get("repo") for d in drafts}
+              == {"github.com/old-owner/private-repo", REPO},
+              f"两份草稿应各自记录目标仓库,实际 {[d.get('repo') for d in drafts]}")
+        check(again.get("idempotent") is True,
+              f"同仓库同参数重复保存应保持幂等(S6 语义不回退),实际 {again}")
+        check(len(list((base / "shared-cache/drafts").glob("*.json"))) == 2,
+              "幂等重放不得产生第三份草稿")
+        # 发布各归各仓:当前仓库后端只发布自己的草稿(S1 拒绝旧仓库草稿),
+        # 当前仓库恰收到一次创建请求
+        online = FakeTransport()
+        current_online = mgs_github.GithubBackend(config, online,
+                                                  base / "shared-cache")
+        publish = current_online.publish_drafts()
+        check(publish["published_count"] == 1,
+              f"只有本仓库草稿可发布,实际 {publish}")
+        posts = [c for c in online.calls if c[0] == "POST"]
+        check(len(posts) == 1 and posts[0][1].endswith("/issues"),
+              f"当前仓库应恰收到一次创建请求,实际 {posts}")
+        check(any("任务身份:09-same" in i["body"] for i in online.issues),
+              "本仓库草稿应实际创建为任务")
+        check(len(list((base / "shared-cache/drafts").glob("*.json"))) == 1,
+              "旧仓库草稿应原样保留待其自己的后端发布")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

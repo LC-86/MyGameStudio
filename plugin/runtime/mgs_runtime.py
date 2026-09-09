@@ -45,6 +45,14 @@
   授权经正常入口被撤销后,锁前已读过旧授权的在途请求在锁内重读时
   以 remote_scope 拒绝,不可能再写入远端(与 R1 的身份撤销同一纪律)。
 
+第二轮审查修复批(2026-09-09,review2-02/SP-2、ST-1):
+- 远端部分成功如实回报:适配器对「评论已发布而结果索引更新未完成」
+  返回携带已发布评论身份与未完成状态的 partial 结果,通道按 allow
+  如实转发(附部分成功说明),不再整体包装成 deny/remote_upstream;
+  重试经读前收养只补索引,不重复发布。
+- 在线执行与草稿重放共用后端 execute_op 的同一份动作参数分发,
+  参数语义不再两处维护。
+
 本模块只依赖 Python 标准库。MCP 通道与调度 CLI 是它的两个入口。
 """
 
@@ -85,7 +93,8 @@ def _remote_summary(result: dict) -> str:
     """远端操作结果的一句话摘要(进审计 note,不含凭据)。"""
 
     keys = ("created", "adopted", "issue_number", "published", "uncertain",
-            "comment_id", "close_reason", "state_reason", "draft")
+            "partial", "index_updated", "comment_id", "close_reason",
+            "state_reason", "draft")
     return ",".join(f"{key}={result[key]}" for key in keys if key in result) \
         or "ok"
 
@@ -1025,7 +1034,7 @@ class GateService:
                     draft = None
                     if exc.kind == "offline" and channel.get("cache_dir"):
                         draft = backend._save_draft(  # noqa: SLF001 - 通道内聚
-                            self._draft_op_for(action), dict(payload), str(exc))
+                            self._op_for_action(action), dict(payload), str(exc))
                     denial = ("remote_upstream",
                               f"remote upstream unavailable (fail closed): {exc}",
                               {"draft": draft} if draft else None)
@@ -1063,6 +1072,14 @@ class GateService:
                                       "config-scope intersection",
                             "result": result,
                         }
+                        if result.get("partial"):
+                            # SP-2:部分成功如实回报——已发布的部分(评论身份)
+                            # 与未完成的部分(结果索引)都在 result 中表达,
+                            # 不包装成整体成功,也不包装成整体拒绝
+                            outcome["reason"] += (
+                                "; partial success: published part carried in "
+                                "result with its incomplete part (retry the "
+                                "same request to complete only what remains)")
                     if outcome is not None:
                         # R4:结果审计追加失败不否认已发生的远端结果——如实
                         # 回报并标注未记录(调用方不误判重试),也不静默丢弃
@@ -1085,43 +1102,18 @@ class GateService:
         return outcome
 
     @staticmethod
-    def _draft_op_for(action: str) -> str:
+    def _op_for_action(action: str) -> str:
         return {"create": "create_task", "update": "update_task",
                 "set-triage": "set_triage", "set-relations": "set_relations",
                 "set-parent": "set_parent", "close": "close_task",
                 "append-result": "append_result", "read": "read"}.get(
-                    action, action)
+            action, action)
 
     @staticmethod
     def _run_remote_action(backend, action: str, payload: dict) -> dict:
         if action == "read":
             return {"published": True,
                     "task": backend.read_task(str(payload["identity"]))}
-        if action == "create":
-            return backend.create_task(
-                str(payload["identity"]), str(payload.get("title", "")),
-                dict(payload.get("request") or {}),
-                triage=str(payload.get("triage", "needs-triage")),
-                progress=str(payload.get("progress", "待执行")))
-        if action == "update":
-            return backend.update_task(
-                str(payload["identity"]), dict(payload.get("fields") or {}),
-                expected_body_sha256=payload.get("expected_body_sha256"),
-                change_note=str(payload.get("change_note", "安排更新")))
-        if action == "set-triage":
-            return backend.set_triage(str(payload["identity"]),
-                                      str(payload["label"]))
-        if action == "set-relations":
-            return backend.set_relations(str(payload["identity"]),
-                                         list(payload.get("deps") or []))
-        if action == "set-parent":
-            return backend.set_parent(str(payload["identity"]),
-                                      payload.get("parent"))
-        if action == "close":
-            return backend.close_task(str(payload["identity"]),
-                                      str(payload["reason"]),
-                                      note=str(payload.get("note", "")))
-        if action == "append-result":
-            return backend.append_result(str(payload["identity"]),
-                                         str(payload.get("result_markdown", "")))
-        raise ValueError(f"unknown action {action}")
+        # 其余动作与草稿重放共用后端的同一份参数分发(ST-1:在线执行与
+        # 重放不再各自维护动作参数,语义变更两路同时生效)
+        return backend.execute_op(GateService._op_for_action(action), payload)

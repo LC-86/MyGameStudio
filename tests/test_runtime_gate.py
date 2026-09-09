@@ -739,6 +739,78 @@ def review2_sp1_section(root: Path) -> None:
           "SP-1:在途拒绝应留下 remote_scope 审计记录")
 
 
+def review2_sp2_section(root: Path) -> None:
+    """第二轮审查修复批(票 review2-02):SP-2 通道级反例固化,先红后绿。
+
+    反例底稿:.scratch/mygamestudio-v1-review2-fixes/evidence/partial_remote_probe.py
+    (2026-09-09 独立复审在 HEAD b89b548 复现):注入「评论 POST 成功+索引
+    PATCH 超时」,mgs_github.append_result 在评论创建后直接抛出、
+    mgs_runtime.remote_record 把它整体转成 deny/remote_upstream(不携带
+    comment_id);故障清除后同请求重试返回 allow,替身累计 2 条重复评论。
+    期望:部分成功如实保留(结果携带已发布评论身份与未完成状态,非整体
+    deny);恢复后重试只补索引,替身评论数恰 1(runtime 合同第 16 行:
+    已写入待表达)。
+    """
+
+    sys.path.insert(0, str(REPO_ROOT / "tests"))
+    import test_github_backend as gh_fixtures  # noqa: PLC0415
+
+    base = root / "review2-sp2"
+    project = gh_fixtures.make_github_project(base / "project")
+    svc = GateService(base / "runtime")
+    resources = ["github://github.com/mygamestudio/issue-accept/issues/**"]
+    svc.init_policy(project, {"producer": resources}, {"production": None})
+    inst = svc.create_instance("producer", "T-sp2", "production", resources)
+    svc._write_json("remote.json", {"github": {
+        "api_base": "http://unused.invalid", "token_env": "MGS_TEST_UNUSED",
+        "cache_dir": str(base / "cache")}})
+    fake = gh_fixtures.FakeTransport()
+    fake.seed_issue("01-task", "Existing")
+    fake.fail("PATCH", "/issues/1", "timeout")  # 评论 POST 成功后索引 PATCH 超时
+
+    class Facade:
+        def remote_record(self, token, action, payload):
+            return svc.remote_record(token, action, payload, transport=fake)
+
+    def call() -> dict:
+        response = mcp_gate.handle_tools_call(
+            Facade(), "mgs_remote",
+            {"token": inst.token, "action": "append-result",
+             "payload": {"identity": "01-task", "result_markdown": "same result"}})
+        return json.loads(response["content"][0]["text"])
+
+    first = call()
+    check(first.get("decision") != "deny",
+          f"SP-2:评论已发布的部分成功不得整体转 deny,实际 {first}")
+    first_result = first.get("result") or {}
+    check(first_result.get("published") is True
+          and first_result.get("comment_id") is not None,
+          f"SP-2:结果应携带已发布评论身份,实际 {first_result}")
+    check(first_result.get("index_updated") is False,
+          f"SP-2:未完成部分(结果索引)应如实表达,实际 {first_result}")
+    check(len(fake.comments[1]) == 1,
+          f"SP-2:首次调用替身应已有 1 条评论,实际 {len(fake.comments[1])} 条")
+
+    # 故障清除后同请求重试:仅补索引,不重复发布评论
+    fake._fail = []
+    second = call()
+    check(second.get("decision") == "allow",
+          f"SP-2:恢复后重试应 allow,实际 {second}")
+    check(len(fake.comments[1]) == 1,
+          f"SP-2:恢复后重试仅补索引,替身评论数应恰 1(不重复发布),"
+          f"实际 {len(fake.comments[1])} 条")
+    posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+    check(len(posts) == 1,
+          f"SP-2:全程应只发出 1 次评论 POST,实际 {len(posts)} 次")
+    check(f"#issuecomment-{first_result.get('comment_id')}"
+          in (fake.issues[0].get("body") or ""),
+          "SP-2:重试后结果索引应补齐该评论引用")
+    entries = audit_lines(base / "runtime")
+    check(any(e.get("op") == "remote:append-result"
+              and e.get("decision") == "intent" for e in entries),
+          "SP-2:远端写入意图仍先于执行持久记录")
+
+
 def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="mgs02-gate-test-"))
     try:
@@ -1354,6 +1426,10 @@ def main() -> int:
         # 36+. 第二轮审查修复批(票 review2-01):SP-1 在途 CONFIG 授权
         #      撤销的远端临界区反例固化
         review2_sp1_section(root)
+
+        # 37+. 第二轮审查修复批(票 review2-02):SP-2 评论已发布而索引
+        #      更新超时的部分成功误报,通道级反例固化
+        review2_sp2_section(root)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
