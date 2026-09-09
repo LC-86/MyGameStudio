@@ -72,3 +72,7 @@
 #### 接续位置
 
 票 03(及后续依赖运行保障的票)可直接复用:`plugin/runtime/`(GateService 公开接缝 + 两入口)、`plugin/internal/protocols/gate-protocol.md`、`tests/test_runtime_gate.py`、`acceptance/02-role-scoped-write/appserver_client.py`(支持 --sandbox 与 --events-out,事件已去重)与 `run.sh` 的隔离环境布局(受保护区放仓库 .tmp、不在 /tmp)。新增角色的做法:policy-spec 加角色 → mgsrt_admin choices 同步 → 技能按 gate-protocol 接线。
+
+### 2026-09-09 — Fix（票 02-fix R2）：用途条目缺失放行已修复
+
+2026-09-09 独立审查以探针实证 R2（报告：[../../mygamestudio-v1-review-fixes/evidence/review.md](../../mygamestudio-v1-review-fixes/evidence/review.md)）：策略中删除绑定用途的条目后，原本在 purpose 层被拒的写入变为无限制放行，「角色 ∩ 任务 ∩ 用途」交集失守。修复票 [02 运行保障门](../../mygamestudio-v1-review-fixes/issues/02-runtime-gate-review-fixes.md) 已修复并固化回归（条目缺失或形状无效一律失效闭合拒绝；显式空条目＝不额外限制的语义保持兼容）。本票勾选历史不动；第 2 条「角色受限写入」的既有结论在修复后重新成立。

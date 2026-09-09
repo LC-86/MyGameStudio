@@ -77,3 +77,7 @@ run1 于 W1 前中止(evidence 计数预期错:票 14 试玩记录是模型产�
 
 票 16(完整闭环)可直接复用:`.tmp/accept-15/` 保存本轮终态(PROJECT v3 双指纹、GAME_DESIGN v4+50 秒未同步变更、04/05/08 needs-triage、02/06/10/11 含 evidence 登记与开发者注、12-game-design-v4 委派任务)可作下票夹具基底(.tmp 属 gitignored 临时区,持久夹具以 acceptance/ 目录为准);`mgs_records baseline` 与 `reclaim-locks` 接缝、双指纹登记口径(manifest 留档)、game-producer 的恢复/冲突纪律供后续票引用;运行保障其余组件与统一接口其余命令无改动。
 
+
+### 2026-09-09 — Fix（票 02-fix R1）：撤销后在途写入仍落盘已修复
+
+2026-09-09 独立审查实证 R1（报告：[../../mygamestudio-v1-review-fixes/evidence/review.md](../../mygamestudio-v1-review-fixes/evidence/review.md)）：写入在取得服务锁前解析凭据、锁内不再核对身份，公开撤销确认完成后，在途写入恢复执行仍放行并落盘——「撤销旧执行能力后不可再写」在并发时序下不成立。修复票 [02 运行保障门](../../mygamestudio-v1-review-fixes/issues/02-runtime-gate-review-fixes.md) 已修复并固化回归（最终身份、策略与授权核对和写入纳入同一服务锁临界区；本地与远端路径同等，撤销完成后在途写入一律拒绝且目标/远端保持原状）。本票勾选历史不动。

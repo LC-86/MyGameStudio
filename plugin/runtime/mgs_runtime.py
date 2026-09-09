@@ -27,6 +27,18 @@
 - 该接缝同时覆盖 release 流程中断在登记与占用两次落盘之间留下的
   「已释放但仍持有占用」缺口。
 
+审查修复批(2026-09-09,R1–R4):
+- 撤销语义(R1):write 的最终身份、策略与授权交集核对移入服务锁
+  临界区,与写入同一临界区完成;撤销完成后任何在途写入一律拒绝;
+- 用途故障闭合(R2):用途条目缺失 ≠ 显式不额外限制——条目缺失或
+  形状无效时交集不可计算,按用途拒绝;策略条目形状无效按策略不完整
+  拒绝;write/scope/远端路径使用同一语义;
+- 权限位保留(R3):内容更新(含回滚路径)保留已有目标的权限位,
+  权限变化必须经显式操作,不经内容更新隐式发生;
+- 远端审计时序(R4):远端写入意图先于执行持久记录,审计不可用则
+  动作不执行(失效闭合);结果审计追加失败时如实回报已发生的远端
+  结果并标注未记录,不包装成未执行的拒绝,也不静默丢弃记录责任。
+
 本模块只依赖 Python 标准库。MCP 通道与调度 CLI 是它的两个入口。
 """
 
@@ -118,6 +130,44 @@ def _remote_match(patterns: list[str], resource: str) -> bool:
             or _match_any(patterns, resource + "/**"))
 
 
+# 用途条目缺失/无效的哨兵:授权交集不可计算,调用方必须失效闭合拒绝(R2)。
+# 与 None(显式空条目 = 不额外限制)是两种不同语义,不得混同。
+_PURPOSE_MISSING = object()
+
+
+def _valid_restrict(value) -> bool:
+    """restrict 字段的合法形态:None(不额外限制)或字符串模式列表。"""
+
+    return value is None or (isinstance(value, list)
+                             and all(isinstance(p, str) for p in value))
+
+
+def _purpose_restrict(policy: dict, purpose: str):
+    """读取用途的额外限制模式(R2)。
+
+    返回模式列表、None(显式空条目 = 不额外限制,既有合法配置)或
+    _PURPOSE_MISSING(绑定用途在策略中无条目 → 交集不可计算,拒绝)。
+    """
+
+    entry = policy.get("purposes", {}).get(purpose)
+    if not isinstance(entry, dict) or "restrict" not in entry:
+        return _PURPOSE_MISSING
+    restrict = entry["restrict"]
+    if not _valid_restrict(restrict):
+        return _PURPOSE_MISSING
+    return restrict
+
+
+def _purpose_missing_reason(purpose: str) -> str:
+    return f"purpose {purpose} missing from runtime policy (fail closed)"
+
+
+def _role_patterns(policy: dict, role: str) -> list[str]:
+    """角色的资源模式清单(条目形状由 _policy 校验;缺失即空集 = 拒绝)。"""
+
+    return policy.get("roles", {}).get(role, {}).get("resources", [])
+
+
 class GateService:
     """受控写入服务。所有公开方法都是接缝:调度侧与工作实例侧分别使用。"""
 
@@ -158,7 +208,8 @@ class GateService:
         os.replace(tmp, path)
 
     def _policy(self) -> dict | None:
-        """读取资源策略;缺失、损坏或结构无效时返回 None(调用方必须失效闭合)。"""
+        """读取资源策略;缺失、损坏或结构无效(含角色/用途条目形状无效,
+        R2)时返回 None(调用方必须失效闭合)。"""
 
         path = self.runtime_root / POLICY_FILE
         if not path.is_file():
@@ -176,6 +227,16 @@ class GateService:
             return None
         if not isinstance(data["project_root"], str) or not data["project_root"]:
             return None
+        for entry in data["roles"].values():
+            if not isinstance(entry, dict) or not isinstance(entry.get("resources"), list):
+                return None
+            if not all(isinstance(p, str) for p in entry["resources"]):
+                return None
+        for entry in data["purposes"].values():
+            if not isinstance(entry, dict) or "restrict" not in entry:
+                return None
+            if not _valid_restrict(entry["restrict"]):
+                return None
         return data
 
     def _policy_sha256(self) -> str:
@@ -397,6 +458,10 @@ class GateService:
         if record is None:
             return self._deny("scope", "identity", reason, token, None, policy, "")
         allowed = self._effective_scope(record, policy)
+        if allowed is None:
+            return self._deny("scope", "purpose",
+                              _purpose_missing_reason(record["purpose"]),
+                              token, record, policy, "")
         result = {
             "op": "scope",
             "decision": "allow",
@@ -419,11 +484,16 @@ class GateService:
             "task_grant_source": "instance registry issued by trusted scheduler",
         }
 
-    def _effective_scope(self, record: dict, policy: dict) -> list[str]:
-        """按角色与用途过滤任务授权,得到凭据的有效可写范围(模式级交集)。"""
+    def _effective_scope(self, record: dict, policy: dict) -> list[str] | None:
+        """按角色与用途过滤任务授权,得到凭据的有效可写范围(模式级交集)。
 
-        role_pats = policy.get("roles", {}).get(record["role"], {}).get("resources", [])
-        restrict = policy.get("purposes", {}).get(record["purpose"], {}).get("restrict")
+        绑定用途在策略中无条目时返回 None(交集不可计算,调用方失效闭合)。
+        """
+
+        restrict = _purpose_restrict(policy, record["purpose"])
+        if restrict is _PURPOSE_MISSING:
+            return None
+        role_pats = _role_patterns(policy, record["role"])
         allowed = []
         for grant in record.get("resources", []):
             if not _match_any(role_pats, grant):
@@ -432,6 +502,27 @@ class GateService:
                 continue
             allowed.append(grant)
         return allowed
+
+    def _grant_denial(self, record: dict, policy: dict,
+                      rel: str) -> tuple[str, str] | None:
+        """本地写入的任务 ∩ 角色 ∩ 用途授权核对(R2 收口后单一实现)。
+
+        返回 (rule_stage, reason) 或 None(放行)。用途条目缺失时交集
+        不可计算:与「显式空条目 = 不额外限制」区分,一律失效闭合拒绝。
+        """
+
+        if not _match_any(record.get("resources", []), rel):
+            return ("task_grant",
+                    f"path not granted to task {record['task']}: {rel}")
+        if not _match_any(_role_patterns(policy, record["role"]), rel):
+            return ("role_scope", f"role {record['role']} may not write: {rel}")
+        restrict = _purpose_restrict(policy, record["purpose"])
+        if restrict is _PURPOSE_MISSING:
+            return ("purpose", _purpose_missing_reason(record["purpose"]))
+        if restrict is not None and not _match_any(restrict, rel):
+            return ("purpose",
+                    f"purpose {record['purpose']} restricted to {restrict}: {rel}")
+        return None
 
     def write(self, token: str, path: str, content: str = "",
               expected_sha256: str | None = None, note: str | None = None,
@@ -442,8 +533,14 @@ class GateService:
         `data`(原始字节,任务票 11 起供音频等二进制资源使用)。
         两者语义一致——同一授权交集、同一字节级版本校验与审计;
         通道层(mcp_gate)负责校验调用方恰提供其一。
+
+        临界区时序(R1):锁外预检只用于快速拒绝;最终的身份有效性、
+        策略与授权交集核对和写入本身在同一服务锁临界区内完成——撤销
+        (release_instance)与策略更换都持有本锁,撤销完成后在途写入
+        必然在锁内重读时被拒,不可能再落盘。
         """
 
+        payload = content.encode("utf-8") if data is None else data
         policy = self._policy()
         if policy is None:
             return self._deny("write", "policy",
@@ -455,41 +552,49 @@ class GateService:
         resolved, rel, reason = self._resolve_target(policy, path)
         if resolved is None:
             return self._deny("write", "path", reason, token, record, policy, path, note)
-
-        if not _match_any(record.get("resources", []), rel):
-            return self._deny("write", "task_grant",
-                              f"path not granted to task {record['task']}: {rel}",
-                              token, record, policy, rel, note)
-        role_pats = policy.get("roles", {}).get(record["role"], {}).get("resources", [])
-        if not _match_any(role_pats, rel):
-            return self._deny("write", "role_scope",
-                              f"role {record['role']} may not write: {rel}",
-                              token, record, policy, rel, note)
-        restrict = policy.get("purposes", {}).get(record["purpose"], {}).get("restrict")
-        if restrict is not None and not _match_any(restrict, rel):
-            return self._deny("write", "purpose",
-                              f"purpose {record['purpose']} restricted to {restrict}: {rel}",
+        pre_grant = self._grant_denial(record, policy, rel)
+        if pre_grant is not None:
+            return self._deny("write", pre_grant[0], pre_grant[1],
                               token, record, policy, rel, note)
 
-        data = content.encode("utf-8") if data is None else data
         denial: tuple[str, str, str] | None = None
         result: dict | None = None
         with self._locked():
-            locks = self._read_json(LOCKS_FILE, {})
-            holder = locks.get(rel)
-            if holder and holder.get("instance_id") != record["instance_id"]:
-                denial = ("write", "occupancy",
-                          f"resource held by instance {holder.get('instance_id')}")
-            elif expected_sha256 is not None:
-                # 版本校验在锁内读取(02 已知边界:消除读取与占用之间的调度窗口)
-                if resolved.exists():
-                    current = _sha256_bytes(resolved.read_bytes())
-                    if expected_sha256.lower() != current:
+            # —— 临界区内最终核对(R1):以锁内重读的策略与登记为准。
+            # 先重读身份再重读策略:策略失效时拒绝记录仍携带最新身份归属 ——
+            record, reason = self._resolve_instance(token)
+            if record is None:
+                denial = ("write", "identity", reason)
+            if denial is None:
+                policy = self._policy()
+                if policy is None:
+                    denial = ("write", "policy",
+                              "runtime policy missing, corrupt or malformed "
+                              "(fail closed)")
+            if denial is None:
+                resolved, rel, reason = self._resolve_target(policy, path)
+                if resolved is None:
+                    denial = ("write", "path", reason)
+            if denial is None:
+                grant = self._grant_denial(record, policy, rel)
+                if grant is not None:
+                    denial = ("write", grant[0], grant[1])
+            if denial is None:
+                locks = self._read_json(LOCKS_FILE, {})
+                holder = locks.get(rel)
+                if holder and holder.get("instance_id") != record["instance_id"]:
+                    denial = ("write", "occupancy",
+                              f"resource held by instance {holder.get('instance_id')}")
+                elif expected_sha256 is not None:
+                    # 版本校验在锁内读取(02 已知边界:消除读取与占用之间的调度窗口)
+                    if resolved.exists():
+                        current = _sha256_bytes(resolved.read_bytes())
+                        if expected_sha256.lower() != current:
+                            denial = ("write", "version",
+                                      f"expected sha256 {expected_sha256} != current {current}")
+                    elif expected_sha256.lower() != "absent":
                         denial = ("write", "version",
-                                  f"expected sha256 {expected_sha256} != current {current}")
-                elif expected_sha256.lower() != "absent":
-                    denial = ("write", "version",
-                              f"target absent but expected {expected_sha256}")
+                                  f"target absent but expected {expected_sha256}")
             if denial is None:
                 # 路径竞态复检:占用与版本校验期间目标树可能被换链
                 re_resolved, re_rel, _ = self._resolve_target(policy, path)
@@ -525,6 +630,9 @@ class GateService:
                             denial = ("write", "path",
                                       f"target is not a regular file: {rel}")
                         else:
+                            # R3:内容更新保留既有目标的权限位——权限变化必须经
+                            # 显式操作,不经内容更新隐式发生;新建文件按默认 0644。
+                            existing_mode = stat.S_IMODE(mode) if mode is not None else None
                             backup = None
                             if mode is not None:
                                 with os.fdopen(os.open(base, os.O_RDONLY,
@@ -540,18 +648,15 @@ class GateService:
                                 "role": record["role"],
                                 "purpose": record["purpose"],
                                 "target": rel,
-                                "written_sha256": _sha256_bytes(data),
-                                "bytes": len(data),
+                                "written_sha256": _sha256_bytes(payload),
+                                "bytes": len(payload),
                                 "basis": self._basis(policy),
                                 "note": note,
                             }
                             tmp_name = ".mgs-write-" + secrets.token_hex(6)
                             try:
-                                tfd = os.open(tmp_name,
-                                              os.O_CREAT | os.O_EXCL | os.O_WRONLY,
-                                              0o644, dir_fd=parent_fd)
-                                with os.fdopen(tfd, "wb") as fh:
-                                    fh.write(data)
+                                self._write_pinned_temp(parent_fd, tmp_name,
+                                                        payload, existing_mode)
                                 os.replace(tmp_name, base,
                                            src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
                                 locks[rel] = {"instance_id": record["instance_id"],
@@ -561,7 +666,8 @@ class GateService:
                             except Exception as exc:
                                 # 落盘后状态记录失败:回滚已写入字节,失效闭合。
                                 # 「无审计则无生效写入」,宁可拒绝也不留下无记录写入。
-                                self._rollback(parent_fd, base, backup)
+                                self._rollback(parent_fd, base, backup,
+                                               mode_bits=existing_mode)
                                 denial = ("write", "audit",
                                           f"post-write recording failed ({exc}); "
                                           "write rolled back (fail closed)")
@@ -575,7 +681,9 @@ class GateService:
                         os.close(parent_fd)
         if denial is not None:
             return self._deny(denial[0], denial[1], denial[2],
-                              token, record, policy, rel or path, note)
+                              token, record,
+                              policy if policy is not None else {},
+                              rel or path, note)
         return result
 
     def _open_pinned_parent(self, resolved: Path, policy: dict) -> int | None:
@@ -612,8 +720,30 @@ class GateService:
         return fd
 
     @staticmethod
-    def _rollback(parent_fd: int, base: str, backup: bytes | None) -> None:
-        """经锚定目录回滚一次已落盘的写入(尽力而为,失败由调用方记录)。"""
+    def _write_pinned_temp(parent_fd: int, tmp_name: str, data: bytes,
+                           mode_bits: int | None) -> None:
+        """在锚定目录创建临时文件并写入字节(R3)。
+
+        mode_bits 给出时逐位生效(fchmod 摆脱 umask),用于保留既有目标
+        的权限位;None 按新建默认 0644(仍受 umask 影响,与既有行为一致)。
+        """
+
+        tfd = os.open(tmp_name, os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                      mode_bits if mode_bits is not None else 0o644,
+                      dir_fd=parent_fd)
+        with os.fdopen(tfd, "wb") as fh:
+            if mode_bits is not None:
+                os.fchmod(fh.fileno(), mode_bits)
+            fh.write(data)
+
+    @staticmethod
+    def _rollback(parent_fd: int, base: str, backup: bytes | None,
+                  mode_bits: int | None = None) -> None:
+        """经锚定目录回滚一次已落盘的写入(尽力而为,失败由调用方记录)。
+
+        回滚与内容更新遵守同一要求(R3):恢复既有目标时保留其权限位
+        (mode_bits 为回滚前的实际权限),不得借回滚隐式改变权限。
+        """
 
         if backup is None:
             try:
@@ -623,10 +753,8 @@ class GateService:
             return
         tmp_name = ".mgs-rollback-" + secrets.token_hex(6)
         try:
-            rfd = os.open(tmp_name, os.O_CREAT | os.O_EXCL | os.O_WRONLY,
-                          0o644, dir_fd=parent_fd)
-            with os.fdopen(rfd, "wb") as fh:
-                fh.write(backup)
+            GateService._write_pinned_temp(parent_fd, tmp_name, backup,
+                                           mode_bits)
             os.replace(tmp_name, base, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
         except OSError:
             pass
@@ -693,6 +821,41 @@ class GateService:
             return None
         return channel
 
+    def _remote_base(self, op: str, record: dict, policy: dict,
+                     resource: str, note: dict) -> dict:
+        """远端操作结果/意图条目与审计记录共用的身份与依据字段组。"""
+
+        return {
+            "op": op, "instance_id": record["instance_id"],
+            "task": record["task"], "role": record["role"],
+            "purpose": record["purpose"], "target": resource,
+            "basis": self._basis(policy), "note": note,
+        }
+
+    def _remote_grant_denial(self, record: dict, policy: dict,
+                             resource: str) -> tuple[str, str] | None:
+        """远端资源的任务 ∩ 角色 ∩ 用途授权核对(_remote_match 语义)。
+
+        返回 (rule_stage, reason) 或 None(放行);用途条目缺失时与本地
+        写入同一语义失效闭合(R2)。
+        """
+
+        if not _remote_match(record.get("resources", []), resource):
+            return ("task_grant",
+                    f"remote resource not granted to task "
+                    f"{record['task']}: {resource}")
+        if not _remote_match(_role_patterns(policy, record["role"]), resource):
+            return ("role_scope",
+                    f"role {record['role']} may not write: {resource}")
+        restrict = _purpose_restrict(policy, record["purpose"])
+        if restrict is _PURPOSE_MISSING:
+            return ("purpose", _purpose_missing_reason(record["purpose"]))
+        if restrict is not None and not _remote_match(restrict, resource):
+            return ("purpose",
+                    f"purpose {record['purpose']} restricted to "
+                    f"{restrict}: {resource}")
+        return None
+
     def remote_record(self, token: str, action: str, payload: dict,
                       *, transport=None) -> dict:
         """受控远端任务操作入口(工作实例在会话内经 mgs-gate 提交)。
@@ -702,6 +865,8 @@ class GateService:
         → 角色范围(role_scope)→ 用途(purpose),全通过后才经适配器执行;
         上游不可用失效闭合(remote_upstream,不绕行直连;缓存目录可用时
         由适配器保存未发布草稿并在结果中回报)。允许与拒绝都进审计。
+        写入意图先于执行持久记录,审计不可用则动作不执行;结果审计失败时
+        如实回报已发生的远端结果(R4)。
         """
 
         op = f"remote:{action}"
@@ -763,21 +928,9 @@ class GateService:
                                   policy, action)
             resource = (f"github://{repo['host']}/{repo['owner']}/{repo['repo']}"
                         f"/issues/{identity}/comments")
-        if not _remote_match(record.get("resources", []), resource):
-            return self._deny(op, "task_grant",
-                              f"remote resource not granted to task "
-                              f"{record['task']}: {resource}",
-                              token, record, policy, resource)
-        role_pats = policy.get("roles", {}).get(record["role"], {}).get("resources", [])
-        if not _remote_match(role_pats, resource):
-            return self._deny(op, "role_scope",
-                              f"role {record['role']} may not write: {resource}",
-                              token, record, policy, resource)
-        restrict = policy.get("purposes", {}).get(record["purpose"], {}).get("restrict")
-        if restrict is not None and not _remote_match(restrict, resource):
-            return self._deny(op, "purpose",
-                              f"purpose {record['purpose']} restricted to "
-                              f"{restrict}: {resource}",
+        grant = self._remote_grant_denial(record, policy, resource)
+        if grant is not None:
+            return self._deny(op, grant[0], grant[1],
                               token, record, policy, resource)
 
         env_token = os.environ.get(channel["token_env"], "").strip()
@@ -785,45 +938,92 @@ class GateService:
             api_base=channel["api_base"], token=env_token or None)
         backend = mgs_github.GithubBackend(
             config, active_transport, channel.get("cache_dir"))
-        try:
-            result = self._run_remote_action(backend, action, payload)
-        except mgs_github.TransportError as exc:
-            # 上游故障:失效闭合;适配器已在可用缓存目录保存未发布草稿的
-            # 操作由各动作内部处理,这里兜底离线草稿
-            draft = None
-            if exc.kind == "offline" and channel.get("cache_dir"):
-                draft = backend._save_draft(  # noqa: SLF001 - 通道内聚
-                    self._draft_op_for(action), dict(payload), str(exc))
-            return self._deny(op, "remote_upstream",
+        note = {"action": action,
+                "repo": f"{repo['host']}/{repo['owner']}/{repo['repo']}"}
+
+        # R1/R4:与本地 write() 同一临界区纪律——最终身份、策略与授权核对、
+        # 写入意图的持久记录、远端动作的执行与结果审计都持有服务锁完成。
+        # 撤销(release_instance)与策略更换同样持有本锁:撤销完成后在途
+        # 远端写入在锁内重读时被拒,不可能执行;远端动作因此与同运行根的
+        # 本地写入串行,占锁时长受传输超时约束(不无限持有)。
+        # R4:改变远端状态的写入意图先于执行持久记录,审计不可用时动作不
+        # 执行(失效闭合);只读动作(read)不改变远端状态,不要求意图记录。
+        denial: tuple[str, str, dict | None] | None = None
+        outcome: dict | None = None
+        with self._locked():
+            record, reason = self._resolve_instance(token)
+            if record is None:
+                denial = ("identity", reason, None)
+            if denial is None:
+                policy = self._policy()
+                if policy is None:
+                    denial = ("policy", "runtime policy missing, corrupt or "
+                              "malformed (fail closed)", None)
+            if denial is None:
+                grant = self._remote_grant_denial(record, policy, resource)
+                if grant is not None:
+                    denial = (grant[0], grant[1], None)
+            if denial is None and action != "read":
+                try:
+                    self._audit_unlocked({
+                        **self._remote_base(op, record, policy, resource, note),
+                        "decision": "intent", "rule_stage": "granted",
+                        "reason": "remote write intent recorded before execution",
+                    })
+                except Exception as exc:
+                    denial = ("audit",
+                              f"cannot durably record remote write intent "
+                              f"({type(exc).__name__}: {exc}); remote action "
+                              "not executed (fail closed)", None)
+            if denial is None:
+                try:
+                    result = self._run_remote_action(backend, action, payload)
+                except mgs_github.TransportError as exc:
+                    # 上游故障:失效闭合;适配器已在可用缓存目录保存未发布
+                    # 草稿的操作由各动作内部处理,这里兜底离线草稿
+                    draft = None
+                    if exc.kind == "offline" and channel.get("cache_dir"):
+                        draft = backend._save_draft(  # noqa: SLF001 - 通道内聚
+                            self._draft_op_for(action), dict(payload), str(exc))
+                    denial = ("remote_upstream",
                               f"remote upstream unavailable (fail closed): {exc}",
-                              token, record, policy, resource,
-                              note={"draft": draft} if draft else None)
-        except mgs_github.GithubRecordsError as exc:
-            return self._deny(op, "remote_upstream", str(exc), token, record,
-                              policy, resource)
-        if not result.get("published", True) and not result.get("created"):
-            # 适配器保存了草稿(离线):按未发布表达,不冒充已发布
-            entry = self._deny(op, "remote_upstream",
-                               "远端不可用:已保存未发布草稿(标明来源与状态;"
-                               "不视为已发布,不静默切换本地后端)",
-                               token, record, policy, resource,
-                               note={"draft": result.get("draft")})
-            return entry
-        outcome = {
-            "op": op, "decision": "allow", "rule_stage": "granted",
-            "reason": "granted by identity+task+role+purpose+config-scope "
-                      "intersection",
-            "instance_id": record["instance_id"], "task": record["task"],
-            "role": record["role"], "purpose": record["purpose"],
-            "target": resource, "basis": self._basis(policy),
-            "note": {"action": action, "repo":
-                     f"{repo['host']}/{repo['owner']}/{repo['repo']}"},
-            "result": result,
-        }
-        self._audit({key: value for key, value in outcome.items()
-                     if key != "result"}
-                    | {"note": {"summary": _remote_summary(result),
-                                **outcome["note"]}})
+                              {"draft": draft} if draft else None)
+                except mgs_github.GithubRecordsError as exc:
+                    denial = ("remote_upstream", str(exc), None)
+                else:
+                    if not result.get("published", True) and not result.get("created"):
+                        # 适配器保存了草稿(离线):按未发布表达,不冒充已发布
+                        denial = ("remote_upstream",
+                                  "远端不可用:已保存未发布草稿(标明来源与状态;"
+                                  "不视为已发布,不静默切换本地后端)",
+                                  {"draft": result.get("draft")})
+                    else:
+                        outcome = {
+                            **self._remote_base(op, record, policy,
+                                                resource, note),
+                            "decision": "allow", "rule_stage": "granted",
+                            "reason": "granted by identity+task+role+purpose+"
+                                      "config-scope intersection",
+                            "result": result,
+                        }
+                        # R4:结果审计追加失败不否认已发生的远端结果——如实
+                        # 回报并标注未记录(调用方不误判重试),也不静默丢弃
+                        # 记录责任;意图条目已持久,可据此对账缺失的结果记录。
+                        try:
+                            entry = {key: value for key, value in outcome.items()
+                                     if key != "result"}
+                            entry["note"] = {"summary": _remote_summary(result),
+                                             **note}
+                            self._audit_unlocked(entry)
+                        except Exception as exc:
+                            outcome["audit_recorded"] = False
+                            outcome["reason"] += (
+                                f"; outcome audit append failed "
+                                f"({type(exc).__name__}: {exc}) — result "
+                                "reported as-is, not wrapped as denial")
+        if denial is not None:
+            return self._deny(op, denial[0], denial[1], token, record, policy,
+                              resource, note=denial[2])
         return outcome
 
     @staticmethod

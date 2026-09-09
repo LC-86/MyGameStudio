@@ -67,3 +67,7 @@
 #### 接续位置
 
 票 04+(及后续依赖运行保障的票)可复用:加固后的 `plugin/runtime/`(新增 rule_stage:policy/race/audit;写入经目录 fd 锚定)、`tests/test_runtime_boundaries.py`、`acceptance/03-indirect-write-failure/` 全套(`appserver_client.py` 为 03 变体:事件落盘保留全部 item 类型,用于反口头通过核对;`gate_probe.py`/`stub_gate.py` 为检查器故障注入工具;run.sh 的探针脚本/守护进程夹具)。新增业务入口接入受控写入时按 gate-protocol 的新拒绝依据速查接线即可。
+
+### 2026-09-09 — Fix（票 02-fix R2/R4）：故障闭合反例已修复
+
+2026-09-09 独立审查发现两项与本票故障闭合语义直接相关的反例（报告：[../../mygamestudio-v1-review-fixes/evidence/review.md](../../mygamestudio-v1-review-fixes/evidence/review.md)）：R2——删除用途策略条目后被拒写入放行（检查器状态退化成放行）；R4——审计不可用时远端评论已实际创建，MCP 入口却报拒绝且无审计。修复票 [02 运行保障门](../../mygamestudio-v1-review-fixes/issues/02-runtime-gate-review-fixes.md) 已修复并固化回归（条目缺失失效闭合；远端写入意图先持久记录，审计不可用则不执行，结果审计失败时如实回报已发生结果）。本票勾选历史不动。

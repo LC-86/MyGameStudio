@@ -75,3 +75,7 @@ run1:W1 模型侧输出中段退化(乱码+元话语)致报告不完整(3 项失
 #### 接续位置
 
 票 06+(设计/规格入口)及后续需要「已有项目」场景的票可直接复用:扩展后的 `plugin/skills/game-init/SKILL.md`(接手路径与恢复/升级纪律)、`samples/nebula-drift/`(含真实矛盾与混合文档的已有项目样例)、`acceptance/05-adopt-existing-project/appserver_client.py`(04 客户端 + 受控中断模式)、run.sh 的「确认留档→受控中断→用户手工修改→恢复→重复运行→注入式模板升级」流程模式。运行保障沿用 `plugin/runtime/` 与 gate-protocol,无改动;统一接口 `records/mgs_records.py` 无改动(配置驱动任务根,天然支持沿用 tasks/)。
+
+### 2026-09-09 — Fix（票 02-fix R3）：内容更新破坏既有权限位已修复
+
+2026-09-09 独立审查实证 R3（报告：[../../mygamestudio-v1-review-fixes/evidence/review.md](../../mygamestudio-v1-review-fixes/evidence/review.md)）：受控内容更新以固定 0644 临时文件替换目标，0755 脚本更新后不可直接执行、0600 文件变 0644，与「接手既有项目保留有效结构」目标相悖。修复票 [02 运行保障门](../../mygamestudio-v1-review-fixes/issues/02-runtime-gate-review-fixes.md) 已修复并固化回归（内容更新与回滚路径逐位保留既有权限位；权限变化须经显式操作）。本票勾选历史不动。
