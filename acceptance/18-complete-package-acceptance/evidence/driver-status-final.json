@@ -1,0 +1,28 @@
+{
+  "instances": [
+    {
+      "instance_id": "i-197e992e6ac7",
+      "role": "implement",
+      "task": "driver-reg-a",
+      "purpose": "production",
+      "resources": [
+        "src/**",
+        "docs/PROJECT.md"
+      ],
+      "released": true,
+      "expired": false
+    },
+    {
+      "instance_id": "i-eca170f1b374",
+      "role": "implement",
+      "task": "driver-reg-b",
+      "purpose": "production",
+      "resources": [
+        "src/lock.txt"
+      ],
+      "released": true,
+      "expired": false
+    }
+  ],
+  "locks": []
+}

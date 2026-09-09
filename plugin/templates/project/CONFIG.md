@@ -7,7 +7,7 @@
 - 后端：{{local-markdown 或 github-issues}}
 - 当前位置：{{本地任务根目录，或 GitHub host/owner/repository}}
 - 任务读取规则：{{采用的后端合同或已有 tracker 配置}}
-- 外部连接引用及已确认操作范围：{{仅引用，不填写凭据}}
+- 外部连接引用及已确认操作范围：{{仅引用，不填写凭据；GitHub Issues 写入授权按 host/owner/repository:issues-write(说明) 记录，未记录即未授权}}
 
 ## 标签映射
 

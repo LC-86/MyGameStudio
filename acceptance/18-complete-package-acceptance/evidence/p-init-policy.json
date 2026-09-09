@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "policy": {
+    "version": 1,
+    "project_root": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18/p/project",
+    "roles": {
+      "producer": {
+        "resources": [
+          "docs/mygamestudio/PROJECT.md",
+          "docs/mygamestudio/work/**",
+          "docs/mygamestudio/CONFIG.md",
+          "docs/mygamestudio/INDEX.md"
+        ]
+      },
+      "design": {
+        "resources": [
+          "docs/mygamestudio/records/**",
+          "prototypes/**"
+        ]
+      }
+    },
+    "purposes": {
+      "production": {
+        "restrict": null
+      }
+    }
+  }
+}

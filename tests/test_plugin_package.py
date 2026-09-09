@@ -1837,9 +1837,191 @@ def test_github_issue_workflow_content() -> None:
               "mgsrt_admin 应提供 set-remote-config(凭据只登记环境变量名)")
     manifest_path = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"
     manifest = json.loads(manifest_path.read_text())
-    check(manifest.get("version") == "0.17.0", "任务票 17 后包版本应为 0.17.0")
+    check(manifest.get("version") == "0.18.0", "任务票 18 后包版本应为 0.18.0")
     check("github-issues-backend" in manifest.get("keywords", []),
           "plugin.json keywords 应含 github-issues-backend")
+
+
+def test_provenance_version_consistency() -> None:
+    """任务票 18:包版本、provenance 标题与 fingerprints 的 generated_for 三处一致。
+
+    0.17.0 曾留下 generated_for=0.16.0 的陈旧值(本票发现并修复);本测试防止再次漂移。
+    """
+
+    manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text())
+    version = manifest.get("version", "")
+    head = (PLUGIN_ROOT / "provenance" / "manifest.md").read_text().splitlines()[0]
+    match = re.search(r"mygamestudio (\d+\.\d+\.\d+)", head)
+    check(match is not None, f"provenance/manifest.md 标题应含版本号,实际:{head}")
+    if match:
+        check(match.group(1) == version,
+              f"manifest.md 标题版本 {match.group(1)} 与 plugin.json {version} 不一致")
+    fingerprints = json.loads((PLUGIN_ROOT / "provenance" / "fingerprints.json").read_text())
+    check(fingerprints.get("generated_for") == f"mygamestudio {version}",
+          f"fingerprints.json generated_for 应为 mygamestudio {version},"
+          f"实际 {fingerprints.get('generated_for')}")
+
+
+def test_config_template_adaptation() -> None:
+    """任务票 18:模板相对设计仓库的适配只允许已登记的两处。
+
+    templates/README.md 自任务票 04 起为适配版(链接改包内路径,provenance 已登记);
+    templates/project/CONFIG.md 自 0.18.0 起(升级行为验证需要的真实模板演进)补充
+    GitHub Issues 写入授权的记录格式说明。其余模板必须仍与设计仓库逐字节一致。
+    """
+
+    adapted = {"README.md", "project/CONFIG.md"}
+    design_root = REPO_ROOT / ".scratch" / "mygamestudio-framework" / "templates"
+    if not design_root.is_dir():
+        check(False, "缺少设计仓库 templates/(只读对照)")
+        return
+    plugin_templates = PLUGIN_ROOT / "templates"
+    design_files = sorted(
+        str(p.relative_to(design_root)) for p in design_root.rglob("*") if p.is_file()
+    )
+    plugin_files = sorted(
+        str(p.relative_to(plugin_templates))
+        for p in plugin_templates.rglob("*") if p.is_file()
+    )
+    check(design_files == plugin_files,
+          f"模板文件集合应与设计仓库一致(仅内容适配),差异:{set(design_files) ^ set(plugin_files)}")
+    for rel in design_files:
+        plugin_file = plugin_templates / rel
+        design_file = design_root / rel
+        if rel not in adapted:
+            check(plugin_file.read_bytes() == design_file.read_bytes(),
+                  f"模板 {rel} 应与设计仓库逐字节一致(适配仅限 {sorted(adapted)})")
+        elif rel == "project/CONFIG.md":
+            text = plugin_file.read_text()
+            check("issues-write" in text and "host/owner/repository" in text,
+                  "适配后的 CONFIG 模板应说明 issues-write 授权记录格式")
+            check(plugin_file.read_bytes() != design_file.read_bytes(),
+                  "CONFIG.md 模板应有 0.18.0 适配差异(供升级行为验证)")
+
+
+def test_internal_references_resolve() -> None:
+    """任务票 18(AC1):包内自研材料的 Markdown 相对链接可解析到实际文件。
+
+    范围不含 internal/methods/(上游逐字节副本,其文内示例路径如
+    ./src/ordering/CONTEXT.md 是方法示例,不是包运行引用;provenance 已注明)。
+    """
+
+    external_prefixes = ("http://", "https://", "mailto:")
+    for md in sorted(PLUGIN_ROOT.rglob("*.md")):
+        if "internal" in md.parts and "methods" in md.parts:
+            continue  # 上游逐字节副本,示例路径不构成包内运行引用
+        text = md.read_text()
+        for target in re.findall(r"\]\(([^)\s]+)\)", text):
+            if target.startswith(external_prefixes) or target.startswith("#"):
+                continue
+            rel = target.split("#", 1)[0]
+            if not rel:
+                continue
+            resolved = (md.parent / rel).resolve()
+            check(resolved.exists(),
+                  f"{md.relative_to(PLUGIN_ROOT)} 引用的 {target} 无法在包内解析")
+
+
+def test_accept18_fixture() -> None:
+    """任务票 18:P 环夹具 atlas-drop(已有项目,本地后端)结构与承接事实。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "18-complete-package-acceptance" / "fixtures" / "atlas-drop"
+    if not fixtures.is_dir():
+        check(False, "缺少 acceptance/18 夹具 atlas-drop/")
+        return
+    for rel in (
+        "README.md",
+        "src/main.js",
+        "docs/mygamestudio/INDEX.md",
+        "docs/mygamestudio/CONFIG.md",
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/TECH_DESIGN.md",
+        "docs/mygamestudio/work/01-shield-pickup/task.md",
+        "docs/mygamestudio/work/02-speed-tune/task.md",
+    ):
+        check((fixtures / rel).is_file(), f"atlas-drop 夹具缺少 {rel}")
+    config = (fixtures / "docs/mygamestudio/CONFIG.md")
+    if config.is_file():
+        text = config.read_text()
+        check("- 后端:local-markdown" in text, "atlas-drop CONFIG 应为 local-markdown 后端")
+        check("外部连接引用及已确认操作范围:无" in text, "atlas-drop CONFIG 应无外部授权")
+    project = fixtures / "docs/mygamestudio/PROJECT.md"
+    if project.is_file():
+        check("基线版本:v1" in project.read_text(), "atlas-drop PROJECT 应为 v1(承接事实)")
+    design = fixtures / "docs/mygamestudio/GAME_DESIGN.md"
+    if design.is_file():
+        check("基线版本:v1" in design.read_text(), "atlas-drop GAME_DESIGN 应为 v1(承接事实)")
+    task01 = fixtures / "docs/mygamestudio/work/01-shield-pickup/task.md"
+    task02 = fixtures / "docs/mygamestudio/work/02-speed-tune/task.md"
+    if task01.is_file():
+        text = task01.read_text()
+        check("任务身份:01-shield-pickup" in text and "ready-for-agent" in text,
+              "atlas-drop 任务 01 应为 ready-for-agent/待执行(承接事实)")
+    if task02.is_file():
+        text = task02.read_text()
+        check("任务身份:02-speed-tune" in text and "needs-triage" in text,
+              "atlas-drop 任务 02 应为 needs-triage(承接事实)")
+        check("01-shield-pickup" in text, "atlas-drop 任务 02 应依赖 01(供 ready 解析)")
+
+
+def test_dist_package_consistent() -> None:
+    """任务票 18(AC6):dist/ 交付物与 plugin/ 源包一致且校验和可复算。"""
+
+    import tarfile
+
+    dist = REPO_ROOT / "dist"
+    if not dist.is_dir():
+        check(False, "缺少 dist/ 交付目录")
+        return
+    manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text())
+    tarball = dist / f"mygamestudio-{manifest['version']}.tar.gz"
+    check(tarball.is_file(), f"缺少安装包 {tarball.name}")
+    sums = dist / "SHA256SUMS.txt"
+    check(sums.is_file(), "缺少 dist/SHA256SUMS.txt")
+    if sums.is_file():
+        listed = set()
+        for line in sums.read_text().splitlines():
+            parts = line.split(None, 1)
+            if len(parts) != 2:
+                check(False, f"SHA256SUMS.txt 行格式异常:{line}")
+                continue
+            digest, name = parts[0], parts[1].strip().lstrip("*")
+            target = dist / name
+            check(target.is_file(), f"SHA256SUMS.txt 引用的文件不存在:{name}")
+            if target.is_file():
+                check(sha256(target) == digest, f"{name} 与 SHA256SUMS.txt 记录的校验和不符")
+            listed.add(name)
+        check(str(tarball.name) in listed, "SHA256SUMS.txt 应覆盖安装包本体")
+        check("package-manifest.txt" in listed, "SHA256SUMS.txt 应覆盖逐文件清单")
+    pkg_manifest = dist / "package-manifest.txt"
+    check(pkg_manifest.is_file(), "缺少 dist/package-manifest.txt")
+    if pkg_manifest.is_file():
+        entries = {}
+        for line in pkg_manifest.read_text().splitlines():
+            parts = line.split(None, 1)
+            if len(parts) != 2:
+                continue
+            entries[parts[1].strip().lstrip("*")] = parts[0].strip()
+        plugin_files = sorted(
+            str(p.relative_to(PLUGIN_ROOT))
+            for p in PLUGIN_ROOT.rglob("*") if p.is_file() and "__pycache__" not in p.parts
+        )
+        check(set(entries) == set(plugin_files),
+              "package-manifest.txt 的文件集合应与 plugin/ 完全一致:"
+              f"\n  仅在清单:{sorted(set(entries) - set(plugin_files))}"
+              f"\n  仅在目录:{sorted(set(plugin_files) - set(entries))}")
+        for rel, digest in entries.items():
+            check(sha256(PLUGIN_ROOT / rel) == digest,
+                  f"package-manifest.txt 中 {rel} 的指纹与 plugin/ 实际不符")
+    if tarball.is_file():
+        with tarfile.open(tarball, "r:gz") as tar:
+            names = [m.name[len("plugin/"):] for m in tar.getmembers()
+                     if m.name.startswith("plugin/") and m.isfile()]
+        check(sorted(names) == sorted(
+            str(p.relative_to(PLUGIN_ROOT))
+            for p in PLUGIN_ROOT.rglob("*") if p.is_file() and "__pycache__" not in p.parts
+        ), "安装包内容文件集合应与 plugin/ 完全一致")
 
 
 def main() -> int:
@@ -1879,6 +2061,11 @@ def main() -> int:
     test_producer_loop_skills_content()
     test_accept16_fixture()
     test_github_issue_workflow_content()
+    test_provenance_version_consistency()
+    test_config_template_adaptation()
+    test_internal_references_resolve()
+    test_accept18_fixture()
+    test_dist_package_consistent()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

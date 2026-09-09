@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "policy": {
+    "version": 1,
+    "project_root": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18-driver/local-project",
+    "roles": {
+      "producer": {
+        "resources": [
+          "docs/**"
+        ]
+      },
+      "implement": {
+        "resources": [
+          "src/**"
+        ]
+      }
+    },
+    "purposes": {
+      "production": {
+        "restrict": null
+      }
+    }
+  }
+}

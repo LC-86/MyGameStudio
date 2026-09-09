@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.16.0",
+  "generated_for": "mygamestudio 0.18.0",
   "files": [
     {
       "path": "internal/contracts/common.md",
@@ -178,8 +178,8 @@
     },
     {
       "path": "templates/project/CONFIG.md",
-      "sha256": "e2ef6aabb5f65ae25f35ec634594d7320e2ceda1f44020892a843c4b600ab435",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/CONFIG.md(逐字节副本)",
+      "sha256": "90e3010d9ff11207200899bfd85d09905583c6a0a5a2806f3976173e61b9c500",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/CONFIG.md(适配版:0.18.0 起外部访问行占位说明补充 issues-write 授权记录格式,任务票 17 合同要求)",
       "license": "本项目自有内容(MIT)"
     },
     {

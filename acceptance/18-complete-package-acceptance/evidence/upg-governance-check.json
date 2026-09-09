@@ -1,0 +1,1 @@
+{"marketplace.json": {"bytes_equal": true}, "config.toml": {"content_equal_except_codex_plugin_sections": false, "plugin_sections": ["[plugins.\"mygamestudio@personal\"]"], "plugin_sections_all_mygamestudio": true}, "policy.json": {"bytes_equal": true}, "instances.json": {"bytes_equal": true}}

@@ -1,0 +1,1 @@
+{"changed": [".codex-plugin/plugin.json", "provenance/fingerprints.json", "provenance/manifest.md", "templates/project/CONFIG.md"], "expected": [".codex-plugin/plugin.json", "templates/project/CONFIG.md", "provenance/manifest.md", "provenance/fingerprints.json"], "exact": true, "only_in_one_side": []}

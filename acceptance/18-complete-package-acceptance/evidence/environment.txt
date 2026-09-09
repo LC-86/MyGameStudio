@@ -1,0 +1,14 @@
+date: 2026-09-09T13:05:02+08:00
+codex: codex-cli 0.151.0
+gh(只读版本检测,未调用任何远端): gh version 2.88.1 (2026-03-12)
+os: macOS 26.5.1 (arm64)
+python: Python 3.14.4
+cwd-repo: /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio
+env-root: /tmp/mygamestudio-accept-18(home=0.18.0 主环境;homeu=升级剧场)
+arena: /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18
+upgrade-path: e2af9a9(0.17.0)→ 仓库 plugin/(0.18.0),经 codex plugin remove+add
+remote(G 环): 本地 HTTP 替身 standin_github.py(非真实 GitHub);真实远端写入验收保留待办
+model-pin: gpt-5.5
+installed: /private/tmp/mygamestudio-accept-18/codex-home/plugins/cache/personal/mygamestudio/0.18.0
+installed-old: /private/tmp/mygamestudio-accept-18/codex-home-u/plugins/cache/personal/mygamestudio/0.17.0
+installed-new: /private/tmp/mygamestudio-accept-18/codex-home-u/plugins/cache/personal/mygamestudio/0.18.0
