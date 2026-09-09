@@ -1,0 +1,1 @@
+{"ok": false, "instance_id": "i-ceac736413f4", "found": true, "active": true, "reclaimed": 0, "reason": "instance still active: revoke its execution binding (release-instance) or wait for expiry before reclaiming occupancy"}

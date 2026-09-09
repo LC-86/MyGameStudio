@@ -43,6 +43,1181 @@ diff -r -x __pycache__ -x .DS_Store /Users/cuilei/MyOS/01_Projects/plugins/MyGam
 ---
 > - `project/CONFIG.md`:设计仓库对应文件的适配版(任务票 18/0.18.0 起)——「外部连接引用及已确认操作范围」行的占位说明补充 GitHub Issues 写入授权记录格式(`host/owner/repository:issues-write(说明)`,未记录即未授权);这是该模板唯一改动,来源为任务票 17 的协作配置合同与受控写入协议要求,同时也是升级行为验证所需的真实模板演进。其余行与设计仓库一致。
 > - `project/` 其余文件与 `work/`、`records/`、`evidence/` 下全部模板文件为设计仓库对应文件的**逐字节副本**(设计模板正文本身不含外链),语义以设计仓库为准。
+diff -r -x __pycache__ -x .DS_Store /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18/upg/installed-old-snapshot/records/mgs_github.py /private/tmp/mygamestudio-accept-18/codex-home-u/plugins/cache/personal/mygamestudio/0.18.0/records/mgs_github.py
+49c49
+<                          _field, _parse_dep_ids, _sections)
+---
+>                          _field, _sections)
+160a161,166
+>     """API 端点:override/环境变量优先,否则按 host 推导。
+> 
+>     无仓库坐标的配置(如本地后端项目做交接可达检查)退回 github.com
+>     端点——可达检查访问的是绝对引用 URL,端点仅作兜底。
+>     """
+> 
+162c168,171
+<     return base or default_api_base(config["repo"]["host"])
+---
+>     if base:
+>         return base
+>     host = ((config.get("repo") or {}).get("host")) or "github.com"
+>     return default_api_base(host)
+185,186c194,200
+<                 ) -> tuple[int, object]:
+<         url = f"{self.api_base}{path}"
+---
+>                 *, auth: bool = True) -> tuple[int, object]:
+>         """执行一次 API 请求。auth=False 时不携带凭据(交接可达检查访问
+>         CONFIG 引用指向的第三方地址,凭据只属于 API 端点,不得外发)。"""
+> 
+>         # 绝对 URL(交接可达检查的引用地址)直接访问,不拼接 api_base
+>         url = (path if path.startswith(("http://", "https://"))
+>                else f"{self.api_base}{path}")
+190c204
+<         if self.token:
+---
+>         if self.token and auth:
+308a323,327
+> def _repo_str(repo: dict) -> str:
+>     """仓库坐标的人读形态(host/owner/repo;草稿、来源、迁移清单共用)。"""
+>     return f"{repo['host']}/{repo['owner']}/{repo['repo']}"
+> 
+> 
+431,432c450
+<                     f"远端不可用({exc})且无缓存:{self.repo['host']}/"
+<                     f"{self.repo['owner']}/{self.repo['repo']};"
+---
+>                     f"远端不可用({exc})且无缓存:{_repo_str(self.repo)};"
+444c462
+<                        "repo": f"{self.repo['host']}/{self.repo['owner']}/{self.repo['repo']}"},
+---
+>                        "repo": _repo_str(self.repo)},
+509c527
+<         """远端不可用时保存未发布草稿(标明来源与状态;不视为已发布)。"""
+---
+>         """远端不可用时保存未发布草稿(标明来源与状态;不视为已发布)。
+510a529,533
+>         每个待发布操作带稳定且唯一的身份(操作+参数的内容哈希,审查修复
+>         票 01/S6):同秒两次不同操作互不覆盖;同一操作重复保存幂等(只保留
+>         一份,重放不重复);绝不覆盖内容不同的既有草稿。
+>         """
+> 
+519c542,566
+<         path = drafts / f"{stamp}-{op}-{identity}.json"
+---
+>         digest = hashlib.sha256(json.dumps(
+>             {"op": op, "args": args}, ensure_ascii=False, sort_keys=True)
+>             .encode("utf-8")).hexdigest()[:8]
+> 
+>         def candidate(index: int | None = None) -> Path:
+>             name = f"{stamp}-{op}-{identity}-{digest}"
+>             return drafts / (f"{name}-{index}.json" if index else f"{name}.json")
+> 
+>         path = candidate()
+>         if path.exists():
+>             prior = None
+>             try:
+>                 prior = json.loads(path.read_text(encoding="utf-8"))
+>             except (OSError, ValueError):
+>                 prior = None
+>             if prior and prior.get("op") == op and prior.get("args") == args:
+>                 # 同一待发布操作重复保存:保留既有草稿,不产生第二份(重放幂等)
+>                 return {"published": False, "status": "未发布草稿",
+>                         "draft": str(path), "cause": cause, "note": DRAFT_NOTE,
+>                         "idempotent": True}
+>             # 同名但内容不同(理论上仅哈希碰撞):序号退避,绝不覆盖既有草稿
+>             index = 1
+>             while candidate(index).exists():
+>                 index += 1
+>             path = candidate(index)
+522c569
+<             "repo": f"{self.repo['host']}/{self.repo['owner']}/{self.repo['repo']}",
+---
+>             "repo": _repo_str(self.repo),
+632a680,682
+>         draft_args = {"identity": identity, "fields": fields,
+>                       "expected_body_sha256": expected_body_sha256,
+>                       "change_note": change_note}
+636,639c686
+<             draft = self._save_draft("update_task",
+<                                      {"identity": identity, "fields": fields,
+<                                       "expected_body_sha256": expected_body_sha256},
+<                                      str(exc))
+---
+>             draft = self._save_draft("update_task", draft_args, str(exc))
+644,645c691
+<                 "update_task", {"identity": identity, "fields": fields,
+<                                 "expected_body_sha256": expected_body_sha256},
+---
+>                 "update_task", draft_args,
+670,673c716
+<             draft = self._save_draft("update_task",
+<                                      {"identity": identity, "fields": fields,
+<                                       "expected_body_sha256": expected_body_sha256},
+<                                      str(exc))
+---
+>             draft = self._save_draft("update_task", draft_args, str(exc))
+757c800,803
+<                 # 超时:回读评论,已发布则收养
+---
+>                 # 超时:回读评论。区分「回读确认不存在」与「回读失败」
+>                 # (审查修复票 01/S2):只有前者才允许重试;后者结果未知,
+>                 # 停止重发并如实回报不确定——重发与草稿重放都会造成重复评论。
+>                 readback_failed = False
+769,771c815,833
+<                 except TransportError:
+<                     pass
+<                 attempts.append({"step": "readback", "outcome": "absent"})
+---
+>                         attempts.append({"step": "readback", "outcome": "absent"})
+>                     else:
+>                         readback_failed = True
+>                         attempts.append({"step": "readback",
+>                                          "outcome": "bad_response",
+>                                          "detail": f"list comments HTTP {status}"})
+>                 except TransportError as readback_exc:
+>                     readback_failed = True
+>                     attempts.append({"step": "readback", "outcome": "uncertain",
+>                                      "detail": str(readback_exc)})
+>                 if readback_failed:
+>                     return {
+>                         "published": None, "uncertain": True,
+>                         "issue_number": number, "attempts": attempts,
+>                         "note": ("结果不确定:结果评论请求超时(可能已落地),"
+>                                  "回读失败无法确认;已停止重发(避免重复评论),"
+>                                  "也未保存草稿(重放会造成重复);请在远端可用后"
+>                                  "先回读评论确认,再决定是否重发"),
+>                     }
+923c985
+<         仍失败保留草稿。草稿在发布前始终标明「未发布」。"""
+---
+>         仍失败保留草稿。草稿在发布前始终标明「未发布」。
+924a987,991
+>         发布前逐份核对草稿记录的目标仓库与当前后端仓库(审查修复票 01/S1):
+>         不一致即拒绝发布该草稿(不发请求、不移动、不标记)——选择/切换到
+>         新后端不构成旧草稿的迁移授权,跨仓库移动需经明确的迁移流程。
+>         """
+> 
+931a999
+>         current_repo = _repo_str(self.repo)
+938a1007,1018
+>             draft_repo = draft.get("repo")
+>             if draft_repo != current_repo:
+>                 results.append({
+>                     "draft": str(path), "published": False,
+>                     "outcome": (
+>                         f"拒绝发布:草稿记录的目标仓库 {draft_repo!r} 与当前后端"
+>                         f"仓库 {current_repo!r} 不一致"
+>                         + ("" if draft_repo else "(草稿未记录目标仓库)")
+>                         + ";选择/切换新后端不构成旧草稿的迁移授权,"
+>                         "跨仓库移动需经明确的迁移流程另行确认"),
+>                 })
+>                 continue
+958,960c1038,1041
+<                 outcome = self.update_task(args["identity"], args.get("fields", {}),
+<                                            expected_body_sha256=args.get(
+<                                                "expected_body_sha256"))
+---
+>                 outcome = self.update_task(
+>                     args["identity"], args.get("fields", {}),
+>                     expected_body_sha256=args.get("expected_body_sha256"),
+>                     change_note=args.get("change_note", "安排更新"))
+985,987c1066,1072
+<         离线时基于缓存核对结构与依赖,远端存在性检查(标签在仓库实际存在、
+<         评论一致性)标注「未核对(离线)」,不冒充已核验;整体结果附
+<         offline 标记。远端不可用且无缓存时报错,不回退本地。
+---
+>         标签映射、核心文档映射、任务核心字段(含工作请求必填字段)与依赖
+>         关系使用 mgs_records 的单一共享实现(审查修复票 01/核验建议 1:
+>         同一畸形任务在两个后端得到相同结论);本方法只保留存储特有检查
+>         (远端标签实际存在、评论一致性、身份重复、标签与正文冲突、关闭原因)。
+>         离线时基于缓存核对结构与依赖,远端存在性检查标注「未核对(离线)」,
+>         不冒充已核验;整体结果附 offline 标记。远端不可用且无缓存时报错,
+>         不回退本地。
+994,998c1079,1080
+<         def add(name: str, ok: bool, detail: str) -> None:
+<             checks.append({"name": name, "ok": bool(ok), "detail": detail})
+< 
+<         add("config-present", True,
+<             str(root / self.config["config_path"]))
+---
+>         checks.append(mgs_records.check_item(
+>             "config-present", True, str(root / self.config["config_path"])))
+1000,1001c1082,1086
+<         add("backend-github-coordinates", True,
+<             f"{repo['host']}/{repo['owner']}/{repo['repo']}")
+---
+>         checks.append(mgs_records.check_item(
+>             "backend-github-coordinates", True,
+>             f"{repo['host']}/{repo['owner']}/{repo['repo']}"))
+>         checks += mgs_records.label_mapping_checks(self.config["labels"])
+>         checks += mgs_records.docmap_checks(root, self.config["docmap"])
+1003,1031d1087
+<         labels = self.config["labels"]
+<         missing = [name for name in CANONICAL_LABELS if name not in labels]
+<         add("labels-complete", not missing,
+<             f"缺失语义:{missing}" if missing else "五类语义齐全")
+<         project_labels = [labels.get(name, "") for name in CANONICAL_LABELS]
+<         conflicts = sorted({label for label in project_labels
+<                             if project_labels.count(label) > 1})
+<         add("labels-no-conflict", not conflicts,
+<             f"多语义映射到同一标签:{conflicts}" if conflicts else "映射无冲突")
+< 
+<         grouped = mgs_records._core_rows(self.config["docmap"])
+<         core_missing = [key for key, rows in grouped.items() if not rows]
+<         add("docmap-core-rows", not core_missing,
+<             f"缺少核心文档行:{core_missing}" if core_missing
+<             else "目标/设计/技术三类齐全(核心设计保留本地 Markdown 位置)")
+<         duplicate_types = [key for key, rows in grouped.items() if len(rows) > 1]
+<         core_paths = [row["path"] for rows in grouped.values() for row in rows]
+<         duplicate_paths = sorted({p for p in core_paths if core_paths.count(p) > 1})
+<         unique_ok = not duplicate_types and not duplicate_paths
+<         add("docmap-unique-authority", unique_ok,
+<             f"重复类型:{duplicate_types} 重复位置:{duplicate_paths}"
+<             if not unique_ok else "每类核心内容唯一当前维护位置")
+<         missing_paths = [row["path"] for row in
+<                          (grouped["goal"] + grouped["design"] + grouped["tech"])
+<                          if not (root / row["path"]).is_file()]
+<         add("docmap-paths-exist", not missing_paths,
+<             f"权威位置不存在:{missing_paths}" if missing_paths
+<             else "核心文档实际存在")
+< 
+1035c1091
+<             add("tasks-valid", False, str(exc))
+---
+>             checks.append(mgs_records.check_item("tasks-valid", False, str(exc)))
+1048,1051c1104,1107
+<             if not identity or not mgs_records.IDENTITY_RE.fullmatch(identity):
+<                 task_problems.append(f"#{task['issue_number']}:正文身份缺失或"
+<                                      f"不合规({identity!r})")
+<             elif identity in seen:
+---
+>             # 任务核心字段:与本地后端共享的单一实现(where 用 #Issue号 定位)
+>             task_problems += mgs_records.task_core_problems(
+>                 task, f"#{task['issue_number']}")
+>             if identity and identity in seen:
+1054,1057d1109
+<             if task["triage"] not in CANONICAL_LABELS:
+<                 task_problems.append(f"{identity}:分流 {task['triage']!r} 不在五类之内")
+<             if not task["progress"]:
+<                 task_problems.append(f"{identity}:缺少进度")
+1064c1116,1117
+<         add("tasks-valid", not task_problems,
+---
+>         checks.append(mgs_records.check_item(
+>             "tasks-valid", not task_problems,
+1066c1119
+<             else f"{len(tasks)} 个远端任务结构有效")
+---
+>             else f"{len(tasks)} 个远端任务结构有效"))
+1068,1079c1121,1124
+<         edges = {task["identity"]: _parse_dep_ids(
+<                     task["request"].get("依赖", "")) for task in tasks}
+<         unresolved = [{"identity": task["identity"], "dep": dep}
+<                       for task in tasks
+<                       for dep in edges.get(task["identity"], [])
+<                       if dep not in seen]
+<         cycles = mgs_records._find_cycles(edges)
+<         dep_problems = [f"{item['identity']} 依赖不存在任务 {item['dep']}"
+<                         for item in unresolved]
+<         dep_problems += ["循环依赖:" + "->".join(cycle) for cycle in cycles]
+<         add("deps-consistent", not dep_problems,
+<             ";".join(dep_problems) if dep_problems else "依赖关系可解析且无循环")
+---
+>         dep_problems = mgs_records.dependency_problems(tasks)
+>         checks.append(mgs_records.check_item(
+>             "deps-consistent", not dep_problems,
+>             ";".join(dep_problems) if dep_problems else "依赖关系可解析且无循环"))
+1080a1126
+>         labels = self.config["labels"]
+1082,1083c1128,1131
+<             add("labels-remote-present", True, "未核对(离线缓存,不下结论)")
+<             add("results-consistent", True, "未核对(离线缓存,不下结论)")
+---
+>             checks.append(mgs_records.check_item(
+>                 "labels-remote-present", True, "未核对(离线缓存,不下结论)"))
+>             checks.append(mgs_records.check_item(
+>                 "results-consistent", True, "未核对(离线缓存,不下结论)"))
+1091c1139,1140
+<                 add("labels-remote-present", True, "未核对(远端标签接口不可用)")
+---
+>                 checks.append(mgs_records.check_item(
+>                     "labels-remote-present", True, "未核对(远端标签接口不可用)"))
+1095c1144,1145
+<                 add("labels-remote-present", not absent,
+---
+>                 checks.append(mgs_records.check_item(
+>                     "labels-remote-present", not absent,
+1097c1147
+<                     else "五类映射标签在仓库实际存在")
+---
+>                     else "五类映射标签在仓库实际存在"))
+1119c1169,1170
+<             add("results-consistent", not result_problems,
+---
+>             checks.append(mgs_records.check_item(
+>                 "results-consistent", not result_problems,
+1121c1172
+<                 else "评论结果与所属任务、结果索引互相一致")
+---
+>                 else "评论结果与所属任务、结果索引互相一致"))
+1144a1196,1207
+> def _ref_check_url(ref: str) -> str | None:
+>     """引用 → 可经传输层检查的绝对 URL。
+> 
+>     `url@版本` 形态剥去版本后缀再检查;非 http(s) 引用(如本地 commit 串)
+>     返回 None——无法实际检查的引用形态不宣称可达。
+>     """
+> 
+>     if not ref.startswith(("http://", "https://")):
+>         return None
+>     return re.sub(r"@[A-Za-z0-9._-]+$", "", ref)
+> 
+> 
+1151,1153c1214,1218
+<     每份核心基线:本地存在性与当前版本 + 是否记录了已发布引用(远端可达
+<     以引用形式判定);未发布本地资料明确标注「远端执行者不可访问」。
+<     ok 仅在全部核心基线可达时为 True(交接前须补发布引用或明确限制)。
+---
+>     每份核心基线:本地存在性与当前版本 + 已发布引用的**实际可达检查**。
+>     可达性结论只能来自实际执行的检查(审查修复票 01/S4):经传输层 GET
+>     引用地址,2xx 才判可达;未执行检查(无通道/上游不可用)、检查失败或
+>     引用形态不可检查,一律按未验证/不可达回报——引用存在不等于检查通过。
+>     ok 仅在全部核心基线经检查可达时为 True(交接前须补发布引用或明确限制)。
+1169a1235,1263
+>             reachable = False
+>             if not published:
+>                 note = ("本地未发布资料:远端执行者不可访问,不得宣称已可远端"
+>                         "访问;发布资料仍需对应授权")
+>             else:
+>                 url = _ref_check_url(published)
+>                 if transport is None:
+>                     note = (f"已记录引用:{published};未执行可达检查(未提供"
+>                             "检查通道)——引用存在不等于检查通过,未验证按"
+>                             "不可达处理")
+>                 elif url is None:
+>                     note = (f"已记录引用:{published};引用形态无法经传输层"
+>                             "检查,未验证按不可达处理")
+>                 else:
+>                     try:
+>                         # 可达探测不带凭据:引用地址可能是任意第三方主机,
+>                         # API 令牌不得随探测外发(审查修复票 01/Spec 复查)
+>                         status, _data = transport.request("GET", url, auth=False)
+>                     except TransportError as exc:
+>                         note = (f"已记录引用:{published};可达检查未完成"
+>                                 f"({exc})——不可达/未验证,不宣称可达")
+>                     else:
+>                         if 200 <= int(status) < 300:
+>                             reachable = True
+>                             note = (f"已发布引用:{published}(实际检查 HTTP "
+>                                     f"{status},远端执行者经此引用访问)")
+>                         else:
+>                             note = (f"已记录引用:{published};实际检查 HTTP "
+>                                     f"{status}——引用不可达,先补发布或修正引用")
+1174,1178c1268,1269
+<                 "remote_reachable": bool(published),
+<                 "note": (f"已发布引用:{published}(远端执行者经此引用访问)"
+<                          if published else
+<                          "本地未发布资料:远端执行者不可访问,不得宣称已可远端"
+<                          "访问;发布资料仍需对应授权"),
+---
+>                 "remote_reachable": reachable,
+>                 "note": note,
+1184c1275,1277
+<                      "确认引用可达,发布资料仍需对应授权。")}
+---
+>                      "确认引用可达,发布资料仍需对应授权。可达性结论只能来自"
+>                      "实际执行的检查;未执行检查(含上游不可用)按未验证/"
+>                      "不可达回报,引用存在不等于检查通过。")}
+1221,1222c1314,1315
+<             "target_ref": (f"local:docs/mygamestudio/work/{task['identity']}"
+<                            "/task.md(身份保持)"),
+---
+>             "target_ref": (f"local:{mgs_records.DEFAULT_TASK_ROOT}/"
+>                            f"{task['identity']}/task.md(身份保持)"),
+1230,1231c1323,1328
+<         "repo": (f"{target_repo['host']}/{target_repo['owner']}/{target_repo['repo']}"
+<                  if target_repo else config["task_root"]),
+---
+>         # repo = 目标位置(github 目标=仓库坐标;本地目标=本地任务根),与
+>         # CONFIG 任务根、文件落点、返回路径共用同一来源(审查修复票 01/S3)
+>         "repo": (_repo_str(target_repo) if target_repo
+>                  else mgs_records.DEFAULT_TASK_ROOT),
+>         # 旧位置 = 迁移源的实际任务位置(github 源=旧仓库坐标;本地源=旧任务根)
+>         "old_position": config["task_root"],
+1257c1354
+<     标签映射与文档映射沿用(核心文档位置不随后端切换变化)。"""
+---
+>     标签映射与文档映射沿用(核心文档位置不随后端切换变化)。
+1258a1356,1360
+>     当前位置取 plan['repo'](目标位置),历史位置取 plan['old_position']
+>     (迁移源实际位置)——与新 CONFIG 任务根、文件落点、返回路径同源
+>     (审查修复票 01/S3)。
+>     """
+> 
+1267d1368
+<         old_position = "docs/mygamestudio/work/"
+1272c1373,1377
+<         old_position = plan["repo"]
+---
+>     # 旧位置兜底:旧清单无 old_position 字段时按方向推断(github 目标的
+>     # 旧位置是本地任务根;本地目标的旧位置沿用清单 repo 字段的旧语义)
+>     old_position = plan.get("old_position") or (
+>         mgs_records.DEFAULT_TASK_ROOT if plan["to"] == "github-issues"
+>         else plan["repo"])
+1352c1457,1458
+<             rel = f"docs/mygamestudio/work/{item['identity']}/task.md"
+---
+>             rel = (f"{mgs_records.DEFAULT_TASK_ROOT}/"
+>                    f"{item['identity']}/task.md")
+1361c1467,1469
+<         result = {"created": created, "emit_dir": str(emit / "files")}
+---
+>         # 返回的产出目录 = 实际落盘根(任务文件与 CONFIG 都在其下),
+>         # 与计划目标、CONFIG 任务根同源(审查修复票 01/S3)
+>         result = {"created": created, "emit_dir": str(emit)}
+diff -r -x __pycache__ -x .DS_Store /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18/upg/installed-old-snapshot/records/mgs_records.py /private/tmp/mygamestudio-accept-18/codex-home-u/plugins/cache/personal/mygamestudio/0.18.0/records/mgs_records.py
+42a43
+> import datetime as _dt
+56a58,61
+> # 本地 Markdown 任务根(《项目目录模板》默认布局;github→local 迁移的
+> # 目标任务根,与 CONFIG 任务根、文件落点、返回路径共用同一常量;
+> # 与解析后的 task_root 同为无尾斜杠形态)
+> DEFAULT_TASK_ROOT = "docs/mygamestudio/work"
+232,233c237,238
+<                cache_dir: Path | str | None = None) -> tuple[dict, list[dict]]:
+<     """按 CONFIG 后端取规范化任务列表。返回 (config, tasks)。"""
+---
+>                cache_dir: Path | str | None = None) -> tuple[dict, list[dict], dict]:
+>     """按 CONFIG 后端取规范化任务列表。返回 (config, tasks, 读取元信息)。
+234a240,244
+>     读取元信息(审查修复票 01/S5):是否缓存、抓取时间与来源——离线回缓存
+>     与在线当前确认是两种不同状态,统一接口必须能把两者区分传递到顶层结果,
+>     调用方才能判断是否在依据旧状态安排工作。
+>     """
+> 
+237c247,252
+<         return config, list_tasks(project_root, config_rel)
+---
+>         meta = {"cached": False,
+>                 "fetched_at": _dt.datetime.now().astimezone().isoformat(
+>                     timespec="seconds"),
+>                 "source": {"backend": "local-markdown",
+>                            "task_root": config["task_root"]}}
+>         return config, list_tasks(project_root, config_rel), meta
+242c257,262
+<         return config, payload["tasks"]
+---
+>         meta = {"cached": bool(payload.get("cached")),
+>                 "fetched_at": payload.get("fetched_at"),
+>                 "source": payload.get("source")}
+>         if meta["cached"]:
+>             meta["cache_note"] = payload.get("note", "")
+>         return config, payload["tasks"], meta
+491a512,513
+>     顶层携带任务读取元信息(cached/fetched_at/source,断网回缓存时另附
+>     cache_note)——缓存推断与当前确认可区分(审查修复票 01/S5)。
+502,503c524,526
+<     tasks = _tasks_for(root, config_rel, transport=transport, api_base=api_base,
+<                        cache_dir=cache_dir)[1]
+---
+>     _config, tasks, fetch_meta = _tasks_for(
+>         root, config_rel, transport=transport, api_base=api_base,
+>         cache_dir=cache_dir)
+547c570,572
+<     return {"startable": startable, "blocked": blocked, "note": READY_NOTE}
+---
+>     result = {"startable": startable, "blocked": blocked, "note": READY_NOTE}
+>     result.update(fetch_meta)
+>     return result
+673c698
+< def _check(name: str, ok: bool, detail: str) -> dict:
+---
+> def check_item(name: str, ok: bool, detail: str) -> dict:
+690a716,796
+> # ---------- 两后端共享的核心校验(审查修复票 01/核验建议 1) ----------
+> # 同一份规范化任务(本地 work/task.md 与 GitHub Issue 正文是同一记录格式)
+> # 在两个后端必须得到相同核验结论:标签映射、核心文档映射、任务核心字段
+> # (身份形态、五类分流、进度、工作请求必填字段)与依赖关系在此单一实现;
+> # 各后端只保留存储特有检查(本地:目录一致性、结果文件与索引;GitHub:
+> # 远端标签实际存在、评论一致性、标签与正文冲突、关闭原因、身份重复)。
+> 
+> def label_mapping_checks(labels: dict) -> list[dict]:
+>     """五类标签映射:语义齐全且不冲突。"""
+> 
+>     missing = [name for name in CANONICAL_LABELS if name not in labels]
+>     project_labels = [labels.get(name, "") for name in CANONICAL_LABELS]
+>     conflicts = sorted({label for label in project_labels
+>                         if project_labels.count(label) > 1})
+>     return [
+>         check_item("labels-complete", not missing,
+>                f"缺失语义:{missing}" if missing else "五类语义齐全"),
+>         check_item("labels-no-conflict", not conflicts,
+>                f"多语义映射到同一标签:{conflicts}" if conflicts else "映射无冲突"),
+>     ]
+> 
+> 
+> def docmap_checks(root: Path, docmap: list[dict]) -> list[dict]:
+>     """核心文档映射:三类齐全、每类唯一当前维护位置且实际存在。"""
+> 
+>     grouped = _core_rows(docmap)
+>     core_missing = [key for key, rows in grouped.items() if not rows]
+>     duplicate_types = [key for key, rows in grouped.items() if len(rows) > 1]
+>     core_paths = [row["path"] for rows in grouped.values() for row in rows]
+>     duplicate_paths = sorted({p for p in core_paths if core_paths.count(p) > 1})
+>     unique_ok = not duplicate_types and not duplicate_paths
+>     missing_paths = [row["path"] for row in
+>                      (grouped["goal"] + grouped["design"] + grouped["tech"])
+>                      if not (root / row["path"]).is_file()]
+>     return [
+>         check_item("docmap-core-rows", not core_missing,
+>                f"缺少核心文档行:{core_missing}" if core_missing
+>                else "目标/设计/技术三类齐全(核心设计保留本地 Markdown 位置)"),
+>         check_item("docmap-unique-authority", unique_ok,
+>                f"重复类型:{duplicate_types} 重复位置:{duplicate_paths}"
+>                if not unique_ok else "每类核心内容唯一当前维护位置"),
+>         check_item("docmap-paths-exist", not missing_paths,
+>                f"权威位置不存在:{missing_paths}" if missing_paths
+>                else "核心文档实际存在"),
+>     ]
+> 
+> 
+> def task_core_problems(task: dict, where: str) -> list[str]:
+>     """规范化任务的核心校验:身份形态、五类分流、进度、工作请求必填字段。
+> 
+>     where 是问题条目的定位前缀(本地为任务目录名,远端为 #Issue号)。
+>     """
+> 
+>     problems: list[str] = []
+>     identity = task["identity"]
+>     if not identity or not IDENTITY_RE.fullmatch(identity):
+>         problems.append(f"{where}:正文身份缺失或不合规({identity!r})")
+>     if task["triage"] not in CANONICAL_LABELS:
+>         problems.append(f"{where}:分流 {task['triage']!r} 不在五类之内")
+>     if not task["progress"]:
+>         problems.append(f"{where}:缺少进度")
+>     for key in TASK_REQUEST_KEYS:
+>         if not task["request"].get(key):
+>             problems.append(f"{where}:工作请求缺少 {key}")
+>     return problems
+> 
+> 
+> def dependency_problems(tasks: list[dict]) -> list[str]:
+>     """依赖关系可解析且无循环(入参为规范化任务列表,双后端同语义)。"""
+> 
+>     edges = {task["identity"]: _parse_dep_ids(
+>                  task["request"].get("依赖", "")) for task in tasks}
+>     seen = {task["identity"] for task in tasks}
+>     problems = [f"{identity} 依赖不存在任务 {dep}"
+>                 for identity, deps in edges.items() for dep in deps
+>                 if dep not in seen]
+>     problems += ["循环依赖:" + "->".join(cycle)
+>                  for cycle in _find_cycles(edges)]
+>     return problems
+> 
+> 
+708,709c814,815
+<         return {"ok": False, "checks": [_check("config-present", False, str(exc))]}
+<     checks.append(_check("config-present", True, str(root / config_rel)))
+---
+>         return {"ok": False, "checks": [check_item("config-present", False, str(exc))]}
+>     checks.append(check_item("config-present", True, str(root / config_rel)))
+714c820
+<         checks.append(_check("backend-local-markdown", False,
+---
+>         checks.append(check_item("backend-local-markdown", False,
+717,718c823
+<     is_local = True
+<     checks.append(_check("backend-local-markdown", is_local,
+---
+>     checks.append(check_item("backend-local-markdown", True,
+721c826
+<     checks.append(_check("task-root-exists", task_root.is_dir(),
+---
+>     checks.append(check_item("task-root-exists", task_root.is_dir(),
+724,732c829,831
+<     labels = config["labels"]
+<     missing = [name for name in CANONICAL_LABELS if name not in labels]
+<     checks.append(_check("labels-complete", not missing,
+<                          f"缺失语义:{missing}" if missing else "五类语义齐全"))
+<     project_labels = [labels.get(name, "") for name in CANONICAL_LABELS]
+<     conflicts = sorted({label for label in project_labels
+<                         if project_labels.count(label) > 1})
+<     checks.append(_check("labels-no-conflict", not conflicts,
+<                          f"多语义映射到同一标签:{conflicts}" if conflicts else "映射无冲突"))
+---
+>     # 标签映射与核心文档映射:两后端共享的单一实现(审查修复票 01/核验建议 1)
+>     checks += label_mapping_checks(config["labels"])
+>     checks += docmap_checks(root, config["docmap"])
+734,753c833
+<     grouped = _core_rows(config["docmap"])
+<     core_missing = [key for key, rows in grouped.items() if not rows]
+<     checks.append(_check("docmap-core-rows", not core_missing,
+<                          f"缺少核心文档行:{core_missing}" if core_missing
+<                          else "目标/设计/技术三类齐全"))
+<     duplicate_types = [key for key, rows in grouped.items() if len(rows) > 1]
+<     core_paths = [row["path"] for rows in grouped.values() for row in rows]
+<     duplicate_paths = sorted({p for p in core_paths if core_paths.count(p) > 1})
+<     unique_ok = not duplicate_types and not duplicate_paths
+<     checks.append(_check("docmap-unique-authority", unique_ok,
+<                          f"重复类型:{duplicate_types} 重复位置:{duplicate_paths}"
+<                          if not unique_ok else "每类核心内容唯一当前维护位置"))
+<     missing_paths = [row["path"] for row in
+<                      (grouped["goal"] + grouped["design"] + grouped["tech"])
+<                      if not (root / row["path"]).is_file()]
+<     checks.append(_check("docmap-paths-exist", not missing_paths,
+<                          f"权威位置不存在:{missing_paths}" if missing_paths
+<                          else "核心文档实际存在"))
+< 
+<     tasks = list_tasks(root, config_rel) if is_local else []
+---
+>     tasks = list_tasks(root, config_rel)
+758,765c838,840
+<         if task["triage"] not in CANONICAL_LABELS:
+<             task_problems.append(f"{task['directory']}:分流 {task['triage']!r} 不在五类之内")
+<         if not task["progress"]:
+<             task_problems.append(f"{task['directory']}:缺少进度")
+<         for key in TASK_REQUEST_KEYS:
+<             if not task["request"].get(key):
+<                 task_problems.append(f"{task['directory']}:工作请求缺少 {key}")
+<     checks.append(_check("tasks-valid", not task_problems,
+---
+>         # 任务核心字段:两后端共享的单一实现(含工作请求必填字段)
+>         task_problems += task_core_problems(task, task["directory"])
+>     checks.append(check_item("tasks-valid", not task_problems,
+784c859
+<     checks.append(_check("results-consistent", not result_problems,
+---
+>     checks.append(check_item("results-consistent", not result_problems,
+788,797c863,867
+<     # 任务票 08:依赖关系可解析且无循环(旧记录无「依赖」字段时视为无依赖)
+<     if is_local:
+<         graph = task_dependencies(root, config_rel)
+<         dep_problems = [f"{item['identity']} 依赖不存在任务 {item['dep']}"
+<                         for item in graph["unresolved"]]
+<         dep_problems += ["循环依赖:" + "->".join(cycle)
+<                          for cycle in graph["cycles"]]
+<         checks.append(_check("deps-consistent", not dep_problems,
+<                              ";".join(dep_problems) if dep_problems
+<                              else "依赖关系可解析且无循环"))
+---
+>     # 依赖关系可解析且无循环(两后端共享;旧记录无「依赖」字段时视为无依赖)
+>     dep_problems = dependency_problems(tasks)
+>     checks.append(check_item("deps-consistent", not dep_problems,
+>                          ";".join(dep_problems) if dep_problems
+>                          else "依赖关系可解析且无循环"))
+852a923,925
+>     p_update.add_argument("--change-note", default=None,
+>                           help="安排更新说明(写入状态变化;缺省「安排更新」;"
+>                                "与草稿保存/重放共用同一参数)")
+908a982,992
+>     def read_transport(config: dict):
+>         """CLI 子命令所需的真实读取通道(审查修复票 01/S3、S4):反向
+>         switch-plan 要读取 github 源任务,handover 要实际执行可达检查;
+>         --api-base/环境变量可指向本地替身,不注入测试桩。"""
+> 
+>         import mgs_github  # noqa: PLC0415
+> 
+>         return mgs_github.UrllibTransport(
+>             api_base=mgs_github.api_base_for(config, args.api_base),
+>             token=mgs_github.token_from_env())
+> 
+919,922c1003
+<             config, mgs_github.UrllibTransport(
+<                 api_base=mgs_github.api_base_for(config, args.api_base),
+<                 token=mgs_github.token_from_env()),
+<             args.cache_dir)
+---
+>             config, read_transport(config), args.cache_dir)
+951c1032,1033
+<                 expected_body_sha256=args.expected_body_sha256)
+---
+>                 expected_body_sha256=args.expected_body_sha256,
+>                 change_note=args.change_note or "安排更新")
+976c1058,1060
+<             payload = mgs_github.handover_baseline_check(root, args.config)
+---
+>             # 可达性结论只能来自实际执行的检查(S4):建立真实读取通道
+>             payload = mgs_github.handover_baseline_check(
+>                 root, args.config, transport=read_transport(config))
+979a1064
+>             config = load_config(root, args.config)
+982c1067
+<                 transport=None, cache_dir=args.cache_dir)
+---
+>                 transport=read_transport(config), cache_dir=args.cache_dir)
+diff -r -x __pycache__ -x .DS_Store /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18/upg/installed-old-snapshot/runtime/mgs_runtime.py /private/tmp/mygamestudio-accept-18/codex-home-u/plugins/cache/personal/mygamestudio/0.18.0/runtime/mgs_runtime.py
+29a30,41
+> 审查修复批(2026-09-09,R1–R4):
+> - 撤销语义(R1):write 的最终身份、策略与授权交集核对移入服务锁
+>   临界区,与写入同一临界区完成;撤销完成后任何在途写入一律拒绝;
+> - 用途故障闭合(R2):用途条目缺失 ≠ 显式不额外限制——条目缺失或
+>   形状无效时交集不可计算,按用途拒绝;策略条目形状无效按策略不完整
+>   拒绝;write/scope/远端路径使用同一语义;
+> - 权限位保留(R3):内容更新(含回滚路径)保留已有目标的权限位,
+>   权限变化必须经显式操作,不经内容更新隐式发生;
+> - 远端审计时序(R4):远端写入意图先于执行持久记录,审计不可用则
+>   动作不执行(失效闭合);结果审计追加失败时如实回报已发生的远端
+>   结果并标注未记录,不包装成未执行的拒绝,也不静默丢弃记录责任。
+> 
+69,70c81,82
+<     keys = ("created", "adopted", "issue_number", "published", "comment_id",
+<             "close_reason", "state_reason", "draft")
+---
+>     keys = ("created", "adopted", "issue_number", "published", "uncertain",
+>             "comment_id", "close_reason", "state_reason", "draft")
+120a133,170
+> # 用途条目缺失/无效的哨兵:授权交集不可计算,调用方必须失效闭合拒绝(R2)。
+> # 与 None(显式空条目 = 不额外限制)是两种不同语义,不得混同。
+> _PURPOSE_MISSING = object()
+> 
+> 
+> def _valid_restrict(value) -> bool:
+>     """restrict 字段的合法形态:None(不额外限制)或字符串模式列表。"""
+> 
+>     return value is None or (isinstance(value, list)
+>                              and all(isinstance(p, str) for p in value))
+> 
+> 
+> def _purpose_restrict(policy: dict, purpose: str):
+>     """读取用途的额外限制模式(R2)。
+> 
+>     返回模式列表、None(显式空条目 = 不额外限制,既有合法配置)或
+>     _PURPOSE_MISSING(绑定用途在策略中无条目 → 交集不可计算,拒绝)。
+>     """
+> 
+>     entry = policy.get("purposes", {}).get(purpose)
+>     if not isinstance(entry, dict) or "restrict" not in entry:
+>         return _PURPOSE_MISSING
+>     restrict = entry["restrict"]
+>     if not _valid_restrict(restrict):
+>         return _PURPOSE_MISSING
+>     return restrict
+> 
+> 
+> def _purpose_missing_reason(purpose: str) -> str:
+>     return f"purpose {purpose} missing from runtime policy (fail closed)"
+> 
+> 
+> def _role_patterns(policy: dict, role: str) -> list[str]:
+>     """角色的资源模式清单(条目形状由 _policy 校验;缺失即空集 = 拒绝)。"""
+> 
+>     return policy.get("roles", {}).get(role, {}).get("resources", [])
+> 
+> 
+161c211,212
+<         """读取资源策略;缺失、损坏或结构无效时返回 None(调用方必须失效闭合)。"""
+---
+>         """读取资源策略;缺失、损坏或结构无效(含角色/用途条目形状无效,
+>         R2)时返回 None(调用方必须失效闭合)。"""
+178a230,239
+>         for entry in data["roles"].values():
+>             if not isinstance(entry, dict) or not isinstance(entry.get("resources"), list):
+>                 return None
+>             if not all(isinstance(p, str) for p in entry["resources"]):
+>                 return None
+>         for entry in data["purposes"].values():
+>             if not isinstance(entry, dict) or "restrict" not in entry:
+>                 return None
+>             if not _valid_restrict(entry["restrict"]):
+>                 return None
+399a461,464
+>         if allowed is None:
+>             return self._deny("scope", "purpose",
+>                               _purpose_missing_reason(record["purpose"]),
+>                               token, record, policy, "")
+422,423c487,488
+<     def _effective_scope(self, record: dict, policy: dict) -> list[str]:
+<         """按角色与用途过滤任务授权,得到凭据的有效可写范围(模式级交集)。"""
+---
+>     def _effective_scope(self, record: dict, policy: dict) -> list[str] | None:
+>         """按角色与用途过滤任务授权,得到凭据的有效可写范围(模式级交集)。
+425,426c490,496
+<         role_pats = policy.get("roles", {}).get(record["role"], {}).get("resources", [])
+<         restrict = policy.get("purposes", {}).get(record["purpose"], {}).get("restrict")
+---
+>         绑定用途在策略中无条目时返回 None(交集不可计算,调用方失效闭合)。
+>         """
+> 
+>         restrict = _purpose_restrict(policy, record["purpose"])
+>         if restrict is _PURPOSE_MISSING:
+>             return None
+>         role_pats = _role_patterns(policy, record["role"])
+435a506,526
+>     def _grant_denial(self, record: dict, policy: dict,
+>                       rel: str) -> tuple[str, str] | None:
+>         """本地写入的任务 ∩ 角色 ∩ 用途授权核对(R2 收口后单一实现)。
+> 
+>         返回 (rule_stage, reason) 或 None(放行)。用途条目缺失时交集
+>         不可计算:与「显式空条目 = 不额外限制」区分,一律失效闭合拒绝。
+>         """
+> 
+>         if not _match_any(record.get("resources", []), rel):
+>             return ("task_grant",
+>                     f"path not granted to task {record['task']}: {rel}")
+>         if not _match_any(_role_patterns(policy, record["role"]), rel):
+>             return ("role_scope", f"role {record['role']} may not write: {rel}")
+>         restrict = _purpose_restrict(policy, record["purpose"])
+>         if restrict is _PURPOSE_MISSING:
+>             return ("purpose", _purpose_missing_reason(record["purpose"]))
+>         if restrict is not None and not _match_any(restrict, rel):
+>             return ("purpose",
+>                     f"purpose {record['purpose']} restricted to {restrict}: {rel}")
+>         return None
+> 
+444a536,540
+> 
+>         临界区时序(R1):锁外预检只用于快速拒绝;最终的身份有效性、
+>         策略与授权交集核对和写入本身在同一服务锁临界区内完成——撤销
+>         (release_instance)与策略更换都持有本锁,撤销完成后在途写入
+>         必然在锁内重读时被拒,不可能再落盘。
+446a543
+>         payload = content.encode("utf-8") if data is None else data
+458,461c555,557
+< 
+<         if not _match_any(record.get("resources", []), rel):
+<             return self._deny("write", "task_grant",
+<                               f"path not granted to task {record['task']}: {rel}",
+---
+>         pre_grant = self._grant_denial(record, policy, rel)
+>         if pre_grant is not None:
+>             return self._deny("write", pre_grant[0], pre_grant[1],
+463,472d558
+<         role_pats = policy.get("roles", {}).get(record["role"], {}).get("resources", [])
+<         if not _match_any(role_pats, rel):
+<             return self._deny("write", "role_scope",
+<                               f"role {record['role']} may not write: {rel}",
+<                               token, record, policy, rel, note)
+<         restrict = policy.get("purposes", {}).get(record["purpose"], {}).get("restrict")
+<         if restrict is not None and not _match_any(restrict, rel):
+<             return self._deny("write", "purpose",
+<                               f"purpose {record['purpose']} restricted to {restrict}: {rel}",
+<                               token, record, policy, rel, note)
+474d559
+<         data = content.encode("utf-8") if data is None else data
+478,487c563,595
+<             locks = self._read_json(LOCKS_FILE, {})
+<             holder = locks.get(rel)
+<             if holder and holder.get("instance_id") != record["instance_id"]:
+<                 denial = ("write", "occupancy",
+<                           f"resource held by instance {holder.get('instance_id')}")
+<             elif expected_sha256 is not None:
+<                 # 版本校验在锁内读取(02 已知边界:消除读取与占用之间的调度窗口)
+<                 if resolved.exists():
+<                     current = _sha256_bytes(resolved.read_bytes())
+<                     if expected_sha256.lower() != current:
+---
+>             # —— 临界区内最终核对(R1):以锁内重读的策略与登记为准。
+>             # 先重读身份再重读策略:策略失效时拒绝记录仍携带最新身份归属 ——
+>             record, reason = self._resolve_instance(token)
+>             if record is None:
+>                 denial = ("write", "identity", reason)
+>             if denial is None:
+>                 policy = self._policy()
+>                 if policy is None:
+>                     denial = ("write", "policy",
+>                               "runtime policy missing, corrupt or malformed "
+>                               "(fail closed)")
+>             if denial is None:
+>                 resolved, rel, reason = self._resolve_target(policy, path)
+>                 if resolved is None:
+>                     denial = ("write", "path", reason)
+>             if denial is None:
+>                 grant = self._grant_denial(record, policy, rel)
+>                 if grant is not None:
+>                     denial = ("write", grant[0], grant[1])
+>             if denial is None:
+>                 locks = self._read_json(LOCKS_FILE, {})
+>                 holder = locks.get(rel)
+>                 if holder and holder.get("instance_id") != record["instance_id"]:
+>                     denial = ("write", "occupancy",
+>                               f"resource held by instance {holder.get('instance_id')}")
+>                 elif expected_sha256 is not None:
+>                     # 版本校验在锁内读取(02 已知边界:消除读取与占用之间的调度窗口)
+>                     if resolved.exists():
+>                         current = _sha256_bytes(resolved.read_bytes())
+>                         if expected_sha256.lower() != current:
+>                             denial = ("write", "version",
+>                                       f"expected sha256 {expected_sha256} != current {current}")
+>                     elif expected_sha256.lower() != "absent":
+489,492c597
+<                                   f"expected sha256 {expected_sha256} != current {current}")
+<                 elif expected_sha256.lower() != "absent":
+<                     denial = ("write", "version",
+<                               f"target absent but expected {expected_sha256}")
+---
+>                                   f"target absent but expected {expected_sha256}")
+527a633,635
+>                             # R3:内容更新保留既有目标的权限位——权限变化必须经
+>                             # 显式操作,不经内容更新隐式发生;新建文件按默认 0644。
+>                             existing_mode = stat.S_IMODE(mode) if mode is not None else None
+543,544c651,652
+<                                 "written_sha256": _sha256_bytes(data),
+<                                 "bytes": len(data),
+---
+>                                 "written_sha256": _sha256_bytes(payload),
+>                                 "bytes": len(payload),
+550,554c658,659
+<                                 tfd = os.open(tmp_name,
+<                                               os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+<                                               0o644, dir_fd=parent_fd)
+<                                 with os.fdopen(tfd, "wb") as fh:
+<                                     fh.write(data)
+---
+>                                 self._write_pinned_temp(parent_fd, tmp_name,
+>                                                         payload, existing_mode)
+564c669,670
+<                                 self._rollback(parent_fd, base, backup)
+---
+>                                 self._rollback(parent_fd, base, backup,
+>                                                mode_bits=existing_mode)
+578c684,686
+<                               token, record, policy, rel or path, note)
+---
+>                               token, record,
+>                               policy if policy is not None else {},
+>                               rel or path, note)
+615,616c723,725
+<     def _rollback(parent_fd: int, base: str, backup: bytes | None) -> None:
+<         """经锚定目录回滚一次已落盘的写入(尽力而为,失败由调用方记录)。"""
+---
+>     def _write_pinned_temp(parent_fd: int, tmp_name: str, data: bytes,
+>                            mode_bits: int | None) -> None:
+>         """在锚定目录创建临时文件并写入字节(R3)。
+617a727,747
+>         mode_bits 给出时逐位生效(fchmod 摆脱 umask),用于保留既有目标
+>         的权限位;None 按新建默认 0644(仍受 umask 影响,与既有行为一致)。
+>         """
+> 
+>         tfd = os.open(tmp_name, os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+>                       mode_bits if mode_bits is not None else 0o644,
+>                       dir_fd=parent_fd)
+>         with os.fdopen(tfd, "wb") as fh:
+>             if mode_bits is not None:
+>                 os.fchmod(fh.fileno(), mode_bits)
+>             fh.write(data)
+> 
+>     @staticmethod
+>     def _rollback(parent_fd: int, base: str, backup: bytes | None,
+>                   mode_bits: int | None = None) -> None:
+>         """经锚定目录回滚一次已落盘的写入(尽力而为,失败由调用方记录)。
+> 
+>         回滚与内容更新遵守同一要求(R3):恢复既有目标时保留其权限位
+>         (mode_bits 为回滚前的实际权限),不得借回滚隐式改变权限。
+>         """
+> 
+626,629c756,757
+<             rfd = os.open(tmp_name, os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+<                           0o644, dir_fd=parent_fd)
+<             with os.fdopen(rfd, "wb") as fh:
+<                 fh.write(backup)
+---
+>             GateService._write_pinned_temp(parent_fd, tmp_name, backup,
+>                                            mode_bits)
+695a824,858
+>     def _remote_base(self, op: str, record: dict, policy: dict,
+>                      resource: str, note: dict) -> dict:
+>         """远端操作结果/意图条目与审计记录共用的身份与依据字段组。"""
+> 
+>         return {
+>             "op": op, "instance_id": record["instance_id"],
+>             "task": record["task"], "role": record["role"],
+>             "purpose": record["purpose"], "target": resource,
+>             "basis": self._basis(policy), "note": note,
+>         }
+> 
+>     def _remote_grant_denial(self, record: dict, policy: dict,
+>                              resource: str) -> tuple[str, str] | None:
+>         """远端资源的任务 ∩ 角色 ∩ 用途授权核对(_remote_match 语义)。
+> 
+>         返回 (rule_stage, reason) 或 None(放行);用途条目缺失时与本地
+>         写入同一语义失效闭合(R2)。
+>         """
+> 
+>         if not _remote_match(record.get("resources", []), resource):
+>             return ("task_grant",
+>                     f"remote resource not granted to task "
+>                     f"{record['task']}: {resource}")
+>         if not _remote_match(_role_patterns(policy, record["role"]), resource):
+>             return ("role_scope",
+>                     f"role {record['role']} may not write: {resource}")
+>         restrict = _purpose_restrict(policy, record["purpose"])
+>         if restrict is _PURPOSE_MISSING:
+>             return ("purpose", _purpose_missing_reason(record["purpose"]))
+>         if restrict is not None and not _remote_match(restrict, resource):
+>             return ("purpose",
+>                     f"purpose {record['purpose']} restricted to "
+>                     f"{restrict}: {resource}")
+>         return None
+> 
+704a868,869
+>         写入意图先于执行持久记录,审计不可用则动作不执行;结果审计失败时
+>         如实回报已发生的远端结果(R4)。
+766,769c931,933
+<         if not _remote_match(record.get("resources", []), resource):
+<             return self._deny(op, "task_grant",
+<                               f"remote resource not granted to task "
+<                               f"{record['task']}: {resource}",
+---
+>         grant = self._remote_grant_denial(record, policy, resource)
+>         if grant is not None:
+>             return self._deny(op, grant[0], grant[1],
+771,781d934
+<         role_pats = policy.get("roles", {}).get(record["role"], {}).get("resources", [])
+<         if not _remote_match(role_pats, resource):
+<             return self._deny(op, "role_scope",
+<                               f"role {record['role']} may not write: {resource}",
+<                               token, record, policy, resource)
+<         restrict = policy.get("purposes", {}).get(record["purpose"], {}).get("restrict")
+<         if restrict is not None and not _remote_match(restrict, resource):
+<             return self._deny(op, "purpose",
+<                               f"purpose {record['purpose']} restricted to "
+<                               f"{restrict}: {resource}",
+<                               token, record, policy, resource)
+788,797c941,988
+<         try:
+<             result = self._run_remote_action(backend, action, payload)
+<         except mgs_github.TransportError as exc:
+<             # 上游故障:失效闭合;适配器已在可用缓存目录保存未发布草稿的
+<             # 操作由各动作内部处理,这里兜底离线草稿
+<             draft = None
+<             if exc.kind == "offline" and channel.get("cache_dir"):
+<                 draft = backend._save_draft(  # noqa: SLF001 - 通道内聚
+<                     self._draft_op_for(action), dict(payload), str(exc))
+<             return self._deny(op, "remote_upstream",
+---
+>         note = {"action": action,
+>                 "repo": f"{repo['host']}/{repo['owner']}/{repo['repo']}"}
+> 
+>         # R1/R4:与本地 write() 同一临界区纪律——最终身份、策略与授权核对、
+>         # 写入意图的持久记录、远端动作的执行与结果审计都持有服务锁完成。
+>         # 撤销(release_instance)与策略更换同样持有本锁:撤销完成后在途
+>         # 远端写入在锁内重读时被拒,不可能执行;远端动作因此与同运行根的
+>         # 本地写入串行,占锁时长受传输超时约束(不无限持有)。
+>         # R4:改变远端状态的写入意图先于执行持久记录,审计不可用时动作不
+>         # 执行(失效闭合);只读动作(read)不改变远端状态,不要求意图记录。
+>         denial: tuple[str, str, dict | None] | None = None
+>         outcome: dict | None = None
+>         with self._locked():
+>             record, reason = self._resolve_instance(token)
+>             if record is None:
+>                 denial = ("identity", reason, None)
+>             if denial is None:
+>                 policy = self._policy()
+>                 if policy is None:
+>                     denial = ("policy", "runtime policy missing, corrupt or "
+>                               "malformed (fail closed)", None)
+>             if denial is None:
+>                 grant = self._remote_grant_denial(record, policy, resource)
+>                 if grant is not None:
+>                     denial = (grant[0], grant[1], None)
+>             if denial is None and action != "read":
+>                 try:
+>                     self._audit_unlocked({
+>                         **self._remote_base(op, record, policy, resource, note),
+>                         "decision": "intent", "rule_stage": "granted",
+>                         "reason": "remote write intent recorded before execution",
+>                     })
+>                 except Exception as exc:
+>                     denial = ("audit",
+>                               f"cannot durably record remote write intent "
+>                               f"({type(exc).__name__}: {exc}); remote action "
+>                               "not executed (fail closed)", None)
+>             if denial is None:
+>                 try:
+>                     result = self._run_remote_action(backend, action, payload)
+>                 except mgs_github.TransportError as exc:
+>                     # 上游故障:失效闭合;适配器已在可用缓存目录保存未发布
+>                     # 草稿的操作由各动作内部处理,这里兜底离线草稿
+>                     draft = None
+>                     if exc.kind == "offline" and channel.get("cache_dir"):
+>                         draft = backend._save_draft(  # noqa: SLF001 - 通道内聚
+>                             self._draft_op_for(action), dict(payload), str(exc))
+>                     denial = ("remote_upstream",
+799,826c990,1043
+<                               token, record, policy, resource,
+<                               note={"draft": draft} if draft else None)
+<         except mgs_github.GithubRecordsError as exc:
+<             return self._deny(op, "remote_upstream", str(exc), token, record,
+<                               policy, resource)
+<         if not result.get("published", True) and not result.get("created"):
+<             # 适配器保存了草稿(离线):按未发布表达,不冒充已发布
+<             entry = self._deny(op, "remote_upstream",
+<                                "远端不可用:已保存未发布草稿(标明来源与状态;"
+<                                "不视为已发布,不静默切换本地后端)",
+<                                token, record, policy, resource,
+<                                note={"draft": result.get("draft")})
+<             return entry
+<         outcome = {
+<             "op": op, "decision": "allow", "rule_stage": "granted",
+<             "reason": "granted by identity+task+role+purpose+config-scope "
+<                       "intersection",
+<             "instance_id": record["instance_id"], "task": record["task"],
+<             "role": record["role"], "purpose": record["purpose"],
+<             "target": resource, "basis": self._basis(policy),
+<             "note": {"action": action, "repo":
+<                      f"{repo['host']}/{repo['owner']}/{repo['repo']}"},
+<             "result": result,
+<         }
+<         self._audit({key: value for key, value in outcome.items()
+<                      if key != "result"}
+<                     | {"note": {"summary": _remote_summary(result),
+<                                 **outcome["note"]}})
+---
+>                               {"draft": draft} if draft else None)
+>                 except mgs_github.GithubRecordsError as exc:
+>                     denial = ("remote_upstream", str(exc), None)
+>                 else:
+>                     if result.get("uncertain"):
+>                         # S2:远端动作已执行但结果未确认(请求超时且回读失败,
+>                         # 适配器已停止重发)——如实回报不确定,不虚报成功,
+>                         # 也不包装成拒绝或「已保存草稿」;调用方应先回读确认
+>                         # 再决定是否重试(R4 同一原则:不把已发生的远端结果
+>                         # 包装成未执行的拒绝)。
+>                         outcome = {
+>                             **self._remote_base(op, record, policy,
+>                                                 resource, note),
+>                             "decision": "uncertain", "rule_stage": "granted",
+>                             "reason": ("remote action executed but outcome "
+>                                        "unconfirmed (readback failed; resend "
+>                                        "stopped to avoid duplication)"),
+>                             "result": result,
+>                         }
+>                     elif not result.get("published", True) \
+>                             and not result.get("created"):
+>                         # 适配器保存了草稿(离线):按未发布表达,不冒充已发布
+>                         denial = ("remote_upstream",
+>                                   "远端不可用:已保存未发布草稿(标明来源与状态;"
+>                                   "不视为已发布,不静默切换本地后端)",
+>                                   {"draft": result.get("draft")})
+>                     else:
+>                         outcome = {
+>                             **self._remote_base(op, record, policy,
+>                                                 resource, note),
+>                             "decision": "allow", "rule_stage": "granted",
+>                             "reason": "granted by identity+task+role+purpose+"
+>                                       "config-scope intersection",
+>                             "result": result,
+>                         }
+>                     if outcome is not None:
+>                         # R4:结果审计追加失败不否认已发生的远端结果——如实
+>                         # 回报并标注未记录(调用方不误判重试),也不静默丢弃
+>                         # 记录责任;意图条目已持久,可据此对账缺失的结果记录。
+>                         try:
+>                             entry = {key: value for key, value in outcome.items()
+>                                      if key != "result"}
+>                             entry["note"] = {"summary": _remote_summary(result),
+>                                              **note}
+>                             self._audit_unlocked(entry)
+>                         except Exception as exc:
+>                             outcome["audit_recorded"] = False
+>                             outcome["reason"] += (
+>                                 f"; outcome audit append failed "
+>                                 f"({type(exc).__name__}: {exc}) — result "
+>                                 "reported as-is, not wrapped as denial")
+>         if denial is not None:
+>             return self._deny(op, denial[0], denial[1], token, record, policy,
+>                               resource, note=denial[2])
 diff -r -x __pycache__ -x .DS_Store /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18/upg/installed-old-snapshot/templates/project/CONFIG.md /private/tmp/mygamestudio-accept-18/codex-home-u/plugins/cache/personal/mygamestudio/0.18.0/templates/project/CONFIG.md
 10c10
 < - 外部连接引用及已确认操作范围：{{仅引用，不填写凭据}}

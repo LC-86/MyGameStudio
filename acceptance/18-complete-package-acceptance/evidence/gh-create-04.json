@@ -17,7 +17,9 @@
     "triage_source": "label",
     "triage_conflict": false,
     "request": {
-      "当前目标": "海雾层视觉提示"
+      "当前目标": "海雾层视觉提示",
+      "完成标准": "雾层可视且不遮挡操作",
+      "执行责任": "Agent(制作实现)"
     },
     "sections": {
       "工作请求": true,
@@ -26,7 +28,7 @@
     },
     "results": [],
     "result_index_text": "\n(暂无)\n",
-    "body": "# 海雾层\n\n任务身份:04-fog-layer。当前分流:needs-triage。进度:待执行。\n\n## 工作请求\n\n- 当前目标:海雾层视觉提示\n\n## 结果索引\n\n(暂无)\n\n## 状态变化\n\n2026-09-09 经统一接口建立 GitHub Issues 任务记录。\n"
+    "body": "# 海雾层\n\n任务身份:04-fog-layer。当前分流:needs-triage。进度:待执行。\n\n## 工作请求\n\n- 当前目标:海雾层视觉提示\n- 完成标准:雾层可视且不遮挡操作\n- 执行责任:Agent(制作实现)\n\n## 结果索引\n\n(暂无)\n\n## 状态变化\n\n2026-09-09 经统一接口建立 GitHub Issues 任务记录。\n"
   },
   "attempts": [
     {

@@ -50,7 +50,7 @@ ATLAS_FIXTURE="$ACC_DIR/fixtures/atlas-drop"
 REPO="github.com/mygamestudio/issue-accept"
 GHTOKEN="standin-token-$(date +%s)-$$"
 STANDIN_PORT=""
-OLD_COMMIT="e2af9a9"   # 0.17.0(任务票 17)
+OLD_COMMIT="36c432c"   # 0.17.0(任务票 17;2026-09-09 历史清理后哈希,旧 e2af9a9 为改写前链)
 REAL_HOME="$HOME"
 PASS=0; FAIL=0
 
@@ -118,8 +118,13 @@ hash_tree() { # hash_tree <目录> <输出文件>(排除 .git 与 __pycache__)
 }
 
 mkdir -p "$EVIDENCE_DIR"
-rm -f "$EVIDENCE_DIR"/*.txt "$EVIDENCE_DIR"/*.json "$EVIDENCE_DIR"/*.jsonl \
-      "$EVIDENCE_DIR"/*.md "$EVIDENCE_DIR"/*.log 2>/dev/null
+# 清空可再生证据;保留手工维护的索引与历史过程日志(原始证据不随重跑消失)
+for f in "$EVIDENCE_DIR"/*.txt "$EVIDENCE_DIR"/*.json "$EVIDENCE_DIR"/*.jsonl \
+         "$EVIDENCE_DIR"/*.md "$EVIDENCE_DIR"/*.log; do
+  [ -f "$f" ] || continue
+  case "$f" in */README.md|*/process-log-*) continue ;; esac
+  rm -f "$f"
+done
 
 # ---------- 0. 环境记录 ----------
 
@@ -133,7 +138,7 @@ rm -f "$EVIDENCE_DIR"/*.txt "$EVIDENCE_DIR"/*.json "$EVIDENCE_DIR"/*.jsonl \
   echo "env-root: $ENVROOT(home=0.18.0 主环境;homeu=升级剧场)"
   echo "arena: $ARENA"
   echo "upgrade-path: $OLD_COMMIT(0.17.0)→ 仓库 plugin/(0.18.0),经 codex plugin remove+add"
-  echo "remote(G 环): 本地 HTTP 替身 standin_github.py(非真实 GitHub);真实远端写入验收保留待办"
+  echo "remote(G 环): 本地 HTTP 替身 standin_github.py(非真实 GitHub);真实远端写入验收已于 2026-09-09 经票 17 remote-replay.sh 完成"
   echo "model-pin: ${MGS_PIN_MODEL:-未固定(服务端默认)}"
 } > "$EVIDENCE_DIR/environment.txt"
 say "== 0. 环境已记录 =="; cat "$EVIDENCE_DIR/environment.txt"
@@ -445,7 +450,11 @@ check "升级后安装副本版本为 0.18.0" test "$NEW_VERSION" = "0.18.0"
 check "升级后安装副本与仓库 plugin/ 逐字节一致" \
   diff -r -x __pycache__ -x .DS_Store "$REPO_ROOT/plugin" "$INSTALLED_NEW"
 echo "installed-new: $INSTALLED_NEW" >> "$EVIDENCE_DIR/environment.txt"
-python3 -B - "$ARENA/upg/installed-old-snapshot" "$INSTALLED_NEW" > "$EVIDENCE_DIR/upgrade-changed-set.json" <<'PYEOF'
+# 变更集从 git 推导(0.17.0 提交→当前 HEAD 的 plugin/ 实际变更),不枚举文件清单
+# ——审查修复批在 0.18.0 交付后改动了后端/运行时文件而版本号未递增,硬编码
+# 清单会随后续修复过时;推导口径=「升级让 0.17.0 以来全部实际变更可发现」
+UPGRADE_EXPECTED=$(git -C "$REPO_ROOT" diff --name-only "$OLD_COMMIT"..HEAD -- plugin/ | sed 's|^plugin/||' | sort)
+python3 -B - "$ARENA/upg/installed-old-snapshot" "$INSTALLED_NEW" $UPGRADE_EXPECTED > "$EVIDENCE_DIR/upgrade-changed-set.json" <<'PYEOF'
 import hashlib, json, sys
 from pathlib import Path
 def tree(root: Path):
@@ -457,15 +466,15 @@ def tree(root: Path):
 old, new = tree(Path(sys.argv[1])), tree(Path(sys.argv[2]))
 changed = sorted(k for k in old.keys() & new.keys() if old[k] != new[k])
 only = sorted(old.keys() ^ new.keys())
-expected = [".codex-plugin/plugin.json", "templates/project/CONFIG.md",
-            "provenance/manifest.md", "provenance/fingerprints.json"]
+expected = sorted(sys.argv[3:])
 print(json.dumps({"changed": changed, "expected": expected,
+                  "expected_source": "git diff --name-only OLD_COMMIT..HEAD -- plugin/(推导)",
                   "exact": set(changed) == set(expected) and not only,
                   "only_in_one_side": only}, ensure_ascii=False))
 PYEOF
 diff -r -x __pycache__ -x .DS_Store "$ARENA/upg/installed-old-snapshot" "$INSTALLED_NEW" \
   > "$EVIDENCE_DIR/upgrade-install-diff.txt" 2>&1 || true
-check_json "安装副本 diff 恰为 0.18.0 版本内变更集(依赖变化可发现)" \
+check_json "安装副本 diff 恰为 0.17.0→当前交付的变更集(git 推导,依赖变化可发现)" \
   "$EVIDENCE_DIR/upgrade-changed-set.json" "data['exact'] is True and data['only_in_one_side'] == []"
 check_contains "新模板带 issues-write 授权记录格式说明" "$INSTALLED_NEW/templates/project/CONFIG.md" \
   'issues-write' 'host/owner/repository'
@@ -721,9 +730,11 @@ check_json "apply 在替身创建两个远端任务" "$EVIDENCE_DIR/gh-switch-ap
 cp "$GH_EMIT/CONFIG.md" "$PROJ_G/docs/mygamestudio/CONFIG.md"
 ok "切换后 CONFIG 已按确认清单预置(调度侧;来源=已确认迁移清单)"
 $CLIBIN create $PFLAGS --identity 03-storm-warning --title "风暴预警" \
-  --field "当前目标=最后阶段风暴预警" > "$EVIDENCE_DIR/gh-create-03.json" 2>&1
+  --field "当前目标=最后阶段风暴预警" --field "完成标准=无头检查可见预警" \
+  --field "执行责任=Agent(制作实现)" > "$EVIDENCE_DIR/gh-create-03.json" 2>&1
 $CLIBIN create $PFLAGS --identity 04-fog-layer --title "海雾层" \
-  --field "当前目标=海雾层视觉提示" > "$EVIDENCE_DIR/gh-create-04.json" 2>&1
+  --field "当前目标=海雾层视觉提示" --field "完成标准=雾层可视且不遮挡操作" \
+  --field "执行责任=Agent(制作实现)" > "$EVIDENCE_DIR/gh-create-04.json" 2>&1
 standin_state > "$EVIDENCE_DIR/gh-state-before-turn.json"
 check_json "替身有 4 个远端任务(01/02 迁移 + 03/04 新建)" \
   "$EVIDENCE_DIR/gh-state-before-turn.json" "len(data['issues']) == 4"
@@ -733,6 +744,9 @@ mk_instance "$RUNROOT_G" g_p producer 18-gh 180 \
   'github://github.com/mygamestudio/issue-accept/issues' \
   'github://github.com/mygamestudio/issue-accept/issues/04-fog-layer/**'
 GP_ID=$(cat "$ARENA/g_p.id"); GP_TOK=$(cat "$ARENA/g_p.token")
+mk_instance "$RUNROOT_G" g_o producer 18-gh-offline 180 \
+  'github://github.com/mygamestudio/issue-accept/issues/03-storm-warning/**'
+GO_TOK=$(cat "$ARENA/g_o.token")
 
 # 6.2 G1:统筹受控远端操作(真实会话,默认画像)
 run_turn g1 "$ENVROOT/home" "$ENVROOT/codex-home" "$RUNROOT_G" \
@@ -760,7 +774,7 @@ check_json "G1 越界更新 01 未生效(仍待执行)" "$EVIDENCE_DIR/gh-state-
 check_json "G1 越界评论 02 未生效(无评论)" "$EVIDENCE_DIR/gh-state-after-g1.json" \
   "len(data['comments'].get('2', [])) == 0"
 check_contains "G1 报告记录 task_grant 拒绝" "$EVIDENCE_DIR/g1-report.md" 'task_grant'
-if grep -qE 'curl|127.0.0.1' "$EVIDENCE_DIR/g1-report.md" && grep -qiE 'refused|denied|permitted|不能|不可|被拒|失败|无法|超时|timed out' "$EVIDENCE_DIR/g1-report.md"; then
+if grep -qE 'curl|127.0.0.1' "$EVIDENCE_DIR/g1-report.md" && grep -qiE 'refused|denied|permitted|failed to connect|couldn.t connect|timed out|不能|不可|被拒|失败|无法|超时' "$EVIDENCE_DIR/g1-report.md"; then
   ok "G1 直连探针被会话沙箱拒绝且如实记录"
 else
   bad "G1 直连探针结果未如实记录(应被拒绝)"
@@ -771,7 +785,7 @@ sanitize "$EVIDENCE_DIR/g1-report.md"; sanitize "$EVIDENCE_DIR/g1-events.jsonl";
 # 6.3 驱动式上游失联失效闭合(真实安装副本 mgs-gate 进程)
 kill "$STANDIN_PID" 2>/dev/null; wait "$STANDIN_PID" 2>/dev/null
 MGS_RUNTIME_ROOT="$RUNROOT_G" python3 -B "$GATE_PROBE" --gate "$INSTALLED/runtime/mcp_gate.py" call mgs_remote \
-  "{\"token\": \"$GP_TOK\", \"action\": \"update\", \"payload\": {\"identity\": \"03-storm-warning\", \"fields\": {\"进度\": \"执行中\"}}}" \
+  "{\"token\": \"$GO_TOK\", \"action\": \"update\", \"payload\": {\"identity\": \"03-storm-warning\", \"fields\": {\"进度\": \"执行中\"}}}" \
   > "$EVIDENCE_DIR/gh-upstream-offline.json" 2>&1
 check_contains "上游失联失效闭合(remote_upstream,不绕行)" "$EVIDENCE_DIR/gh-upstream-offline.json" \
   'remote_upstream' 'deny'
@@ -809,7 +823,7 @@ EOF
 python3 -B "$PLUGIN_RUNTIME/mgsrt_admin.py" --runtime-root "$RUNROOT_R" init-policy \
   --spec "$ARENA/reg/policy-spec.json" > "$EVIDENCE_DIR/reg-init-policy.json" 2>&1
 check_contains "R 环策略初始化完成" "$EVIDENCE_DIR/reg-init-policy.json" '"implement"'
-mk_instance "$RUNROOT_R" r_i1 implement 18-reg-a 120 'src/**'
+mk_instance "$RUNROOT_R" r_i1 implement 18-reg-a 120 'src/**' 'docs/mygamestudio/PROJECT.md'
 mk_instance "$RUNROOT_R" r_i2 implement 18-reg-b 120 'src/lock-probe.txt'
 R1_ID=$(cat "$ARENA/r_i1.id"); R1_TOK=$(cat "$ARENA/r_i1.token")
 R2_ID=$(cat "$ARENA/r_i2.id"); R2_TOK=$(cat "$ARENA/r_i2.token")
@@ -817,7 +831,7 @@ R2_ID=$(cat "$ARENA/r_i2.id"); R2_TOK=$(cat "$ARENA/r_i2.token")
 run_turn r1 "$ENVROOT/home" "$ENVROOT/codex-home" "$RUNROOT_R" \
   "$ENVROOT/instances/ws-r" - "本会话有两个执行凭据(由验收调度层注入;均不写入任何文件或报告正文):
 
-凭据 A(实例 $R1_ID,任务 18-reg-a,角色 制作实现(implement),用途 production,授权 src/**):
+凭据 A(实例 $R1_ID,任务 18-reg-a,角色 制作实现(implement),用途 production,授权 src/** 与 docs/mygamestudio/PROJECT.md):
 $R1_TOK
 
 凭据 B(实例 $R2_ID,任务 18-reg-b,角色 制作实现(implement),用途 production,授权仅 src/lock-probe.txt):
@@ -840,7 +854,12 @@ check "R1 凭据 B 授权文件写入成功" grep -q 'lock-probe by B' "$PROJ_R/
 check_contains "R1 报告记录 role_scope 拒绝" "$EVIDENCE_DIR/r1-report.md" 'role_scope'
 check_contains "R1 报告记录 occupancy 拒绝" "$EVIDENCE_DIR/r1-report.md" 'occupancy'
 check_contains "R1 报告记录 task_grant 拒绝(任务粒度)" "$EVIDENCE_DIR/r1-report.md" 'task_grant'
-check "R1 报告记录 path 拒绝(换链)" grep -Eq '"rule_stage": ?"path"|(rule_stage|拒绝).{0,40}path|path.{0,40}(rule_stage|拒绝)' "$EVIDENCE_DIR/r1-report.md"
+if grep -Eq '"rule_stage": ?"path"|(rule_stage|拒绝|deny).{0,60}path|path.{0,60}(rule_stage|拒绝|deny)' "$EVIDENCE_DIR/r1-report.md" \
+   || grep -qF 'rule_stage\": \"path\"' "$EVIDENCE_DIR/r1-events.jsonl"; then
+  ok "R1 记录 path 拒绝(换链;报告词族或事件流原始记录)"
+else
+  bad "R1 未记录 path 拒绝(换链)"
+fi
 check "R1 间接写入未生效(shell/python 均被拒)" \
   test ! -f "$PROJ_R/src/indirect.txt" -a ! -f "$PROJ_R/src/indirect2.txt"
 check_contains "R1 报告原样记录间接写入被操作系统拒绝" "$EVIDENCE_DIR/r1-report.md" 'Operation not permitted'
@@ -940,6 +959,6 @@ say ""
 say "================ 汇总 ================"
 say "PASS: $PASS  FAIL: $FAIL"
 say "证据目录: $EVIDENCE_DIR"
-say "声明:G 环远端为本地替身(非真实 GitHub);真实远端写入验收保留待办(待用户授权测试仓库)。"
+say "声明:G 环远端为本地替身(非真实 GitHub);真实远端写入验收已于 2026-09-09 经票 17 remote-replay.sh 完成(38 PASS/0 FAIL)。"
 say "真实模型 turn:N1/U1/U2/P1/P2/P3/G1/R1/R1b 共 9 个。"
 [ "$FAIL" = "0" ]

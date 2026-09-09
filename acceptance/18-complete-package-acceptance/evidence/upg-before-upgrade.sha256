@@ -1,10 +1,10 @@
 5dc3594f897bf0735786714c1121422f547e675e8b4f0b63b8150ce263672a2f  ./README.md
-9f030cf48ff959168cb5c078a06ca490ba6b1971d7d4bd6b06ae44fc2f3e35a0  ./docs/mygamestudio/CONFIG.md
-72375a3e8144bcce33d7429afe898d77d4c0657087dc1a3a9fc02803d71429a6  ./docs/mygamestudio/GAME_DESIGN.md
-0b8e4428a1c58e2bda77c5559ff8e45e988e8e02f15721bd352fca8de14a4922  ./docs/mygamestudio/INDEX.md
-52208b4e42fa397658e97f669d6f26a85a0eb60e1337a957dd1337bc742ab109  ./docs/mygamestudio/PROJECT.md
-814314cd0f6e6c40a4f1f0feeedf5ddf3f2a6b90b5f818e2ac74e45d106b2179  ./docs/mygamestudio/TECH_DESIGN.md
+463e90595dc98a89c91f3fc49fda2064e44c28f062faab155dfab286840e648a  ./docs/mygamestudio/CONFIG.md
+e142f3a517305c0ff4ffa30db171cf0c53903aa124ba9fcdc21354feef054c47  ./docs/mygamestudio/GAME_DESIGN.md
+35e5c875d0f9ec3d3bccfe33de712b545136b4e453caec3f90fd15208d3a730b  ./docs/mygamestudio/INDEX.md
+f45db261078751e8a4a0576c329efd6d93f6249d5b2243aa699143900455137a  ./docs/mygamestudio/PROJECT.md
+3061cdb50aceb3f8f43563e88d789150e08bd31e23ad302968577763da8837db  ./docs/mygamestudio/TECH_DESIGN.md
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./docs/mygamestudio/evidence/.gitkeep
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./docs/mygamestudio/records/.gitkeep
-1cf0b7cd15d470a54591e720e6ef01f12c2cf56d267d46089bd688b74babe8c9  ./docs/mygamestudio/work/01-score-keeper/task.md
+74be70a39de0700c24114e915fde1f97d1c3637a9b1b3a89f691ed8d2c7767e8  ./docs/mygamestudio/work/01-score-keeper/task.md
 5b7a4e290def1a530554ea640d86e7420960a820752b6fa41595a60b59093294  ./src/main.js

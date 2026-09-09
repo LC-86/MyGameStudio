@@ -29,7 +29,7 @@
     {
       "name": "docmap-core-rows",
       "ok": true,
-      "detail": "目标/设计/技术三类齐全"
+      "detail": "目标/设计/技术三类齐全(核心设计保留本地 Markdown 位置)"
     },
     {
       "name": "docmap-unique-authority",
