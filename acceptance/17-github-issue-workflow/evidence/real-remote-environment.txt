@@ -1,0 +1,7 @@
+date: 2026-09-09T19:24:18+08:00
+remote: 真实 GitHub api.github.com(非本地替身)
+repo: github.com/LC-86/mgs-issue-accept-test
+gh: gh version 2.88.1 (2026-03-12)
+token: 经 gh auth token 运行时注入进程环境(MGS_GITHUB_TOKEN),不落盘
+model-calls: 0(确定性重放,无模型 turn)
+list-read-lag-attempts: 2

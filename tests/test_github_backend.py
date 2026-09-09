@@ -940,6 +940,41 @@ def test_cli_local_backend_refuses_write_subcommands() -> None:
           f"handover 应限定 github 后端:{result.stdout[:200]}")
 
 
+def test_cli_github_handover_end_to_end() -> None:
+    """票 17 第 7 条真实远端重放发现的缺陷固化:github 后端 CLI handover
+    端到端路径崩溃(AttributeError:handover_baselinecheck_item——票 01-fix
+    改名漏改 CLI 调用点)。未发布基线时必须输出 JSON 报告并以退出码 1 如实
+    回报;崩溃的退出码恰为 1,会伪装成「不可达」结论,故必须锚定 JSON 输出。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        cache = Path(tmp) / "cache"
+        fake = FakeTransport()
+        server = _StandinServer(fake)
+        server.start()
+        common = ["--project", str(root), "--api-base", server.base,
+                  "--cache-dir", str(cache)]
+        try:
+            result = run_cli("handover", *common)
+            check(result.returncode == 1,
+                  f"未发布基线时 handover 应以退出码 1 如实回报:"
+                  f"{result.stdout[:200]}{result.stderr[:200]}")
+            try:
+                report = json.loads(result.stdout)
+            except ValueError:
+                check(False,
+                      f"handover 应输出 JSON 报告而非崩溃(先看 stderr):"
+                      f"{result.stderr[-300:]}")
+                return
+            check(report.get("ok") is False and len(report.get("docs", [])) >= 1,
+                  f"handover 报告应含基线文档条目:{str(report)[:200]}")
+            check(any("不可访问" in d.get("note", "") and "不得宣称" in d.get("note", "")
+                      for d in report["docs"]),
+                  "未发布基线应标注远端不可访问且不得宣称已可访问")
+        finally:
+            server.stop()
+
+
 # ---------- 审查修复票 01:反例固化(修复前红、修复后绿) ----------
 
 def test_append_result_readback_failure_keeps_uncertain() -> None:

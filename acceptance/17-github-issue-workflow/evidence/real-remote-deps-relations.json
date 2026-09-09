@@ -1,0 +1,12 @@
+{
+  "edges": {
+    "03-storm-warning": [
+      "01-harbor-timer"
+    ],
+    "02-crane-sprite": [],
+    "01-harbor-timer": []
+  },
+  "unresolved": [],
+  "cycles": [],
+  "ok": true
+}

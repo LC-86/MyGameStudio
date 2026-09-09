@@ -2,12 +2,15 @@
 
 ## 覆盖声明(先读)
 
-- 本验收的「远端」是**本地 HTTP 替身** `standin_github.py`(127.0.0.1 动态端口,
+- 本验收主线的「远端」是**本地 HTTP 替身** `standin_github.py`(127.0.0.1 动态端口,
   实现 GitHub REST 子集 + 故障注入),**不是真实 GitHub**。
-- **真实远端写入验收保留待办**:需要用户提供明确授权的测试仓库
-  (host/owner/repo 与写入授权)。未获授权时不创建、不写入任何真实
-  GitHub 仓库/Issues,不使用 gh 或 API 做远端写操作;gh CLI 仅做只读
-  版本检测。
+- **真实远端写入验收已于 2026-09-09 完成**(用户授权):`remote-replay.sh`
+  在一次性私有测试仓库 `LC-86/mgs-issue-accept-test` 上对真实
+  api.github.com 确定性重放第 4 段远端操作序列(38 PASS/0 FAIL,证据前缀
+  `real-remote-*`);替身故障注入语义仍由本验收主线与静态套件固化,不在
+  真实远端重放。仓库准备:gh 建私有空仓库 + 预建五个项目标签
+  (triage/info/agent-ready/human-ready/wont-do),令牌经
+  `gh auth token` 运行时注入进程环境,不落盘、不回显、证据脱敏核对。
 - 两个真实模型 turn(W1 统筹经 `$game-init`、W2 制作实现纯指令轮)在
   隔离 HOME/CODEX_HOME(/tmp)中经 app-server 通路完成;凭据用符号链接,
   不修改用户全局配置。
@@ -55,8 +58,12 @@
 ## 复现
 
 ```bash
-./acceptance/17-github-issue-workflow/run.sh   # 消耗 4 个真实模型 turn
+./acceptance/17-github-issue-workflow/run.sh          # 替身主线,消耗 4 个真实模型 turn
+gh repo create mgs-issue-accept-test --private        # 真实远端重放前置:一次性私有空仓库
+for l in triage info agent-ready human-ready wont-do; do gh label create "$l" -R <owner>/mgs-issue-accept-test; done
+./acceptance/17-github-issue-workflow/remote-replay.sh <owner>/mgs-issue-accept-test  # 真实远端,0 模型调用
 ```
 
-证据在 `acceptance/17-github-issue-workflow/evidence/`;隔离环境在
-`/tmp/mygamestudio-accept-17`,受保护区在仓库 `.tmp/accept-17/`。
+证据在 `acceptance/17-github-issue-workflow/evidence/`(真实远端前缀
+`real-remote-*`);隔离环境在 `/tmp/mygamestudio-accept-17`,受保护区在仓库
+`.tmp/accept-17/`(真实远端重放用 `.tmp/accept-17-real/`)。

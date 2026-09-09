@@ -1056,7 +1056,7 @@ def _cli() -> int:
                     f"handover 仅用于 github-issues 后端的远端交接核对"
                     f"(当前 {config['backend']})")
             # 可达性结论只能来自实际执行的检查(S4):建立真实读取通道
-            payload = mgs_github.handover_baselinecheck_item(
+            payload = mgs_github.handover_baseline_check(
                 root, args.config, transport=read_transport(config))
         elif args.cmd == "switch-plan":
             import mgs_github  # noqa: PLC0415
