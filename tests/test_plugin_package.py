@@ -2097,6 +2097,183 @@ def test_dist_rebuild_byte_reproducible() -> None:
               f"{list(leaked)[:3]}")
 
 
+def test_accept16_sanitize_covers_unenumerated_tokens() -> None:
+    """审查修复票 04(R6):脱敏不依赖实例名枚举——ARENA 中任何令牌文件
+    (含手工续作签发、从未进入任何名单的新实例)的明文都必须被替换。
+
+    反例背景:sanitize() 曾枚举固定实例名(proto1…prod2),手工续作轮签发的
+    rev2/prod3 令牌文件在 ARENA 却不在名单内,明文进入证据与 Git 历史,
+    「脱敏核对通过」结论不成立。本探针把名单内全部老实例与名单外新实例
+    同时放进夹具 ARENA,直接执行从 run.sh 提取的 sanitize() 实现。
+    """
+
+    import secrets as pysecrets
+    import subprocess
+    import tempfile
+
+    run_sh = REPO_ROOT / "acceptance" / "16-producer-complete-loop" / "run.sh"
+    if not run_sh.is_file():
+        check(False, "缺少 acceptance/16-producer-complete-loop/run.sh")
+        return
+    text = run_sh.read_text(encoding="utf-8")
+    match = re.search(r"^sanitize\(\) \{.*?^\}", text, re.MULTILINE | re.DOTALL)
+    check(match is not None, "run.sh 应定义 sanitize() 函数")
+    if match is None:
+        return
+    func_src = match.group(0)
+
+    with tempfile.TemporaryDirectory(prefix="mgs-r6-sanitize-") as tmp:
+        tmp_path = Path(tmp)
+        arena = tmp_path / "arena"
+        arena.mkdir()
+        tokens: dict[str, str] = {}
+        # 名单内全部老实例(旧实现可完整跑通,红点只落在漏覆盖的新实例上)
+        for name in ("proto1", "prod1", "spec1", "plan1", "impl1", "impl2",
+                     "rev1", "pt1", "dsgn1", "prod2",
+                     "rev2", "prod3", "impl7"):  # 后三个不在旧枚举名单内
+            token = pysecrets.token_hex(32)
+            tokens[name] = token
+            (arena / f"{name}.token").write_text(token + "\n", encoding="utf-8")
+        ev = tmp_path / "tXb-events.jsonl"
+        ev.write_text("\n".join(
+            f'{{"seq": {i}, "msg": "token {t} 开头"}}'
+            for i, t in enumerate(tokens.values())) + "\n", encoding="utf-8")
+        script = (
+            "set -eu\n"
+            f'ARENA="{arena}"\n'
+            f"{func_src}\n"
+            f'sanitize "{ev}"\n'
+        )
+        result = subprocess.run(["bash", "-c", script],
+                                capture_output=True, text=True)
+        check(result.returncode == 0,
+              f"sanitize 子进程失败:{result.stderr.strip()[:300]}")
+        body = ev.read_text(encoding="utf-8")
+        check(tokens["prod1"] not in body and "<redacted-prod1-token>" in body,
+              "sanitize 应替换名单内实例令牌(基线对照)")
+        for name in ("rev2", "prod3", "impl7"):
+            check(tokens[name] not in body,
+                  f"sanitize 后证据仍含未枚举实例 {name} 的令牌明文(枚举漏覆盖,R6)")
+            check(f"<redacted-{name}-token>" in body,
+                  f"sanitize 未把未枚举实例 {name} 的令牌替换为占位符")
+
+
+def test_accept16_secret_scan_gate() -> None:
+    """审查修复票 04(R6):证据入库前的独立扫描——与脱敏实现分离的第二道核对。
+
+    机制:从证据与项目文件提取全部 64 位小写 hex 候选串,逐一计算 SHA-256
+    与运行根实例登记(instances.json 的 token_hash 全量集合,不枚举实例名)
+    及 ARENA 全部令牌文件比对,命中即失败。注入明文令牌时验收必须失败;
+    报告只含位置与实例号,不回显明文。
+    """
+
+    import secrets as pysecrets
+    import subprocess
+    import tempfile
+
+    scanner = REPO_ROOT / "acceptance" / "16-producer-complete-loop" / "secret_scan.py"
+    check(scanner.is_file(), "缺少独立扫描脚本 secret_scan.py(与脱敏实现分离)")
+    if not scanner.is_file():
+        return
+    with tempfile.TemporaryDirectory(prefix="mgs-r6-scan-") as tmp:
+        tmp_path = Path(tmp)
+        ev = tmp_path / "evidence"
+        ev.mkdir()
+        proj = tmp_path / "proj"
+        proj.mkdir()
+        arena = tmp_path / "arena"
+        arena.mkdir()
+        tok_registered = pysecrets.token_hex(32)   # 已登记、未存 ARENA(未落盘的续作实例)
+        tok_arena_only = pysecrets.token_hex(32)   # 只存 ARENA、不在登记(互补路径)
+        registry = {"instances": [
+            {"instance_id": "i-scanreg1", "role": "review", "task": "16-review-round-50s",
+             "token_hash": hashlib.sha256(tok_registered.encode()).hexdigest()},
+            {"instance_id": "i-scanreg2", "role": "producer", "task": "16-loop-sync",
+             "token_hash": hashlib.sha256(b"decoy-hash-input").hexdigest()},
+        ]}
+        registry_path = tmp_path / "instances.json"
+        registry_path.write_text(json.dumps(registry, ensure_ascii=False),
+                                 encoding="utf-8")
+        (arena / "manual9.token").write_text(tok_arena_only + "\n", encoding="utf-8")
+
+        def run_scan() -> subprocess.CompletedProcess:
+            return subprocess.run(
+                [sys.executable, str(scanner),
+                 "--evidence", str(ev), "--project", str(proj),
+                 "--registry", str(registry_path),
+                 "--arena-tokens", str(arena)],
+                capture_output=True, text=True)
+
+        # 干净证据:红acted 占位符 + 与登记无关的合法 SHA-256(文件/策略哈希)
+        unrelated = hashlib.sha256(b"unrelated file content").hexdigest()
+        (ev / "t1-events.jsonl").write_text(
+            '{"msg": "<redacted-prod1-token> ok"}\n{"sha": "' + unrelated + '"}\n',
+            encoding="utf-8")
+        (proj / "PROJECT.md").write_text("# 项目\n基线 " + unrelated + "\n",
+                                         encoding="utf-8")
+        r0 = run_scan()
+        check(r0.returncode == 0,
+              f"干净证据(占位符+无关哈希)应通过独立扫描:{r0.stdout[-300:]}")
+
+        # 注入 1:已登记实例的凭据明文(未存 ARENA)→ 验收失败,指认实例与位置
+        injected = ev / "t6b-events.jsonl"
+        injected.write_text('{"n": 1}\n{"msg": "' + tok_registered + ' 附言"}\n',
+                            encoding="utf-8")
+        r1 = run_scan()
+        check(r1.returncode == 1,
+              "注入已登记实例凭据明文时独立扫描必须失败(退出 1,验收失败)")
+        check("i-scanreg1" in r1.stdout, "扫描报告应指认登记实例号(不枚举名字)")
+        check("t6b-events.jsonl" in r1.stdout, "扫描报告应定位证据文件")
+        check(tok_registered not in r1.stdout + r1.stderr,
+              "扫描报告不得回显令牌明文")
+
+        # 注入 2:仅存 ARENA 的令牌明文(与登记互补)→ 同样失败
+        injected.write_text('{"n": 1}\n{"msg": "' + tok_arena_only + '"}\n',
+                            encoding="utf-8")
+        r2 = run_scan()
+        check(r2.returncode == 1, "仅存 ARENA 的令牌明文也应被独立扫描发现")
+        check("manual9" in r2.stdout, "扫描报告应指认 ARENA 令牌文件名")
+        check(tok_arena_only not in r2.stdout + r2.stderr,
+              "扫描报告不得回显令牌明文(ARENA 路径)")
+
+        # 注入 3:项目目录(而非证据目录)泄漏 → 同样失败
+        injected.write_text("", encoding="utf-8")
+        (proj / "WORK.md").write_text("记录 " + tok_registered + "\n",
+                                      encoding="utf-8")
+        r3 = run_scan()
+        check(r3.returncode == 1, "项目目录中的凭据明文同样必须使扫描失败")
+
+        # 登记文件缺失 → 配置错误(退出 2),不得静默通过
+        r4 = subprocess.run(
+            [sys.executable, str(scanner),
+             "--evidence", str(ev), "--project", str(proj),
+             "--registry", str(tmp_path / "missing.json"),
+             "--arena-tokens", str(arena)],
+            capture_output=True, text=True)
+        check(r4.returncode == 2, "登记文件缺失应报配置错误(退出 2),不得静默通过")
+
+        # 扫描目标为零(路径不存在/为空)→ 失效闭合,不得静默通过
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        r5 = subprocess.run(
+            [sys.executable, str(scanner),
+             "--evidence", str(empty), "--project", str(tmp_path / "no-such-dir"),
+             "--registry", str(registry_path),
+             "--arena-tokens", str(arena)],
+            capture_output=True, text=True)
+        check(r5.returncode == 2,
+              "扫描目标为零应报输入错误(退出 2,失效闭合),不得静默通过")
+
+    # run.sh 接线:末段以独立扫描替代枚举 grep,按运行根登记全量比对
+    run_sh = (REPO_ROOT / "acceptance" / "16-producer-complete-loop" / "run.sh")
+    if run_sh.is_file():
+        text = run_sh.read_text(encoding="utf-8")
+        check('python3 -B "$ACC_DIR/secret_scan.py"' in text,
+              "run.sh 应以命令形态调用独立扫描脚本(注释字样不算)")
+        check('--registry "$RUNROOT/instances.json"' in text,
+              "run.sh 扫描应按运行根实例登记全量比对(不枚举实例名)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -2140,6 +2317,8 @@ def main() -> int:
     test_accept18_fixture()
     test_dist_package_consistent()
     test_dist_rebuild_byte_reproducible()
+    test_accept16_sanitize_covers_unenumerated_tokens()
+    test_accept16_secret_scan_gate()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

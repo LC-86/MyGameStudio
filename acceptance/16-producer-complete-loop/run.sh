@@ -5,6 +5,9 @@
 #      RESUME=1 ./run.sh [同上环境根目录] —— 断点续跑:已产出报告的轮次跳过执行
 #      (复用既有环境与证据,不重建、不清证据;被超时截断的轮可先以新实例手工补
 #      一个续作轮,证据前缀如 t5b,本脚本会把 t5+t5b 报告合并核对)。
+#      续作实例凭据按约定存为 .tmp/accept-16/<名>.token/.id:脱敏遍历 ARENA
+#      全部令牌文件(不枚举实例名),末段另有按运行根登记哈希全量比对的独立
+#      扫描(secret_scan.py),证据含任何已登记凭据明文即验收失败。
 #
 # 前提:
 # - 本机已安装并登录 codex CLI(隔离 CODEX_HOME + 指向真实 auth.json 的符号链接,
@@ -482,10 +485,20 @@ else
 fi
 say "初始策略 SHA-256: $POLICY0"
 
-sanitize() { # 用 <redacted-*> 替换证据中的全部原始令牌
-  local f="$1" name tok
-  for name in proto1 prod1 spec1 plan1 impl1 impl2 rev1 pt1 dsgn1 prod2; do
-    tok=$(cat "$ARENA/$name.token")
+sanitize() { # 用 <redacted-*> 替换证据中的全部原始令牌(机制化:遍历 ARENA 内
+             # 全部 *.token 文件,覆盖任何签发/续作实例,不枚举实例名——续作轮
+             # 手工签发的实例只要按约定把凭据存为 $ARENA/<名>.token 即被覆盖)
+  local f="$1" path name tok
+  for path in "$ARENA"/*.token; do
+    [ -f "$path" ] || continue
+    name="${path##*/}"; name="${name%.token}"
+    case "$name" in
+      *[!A-Za-z0-9_-]*)
+        echo "sanitize: 跳过非常规命名的令牌文件 $name(占位符含元字符)" >&2
+        continue ;;
+    esac
+    tok=$(head -n 1 "$path")
+    [ -n "$tok" ] || continue
     sed -i '' -e "s/$tok/<redacted-$name-token>/g" "$f"
   done
 }
@@ -503,6 +516,9 @@ run_turn() { # run_turn <证据前缀> <工作区> <mention> <文本> <超时秒
     --out "$EVIDENCE_DIR/$prefix-report.md" --events-out "$EVIDENCE_DIR/$prefix-events.jsonl" \
     --timeout "$tmo" > "$EVIDENCE_DIR/$prefix-runlog.txt" 2>&1
   local rc=$?
+  if [ -s "$EVIDENCE_DIR/$prefix-runlog.txt" ]; then
+    sanitize "$EVIDENCE_DIR/$prefix-runlog.txt"   # 客户端 stdout 同为证据,一并脱敏
+  fi
   if [ -s "$EVIDENCE_DIR/$prefix-report.md" ]; then
     sanitize "$EVIDENCE_DIR/$prefix-report.md"
   fi
@@ -1370,14 +1386,20 @@ fi
   echo "policy-initial: $POLICY0"
   echo "policy-final:   $POLICY1"
 } > "$EVIDENCE_DIR/policy-sha256.txt"
-LEAK=0
-for name in proto1 prod1 spec1 plan1 impl1 impl2 rev1 pt1 dsgn1 prod2; do
-  if [ -f "$ARENA/$name.token" ]; then
-    if grep -rq "$(cat "$ARENA/$name.token")" "$PROJ" 2>/dev/null; then LEAK=1; fi
-    if grep -rq "$(cat "$ARENA/$name.token")" "$EVIDENCE_DIR" 2>/dev/null; then LEAK=1; fi
-  fi
-done
-[ "$LEAK" = "0" ] && ok "项目与证据目录均未发现任何原始令牌" || bad "发现原始令牌泄漏"
+# 独立扫描(R6 机制化,与 sanitize 实现分离):证据入库前对全部证据与项目文件
+# 做凭据明文核对——提取 64 位 hex 候选串,与运行根登记的全部 token_hash(不
+# 枚举实例名、不区分已释放/过期)及 ARENA 全部令牌文件比对;发现即验收失败。
+# 报告只含位置与实例号,不含明文;输入错误(退出 2)同样按泄漏核对失败处理。
+python3 -B "$ACC_DIR/secret_scan.py" \
+  --evidence "$EVIDENCE_DIR" --project "$PROJ" \
+  --registry "$RUNROOT/instances.json" --arena-tokens "$ARENA" \
+  > "$EVIDENCE_DIR/secret-scan.txt" 2>&1
+LEAK=$?
+if [ "$LEAK" = "0" ]; then
+  ok "独立扫描:证据与项目均无已登记实例凭据明文(登记哈希全量比对,留档 evidence/secret-scan.txt)"
+else
+  bad "独立扫描发现已登记实例凭据明文或扫描输入错误(退出 $LEAK),证据不得入库(详见 evidence/secret-scan.txt)"
+fi
 { ps aux | grep -E "codex (app-server|exec)" | grep -v grep || true; } > "$EVIDENCE_DIR/ps-final.txt"
 codex_orphans > "$ARENA/ps-final-now.txt" || true
 PS_NEW=$(comm -13 "$ARENA/ps-baseline.txt" "$ARENA/ps-final-now.txt" || true)

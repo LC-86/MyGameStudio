@@ -81,3 +81,11 @@ run1(T1-T5 完整,T5 超 2700s 截断)→ t5b 首次手工启动误用相对 MGS
 #### 接续位置
 
 票 17(GitHub Issues 后端)与 18(完整包验收)可直接复用:`plugin/skills/game-producer/` 的入口分类/闭环委派/完成判定纪律与「直接专业调用结果的同步」;`acceptance/16-producer-complete-loop/` 的 RESUME 断点续跑机制(长验收遇服务退化时可分阶段完成并以重放收敛)、hash_diff/TURN_EXECUTED/no_false_pass 辅助与「夹具承接上票终态逐字节」模式;`.tmp/accept-16/` 保存本轮终态(GAME_DESIGN v5、TECH_DESIGN v4、PROJECT v4、13/14 已完成、02/06/10/11 待验收、04/05/08 重核待执行、双阶段讨论未决、urgent-window 原型)可作后续票夹具基底(.tmp 属 gitignored 临时区,持久夹具以 acceptance/ 目录为准);运行保障与统一接口无改动,策略基线沿用票 13-15。
+
+### 2026-09-09 — 审查修复票 04 完成：R6 证据凭据泄漏的脱敏机制化与独立扫描
+
+2026-09-09 独立审查 R6 实证本票续作轮证据（t6b/t9b-events.jsonl）保留了两枚真实执行令牌明文并已进入 Git 历史——当时 sanitize() 与泄漏核对均靠固定名单枚举，手工续作签发的 rev2/prod3 实例不在名单内，「脱敏核对通过」结论不成立（报告：[../../mygamestudio-v1-review-fixes/evidence/review.md](../../mygamestudio-v1-review-fixes/evidence/review.md) R6）。
+
+已修复（[修复票 04](../../mygamestudio-v1-review-fixes/issues/04-credential-leak-evidence-sanitize.md)）：sanitize() 改为遍历 ARENA 全部令牌文件（不枚举实例名），runlog 一并脱敏；新增与脱敏实现分离的 `secret_scan.py` 独立扫描（登记 token_hash 全量哈希比对 + ARENA 令牌文件互补，命中即验收失败、报告不含明文），替换段 18 的枚举式泄漏 grep；回归固化于 `tests/test_plugin_package.py`（先红后绿）。两枚令牌经只读核对均按登记自然过期（到期 2026-09-09T05:46:23Z/05:55:50Z，`released=false`，留档于修复票 evidence）；撤销与 Git 历史处理待用户决定。
+
+对本票结论的影响：闭环行为证据（153 PASS/0 FAIL 及各轮模型行为）不受影响；「证据保密」一项的旧核对方式失效，机制修复后本票验收脚本再跑（含 RESUME 重放）会对 t6b/t9b 历史明文判 FAIL（失效闭合），历史处置完成前无法全绿复跑。本票勾选状态与原始证据文件不动。
