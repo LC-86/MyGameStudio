@@ -626,6 +626,119 @@ def records_review_fix_section(root: Path) -> None:
           "不确定结果不得被包装成「已保存草稿」的拒绝")
 
 
+def review2_sp1_section(root: Path) -> None:
+    """第二轮审查修复批(票 review2-01):SP-1 反例固化,先红后绿。
+
+    反例底稿:.scratch/mygamestudio-v1-review2-fixes/evidence/extra_probes.py
+    的 remote-config-revoke-inflight 块(2026-09-09 独立复审在 HEAD b89b548
+    复现):remote_record 在锁外读取 CONFIG 仓库授权并构建 backend,锁内只
+    重读身份与 policy——把在途请求暂停在取锁前,另一 GateService 经正常
+    write 入口(内容哈希正确)撤销 CONFIG 的 issues-write 后恢复原请求,
+    仍 allow 且替身新增评论。期望:最终临界区内重读 CONFIG 授权与目标并
+    据此构建 backend,在途请求 deny/remote_scope、远端零写入(records
+    合同:创建或修改远端记录前核对明确的仓库及操作授权)。
+    """
+
+    sys.path.insert(0, str(REPO_ROOT / "tests"))
+    import test_github_backend as gh_fixtures  # noqa: PLC0415
+
+    base = root / "review2-sp1"
+    project = gh_fixtures.make_github_project(base / "project")
+    runtime = base / "runtime"
+    svc = GateService(runtime)
+    peer = GateService(runtime)  # 另一会话入口,与探针的双 GateService 时序一致
+    resources = ["github://github.com/mygamestudio/issue-accept/issues/**",
+                 "docs/mygamestudio/CONFIG.md"]
+    svc.init_policy(project, {"producer": resources}, {"production": None})
+    inst = svc.create_instance("producer", "remote", "production", resources)
+    admin = svc.create_instance("producer", "config-update", "production",
+                                resources)
+    svc._write_json("remote.json", {"github": {
+        "api_base": "http://unused.invalid", "token_env": "MGS_TEST_UNUSED",
+        "cache_dir": str(base / "cache")}})
+    transport = gh_fixtures.FakeTransport()
+    transport.seed_issue("01-task", "Existing")
+
+    # 基线:撤销前合法远端写入放行(授权在场,语义与性能不回退的前提)
+    ok = peer.remote_record(inst.token, "append-result",
+                            {"identity": "01-task", "result_markdown": "撤销前"},
+                            transport=transport)
+    check(ok["decision"] == "allow",
+          f"SP-1:撤销前合法远端写入应放行,实际 {ok}")
+    check(len(transport.comments[1]) == 1,
+          f"SP-1:撤销前应恰新增 1 条评论,实际 {len(transport.comments[1])}")
+
+    # 在途时序:写线程停在取锁前(锁外 CONFIG 已读完),撤销先完成再恢复。
+    # 与 R1-remote 的差别:暂停点在锁本身,覆盖「锁外 CONFIG 读取→取锁」窗口。
+    real_lock = svc._locked
+    waiting = threading.Event()
+    resume = threading.Event()
+    outcome: dict = {}
+
+    def paused_lock():
+        if threading.current_thread().name == "remote-writer":
+            waiting.set()
+            assert resume.wait(5)
+        return real_lock()
+
+    def inflight() -> None:
+        try:
+            outcome["res"] = svc.remote_record(
+                inst.token, "append-result",
+                {"identity": "01-task", "result_markdown": "撤销后在途"},
+                transport=transport)
+        except Exception as exc:  # noqa: BLE001 - 异常本身即断言素材
+            outcome["error"] = repr(exc)
+
+    svc._locked = paused_lock
+    thread = threading.Thread(target=inflight, name="remote-writer")
+    thread.start()
+    try:
+        check(waiting.wait(5), "SP-1:在途请求应先暂停在取锁前")
+        config = project / "docs/mygamestudio/CONFIG.md"
+        old_text = config.read_text(encoding="utf-8")
+        new_text = old_text.replace(gh_fixtures.AUTH, "无(已撤销)")
+        check(new_text != old_text, "SP-1:探针应实际改写 CONFIG 授权行")
+        rev = peer.write(admin.token, "docs/mygamestudio/CONFIG.md", new_text,
+                         expected_sha256=hashlib.sha256(
+                             old_text.encode()).hexdigest())
+        check(rev["decision"] == "allow",
+              f"SP-1:经正常入口撤销 CONFIG 授权应 allow,实际 {rev}")
+        resume.set()
+        thread.join(5)
+        check(not thread.is_alive(), "SP-1:在途线程应在撤销后返回")
+    finally:
+        svc._locked = real_lock
+        resume.set()
+    res = outcome.get("res")
+    check(outcome.get("error") is None,
+          f"SP-1:在途请求不应异常,实际 {outcome.get('error')}")
+    check(res is not None and res["decision"] == "deny"
+          and res["rule_stage"] == "remote_scope",
+          f"SP-1:CONFIG 授权撤销后,在途远端写入必须以 remote_scope 拒绝,"
+          f"实际 {res}")
+    check(len(transport.comments[1]) == 1,
+          f"SP-1:被拒的在途请求不得产生远端写入(评论数应保持 1,"
+          f"实际 {len(transport.comments[1])})")
+    posts = [c for c in transport.calls
+             if c[0] == "POST" and "/comments" in c[1]]
+    check(len(posts) == 1,
+          f"SP-1:全程应只发出撤销前那 1 次评论 POST,实际 {len(posts)} 次")
+
+    # 撤销后新请求继续拒绝(既有语义不回退);拒绝如实进审计
+    fresh = peer.remote_record(inst.token, "append-result",
+                               {"identity": "01-task",
+                                "result_markdown": "撤销后新请求"},
+                               transport=transport)
+    check(fresh["decision"] == "deny" and fresh["rule_stage"] == "remote_scope",
+          f"SP-1:撤销后新远端请求应继续拒绝,实际 {fresh}")
+    entries = audit_lines(runtime)
+    check(any(e.get("op") == "remote:append-result"
+              and e.get("decision") == "deny"
+              and e.get("rule_stage") == "remote_scope" for e in entries),
+          "SP-1:在途拒绝应留下 remote_scope 审计记录")
+
+
 def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="mgs02-gate-test-"))
     try:
@@ -1237,6 +1350,10 @@ def main() -> int:
         # 35+. 审查修复批(票 01-fix):通道侧反例固化(说明三路一致/
         #      不确定结果如实回报)
         records_review_fix_section(root)
+
+        # 36+. 第二轮审查修复批(票 review2-01):SP-1 在途 CONFIG 授权
+        #      撤销的远端临界区反例固化
+        review2_sp1_section(root)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 

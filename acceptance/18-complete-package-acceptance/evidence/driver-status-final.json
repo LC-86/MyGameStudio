@@ -1,7 +1,7 @@
 {
   "instances": [
     {
-      "instance_id": "i-959443ac0daa",
+      "instance_id": "i-db11eefc6bfa",
       "role": "implement",
       "task": "driver-reg-a",
       "purpose": "production",
@@ -13,7 +13,7 @@
       "expired": false
     },
     {
-      "instance_id": "i-4769537c4d1b",
+      "instance_id": "i-be4c8bea8727",
       "role": "implement",
       "task": "driver-reg-b",
       "purpose": "production",

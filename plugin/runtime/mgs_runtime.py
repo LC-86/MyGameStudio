@@ -39,6 +39,12 @@
   动作不执行(失效闭合);结果审计追加失败时如实回报已发生的远端
   结果并标注未记录,不包装成未执行的拒绝,也不静默丢弃记录责任。
 
+第二轮审查修复批(2026-09-09,review2-01/SP-1):
+- 远端在途授权缺口:remote_record 的项目 CONFIG 后端/仓库目标与
+  issues-write 授权核对、backend 构建移入最终服务锁临界区——CONFIG
+  授权经正常入口被撤销后,锁前已读过旧授权的在途请求在锁内重读时
+  以 remote_scope 拒绝,不可能再写入远端(与 R1 的身份撤销同一纪律)。
+
 本模块只依赖 Python 标准库。MCP 通道与调度 CLI 是它的两个入口。
 """
 
@@ -856,6 +862,55 @@ class GateService:
                     f"{restrict}: {resource}")
         return None
 
+    def _remote_config_state(self, policy: dict, config_rel: str,
+                             action: str,
+                             payload: dict) -> tuple[dict | None, str, dict,
+                                                     tuple[str, str] | None]:
+        """读取项目 CONFIG 并核对远端通道适用性与仓库级授权(SP-1)。
+
+        返回 (config, resource, note, denial):denial 非 None 时为
+        (rule_stage, reason),其余返回值无意义;否则 config 为本次读到的
+        配置,resource/note 按其仓库目标构造。锁外调用只做快速预检;
+        最终临界区内再次调用——CONFIG 后端/授权经正常入口被撤销或变更后,
+        在途远端请求以锁内重读的结果拒绝,并据此构建 backend(records
+        合同:创建或修改远端记录前核对明确的仓库及操作授权)。
+        """
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent
+                               / "records"))
+        import mgs_github  # noqa: PLC0415
+        import mgs_records  # noqa: PLC0415
+
+        project_root = Path(policy["project_root"])
+        try:
+            config = mgs_records.load_config(project_root, config_rel)
+        except mgs_records.RecordsError as exc:
+            return None, "", {}, ("remote_scope",
+                                  f"项目协作配置不可读:{exc}")
+        if config["backend"] != "github-issues" or not config.get("repo"):
+            return None, "", {}, (
+                "remote_scope",
+                f"项目任务后端为 {config['backend']!r},远端通道仅服务 "
+                "github-issues 后端项目")
+        repo = config["repo"]
+        allowed, auth_note = mgs_github._authorization_for(
+            config, "issues-write")
+        if not allowed:
+            return None, "", {}, ("remote_scope", auth_note)
+        identity = str(payload.get("identity") or "")
+        granularity = self.REMOTE_ACTIONS[action]
+        base = f"github://{repo['host']}/{repo['owner']}/{repo['repo']}/issues"
+        if granularity == "collection":
+            resource = base
+        else:
+            if not identity:
+                return None, "", {}, ("channel", "缺少 identity")
+            resource = (f"{base}/{identity}" if granularity == "task"
+                        else f"{base}/{identity}/comments")
+        note = {"action": action,
+                "repo": f"{repo['host']}/{repo['owner']}/{repo['repo']}"}
+        return config, resource, note, None
+
     def remote_record(self, token: str, action: str, payload: dict,
                       *, transport=None) -> dict:
         """受控远端任务操作入口(工作实例在会话内经 mgs-gate 提交)。
@@ -863,8 +918,10 @@ class GateService:
         逐次校验:凭据(身份)→ 远端通道配置(channel)→ 项目 CONFIG 后端
         与仓库级 issues-write 授权(remote_scope)→ 任务授权(task_grant)
         → 角色范围(role_scope)→ 用途(purpose),全通过后才经适配器执行;
-        上游不可用失效闭合(remote_upstream,不绕行直连;缓存目录可用时
-        由适配器保存未发布草稿并在结果中回报)。允许与拒绝都进审计。
+        CONFIG 读取与授权核对在锁外快速预检后,于最终临界区内重读复核并
+        据此构建 backend(SP-1:授权撤销覆盖在途请求)。上游不可用失效
+        闭合(remote_upstream,不绕行直连;缓存目录可用时由适配器保存
+        未发布草稿并在结果中回报)。允许与拒绝都进审计。
         写入意图先于执行持久记录,审计不可用则动作不执行;结果审计失败时
         如实回报已发生的远端结果(R4)。
         """
@@ -893,41 +950,15 @@ class GateService:
         import mgs_github  # noqa: PLC0415
         import mgs_records  # noqa: PLC0415
 
-        project_root = Path(policy["project_root"])
         config_rel = str(payload.get("config_rel") or mgs_records.DEFAULT_CONFIG_REL)
-        try:
-            config = mgs_records.load_config(project_root, config_rel)
-        except mgs_records.RecordsError as exc:
-            return self._deny(op, "remote_scope",
-                              f"项目协作配置不可读:{exc}", token, record,
-                              policy, action)
-        if config["backend"] != "github-issues" or not config.get("repo"):
-            return self._deny(
-                op, "remote_scope",
-                f"项目任务后端为 {config['backend']!r},远端通道仅服务 "
-                "github-issues 后端项目", token, record, policy, action)
-        repo = config["repo"]
-        allowed, auth_note = mgs_github._authorization_for(config, "issues-write")
-        if not allowed:
-            return self._deny(op, "remote_scope", auth_note, token, record,
-                              policy, action)
-
-        identity = str(payload.get("identity") or "")
-        granularity = self.REMOTE_ACTIONS[action]
-        if granularity == "collection":
-            resource = f"github://{repo['host']}/{repo['owner']}/{repo['repo']}/issues"
-        elif granularity == "task":
-            if not identity:
-                return self._deny(op, "channel", "缺少 identity", token, record,
-                                  policy, action)
-            resource = (f"github://{repo['host']}/{repo['owner']}/{repo['repo']}"
-                        f"/issues/{identity}")
-        else:
-            if not identity:
-                return self._deny(op, "channel", "缺少 identity", token, record,
-                                  policy, action)
-            resource = (f"github://{repo['host']}/{repo['owner']}/{repo['repo']}"
-                        f"/issues/{identity}/comments")
+        # 锁外快速预检(SP-1):尽早拒绝不可用请求;最终判定以临界区内
+        # 重读的 CONFIG 为准(见下),此处读到的 config 不再沿用,backend
+        # 也只在锁内按重读结果构建。
+        config, resource, note, config_denial = self._remote_config_state(
+            policy, config_rel, action, payload)
+        if config_denial is not None:
+            return self._deny(op, config_denial[0], config_denial[1],
+                              token, record, policy, action)
         grant = self._remote_grant_denial(record, policy, resource)
         if grant is not None:
             return self._deny(op, grant[0], grant[1],
@@ -936,10 +967,6 @@ class GateService:
         env_token = os.environ.get(channel["token_env"], "").strip()
         active_transport = transport or mgs_github.UrllibTransport(
             api_base=channel["api_base"], token=env_token or None)
-        backend = mgs_github.GithubBackend(
-            config, active_transport, channel.get("cache_dir"))
-        note = {"action": action,
-                "repo": f"{repo['host']}/{repo['owner']}/{repo['repo']}"}
 
         # R1/R4:与本地 write() 同一临界区纪律——最终身份、策略与授权核对、
         # 写入意图的持久记录、远端动作的执行与结果审计都持有服务锁完成。
@@ -948,6 +975,11 @@ class GateService:
         # 本地写入串行,占锁时长受传输超时约束(不无限持有)。
         # R4:改变远端状态的写入意图先于执行持久记录,审计不可用时动作不
         # 执行(失效闭合);只读动作(read)不改变远端状态,不要求意图记录。
+        # SP-1:项目 CONFIG(后端类型、仓库目标、issues-write 授权)同样在
+        # 临界区内重读——CONFIG 经正常 write 入口被撤销后,锁前已读过旧
+        # 授权的在途请求在锁内重读时被拒(remote_scope),backend 也按锁内
+        # 读到的 CONFIG 构建,不沿用锁外快照(R1 修身份撤销,本条补齐
+        # CONFIG 授权撤销的同一最终检查)。
         denial: tuple[str, str, dict | None] | None = None
         outcome: dict | None = None
         with self._locked():
@@ -960,9 +992,18 @@ class GateService:
                     denial = ("policy", "runtime policy missing, corrupt or "
                               "malformed (fail closed)", None)
             if denial is None:
+                config, resource, note, config_denial = (
+                    self._remote_config_state(policy, config_rel, action,
+                                              payload))
+                if config_denial is not None:
+                    denial = (config_denial[0], config_denial[1], None)
+            if denial is None:
                 grant = self._remote_grant_denial(record, policy, resource)
                 if grant is not None:
                     denial = (grant[0], grant[1], None)
+            if denial is None:
+                backend = mgs_github.GithubBackend(
+                    config, active_transport, channel.get("cache_dir"))
             if denial is None and action != "read":
                 try:
                     self._audit_unlocked({
