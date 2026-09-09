@@ -13,8 +13,10 @@
 未登记且未保存的未知格式秘密不在探测范围内(与审查报告的有限模式
 扫描边界一致);令牌被大写化、分块跨行或嵌入更长 hex 串等变形形态
 不产生候选,同样不在探测范围。证据中的合法 SHA-256(文件/策略哈希)
-与登记 token_hash 碰撞的概率可忽略,不会误报。扫描目标为零(路径
-缺失或为空)按输入错误处理(退出 2),不静默通过。
+与登记 token_hash 碰撞的概率可忽略,不会误报。指定的每个扫描根
+(--evidence/--project)逐一核验:任一根缺失或遍历出错(子目录不可读)
+按输入错误处理(退出 2),存在的干净根不得掩盖另一指定根缺失——
+复审二 SP-4;扫描目标总数为零(根存在但为空)同样退出 2,不静默通过。
 
 用法:
   python3 secret_scan.py --evidence <证据目录> --project <项目目录> \
@@ -81,12 +83,22 @@ def load_arena_tokens(path: str, errors: list[str]) -> dict[str, str]:
     return mapping
 
 
-def iter_files(roots: list[str]):
+def iter_files(roots: list[str], errors: list[str]):
+    # SP-4:逐根核验——任一指定根缺失或遍历出错都记入输入错误,不静默跳过;
+    # 存在的干净根产出的文件数不得掩盖另一个根缺失(旧实现只看总数)
     for root in roots:
         if os.path.isfile(root):
             yield root
             continue
-        for dirpath, dirnames, filenames in os.walk(root):
+        if not os.path.exists(root):
+            errors.append(f"指定的扫描根不存在:{root}")
+            continue
+
+        def record_walk_error(exc: OSError, root: str = root) -> None:
+            errors.append(
+                f"扫描根遍历失败:{getattr(exc, 'filename', None) or root}:{exc}")
+
+        for dirpath, dirnames, filenames in os.walk(root, onerror=record_walk_error):
             dirnames.sort()
             for filename in sorted(filenames):
                 yield os.path.join(dirpath, filename)
@@ -111,7 +123,7 @@ def main() -> int:
     arena = load_arena_tokens(args.arena_tokens, errors)
 
     scanned = 0
-    for path in iter_files(list(args.evidence) + list(args.project)):
+    for path in iter_files(list(args.evidence) + list(args.project), errors):
         scanned += 1
         try:
             with open(path, encoding="utf-8", errors="replace") as fh:

@@ -29,7 +29,7 @@
 | 5 | P 环闭环 | P1 `$game-producer` 目标变化(PROJECT v2、任务重分流、依赖重排、委派记录、越界探针)→ P2 被委派 `$game-design` 决策地图(制图不裁决,records/ 写入,越界探针)→ P3 直接 `$game-status`(只读、反映新状态) |
 | 6 | G 环 GitHub 替身 | 调度侧 switch-plan/apply(确认留档;CONFIG 预置)→ CLI 建 03/04 → G1 统筹 mgs_remote 读/安排更新/结果评论 allow + 越界 task_grant deny + 直连探针被沙箱拒 → 驱动式上游失联失效闭合与草稿重放 |
 | 7 | R 环运行保障回归 | R1 双凭据:合法写/角色 deny/占用 deny/任务粒度 deny/换链 deny/间接写(shell+python)被 OS 拒;驱动式策略损坏 fail-closed + 恢复后同凭据续用;R1b 释放后旧凭据 identity 拒;reclaim-locks 活跃拒/释放后回收 |
-| 8 | 终态 | 四运行根审计字段完整;令牌/替身凭据零泄漏;实例释放;汇总 |
+| 8 | 终态 | 四运行根审计字段完整;令牌/替身凭据零泄漏(独立扫描 secret_scan.py,逐运行根登记全量比对,不枚举实例名——复审二 SP-5 机制化,沿票 16/票 04 先例);实例释放;汇总 |
 
 ## 与票面七条验收标准的对应
 

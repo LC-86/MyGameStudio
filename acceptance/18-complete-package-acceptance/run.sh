@@ -20,7 +20,8 @@
 #     (mgs_remote allow/deny + 直连探针)→ 驱动式上游失联失效闭合
 #  7. R 环(运行保障回归·交付包):R1 角色交集/任务粒度/占用/间接写入/换链
 #     探针;驱动式策略损坏失效闭合与恢复;R1b 凭据失效后拒绝;占用回收
-#  8. 终态:审计字段、令牌泄漏、占用清空、汇总
+#  8. 终态:审计字段、令牌泄漏(独立扫描 secret_scan.py,逐运行根登记全量
+#     比对,复审二 SP-5 机制化)、占用清空、汇总
 #
 # 真实模型 turn 共 9 个:N1/U1/U2/P1/P2/P3/G1/R1/R1b。
 # 声明:G 环「远端」为本地 HTTP 替身(非真实 GitHub);真实远端写入验收
@@ -42,6 +43,7 @@ PROJ_R="$ARENA/reg/project";  RUNROOT_R="$ARENA/reg/runtime"
 GH_CACHE="$ARENA/gh/cache";   GH_EMIT="$ARENA/gh/emit"
 PLUGIN_RUNTIME="$REPO_ROOT/plugin/runtime"
 PLUGIN_RECORDS="$REPO_ROOT/plugin/records"
+SECRET_SCAN="$REPO_ROOT/acceptance/16-producer-complete-loop/secret_scan.py"
 MGS_CLIENT="$ACC_DIR/appserver_client.py"
 GATE_PROBE="$ACC_DIR/gate_probe.py"
 STANDIN="$ACC_DIR/standin_github.py"
@@ -383,14 +385,26 @@ run_turn() { # run_turn <前缀> <home> <codexhome> <运行根> <工作区> <men
   fi
 }
 
-sanitize() { # 证据中的原始令牌与替身凭据全部替换
-  local file="$1" prefix tok
-  for prefix in u_p p_p p_d g_p r_i1 r_i2; do
-    [ -f "$ARENA/$prefix.token" ] || continue
-    tok=$(cat "$ARENA/$prefix.token")
-    sed -i '' "s/$tok/<redacted-token>/g" "$file"
+sanitize() { # 用 <redacted-*> 替换证据中的全部原始令牌(机制化:遍历 ARENA 内
+             # 全部 *.token 文件,覆盖任何签发实例,不枚举实例名——复审二 SP-5;
+             # 收口新增的离线探针实例 g_o 等只要按约定把凭据存为
+             # $ARENA/<名>.token 即被覆盖,机制沿第一轮票 04 在 16 号票的先例)
+  local f="$1" path name tok
+  for path in "$ARENA"/*.token; do
+    [ -f "$path" ] || continue
+    name="${path##*/}"; name="${name%.token}"
+    case "$name" in
+      *[!A-Za-z0-9_-]*)
+        echo "sanitize: 跳过非常规命名的令牌文件 $name(占位符含元字符)" >&2
+        continue ;;
+    esac
+    tok=$(head -n 1 "$path")
+    [ -n "$tok" ] || continue
+    # LC_ALL=C 按字节匹配:令牌为纯 ASCII,不受证据文件中无效 UTF-8 字节
+    # 或运行环境 locale 影响(BSD sed 在 UTF-8 locale 遇无效字节会整体报错跳过)
+    LC_ALL=C sed -i '' -e "s/$tok/<redacted-$name-token>/g" "$f"
   done
-  sed -i '' "s/$GHTOKEN/<redacted-remote-token>/g" "$file"
+  LC_ALL=C sed -i '' -e "s/$GHTOKEN/<redacted-remote-token>/g" "$f"
 }
 
 # 4.3 U1:旧版(0.17.0)上新项目初始化(直接调用 Game-Init)
@@ -918,7 +932,7 @@ sanitize "$EVIDENCE_DIR/r1b-report.md"; sanitize "$EVIDENCE_DIR/r1b-events.jsonl
 
 # ---------- 8. 终态核对与汇总 ----------
 
-say "== 8. 终态:审计字段、令牌泄漏、汇总 =="
+say "== 8. 终态:审计字段、令牌泄漏(独立扫描)、汇总 =="
 for rr in "$RUNROOT_U" "$RUNROOT_P" "$RUNROOT_G" "$RUNROOT_R"; do
   name=$(basename "$(dirname "$rr")")
   cp "$rr/audit/audit.jsonl" "$EVIDENCE_DIR/audit-$name.jsonl"
@@ -936,16 +950,29 @@ PYEOF
 )
   if [ "$N" = "OK" ]; then ok "审计字段完整($name)"; else bad "审计字段缺失($name):$N"; fi
 done
+# 令牌泄漏检查(机制化,复审二 SP-5):不再枚举实例前缀,改为调用 16 号票的
+# 独立扫描器 secret_scan.py(与脱敏实现分离)——对全部证据与四个项目目录
+# 提取 64 位 hex 候选串,逐一 SHA-256 后与各运行根登记(instances.json 的
+# token_hash 全量集合,不枚举实例名、不区分已释放/过期)及 ARENA 全部令牌
+# 文件比对;逐运行根各扫一遍并留档 evidence/secret-scan-<环名>.txt(报告
+# 只含位置与实例号,不含明文)。替身凭据 GHTOKEN 非 hex 形态,保留直查。
+# 扫描输入错误(退出 2,含扫描根缺失/不可遍历,SP-4)同样算泄漏核对失败。
 LEAK=0
-for prefix in u_p p_p p_d g_p r_i1 r_i2; do
-  [ -f "$ARENA/$prefix.token" ] || continue
-  tok=$(cat "$ARENA/$prefix.token")
-  if grep -rlF "$tok" "$EVIDENCE_DIR" "$PROJ_U" "$PROJ_P" "$PROJ_G" "$PROJ_R" 2>/dev/null | grep -q .; then
+for rr in "$RUNROOT_U" "$RUNROOT_P" "$RUNROOT_G" "$RUNROOT_R"; do
+  name=$(basename "$(dirname "$rr")")
+  if python3 -B "$SECRET_SCAN" \
+      --evidence "$EVIDENCE_DIR" \
+      --project "$PROJ_U" --project "$PROJ_P" --project "$PROJ_G" --project "$PROJ_R" \
+      --registry "$rr/instances.json" --arena-tokens "$ARENA" \
+      > "$EVIDENCE_DIR/secret-scan-$name.txt" 2>&1; then
+    :
+  else
     LEAK=$((LEAK+1))
+    say "独立扫描退出非 0($name),证据不得入库(详见 evidence/secret-scan-$name.txt)"
   fi
 done
 grep -rlF "$GHTOKEN" "$EVIDENCE_DIR" "$PROJ_G" 2>/dev/null | grep -q . && LEAK=$((LEAK+1))
-check "原始令牌与替身凭据未泄漏到证据与项目" test "$LEAK" = "0"
+check "原始令牌与替身凭据未泄漏到证据与项目(独立扫描,登记哈希全量比对)" test "$LEAK" = "0"
 
 # 收尾:释放实例与替身
 for pair in "$RUNROOT_U:u_p" "$RUNROOT_P:p_p" "$RUNROOT_P:p_d" "$RUNROOT_G:g_p"; do

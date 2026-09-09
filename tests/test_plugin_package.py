@@ -2159,14 +2159,17 @@ def test_accept16_sanitize_covers_unenumerated_tokens() -> None:
 
 
 def test_accept16_secret_scan_gate() -> None:
-    """审查修复票 04(R6):证据入库前的独立扫描——与脱敏实现分离的第二道核对。
+    """审查修复票 04(R6)+ 复审二 SP-4:证据入库前的独立扫描。
 
     机制:从证据与项目文件提取全部 64 位小写 hex 候选串,逐一计算 SHA-256
     与运行根实例登记(instances.json 的 token_hash 全量集合,不枚举实例名)
     及 ARENA 全部令牌文件比对,命中即失败。注入明文令牌时验收必须失败;
-    报告只含位置与实例号,不回显明文。
+    报告只含位置与实例号,不回显明文。SP-4 补:逐根核验扫描根的存在性与
+    遍历错误——任一指定根缺失/不可遍历即退出 2,存在的干净根不得掩盖
+    另一指定根缺失(旧实现只看全部根的总文件数,会静默成功)。
     """
 
+    import os
     import secrets as pysecrets
     import subprocess
     import tempfile
@@ -2264,6 +2267,42 @@ def test_accept16_secret_scan_gate() -> None:
         check(r5.returncode == 2,
               "扫描目标为零应报输入错误(退出 2,失效闭合),不得静默通过")
 
+        # SP-4(复审二):逐根核验——存在的干净根不得掩盖另一指定根缺失。
+        # 反例:--evidence 干净非空 + --project 不存在 + 有效登记 → 旧实现仅查
+        # 全部根的「总」文件数,退出 0 称扫描完成;期望指认缺失根并退出 2。
+        missing_root = tmp_path / "missing-project"
+        r6 = subprocess.run(
+            [sys.executable, str(scanner),
+             "--evidence", str(ev), "--project", str(missing_root),
+             "--registry", str(registry_path),
+             "--arena-tokens", str(arena)],
+            capture_output=True, text=True)
+        check(r6.returncode == 2,
+              "任一指定扫描根缺失时应逐根报输入错误(退出 2),"
+              "不得因其他根非空而静默成功(SP-4)")
+        check("missing-project" in r6.stdout,
+              "扫描报告应指认缺失的扫描根(退出 2 且点名,SP-4)")
+
+        # SP-4:遍历错误(根存在但子目录不可读)同样逐根失效闭合;
+        # root 用户绕过权限位,不构成反例,跳过
+        if os.geteuid() != 0:
+            locked = tmp_path / "locked-root"
+            (locked / "sub").mkdir(parents=True)
+            (locked / "sub" / "f.txt").write_text("x", encoding="utf-8")
+            os.chmod(locked / "sub", 0)
+            try:
+                r7 = subprocess.run(
+                    [sys.executable, str(scanner),
+                     "--evidence", str(ev), "--project", str(locked),
+                     "--registry", str(registry_path),
+                     "--arena-tokens", str(arena)],
+                    capture_output=True, text=True)
+                check(r7.returncode == 2,
+                      "扫描根不可遍历(子目录不可读)应报输入错误(退出 2),"
+                      "不得静默跳过该子树(SP-4)")
+            finally:
+                os.chmod(locked / "sub", 0o755)
+
     # run.sh 接线:末段以独立扫描替代枚举 grep,按运行根登记全量比对
     run_sh = (REPO_ROOT / "acceptance" / "16-producer-complete-loop" / "run.sh")
     if run_sh.is_file():
@@ -2272,6 +2311,153 @@ def test_accept16_secret_scan_gate() -> None:
               "run.sh 应以命令形态调用独立扫描脚本(注释字样不算)")
         check('--registry "$RUNROOT/instances.json"' in text,
               "run.sh 扫描应按运行根实例登记全量比对(不枚举实例名)")
+
+
+def test_accept18_leak_checks_mechanized() -> None:
+    """复审二 SP-5:票 18 脱敏与泄漏检查不依赖实例名枚举。
+
+    反例背景:sanitize() 与段 8 泄漏检查仍枚举六个旧实例前缀
+    (u_p p_p p_d g_p r_i1 r_i2),收口新增的离线探针实例 g_o 的令牌文件
+    在 ARENA 却不在名单内——注入 g_o.token 明文后脱敏仍残留、泄漏检查
+    退出 0(假绿)。本探针把 run.sh 的 sanitize() 与泄漏检查段落原样提取
+    到合成夹具执行(方法沿复审探针 acceptance-probes.py):
+    - sanitize:ARENA 同时放名单内实例与 g_o,名单内替换为基线对照,
+      g_o 必须同样被替换(机制沿第一轮票 04 在 16 号票的 glob 先例);
+    - 泄漏检查:夹具登记含 g_o token_hash 的运行根 instances.json,
+      证据注入 g_o 明文 → 检查必须判 FAIL(接入 16 号票独立扫描器,
+      --registry 指向运行根登记全量比对);替身凭据 GHTOKEN 的直查保留。
+    """
+
+    import hashlib as pyhash
+    import secrets as pysecrets
+    import shlex
+    import subprocess
+    import tempfile
+
+    run_sh = REPO_ROOT / "acceptance" / "18-complete-package-acceptance" / "run.sh"
+    if not run_sh.is_file():
+        check(False, "缺少 acceptance/18-complete-package-acceptance/run.sh")
+        return
+    text = run_sh.read_text(encoding="utf-8")
+    scanner = REPO_ROOT / "acceptance" / "16-producer-complete-loop" / "secret_scan.py"
+    check(scanner.is_file(), "缺少 16 号票独立扫描脚本(secret_scan.py)")
+    if not scanner.is_file():
+        return
+
+    sanitize_match = re.search(r"^sanitize\(\) \{.*?^\}", text,
+                               re.MULTILINE | re.DOTALL)
+    check(sanitize_match is not None, "run.sh 应定义 sanitize() 函数")
+    leak_match = re.search(
+        r'^LEAK=0\n.*?^check "原始令牌与替身凭据未泄漏到证据与项目[^\n]*$',
+        text, re.MULTILINE | re.DOTALL)
+    check(leak_match is not None, "run.sh 段 8 应有泄漏检查段落(LEAK 计数)")
+    if sanitize_match is None or leak_match is None:
+        return
+
+    with tempfile.TemporaryDirectory(prefix="mgs-sp5-") as tmp:
+        tmp_path = Path(tmp)
+        arena = tmp_path / "arena"
+        arena.mkdir()
+        evidence = tmp_path / "evidence"
+        evidence.mkdir()
+        proj = tmp_path / "proj"
+        proj.mkdir()
+        (proj / "PROJECT.md").write_text("# 项目\n", encoding="utf-8")
+
+        tokens: dict[str, str] = {}
+        for name in ("u_p", "p_p", "p_d", "g_p", "r_i1", "r_i2",   # 旧枚举名单
+                     "g_o"):                                       # 收口新增,名单外
+            token = pysecrets.token_hex(32)
+            tokens[name] = token
+            (arena / f"{name}.token").write_text(token + "\n", encoding="utf-8")
+        # 四个合成运行根:g_o 按 run.sh 实况登记在 gh 环运行根,其余为诱饵
+        registry_common = {"instances": [
+            {"instance_id": "i-fixture-decoy", "role": "producer",
+             "task": "18-fixture", "token_hash": pyhash.sha256(b"decoy").hexdigest()},
+        ]}
+        registry_gh = {"instances": [
+            {"instance_id": "i-fixture-go", "role": "producer", "task": "18-gh-offline",
+             "token_hash": pyhash.sha256(tokens["g_o"].encode()).hexdigest()},
+        ]}
+        runroots: dict[str, Path] = {}
+        for tag, registry in (("upg", registry_common), ("p", registry_common),
+                              ("gh", registry_gh), ("reg", registry_common)):
+            rr = tmp_path / f"runtime-{tag}"
+            rr.mkdir()
+            (rr / "instances.json").write_text(
+                json.dumps(registry, ensure_ascii=False), encoding="utf-8")
+            runroots[tag] = rr
+
+        # 证据注入 g_o 明文(sanitize 应替换;泄漏检查是第二道防线,应发现)
+        injected = evidence / "gh-upstream-offline.json"
+        injected.write_text('{"probe": "mgs_remote", "token_in_args": "'
+                            + tokens["g_o"] + '"}\n', encoding="utf-8")
+
+        # 1) sanitize:提取实现直接执行,名单内为基线对照,g_o 不得漏
+        sanitize_runner = "\n".join([
+            "set -u",
+            f'ARENA={shlex.quote(str(arena))}',
+            "GHTOKEN=synthetic-standin-token",
+            sanitize_match.group(0),
+            f'sanitize {shlex.quote(str(injected))}',
+        ])
+        res = subprocess.run(["bash", "-c", sanitize_runner],
+                             capture_output=True, text=True)
+        check(res.returncode == 0,
+              f"sanitize 子进程失败:{res.stderr.strip()[:300]}")
+        body = injected.read_text(encoding="utf-8")
+        check(tokens["g_p"] not in body,
+              "sanitize 应替换名单内实例令牌(基线对照)")
+        check(tokens["g_o"] not in body,
+              "sanitize 后证据仍含名单外实例 g_o 的令牌明文(枚举漏覆盖,SP-5)")
+        check("<redacted-g_o-token>" in body,
+              "sanitize 未把名单外实例 g_o 的令牌替换为占位符(SP-5)")
+
+        # 2) 泄漏检查:提取段落原样执行,注入明文必须判 FAIL(不得假绿)。
+        #    这是独立于 sanitize 的第二道防线——重新注入明文再测(若先经
+        #    修复后的 sanitize,文件已干净,检查通过才是正确行为)
+        injected.write_text('{"probe": "mgs_remote", "token_in_args": "'
+                            + tokens["g_o"] + '"}\n', encoding="utf-8")
+        leak_runner = "\n".join([
+            "set -u",
+            f'ARENA={shlex.quote(str(arena))}',
+            f'EVIDENCE_DIR={shlex.quote(str(evidence))}',
+            f'PROJ_U={shlex.quote(str(proj))}',
+            f'PROJ_P={shlex.quote(str(proj))}',
+            f'PROJ_G={shlex.quote(str(proj))}',
+            f'PROJ_R={shlex.quote(str(proj))}',
+            f'RUNROOT_U={shlex.quote(str(runroots["upg"]))}',
+            f'RUNROOT_P={shlex.quote(str(runroots["p"]))}',
+            f'RUNROOT_G={shlex.quote(str(runroots["gh"]))}',
+            f'RUNROOT_R={shlex.quote(str(runroots["reg"]))}',
+            f'SECRET_SCAN={shlex.quote(str(scanner))}',
+            "GHTOKEN=synthetic-standin-token",
+            'check() { local d="$1"; shift; '
+            'if "$@" >/dev/null 2>&1; then echo "leakcheck-PASS"; '
+            'else echo "leakcheck-FAIL"; fi; }',
+            leak_match.group(0),
+        ])
+        res = subprocess.run(["bash", "-c", leak_runner],
+                             capture_output=True, text=True)
+        check("leakcheck-FAIL" in res.stdout,
+              "注入名单外实例 g_o 凭据明文时泄漏检查必须判 FAIL,"
+              "不得假绿(SP-5)")
+        check("leakcheck-PASS" not in res.stdout,
+              "注入名单外实例 g_o 凭据明文时泄漏检查不得报 PASS(假绿,SP-5)")
+        check(res.stderr.strip() == "",
+              f"泄漏检查段落不应有 stderr 噪音:{res.stderr.strip()[:200]}")
+
+    # 3) run.sh 接线形态:机制化命令在位,枚举清单退场,既有语义不弱化
+    check('for path in "$ARENA"/*.token' in text,
+          "sanitize 应遍历 ARENA 全部 *.token(glob,不枚举实例名)")
+    check("for prefix in u_p p_p p_d g_p r_i1 r_i2" not in text,
+          "run.sh 不应再枚举固定实例前缀(脱敏与泄漏检查均机制化)")
+    check('python3 -B "$SECRET_SCAN"' in text,
+          "泄漏检查应以命令形态调用独立扫描脚本(注释字样不算)")
+    check('--registry "$rr/instances.json"' in text,
+          "泄漏检查应按各运行根实例登记全量比对(--registry 指向运行根)")
+    check('grep -rlF "$GHTOKEN"' in text,
+          "替身凭据 GHTOKEN(非 hex 形态)的直查应保留,既有语义不弱化")
 
 
 def main() -> int:
@@ -2319,6 +2505,7 @@ def main() -> int:
     test_dist_rebuild_byte_reproducible()
     test_accept16_sanitize_covers_unenumerated_tokens()
     test_accept16_secret_scan_gate()
+    test_accept18_leak_checks_mechanized()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:
