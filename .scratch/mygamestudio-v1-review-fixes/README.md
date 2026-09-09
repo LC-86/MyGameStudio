@@ -28,7 +28,7 @@
 
 ## 证据目录
 
-[evidence/](evidence/) 收录审查报告（review.md）、探针脚本与输出（spec/runtime）、机器可读摘要（verification-summary.json）与驱动回归日志（driver-probes.log）。审查工作目录 `/tmp/mygamestudio-review-4h4jbp_z/` 另含 `driver-env/` 与 `repo/`（隔离副本），未收录；如需查阅以 /tmp 原件为准，注意其可能已被清除。
+[evidence/](evidence/) 收录审查报告（review.md）、探针脚本与输出（spec/runtime）、机器可读摘要（verification-summary.json）与驱动回归日志（driver-probes.log）；修复票补充证据随票收录（如票 03 的 `repro-verify.txt`：打包可复现性验证输出）。审查工作目录 `/tmp/mygamestudio-review-4h4jbp_z/` 另含 `driver-env/` 与 `repo/`（隔离副本），未收录；如需查阅以 /tmp 原件为准，注意其可能已被清除。
 
 ## 从哪里开始
 

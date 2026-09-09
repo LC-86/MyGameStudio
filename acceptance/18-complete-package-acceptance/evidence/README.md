@@ -10,7 +10,7 @@
 
 | 来源 | 状态 | 覆盖 |
 | --- | --- | --- |
-| run3(`process-log-run3-usage-limit.txt`;`*-report/*-events/*-json` 大部分) | 中断于 U2(用量上限) | 段 0-2 全过(环境/确定性/dist 复现/安装 0.18.0/14 入口/仅显式触发/指纹许可复算);N1 普通对话不触发全过;U 环:0.17.0 真实安装、U1 初始化(含 TECH_DESIGN)、真实升级 remove+add、安装副本 diff 恰为版本内变更集、治理(marketplace/policy/instances 字节不变;config.toml 仅 codex 自管段)、home 清单不变、升级后 14 入口。U2 轮被截断(报告 369 字,未到写入步)。 |
+| run3(`process-log-run3-usage-limit.txt`;`*-report/*-events/*-json` 大部分) | 中断于 U2(用量上限) | 段 0-2 全过(环境/确定性/dist 复现/安装 0.18.0/14 入口/仅显式触发/指纹许可复算);N1 普通对话不触发全过;U 环:0.17.0 真实安装、U1 初始化(含 TECH_DESIGN)、真实升级 remove+add、安装副本 diff 恰为版本内变更集、治理(marketplace/policy/instances 字节不变;config.toml 检查原始判 FAIL——段归一化比较排除 codex 自管插件段后仍不等,见 `upg-governance-check.json` 与过程日志;2026-09-09 审查按 TOML 语义复核:排除自管段后相等,差异属不改变语义的文本差异,叙述修正见审查修复票 03)、home 清单不变、升级后 14 入口。U2 轮被截断(报告 369 字,未到写入步)。 |
 | run2(`process-log-run2-shakedown.txt`) | P 环全过后被我方运行中编辑脚本所致的字节错位中断(教训已记录,非产品问题) | P 环会话级全过:P1 统筹目标变化(12 项 PASS)、P2 委派设计决策地图(仅"探针措辞"检查 1 FAIL,实为 task_grant 拒绝已发生且如实记录,检查表达式随后修正)、P3 直接状态只读。该轮证据文件已被 run3 重生成覆盖,以过程日志为准。G 环因 set-remote-config 漏 --runtime-root 而在通道层失效闭合(G1 报告如实记录 channel 拒绝——顺带构成会话级 channel 失效闭合证据;该缺陷已修)。 |
 | run1(无日志保留) | 停于 U 环前(检查表达式 bug:技能名前缀) | 无有效证据。 |
 | `driver-probes.sh`(本轮执行,33 PASS/0 FAIL,`driver-*`) | 完成 | 无模型确定性驱动(对实际安装副本的 mgs-gate 进程):角色交集/任务粒度/占用/换链/策略损坏失效闭合与恢复/旧令牌 identity/占用回收/受控远端 allow+task_grant 拒+上游失联失效闭合与草稿重放。 |

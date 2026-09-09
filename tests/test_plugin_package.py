@@ -2024,6 +2024,79 @@ def test_dist_package_consistent() -> None:
         ), "安装包内容文件集合应与 plugin/ 完全一致")
 
 
+def test_dist_rebuild_byte_reproducible() -> None:
+    """审查修复票 03(R5):同源隔离重建逐字节一致,且 tar 不携带平台扩展元数据。
+
+    反例背景:构建脚本曾仅靠 COPYFILE_DISABLE,macOS tar 仍会把
+    com.apple.provenance 等扩展属性写入 PAX 头——文件内容完全一致的同源
+    重建包字节不同(审查报告 R5)。本检查以「两份新副本隔离重建」固化
+    验证,不再以同目录重复构建充当;user.* 扩展属性注入依赖 macOS
+    xattr 语义(本包声明的目标宿主)。
+    """
+
+    import shutil
+    import subprocess
+    import tarfile
+    import tempfile
+
+    build = REPO_ROOT / "dist" / "build-package.sh"
+    if not build.is_file():
+        check(False, "缺少 dist/build-package.sh")
+        return
+    version = json.loads(
+        (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text())["version"]
+    tarball_name = f"mygamestudio-{version}.tar.gz"
+
+    def pax_leak(path: Path) -> dict:
+        leaked = {}
+        with tarfile.open(path, "r:gz") as tar:
+            for member in tar.getmembers():
+                if member.pax_headers:
+                    leaked[member.name] = dict(member.pax_headers)
+        return leaked
+
+    with tempfile.TemporaryDirectory(prefix="mgs-repro-") as tmp:
+        hashes = []
+        for tag, inject_xattr in (("copy-a", False), ("copy-b", True)):
+            root = Path(tmp) / tag
+            (root / "dist").mkdir(parents=True)
+            shutil.copytree(PLUGIN_ROOT, root / "plugin",
+                            ignore=shutil.ignore_patterns("__pycache__", ".DS_Store"))
+            shutil.copy2(build, root / "dist" / "build-package.sh")
+            if inject_xattr:
+                for rel in (".codex-plugin/plugin.json", "skills/game-init/SKILL.md"):
+                    target = root / "plugin" / rel
+                    check(target.is_file(), f"xattr 注入目标不存在:{rel}")
+                    if target.is_file():
+                        inject = subprocess.run(
+                            ["xattr", "-w", "user.mgs_r5_probe", "copy-b", str(target)],
+                            capture_output=True, text=True)
+                        check(inject.returncode == 0,
+                              f"xattr 注入失败({rel}):{inject.stderr.strip()[:200]}")
+            result = subprocess.run(
+                ["./dist/build-package.sh"], cwd=root,
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+            check(result.returncode == 0,
+                  f"隔离副本 {tag} 构建失败:{result.stderr.strip()[:300]}")
+            rebuilt = root / "dist" / tarball_name
+            if result.returncode == 0 and rebuilt.is_file():
+                hashes.append(sha256(rebuilt))
+                leaked = pax_leak(rebuilt)
+                check(not leaked,
+                      f"隔离副本 {tag} 重建包不应携带任何 PAX 扩展头"
+                      f"(平台扩展元数据等未归一化字段):{list(leaked)[:3]}")
+        check(len(hashes) == 2 and hashes[0] == hashes[1],
+              "两份隔离副本同源重建的安装包应逐字节一致:"
+              f"{hashes[0] if hashes else '<构建失败>'} vs "
+              f"{hashes[1] if len(hashes) > 1 else '<构建失败>'}")
+    delivered = REPO_ROOT / "dist" / tarball_name
+    if delivered.is_file():
+        leaked = pax_leak(delivered)
+        check(not leaked,
+              f"交付包不应携带任何 PAX 扩展头(平台扩展元数据等未归一化字段):"
+              f"{list(leaked)[:3]}")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -2066,6 +2139,7 @@ def main() -> int:
     test_internal_references_resolve()
     test_accept18_fixture()
     test_dist_package_consistent()
+    test_dist_rebuild_byte_reproducible()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

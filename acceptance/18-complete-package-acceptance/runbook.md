@@ -22,10 +22,10 @@
 | 段 | 内容 | 机制要点 |
 | --- | --- | --- |
 | 0 | 环境记录 | codex/gh(只读)版本;模型固定开关 MGS_PIN_MODEL |
-| 1 | 确定性检查 + dist 复现 | 5 个静态套件;`dist/build-package.sh` 重打包字节一致 |
+| 1 | 确定性检查 + dist 复现 | 5 个静态套件;`dist/build-package.sh` 重打包字节一致(隔离重建验证 `dist/verify-reproducible.sh`,审查修复票 03 固化) |
 | 2 | 安装 0.18.0 与注册面 | marketplace 安装;副本逐字节一致;恰好 14 入口;`codex debug prompt-input` 证明模型可见目录不含任何 game-* 入口;指纹/许可/方法对安装副本复算 |
 | 3 | N1 普通对话对照 | 无提及 turn:无 mcpToolCall、无 mgs 命令、无业务报告结构、项目哈希不变 |
-| 4 | U 环升级 | 0.17.0 安装(homeu 独立环境)→ U1 `$game-init` 新项目 → 手工开发者注 → 换源+remove+add 升级 → 安装副本 diff 恰为版本内变更集 → 治理/策略/实例字节不变 → U2 `$game-init` 模板升级(CONFIG 补授权格式,保留方案)→ GAME_DESIGN 字节不变、开发者注保留、后端不变 |
+| 4 | U 环升级 | 0.17.0 安装(homeu 独立环境)→ U1 `$game-init` 新项目 → 手工开发者注 → 换源+remove+add 升级 → 安装副本 diff 恰为版本内变更集 → 治理(marketplace/policy/instances 字节不变;config.toml 排除 codex 自管插件段后的段归一化比较在 run3 判 FAIL——差异为不改变 TOML 语义的文本差异,审查复核语义等价,叙述修正见审查修复票 03)→ U2 `$game-init` 模板升级(CONFIG 补授权格式,保留方案)→ GAME_DESIGN 字节不变、开发者注保留、后端不变 |
 | 5 | P 环闭环 | P1 `$game-producer` 目标变化(PROJECT v2、任务重分流、依赖重排、委派记录、越界探针)→ P2 被委派 `$game-design` 决策地图(制图不裁决,records/ 写入,越界探针)→ P3 直接 `$game-status`(只读、反映新状态) |
 | 6 | G 环 GitHub 替身 | 调度侧 switch-plan/apply(确认留档;CONFIG 预置)→ CLI 建 03/04 → G1 统筹 mgs_remote 读/安排更新/结果评论 allow + 越界 task_grant deny + 直连探针被沙箱拒 → 驱动式上游失联失效闭合与草稿重放 |
 | 7 | R 环运行保障回归 | R1 双凭据:合法写/角色 deny/占用 deny/任务粒度 deny/换链 deny/间接写(shell+python)被 OS 拒;驱动式策略损坏 fail-closed + 恢复后同凭据续用;R1b 释放后旧凭据 identity 拒;reclaim-locks 活跃拒/释放后回收 |

@@ -74,8 +74,13 @@ allow/deny/上游失联与草稿重放;不替代 run.sh 的会话级(真实模�
 ```bash
 ./dist/build-package.sh
 shasum -a 256 -c dist/SHA256SUMS.txt        # 在 dist/ 内执行
+./dist/verify-reproducible.sh               # 字节可复现性:git archive 干净副本
+                                            # 隔离重建 + 三项产物逐字节比对
+                                            # + 平台扩展元数据 PAX 头扫描
 # 内容一致性(清单↔源目录↔tar 包三方)由 tests/test_plugin_package.py 的
-# test_dist_package_consistent 持续核对。
+# test_dist_package_consistent 持续核对;同源隔离重建逐字节一致(排除
+# com.apple.provenance 等平台扩展元数据)由同名套件的
+# test_dist_rebuild_byte_reproducible 与上述脚本固化(审查修复票 03/R5)。
 ```
 
 ## 5. 手动最小安装验证(不跑全量)

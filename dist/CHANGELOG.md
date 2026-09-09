@@ -1,7 +1,9 @@
 # MyGameStudio 安装包变更说明(dist/)
 
 本目录是任务票 18 的可审阅交付物。安装包、逐文件清单与校验和由
-`dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致);
+`dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致,经
+`dist/verify-reproducible.sh` 干净副本隔离重建验证——平台扩展元数据
+排除系审查修复票 03 的修正);
 `tests/test_plugin_package.py` 持续核对清单、校验和与源目录三方一致。
 
 ## 交付物清单
@@ -15,6 +17,7 @@
 | `ACCEPTANCE-RESULTS.md` | 逐项验收结果(任务票 18 七条标准 + 设计验收矩阵) |
 | `REPRODUCE.md` | 复现步骤(整包验收与各专项验收) |
 | `build-package.sh` | 可复现构建脚本 |
+| `verify-reproducible.sh` | 字节可复现性验证(干净副本隔离重建+逐字节比对;审查修复票 03) |
 
 ## 安装(供后续用户决定后执行;本票未自动安装)
 
@@ -53,7 +56,10 @@ mygamestudio@personal` + `codex plugin add mygamestudio@personal`(实测
   provenance manifest 与逐文件指纹随包更新,CONFIG 模板变更由
   `$game-init` 模板升级流程以「具体变更清单 + 保留方案」提出,不静默改写。
 - 项目资料、用户手工修改与当前任务后端保留(实测保留,见验收段 5)。
-- 不自动改写客户端治理(marketplace.json、config.toml 实测字节不变)、
+- 不自动改写客户端治理(marketplace.json、运行根 policy.json、instances.json
+  实测字节不变;config.toml 排除 codex 自管插件段后仍有不改变 TOML 语义的
+  文本差异——原始段归一化比较 FAIL 留痕于 acceptance/18 evidence,2026-09-09
+  审查按 TOML 语义复核排除自管段后相等,叙述修正见审查修复票 03)、
   不静默替换运行规则(运行根策略实测字节不变)、不重建用户文档
   (未被确认清单覆盖的文档实测字节不变)。
 
