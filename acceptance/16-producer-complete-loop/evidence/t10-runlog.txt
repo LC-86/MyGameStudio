@@ -1,0 +1,1 @@
+wrote 7072 chars to acceptance/16-producer-complete-loop/evidence/t10-report.md

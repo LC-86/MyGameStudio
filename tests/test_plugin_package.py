@@ -1667,6 +1667,129 @@ def test_accept15_fixture() -> None:
               "samples/tide-pool 本体应保持 v1(15 用夹具覆盖)")
 
 
+def test_producer_loop_skills_content() -> None:
+    """任务票 16:制作统筹完整闭环纪律——入口分类、按需委派与完成判定。"""
+
+    producer = PLUGIN_ROOT / "skills" / "game-producer" / "SKILL.md"
+    check(producer.is_file(), "缺少 skills/game-producer/SKILL.md")
+    if producer.is_file():
+        text = producer.read_text(encoding="utf-8")
+        for concept in (
+            "仅讨论",            # 入口一:仅讨论
+            "已有规格",          # 入口二:已有规格制作
+            "直接调用",          # 入口三:直接专业调用后的状态同步
+            "直接专业调用",      # 入口三全称(与上一条至少其一,全要求)
+            "状态同步",          # 直接调用结果在下次介入时同步
+            "下次介入",          # 同步时点:统筹下次显式介入
+            "按事实核对",        # 同步依据实际成果而非作者自述
+            "合适环节",          # 按已有资料从合适环节开始
+            "中间进入",          # 输入充足时从中间环节进入
+            "跳过原型",          # 无需原型的工作跳过原型
+            "不强制",            # 不强制每轮执行全部技能
+            "全部技能",          # 同上(完整短语「不强制…全部技能」)
+            "隔离",              # 设计原型保持隔离
+            "Game-Implement",    # 本次制作由 Game-Implement 组织
+            "委派",              # 统筹按需明确委派业务入口
+            "独立审查",          # 审查完成是验收事实之一
+            "约定检查",          # 约定检查完成且无需人判断可标记完成
+            "无需人判断",        # 可标记完成的条件
+            "待验收",            # 需要人的验收保持待验收
+            "作者自报",          # 作者自报不能代替验收
+            "旧版本",            # 旧版本结果不能代替当前验收
+            "短规格",            # 较小任务可用短规格
+            "单项工作",          # 单项工作完成闭环
+            "粗粒度",            # 未来目标保持粗粒度
+            "阶段门槛",          # 不引入固定阶段门槛
+        ):
+            check(concept in text, f"game-producer SKILL.md 应覆盖概念:{concept}")
+
+
+def test_accept16_fixture() -> None:
+    """任务票 16:制作统筹完整闭环验收夹具——承接票 15 终态(逐字节)+ 开发者
+    闭环请求;漂移、待同步与待人工事实在夹具栈中真实存在;不改样例本体。"""
+
+    fixtures = REPO_ROOT / "acceptance" / "16-producer-complete-loop" / "fixtures"
+    check((fixtures / "README.md").is_file(), "accept-16 夹具缺少 README.md")
+    readme = fixtures / "README.md"
+    if readme.is_file():
+        text = readme.read_text(encoding="utf-8")
+        check("闭环" in text, "夹具 README 当前请求应为完整小步闭环请求")
+        check("50 秒" in text, "夹具 README 应包含开发者对 50 秒回会的确认决定")
+        check("直接调用" in text or "直接专业调用" in text,
+              "夹具 README 应声明直接专业调用(Game-Prototype)的事实")
+        check("urgent-window" in text,
+              "夹具 README 应引用直接调用的原型 urgent-window")
+        check("讨论" in text, "夹具 README 应包含仅讨论请求(不进入制作)")
+        check("PT-01" in text, "夹具 README 应引用 PT-01 缺陷修复交接")
+        check("短规格" in text or "单项" in text,
+              "夹具 README 应说明本轮以短规格/单项工作收口")
+    # 承接票 15 终态的关键文件必须存在
+    for rel in (
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/records/decision-2026-09-08-round-45s.md",
+        "docs/mygamestudio/work/12-game-design-v4/task.md",
+        "docs/mygamestudio/work/15-race-demo/results/race.md",
+        "docs/mygamestudio/work/02-tide-timer/task.md",
+        "docs/mygamestudio/work/04-shell-combo/task.md",
+        "docs/mygamestudio/work/05-gull-swoop/task.md",
+        "docs/mygamestudio/work/06-gull-sprite/task.md",
+        "docs/mygamestudio/work/08-gull-playtest/task.md",
+        "docs/mygamestudio/work/10-warning-sfx/task.md",
+        "docs/mygamestudio/work/11-playable-build/task.md",
+    ):
+        check((fixtures / rel).is_file(), f"accept-16 夹具缺少承接票 15 终态的 {rel}")
+    # 承接事实的结构核对
+    design = fixtures / "docs" / "mygamestudio" / "GAME_DESIGN.md"
+    if design.is_file():
+        text = design.read_text(encoding="utf-8")
+        check("基线版本:v4" in text,
+              "承接布景的 GAME_DESIGN 应为 v4(50 秒手工变更未同步版本号)")
+        check("50 秒" in text, "承接布景的 GAME_DESIGN 应含开发者手工 50 秒变更")
+    task04 = fixtures / "docs" / "mygamestudio" / "work" / "04-shell-combo" / "task.md"
+    if task04.is_file():
+        check("needs-triage" in task04.read_text(encoding="utf-8"),
+              "承接布景的 04/05/08 应保持 needs-triage(待重核)")
+    task12 = fixtures / "docs" / "mygamestudio" / "work" / "12-game-design-v4" / "task.md"
+    if task12.is_file():
+        text = task12.read_text(encoding="utf-8")
+        check("待执行" in text,
+              "承接布景的 12-game-design-v4 应为待执行(v4 已采纳但记录待统筹同步)")
+    task02 = fixtures / "docs" / "mygamestudio" / "work" / "02-tide-timer" / "task.md"
+    if task02.is_file():
+        text = task02.read_text(encoding="utf-8")
+        check("待验收" in text, "承接布景的 02 应保持待验收")
+        check("evidence/" in text, "承接布景的 02 结果索引应已登记 evidence(票 15)")
+        check("开发者注" in text or "开发者" in text,
+              "承接布景的 02 应保留票 15 的开发者注(恢复不覆盖用户修改)")
+    # 承接票 15 终态的文件与 .tmp 终态逐字节一致(本机有 .tmp 时核对)
+    a15 = ".tmp/accept-15/projects/tide-pool"
+    for rel in (
+        "docs/mygamestudio/PROJECT.md",
+        "docs/mygamestudio/GAME_DESIGN.md",
+        "docs/mygamestudio/records/decision-2026-09-08-round-45s.md",
+        "docs/mygamestudio/work/12-game-design-v4/task.md",
+        "docs/mygamestudio/work/15-race-demo/results/race.md",
+        "docs/mygamestudio/work/02-tide-timer/task.md",
+        "docs/mygamestudio/work/04-shell-combo/task.md",
+        "docs/mygamestudio/work/05-gull-swoop/task.md",
+        "docs/mygamestudio/work/06-gull-sprite/task.md",
+        "docs/mygamestudio/work/08-gull-playtest/task.md",
+        "docs/mygamestudio/work/10-warning-sfx/task.md",
+        "docs/mygamestudio/work/11-playable-build/task.md",
+    ):
+        arena_file = REPO_ROOT / a15 / rel
+        if arena_file.is_file() and (fixtures / rel).is_file():
+            check((fixtures / rel).read_bytes() == arena_file.read_bytes(),
+                  f"accept-16 夹具 {rel} 应与票 15 终态逐字节一致")
+    # 样例本体保持 v1 未动
+    sample_design = (REPO_ROOT / "samples" / "tide-pool" / "docs" / "mygamestudio"
+                     / "GAME_DESIGN.md")
+    if sample_design.is_file():
+        check("基线版本:v1" in sample_design.read_text(encoding="utf-8"),
+              "samples/tide-pool 本体应保持 v1(16 用夹具覆盖)")
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -1701,6 +1824,8 @@ def main() -> int:
     test_accept14_fixture()
     test_goal_change_skills_content()
     test_accept15_fixture()
+    test_producer_loop_skills_content()
+    test_accept16_fixture()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

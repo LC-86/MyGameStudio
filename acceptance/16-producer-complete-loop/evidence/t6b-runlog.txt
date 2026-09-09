@@ -1,0 +1,1 @@
+wrote 3369 chars to acceptance/16-producer-complete-loop/evidence/t6b-report.md

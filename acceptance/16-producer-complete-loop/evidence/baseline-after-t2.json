@@ -1,0 +1,228 @@
+{
+  "ok": true,
+  "docs": [
+    {
+      "path": "docs/mygamestudio/PROJECT.md",
+      "content": "项目目标与范围",
+      "role": "制作统筹",
+      "declared_version": "v4",
+      "recorded_fingerprint": "sha256:cbfc7097a3d54c638bc940d275affddc6f9775c89e44b1ff5c9b870093d408dd",
+      "current_fingerprint": "sha256:cbfc7097a3d54c638bc940d275affddc6f9775c89e44b1ff5c9b870093d408dd",
+      "status": "一致",
+      "note": "内容与登记指纹一致"
+    },
+    {
+      "path": "docs/mygamestudio/GAME_DESIGN.md",
+      "content": "游戏需求与设计",
+      "role": "方案设计",
+      "declared_version": "v5",
+      "recorded_fingerprint": "sha256:2f334433ff10d165ed4afc3ad46242f72cd5d8c055b23238c3afe87721c97e30",
+      "current_fingerprint": "sha256:2f334433ff10d165ed4afc3ad46242f72cd5d8c055b23238c3afe87721c97e30",
+      "status": "一致",
+      "note": "内容与登记指纹一致"
+    },
+    {
+      "path": "docs/mygamestudio/TECH_DESIGN.md",
+      "content": "技术设计",
+      "role": "制作实现",
+      "declared_version": "v4",
+      "recorded_fingerprint": null,
+      "current_fingerprint": "sha256:131e5e31dd40d60a1e75309798d1647ca038fa7a77917ac6becba7a07754061a",
+      "status": "指纹未登记",
+      "note": "该基线未完整登记内容指纹与归一指纹;由其维护角色在版本采纳或格式修正同步时登记,登记后可检测版本号未同步的手工内容变更"
+    }
+  ],
+  "affected_tasks": [
+    {
+      "identity": "01-shell-collect",
+      "title": "贝壳拾取与计数",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v1",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v1 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "02-tide-timer",
+      "title": "潮汐倒计时可视化",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "PROJECT",
+      "ref_version": "v2",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v2 下完成事实,不自动算作满足新目标(PROJECT 当前 v4)"
+    },
+    {
+      "identity": "02-tide-timer",
+      "title": "潮汐倒计时可视化",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v2",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v2 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "02-tide-timer",
+      "title": "潮汐倒计时可视化",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "TECH_DESIGN",
+      "ref_version": "v1",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v1 下完成事实,不自动算作满足新目标(TECH_DESIGN 当前 v4)"
+    },
+    {
+      "identity": "03-gull-round-plan",
+      "title": "海鸥轮次规格拆单",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "PROJECT",
+      "ref_version": "v2",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v2 下完成事实,不自动算作满足新目标(PROJECT 当前 v4)"
+    },
+    {
+      "identity": "03-gull-round-plan",
+      "title": "海鸥轮次规格拆单",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v2",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v2 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "03-gull-round-plan",
+      "title": "海鸥轮次规格拆单",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "TECH_DESIGN",
+      "ref_version": "v1",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v1 下完成事实,不自动算作满足新目标(TECH_DESIGN 当前 v4)"
+    },
+    {
+      "identity": "06-gull-sprite",
+      "title": "海鸥与俯冲姿态贴图",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "PROJECT",
+      "ref_version": "v2",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v2 下完成事实,不自动算作满足新目标(PROJECT 当前 v4)"
+    },
+    {
+      "identity": "06-gull-sprite",
+      "title": "海鸥与俯冲姿态贴图",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v2",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v2 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "07-warning-cue",
+      "title": "海鸥出现预警待决定",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v2",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v2 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "09-future-scope",
+      "title": "远期玩法范围候选",
+      "triage": "needs-triage",
+      "progress": "暂缓，等待目标核对",
+      "doc": "PROJECT",
+      "ref_version": "v2",
+      "current_version": "v4",
+      "completion_fact": null
+    },
+    {
+      "identity": "10-warning-sfx",
+      "title": "海鸥出现预警音效",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v3",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v3 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "11-playable-build",
+      "title": "当前版本可玩成果构建",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "TECH_DESIGN",
+      "ref_version": "v3",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v3 下完成事实,不自动算作满足新目标(TECH_DESIGN 当前 v4)"
+    },
+    {
+      "identity": "11-playable-build",
+      "title": "当前版本可玩成果构建",
+      "triage": "ready-for-agent",
+      "progress": "待验收",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v3",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v3 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "12-game-design-v4",
+      "title": "游戏设计 v4 目标变化采纳",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "PROJECT",
+      "ref_version": "v3",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v3 下完成事实,不自动算作满足新目标(PROJECT 当前 v4)"
+    },
+    {
+      "identity": "12-game-design-v4",
+      "title": "游戏设计 v4 目标变化采纳",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v3",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v3 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "12-game-design-v4",
+      "title": "游戏设计 v4 目标变化采纳",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "TECH_DESIGN",
+      "ref_version": "v3",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v3 下完成事实,不自动算作满足新目标(TECH_DESIGN 当前 v4)"
+    },
+    {
+      "identity": "13-game-design-v5",
+      "title": "游戏设计 v5：采纳 50 秒回合",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "GAME_DESIGN",
+      "ref_version": "v4",
+      "current_version": "v5",
+      "completion_fact": "保留原版本 v4 下完成事实,不自动算作满足新目标(GAME_DESIGN 当前 v5)"
+    },
+    {
+      "identity": "13-game-design-v5",
+      "title": "游戏设计 v5：采纳 50 秒回合",
+      "triage": "ready-for-agent",
+      "progress": "已完成",
+      "doc": "TECH_DESIGN",
+      "ref_version": "v3",
+      "current_version": "v4",
+      "completion_fact": "保留原版本 v3 下完成事实,不自动算作满足新目标(TECH_DESIGN 当前 v4)"
+    }
+  ],
+  "note": "内容指纹用于发现手工修改或版本号未同步的情况;指纹变化先核对实际影响,疑似格式修正不自动触发需求重审、不作废既有成果与证据;实质变更需按实质影响处理(确认采纳则由该基线维护角色递增版本并更新指纹);受影响任务重新分流,原版本下完成事实保留,不自动算作满足新目标。"
+}

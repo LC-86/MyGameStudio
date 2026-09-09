@@ -1,0 +1,30 @@
+{
+  "identity": "14-round-50s-params",
+  "title": "50 秒回合、追回窗口参数化与 PT-01 修复",
+  "triage": "ready-for-agent",
+  "progress": "已完成",
+  "directory": "14-round-50s-params",
+  "request": {
+    "当前目标": "落实 PROJECT v4「本次制作单项」与 README「当前请求」第 2 条，以一个可独立核验的短规格成果完成 50 秒回合、追回窗口参数化、PT-01 修复和可玩构建重建。",
+    "输入与基线": "GAME_DESIGN v5（50 秒回合；追回窗口为具名可调参数、基准 3 秒）；TECH_DESIGN v4（参数表、组装式构建、运行约定与 PT-01 容差）；CONFIG v4（制作、构建与运行能力）；README「当前请求」第 2 条与 PROJECT v4 的 PT-01 交接；docs/mygamestudio/evidence/ 中既有倒计时审查和复核证据。PT-01 的缺陷定义为浮点累加残差导致最后 10 秒强调晚一帧、HUD 多显示 1 秒。",
+    "本次交付": "更新 TECH_DESIGN 参数登记，明确回合时长具名常量为 50 秒、追回窗口具名可调参数基准为 3 秒；更新 src/ 正式工程落实 50 秒并修复 PT-01；按 TECH_DESIGN v4「构建与导出」重建 build/，执行入口、内容对应与无头运行检查；执行结果和证据按轮写入本任务 results/。",
+    "允许修改范围": "docs/mygamestudio/TECH_DESIGN.md、src/**、build/**、docs/mygamestudio/work/14-round-50s-params/results/**；实际开工前逐项经受控通道核对授权。",
+    "所需能力": "Agent 制作实现与 Game-Implement 组织能力；TECH_DESIGN 维护、纯 HTML/JS 修改、文件组装与 SHA-256 核对、python3 静态服务、node DOM 桩无头冒烟；CONFIG v4 记录上述能力均已就绪。",
+    "完成标准": "TECH_DESIGN 的参数登记与 src 代码更新可逐项核对；回合时长由同一具名 50 秒常量驱动，追回窗口以具名参数登记且基准为 3 秒；PT-01 边界回归在名义 remainingSeconds=10 时 urgent 立即生效且 HUD 显示 10；build/index.html 与入口实际引用产物重建，各 build 文件与对应 src 文件 SHA-256 一致并在结果中登记；静态服务入口和脚本返回 200 且内容一致；无头冒烟覆盖初始化、递减、名义 10 秒边界、0 秒结算及结算后冻结并通过。",
+    "执行责任": "Agent（制作实现，由 Game-Implement 组织并承担技术设计、正式代码、构建集成与证据汇总）。",
+    "验收方式": "先做参数和代码级检查，再核对构建产物与源文件 SHA-256、静态服务运行和无头冒烟；由未参与制作的 Game-Review 独立审查；由 Game-Playtest 复测 PT-01 功能场景（名义 10 秒边界 urgent 立即生效且 HUD 显示 10）。本任务没有人工手感判断完成项；手感判断归 08-gull-playtest 与 11-playable-build 的开发者人工试玩，不阻塞本任务的客观验收。",
+    "依赖": "无。GAME_DESIGN v5 采纳已实际完成并见其变更索引。",
+    "依赖与写入协调": "本任务执行期间由 Game-Implement 作为 TECH_DESIGN.md、src/** 与 build/** 的单一写入协调者；顺序为参数登记、src 修改、build 重建、检查、独立审查、PT-01 复测；审查与试玩只写各自获授权的证据或本任务 results，不并发改制作成果；Game-Implement 汇总集成结果。04-shell-combo、05-gull-swoop、08-gull-playtest 不进入本次制作，其基线重核与分流由统筹同步轮另行处理。",
+    "尚缺信息": "无。urgent 阈值本任务沿 TECH_DESIGN v4 当前 10 秒语义实施，不引入等比候选或固定阶段门槛；双阶段节奏属于后续讨论，不影响本任务实现事实。"
+  },
+  "sections": {
+    "工作请求": true,
+    "结果索引": true,
+    "状态变化": true
+  },
+  "results": [
+    "results/2026-09-09.md"
+  ],
+  "result_index_text": "\n- results/2026-09-09.md：Game-Implement 结果记录；登记 TECH_DESIGN v4、src/build 更新、源↔产物 SHA-256、Node DOM 桩无头检查输出与实现边界探针。\n- evidence/2026-09-09-review-14-round-50s.md：Game-Review 独立审查记录；登记 TECH_DESIGN、src/build、results 指纹，确认专业规范与需求符合性均通过，无需返回制作修复。\n- evidence/2026-09-09-playtest-14-round-50s.md：Game-Playtest 自动复测记录；登记当前 build 指纹、入口引用、初始化、递减、名义 10 秒 PT-01、0 秒结算与幂等检查；人工体验项未反馈且不阻塞本任务客观验收。\n",
+  "path": "docs/mygamestudio/work/14-round-50s-params/task.md"
+}

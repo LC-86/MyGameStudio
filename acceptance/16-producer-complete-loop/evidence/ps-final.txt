@@ -1,0 +1,5 @@
+cuilei           81678   0.1  0.2 436020960 103712   ??  S     4:33AM   0:44.38 /Applications/ChatGPT.app/Contents/Resources/codex app-server --listen stdio://
+cuilei           83379   0.1  0.2 436019184 101808   ??  S     4:40AM   0:43.55 /Applications/ChatGPT.app/Contents/Resources/codex app-server --listen stdio://
+cuilei           82010   0.1  0.2 436016992 103584   ??  S     4:34AM   0:45.27 /Applications/ChatGPT.app/Contents/Resources/codex app-server --listen stdio://
+cuilei           82887   0.1  0.4 436042992 179248   ??  S     4:38AM   0:53.55 /Users/cuilei/.codex/plugins/.plugin-appserver/codex app-server --analytics-default-enabled
+cuilei           83518   0.0  0.1 435884800  62912   ??  S     4:40AM   0:05.74 /opt/homebrew/bin/codex app-server --listen stdio://
