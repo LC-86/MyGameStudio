@@ -2460,6 +2460,245 @@ def test_accept18_leak_checks_mechanized() -> None:
           "替身凭据 GHTOKEN(非 hex 形态)的直查应保留,既有语义不弱化")
 
 
+def test_accept18_probe_checks_anchored_to_events() -> None:
+    """复审二 SP-6:票 18 探针行为判据必须锚定事件流真实工具返回/命令记录。
+
+    反例背景:run.sh 的 R1 path 检查以 OR 接上对整个 r1-events.jsonl 的
+    关键词 grep(不限事件类型/decision/目标),审查夹具中事件仅一条
+    agentMessage、文字举例 decision=allow, rule_stage=path、零 MCP 调用,
+    判据仍 PASS(allow 示例被当作实际 path 拒绝);G1 直连探针判据同样
+    只查报告词族,无命令执行的示例文本即可满足。本探针(方法沿复审探针
+    acceptance-probes.py 的提取式夹具法):
+    - 旧判据段仍在时,审查夹具执行后必须 FAIL(修复前假绿即本测试的红);
+    - 加固后的锚定实现(mcp_deny_anchor/curl_direct_denied)对审查夹具、
+      allow 工具返回夹具、无命令执行的示例文本夹具一律不成立;
+    - 真实 deny/path、真实 curl 直连失败的事件流必须成立;
+    - 对本仓留存的验收证据重跑锚定判据仍 PASS(不因加固翻案)。
+    """
+
+    import shlex
+    import subprocess
+    import tempfile
+
+    run_sh = REPO_ROOT / "acceptance" / "18-complete-package-acceptance" / "run.sh"
+    if not run_sh.is_file():
+        check(False, "缺少 acceptance/18-complete-package-acceptance/run.sh")
+        return
+    text = run_sh.read_text(encoding="utf-8")
+    ev_dir = REPO_ROOT / "acceptance" / "18-complete-package-acceptance" / "evidence"
+
+    def run_bash(script: str) -> str:
+        res = subprocess.run(["bash", "-c", script],
+                             capture_output=True, text=True)
+        return res.stdout + res.stderr
+
+    # —— 夹具构造(照真实事件结构;全部合成值,不含任何真实凭据)——
+
+    def mcp_write_event(path: str, decision: str, stage: str, target: str) -> str:
+        item = {
+            "type": "mcpToolCall", "tool": "mgs_write", "status": "completed",
+            "arguments": {"token": "<redacted-token>", "path": path,
+                          "content": "x", "expected_sha256": "absent"},
+            "result": {"content": [{"type": "text", "text": json.dumps({
+                "op": "write", "decision": decision, "reason": "fixture",
+                "rule_stage": stage, "instance_id": "i-fixture",
+                "task": "18-reg-a", "role": "implement", "purpose": "production",
+                "target": target, "basis": {},
+            }, ensure_ascii=False)}]},
+        }
+        return json.dumps({"method": "item/completed",
+                           "params": {"item": item}}, ensure_ascii=False)
+
+    with tempfile.TemporaryDirectory(prefix="mgs-sp6-") as tmp:
+        tmp_path = Path(tmp)
+
+        # 夹具 A(审查夹具,逐字沿复审探针):仅一条 agentMessage,
+        # 文字举例 decision=allow, rule_stage=path,零 MCP 调用
+        fixture_a = tmp_path / "r1-events-a.jsonl"
+        fixture_a.write_text(json.dumps({
+            "method": "item/completed",
+            "params": {"item": {"type": "agentMessage",
+                                "text": "Example only: " + json.dumps(
+                                    {"decision": "allow", "rule_stage": "path"})}},
+        }, ensure_ascii=False) + "\n", encoding="utf-8")
+        # 夹具 B(真实 deny/path 形态的 mcpToolCall 返回)
+        fixture_b = tmp_path / "r1-events-b.jsonl"
+        fixture_b.write_text(
+            mcp_write_event("/tmp/mgs18-evil-link.md", "deny", "path",
+                            "/tmp/mgs18-evil-link.md") + "\n", encoding="utf-8")
+        # 夹具 C(同为 mcpToolCall 但 decision=allow:allow 示例不得成立)
+        fixture_c = tmp_path / "r1-events-c.jsonl"
+        fixture_c.write_text(
+            mcp_write_event("/tmp/mgs18-evil-link.md", "allow", "granted",
+                            "/tmp/mgs18-evil-link.md") + "\n", encoding="utf-8")
+
+        # G1 夹具 D:示例文本提及 curl 直连失败,但无任何命令执行记录
+        g1_fixture_d_events = tmp_path / "g1-events-d.jsonl"
+        g1_fixture_d_events.write_text(json.dumps({
+            "method": "item/completed",
+            "params": {"item": {"type": "agentMessage",
+                                "text": "探针示例:curl -sS http://127.0.0.1/x "
+                                        "→ failed to connect(仅举例)"}},
+        }, ensure_ascii=False) + "\n", encoding="utf-8")
+        # G1 夹具 E:真实 commandExecution 失败形态(curl 直连替身被拒)
+        g1_fixture_e_events = tmp_path / "g1-events-e.jsonl"
+        g1_fixture_e_events.write_text(json.dumps({
+            "method": "item/completed",
+            "params": {"item": {
+                "type": "commandExecution",
+                "command": "/bin/zsh -lc 'curl -sS -m 3 http://127.0.0.1:1/_test/ping'",
+                "status": "failed", "exitCode": 7,
+                "aggregatedOutput": "curl: (7) Failed to connect to 127.0.0.1 "
+                                    "port 1 after 0 ms: Couldn't connect to server\n",
+            }},
+        }, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        # —— 0)旧判据段仍在时:审查/示例夹具必须 FAIL(修复前的假绿=红)——
+
+        legacy_r1 = re.search(
+            r"^if grep -Eq '\"rule_stage\".*?^fi$", text, re.MULTILINE | re.DOTALL)
+        if legacy_r1 is not None:
+            report = tmp_path / "r1-report-legacy.md"
+            report.write_text("no result supplied\n", encoding="utf-8")
+            runner = "\n".join([
+                "set -u",
+                f'EVIDENCE_DIR={shlex.quote(str(tmp_path))}',
+                'mv "$EVIDENCE_DIR"/r1-events-a.jsonl "$EVIDENCE_DIR/r1-events.jsonl"',
+                'ok() { echo "LEGACY-PASS"; }',
+                'bad() { echo "LEGACY-FAIL"; }',
+                legacy_r1.group(0),
+            ])
+            out = run_bash(runner)
+            check("LEGACY-FAIL" in out and "LEGACY-PASS" not in out,
+                  "旧 R1 path 判据对无 MCP 调用的 allow 示例夹具必须 FAIL,"
+                  "当前词串 grep 分支假绿(SP-6)")
+        legacy_g1 = re.search(
+            r"^if grep -qE 'curl\|127\.0\.0\.1'.*?^fi$",
+            text, re.MULTILINE | re.DOTALL)
+        if legacy_g1 is not None:
+            report = tmp_path / "g1-report.md"
+            report.write_text("直连探针:curl http://127.0.0.1/x failed to connect"
+                              "(示例文本)\n", encoding="utf-8")
+            runner = "\n".join([
+                "set -u",
+                f'EVIDENCE_DIR={shlex.quote(str(tmp_path))}',
+                'mv "$EVIDENCE_DIR"/g1-events-d.jsonl "$EVIDENCE_DIR/g1-events.jsonl"',
+                'ok() { echo "LEGACY-PASS"; }',
+                'bad() { echo "LEGACY-FAIL"; }',
+                legacy_g1.group(0),
+            ])
+            out = run_bash(runner)
+            check("LEGACY-FAIL" in out and "LEGACY-PASS" not in out,
+                  "旧 G1 直连判据对无命令执行的示例文本必须 FAIL,"
+                  "当前报告词族分支假绿(SP-6 自查)")
+
+        # —— 1)加固实现存在且只认真实工具返回/命令记录 ——
+
+        anchor_fn = re.search(r"^mcp_deny_anchor\(\) \{.*?^\}$",
+                              text, re.MULTILINE | re.DOTALL)
+        check(anchor_fn is not None,
+              "run.sh 应定义 mcp_deny_anchor(事件流 mcpToolCall 锚定,SP-6)")
+        curl_fn = re.search(r"^curl_direct_denied\(\) \{.*?^\}$",
+                            text, re.MULTILINE | re.DOTALL)
+        check(curl_fn is not None,
+              "run.sh 应定义 curl_direct_denied(事件流 commandExecution 锚定,SP-6)")
+        if anchor_fn is None or curl_fn is None:
+            return
+        fn_defs = anchor_fn.group(0) + "\n" + curl_fn.group(0)
+
+        def anchor_call(events: Path, *args: str) -> str:
+            # 位置参数经 set -- 传入,避免引号嵌套歧义
+            script = "\n".join([
+                "set -u", fn_defs,
+                f'set -- {shlex.quote(str(events))} '
+                + " ".join(shlex.quote(a) for a in args),
+                'R=$(mcp_deny_anchor "$1" "$2" "$3" "$4")',
+                'echo "ANCHOR:$R"',
+            ])
+            return run_bash(script).strip()
+
+        def curl_call(events: Path) -> str:
+            script = "\n".join([
+                "set -u", fn_defs,
+                f'set -- {shlex.quote(str(events))}',
+                'R=$(curl_direct_denied "$1")',
+                'echo "CURL:$R"',
+            ])
+            return run_bash(script).strip()
+
+        link = "/tmp/mgs18-evil-link.md"
+        check(anchor_call(fixture_a, "mgs_write", "path", link) == "ANCHOR:MISSING",
+              "审查夹具(仅 agentMessage 的 allow 示例词串)不得满足 path 锚定(SP-6)")
+        check(anchor_call(fixture_c, "mgs_write", "path", link) == "ANCHOR:MISSING",
+              "allow 的 mgs_write 返回不得满足 path 锚定(须核对 decision=deny)")
+        check(anchor_call(fixture_b, "mgs_write", "path", link) == "ANCHOR:OK",
+              "真实 deny/path 的 mgs_write 返回必须满足锚定(不得误伤)")
+        check(curl_call(g1_fixture_d_events) == "CURL:MISSING",
+              "无命令执行记录的示例文本不得满足直连探针锚定(SP-6 自查)")
+        check(curl_call(g1_fixture_e_events) == "CURL:OK",
+              "真实失败的 curl 直连 commandExecution 必须满足锚定(不得误伤)")
+
+        # —— 2)对仓内留存验收证据重跑锚定判据:仍 PASS,不因加固翻案 ——
+
+        r1_real = ev_dir / "r1-events.jsonl"
+        if r1_real.is_file():
+            for stage, target in (("role_scope", "docs/mygamestudio/PROJECT.md"),
+                                  ("occupancy", "src/lock-probe.txt"),
+                                  ("task_grant", "src/other.txt"),
+                                  ("path", link)):
+                check(anchor_call(r1_real, "mgs_write", stage, target) == "ANCHOR:OK",
+                      f"留存 R1 证据重跑锚定判据仍 PASS(deny/{stage} → {target})")
+        g1_real = ev_dir / "g1-events.jsonl"
+        if g1_real.is_file():
+            check(curl_call(g1_real) == "CURL:OK",
+                  "留存 G1 证据重跑直连探针锚定仍 PASS")
+            for target in ("01-harbor-timer", "02-crane-sprite"):
+                check(anchor_call(g1_real, "mgs_remote", "task_grant", target)
+                      == "ANCHOR:OK",
+                      f"留存 G1 证据重跑越界锚定仍 PASS(mgs_remote deny → {target})")
+        p1_real = ev_dir / "p1-events.jsonl"
+        if p1_real.is_file():
+            check(anchor_call(p1_real, "mgs_write", "role_scope|task_grant",
+                              "docs/mygamestudio/GAME_DESIGN.md") == "ANCHOR:OK",
+                  "留存 P1 证据重跑越界锚定仍 PASS")
+        p2_real = ev_dir / "p2-events.jsonl"
+        if p2_real.is_file():
+            check(anchor_call(p2_real, "mgs_write", "role_scope|task_grant",
+                              "docs/mygamestudio/GAME_DESIGN.md") == "ANCHOR:OK",
+                  "留存 P2 证据重跑越界锚定仍 PASS")
+        r1b_real = ev_dir / "r1b-events.jsonl"
+        if r1b_real.is_file():
+            check(anchor_call(r1b_real, "mgs_write", "identity", "src/stale.txt")
+                  == "ANCHOR:OK",
+                  "留存 R1b 证据重跑 identity 锚定仍 PASS")
+
+    # —— 3)run.sh 接线形态:探针行为判据锚定事件流,旧词串分支退场 ——
+
+    check("|| grep -qF 'rule_stage" not in text,
+          "R1 path 判据不应再保留对整个 JSONL 的任意词串 grep OR 分支(SP-6)")
+    for snippet, desc in (
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write path',
+         "R1 path 判据应以事件流 mcpToolCall 锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write role_scope',
+         "R1 role_scope 判据应以事件流锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write occupancy',
+         "R1 occupancy 判据应以事件流锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write task_grant',
+         "R1 task_grant 判据应以事件流锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/g1-events.jsonl" mgs_remote task_grant',
+         "G1 越界远端判据应以事件流锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/p1-events.jsonl" mgs_write',
+         "P1 越界判据应以事件流锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/p2-events.jsonl" mgs_write',
+         "P2 越界判据应以事件流锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1b-events.jsonl" mgs_write identity',
+         "R1b identity 判据应以事件流锚定接线"),
+        ('curl_direct_denied "$EVIDENCE_DIR/g1-events.jsonl"',
+         "G1 直连判据应以事件流 commandExecution 锚定接线"),
+    ):
+        check(snippet in text, desc)
+
+
 def main() -> int:
     test_manifest()
     test_explicit_skills()
@@ -2506,6 +2745,7 @@ def main() -> int:
     test_accept16_sanitize_covers_unenumerated_tokens()
     test_accept16_secret_scan_gate()
     test_accept18_leak_checks_mechanized()
+    test_accept18_probe_checks_anchored_to_events()
     if FAILURES:
         print(f"FAIL ({len(FAILURES)} 项):")
         for failure in FAILURES:

@@ -96,6 +96,67 @@ check_json() { # check_json <描述> <文件> <python布尔表达式(data)>
   fi
 }
 
+# 探针行为锚定事件流(复审二 SP-6):探针「被拒/失败」的行为结论必须来自
+# 事件流真实记录,报告词族仅是表达核对、不再独立成立任何行为判据。
+mcp_deny_anchor() { # mcp_deny_anchor <事件JSONL> <工具> <rule_stage(|分隔多值)> <目标子串>
+  # 解析 JSONL 中真实 mcpToolCall 记录:核对工具、返回 decision=deny、
+  # rule_stage 与目标(调用目标与返回 target 一致含子串)。agentMessage
+  # 等示例文本不是 mcpToolCall 记录,无法满足锚定。
+  python3 -B - "$1" "$2" "$3" "$4" <<'PYEOF'
+import json, sys
+events, tool, stages, target_substr = sys.argv[1:5]
+stages = stages.split("|")
+anchored = False
+for line in open(events, encoding="utf-8", errors="replace"):
+    try:
+        item = json.loads(line).get("params", {}).get("item", {})
+    except ValueError:
+        continue
+    if item.get("type") != "mcpToolCall" or item.get("tool") != tool:
+        continue
+    args = item.get("arguments") or {}
+    called = str(args.get("path") or (args.get("payload") or {}).get("identity") or "")
+    for chunk in ((item.get("result") or {}).get("content") or []):
+        try:
+            ret = json.loads(chunk.get("text", ""))
+        except ValueError:
+            continue
+        target = str(ret.get("target") or "")
+        if (ret.get("decision") == "deny" and ret.get("rule_stage") in stages
+                and target_substr in target and target_substr in called):
+            anchored = True
+print("OK" if anchored else "MISSING")
+PYEOF
+}
+
+curl_direct_denied() { # curl_direct_denied <事件JSONL>
+  # 解析 JSONL 中真实 commandExecution 记录:命令确为 curl 直连替身
+  # (127.0.0.1)且执行失败(status=failed 或退出码非 0),原始输出含
+  # 连接失败词族。报告措辞词族不再独立成立直连探针判据。
+  python3 -B - "$1" <<'PYEOF'
+import json, re, sys
+fail_words = re.compile(
+    "refused|denied|permitted|failed to connect|couldn't connect|timed out"
+    "|不能|不可|被拒|失败|无法|超时", re.IGNORECASE)
+anchored = False
+for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
+    try:
+        item = json.loads(line).get("params", {}).get("item", {})
+    except ValueError:
+        continue
+    if item.get("type") != "commandExecution":
+        continue
+    command = str(item.get("command") or "")
+    if "curl" not in command or "127.0.0.1" not in command:
+        continue
+    failed = (item.get("status") == "failed"
+              or item.get("exitCode") not in (None, 0))
+    if failed and fail_words.search(str(item.get("aggregatedOutput") or "")):
+        anchored = True
+print("OK" if anchored else "MISSING")
+PYEOF
+}
+
 standin_call() { # standin_call <JSON正文> [路径]
   python3 -B -c "
 import json, sys, urllib.request
@@ -627,6 +688,8 @@ grep -qE '依赖[:：]无' "$PROJ_P/docs/mygamestudio/work/02-speed-tune/task.md
   && ok "P1 任务 02 依赖改为无" || bad "P1 任务 02 依赖未改"
 check_contains "P1 报告含委派工作请求" "$EVIDENCE_DIR/p1-report.md" '### 委派工作请求'
 check "P1 越界探针被拒(报告记录 deny 与 rule_stage)" grep -qE 'role_scope|task_grant|被拒' "$EVIDENCE_DIR/p1-report.md"
+check "P1 越界写入被拒(mgs_write deny,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/p1-events.jsonl" mgs_write 'role_scope|task_grant' docs/mygamestudio/GAME_DESIGN.md)" = "OK"
 check "P1 GAME_DESIGN 未被统筹改写(仍 v1)" grep -qE '基线版本[:：]v1' "$PROJ_P/docs/mygamestudio/GAME_DESIGN.md"
 python3 -B "$PLUGIN_RECORDS/mgs_records.py" ready --project "$PROJ_P" \
   > "$EVIDENCE_DIR/p-ready-after-p1.json" 2>&1
@@ -650,6 +713,8 @@ check_contains "P2 决策地图含目的地/工单/雾区/范围外" \
 check "P2 不改 GAME_DESIGN(基线仍 v1)" grep -qE '基线版本[:：]v1' "$PROJ_P/docs/mygamestudio/GAME_DESIGN.md"
 check_contains "P2 报告明确未裁决/未决" "$EVIDENCE_DIR/p2-report.md" '未决'
 check "P2 越界探针被拒(报告记录 deny 与 rule_stage)" grep -qE 'role_scope|task_grant|被拒' "$EVIDENCE_DIR/p2-report.md"
+check "P2 越界写入被拒(mgs_write deny,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/p2-events.jsonl" mgs_write 'role_scope|task_grant' docs/mygamestudio/GAME_DESIGN.md)" = "OK"
 
 # P3:直接调用 Game-Status(只读)
 hash_tree "$PROJ_P" "$EVIDENCE_DIR/p-before-p3.sha256"
@@ -788,11 +853,12 @@ check_json "G1 越界更新 01 未生效(仍待执行)" "$EVIDENCE_DIR/gh-state-
 check_json "G1 越界评论 02 未生效(无评论)" "$EVIDENCE_DIR/gh-state-after-g1.json" \
   "len(data['comments'].get('2', [])) == 0"
 check_contains "G1 报告记录 task_grant 拒绝" "$EVIDENCE_DIR/g1-report.md" 'task_grant'
-if grep -qE 'curl|127.0.0.1' "$EVIDENCE_DIR/g1-report.md" && grep -qiE 'refused|denied|permitted|failed to connect|couldn.t connect|timed out|不能|不可|被拒|失败|无法|超时' "$EVIDENCE_DIR/g1-report.md"; then
-  ok "G1 直连探针被会话沙箱拒绝且如实记录"
-else
-  bad "G1 直连探针结果未如实记录(应被拒绝)"
-fi
+check "G1 越界更新被拒(mgs_remote deny/task_grant,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/g1-events.jsonl" mgs_remote task_grant 01-harbor-timer)" = "OK"
+check "G1 越界评论被拒(mgs_remote deny/task_grant,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/g1-events.jsonl" mgs_remote task_grant 02-crane-sprite)" = "OK"
+check "G1 直连探针被会话沙箱拒绝(curl 直连;commandExecution 原始记录锚定)" \
+  test "$(curl_direct_denied "$EVIDENCE_DIR/g1-events.jsonl")" = "OK"
 check "G1 报告不含原始令牌" test -z "$(grep -cF "$GP_TOK" "$EVIDENCE_DIR/g1-report.md" | grep -v '^0$')"
 sanitize "$EVIDENCE_DIR/g1-report.md"; sanitize "$EVIDENCE_DIR/g1-events.jsonl"; sanitize "$EVIDENCE_DIR/g1-runlog.txt"
 
@@ -868,12 +934,14 @@ check "R1 凭据 B 授权文件写入成功" grep -q 'lock-probe by B' "$PROJ_R/
 check_contains "R1 报告记录 role_scope 拒绝" "$EVIDENCE_DIR/r1-report.md" 'role_scope'
 check_contains "R1 报告记录 occupancy 拒绝" "$EVIDENCE_DIR/r1-report.md" 'occupancy'
 check_contains "R1 报告记录 task_grant 拒绝(任务粒度)" "$EVIDENCE_DIR/r1-report.md" 'task_grant'
-if grep -Eq '"rule_stage": ?"path"|(rule_stage|拒绝|deny).{0,60}path|path.{0,60}(rule_stage|拒绝|deny)' "$EVIDENCE_DIR/r1-report.md" \
-   || grep -qF 'rule_stage\": \"path\"' "$EVIDENCE_DIR/r1-events.jsonl"; then
-  ok "R1 记录 path 拒绝(换链;报告词族或事件流原始记录)"
-else
-  bad "R1 未记录 path 拒绝(换链)"
-fi
+check "R1 越界角色写入被拒(mgs_write deny/role_scope,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write role_scope docs/mygamestudio/PROJECT.md)" = "OK"
+check "R1 占用冲突写入被拒(mgs_write deny/occupancy,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write occupancy src/lock-probe.txt)" = "OK"
+check "R1 任务粒度越界写入被拒(mgs_write deny/task_grant,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write task_grant src/other.txt)" = "OK"
+check "R1 记录 path 拒绝(换链;mgs_write deny/path 事件流锚定,SP-6)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write path /tmp/mgs18-evil-link.md)" = "OK"
 check "R1 间接写入未生效(shell/python 均被拒)" \
   test ! -f "$PROJ_R/src/indirect.txt" -a ! -f "$PROJ_R/src/indirect2.txt"
 check_contains "R1 报告原样记录间接写入被操作系统拒绝" "$EVIDENCE_DIR/r1-report.md" 'Operation not permitted'
@@ -907,6 +975,8 @@ run_turn r1b "$ENVROOT/home" "$ENVROOT/codex-home" "$RUNROOT_R" \
 任务(只做一件事,原样记录返回的 decision/rule_stage):经 mgs_write 把「stale write」写入 src/stale.txt(新文件)。简短报告后结束。" 420
 check "R1b turn 完整结束" grep -q 'turn/completed' "$EVIDENCE_DIR/r1b-events.jsonl"
 check_contains "R1b 旧凭据写入被拒(identity)" "$EVIDENCE_DIR/r1b-report.md" 'identity'
+check "R1b 旧凭据写入被拒(mgs_write deny/identity,事件流锚定)" \
+  test "$(mcp_deny_anchor "$EVIDENCE_DIR/r1b-events.jsonl" mgs_write identity src/stale.txt)" = "OK"
 check "R1b 写入未生效" test ! -f "$PROJ_R/src/stale.txt"
 
 # 占用回收:活跃实例回收被拒;释放后回收成功;终态占用清空
