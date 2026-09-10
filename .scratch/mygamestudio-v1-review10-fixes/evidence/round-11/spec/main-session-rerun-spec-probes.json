@@ -1,0 +1,1618 @@
+{
+  "rows": [
+    {
+      "id": "direct-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 253 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/direct-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "output-short-success",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -o 'outputs/{a,b}.txt' http://127.0.0.1:62394/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 0,
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/output-short-success.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "output-short-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -o 'outputs/{a,b}.txt' http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 252 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/output-short-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "output-long-success",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --output 'outputs/item[1-2].txt' http://127.0.0.1:62399/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 0,
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/output-long-success.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "output-long-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --output 'outputs/item[1-2].txt' http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 254 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/output-long-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-short-success",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -d 'field={a,b}[1-2]' http://127.0.0.1:62427/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "POST",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 16,
+          "body_sha256": "14e8d285093de38d754517f6a5af10fed5c6d1526ee81482a8850d765c115919",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/data-short-success.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-short-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -d 'field={a,b}[1-2]' http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 254 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/data-short-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-long-success",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --data 'field={a,b}[1-2]' http://127.0.0.1:62432/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "POST",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 16,
+          "body_sha256": "14e8d285093de38d754517f6a5af10fed5c6d1526ee81482a8850d765c115919",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/data-long-success.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-long-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --data 'field={a,b}[1-2]' http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 254 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/data-long-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-raw-success",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --data-raw '@{a,b}[1-2]' http://127.0.0.1:62435/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "POST",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 11,
+          "body_sha256": "a0d83426561c34d8621d88f98c30416fb5c5e306b5ac522524831414ff076845",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/data-raw-success.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-raw-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --data-raw '@{a,b}[1-2]' http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 255 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/data-raw-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-binary-success",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --data-binary '{a,b}[1-2]' http://127.0.0.1:62438/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "POST",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 10,
+          "body_sha256": "809e11f36ae70c0f36fb6b08c0ba33220630ae074439f8833a0600c80659159d",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/data-binary-success.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "data-binary-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --data-binary '{a,b}[1-2]' http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 255 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/data-binary-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "form-short-glob-literal",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -F 'file=@{a,b}.txt' http://127.0.0.1:62449/upload/",
+      "expected": "MISSING",
+      "exit": 26,
+      "stdout": "",
+      "stderr": "curl: (26) Failed to open/read local data from file/application\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/form-short-glob-literal.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "form-long-glob-literal",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --form 'file=@{a,b}.txt' http://127.0.0.1:62453/upload/",
+      "expected": "MISSING",
+      "exit": 26,
+      "stdout": "",
+      "stderr": "curl: (26) Failed to open/read local data from file/application\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/form-long-glob-literal.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "form-long-two-files-one-post",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --form file=@a.txt,b.txt http://127.0.0.1:62477/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "POST",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 601,
+          "body_sha256": "7d36c2cac39d89f9b49b841e9f52aaddc699e46060d5ddd30747370b486572ba",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/form-long-two-files-one-post.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "form-long-data-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --form 'field={a,b}[1-2]' http://127.0.0.1:62483/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "POST",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 162,
+          "body_sha256": "b3707f3bb54293f708b8944e1f266c5808905c4cef52f332b6e9c9544fff6c76",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/form-long-data-glob.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "form-long-two-files-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --form file=@a.txt,b.txt http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 255 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/form-long-two-files-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-stdin-dash",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T - http://127.0.0.1:62488/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 20,
+          "body_sha256": "6a4d3d785fb3b491ab3564cc2462517b5d817f34cc46eae2290518d7ead1b0be",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-stdin-dash.jsonl",
+      "stdin_bytes": 20,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-stdin-dot",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T . http://127.0.0.1:62490/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n100    39  100     8    0    31   3619  14027 --:--:-- --:--:-- --:--:-- 19500",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 20,
+          "body_sha256": "6a4d3d785fb3b491ab3564cc2462517b5d817f34cc46eae2290518d7ead1b0be",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-stdin-dot.jsonl",
+      "stdin_bytes": 20,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-empty-value",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '' http://127.0.0.1:62551/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 0,
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-empty-value.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-short-missing-value",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS http://127.0.0.1:62553/upload/ -T",
+      "expected": "MISSING",
+      "exit": 2,
+      "stdout": "",
+      "stderr": "curl: option -T: requires parameter\ncurl: try 'curl --help' or 'curl --manual' for more information\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-short-missing-value.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-long-missing-value",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS http://127.0.0.1:62561/upload/ --upload-file",
+      "expected": "MISSING",
+      "exit": 2,
+      "stdout": "",
+      "stderr": "curl: option --upload-file: requires parameter\ncurl: try 'curl --help' or 'curl --manual' for more information\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-long-missing-value.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-aggregate-missing-value",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS http://127.0.0.1:62565/upload/ -sST",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/upload/",
+          "status": 200,
+          "bytes": 0,
+          "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-aggregate-missing-value.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-stdin-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T - http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 257 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-stdin-closed.jsonl",
+      "stdin_bytes": 20,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-dot-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T . http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0curl: (28) Failed to connect to 127.0.0.1 port 62380 after 255 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-dot-closed.jsonl",
+      "stdin_bytes": 20,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "upload-step-braces",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '{1..10..2}' http://127.0.0.1:62571/upload/",
+      "expected": "MISSING",
+      "exit": 26,
+      "stdout": "",
+      "stderr": "curl: Can't open '1..10..2'\ncurl: try 'curl --help' or 'curl --manual' for more information\ncurl: (26) Failed to open/read local data from file/application\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-step-braces.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-step-range",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T 'item[1-3:2].txt' http://127.0.0.1:62578/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 62578 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/item1.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-step-range.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-nested-braces",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '{{a,b},c}.txt' http://127.0.0.1:62587/upload/",
+      "expected": "MISSING",
+      "exit": 3,
+      "stdout": "",
+      "stderr": "curl: (3) nested brace in URL position 2:\n{{a,b},c}.txt\n ^\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-nested-braces.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-escaped-braces",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '\\{a,b\\}.txt' http://127.0.0.1:62590/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/%7ba%2cb%7d.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-escaped-braces.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-singleton-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '{a}.txt' http://127.0.0.1:62592/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-singleton-glob.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-unmatched-open",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T 'a[.txt' http://127.0.0.1:62598/upload/",
+      "expected": "MISSING",
+      "exit": 3,
+      "stdout": "",
+      "stderr": "curl: (3) bad range specification in URL position 3:\na[.txt\n  ^\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-unmatched-open.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-unmatched-close",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T 'a].txt' http://127.0.0.1:62618/upload/",
+      "expected": "MISSING",
+      "exit": 3,
+      "stdout": "",
+      "stderr": "curl: (3) unmatched close brace/bracket in URL position 2:\na].txt\n ^\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-unmatched-close.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-long-aggregate",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -sSTa.txt http://127.0.0.1:62622/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-long-aggregate.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-duplicate-flags",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T a.txt -T b.txt http://127.0.0.1:62624/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-duplicate-flags.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-disabled-literal-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -g -T '{a,b}.txt' http://127.0.0.1:62630/upload/",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "SUCCESS\n",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/%7ba%2cb%7d.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-disabled-literal-glob.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-disabled-literal-glob-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -g -T '{a,b}.txt' http://127.0.0.1:62380/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 255 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-disabled-literal-glob-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-long-single-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS --upload-file a.txt http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 257 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-long-single-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-short-single-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T a.txt http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 250 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-short-single-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-aggregate-single-closed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -sSTa.txt http://127.0.0.1:62380/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 62380 after 257 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-aggregate-single-closed.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-plus-url-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '{a.txt,b.txt}' 'http://127.0.0.1:62650/upload/{one,two}'",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 62650 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 62650 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 62650 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/one",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-plus-url-glob.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-plus-retry",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '{a.txt,b.txt}' --retry 1 http://127.0.0.1:62655/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 62655 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-plus-retry.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-plus-redirect",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '{a.txt,b.txt}' -L http://127.0.0.1:62658/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 62658 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-plus-redirect.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-all-three",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .25 --max-time 2 -sS -T '{a.txt,b.txt}' --retry 1 -L 'http://127.0.0.1:62668/upload/{one,two}'",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 62668 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 62668 after 0 ms: Couldn't connect to server\ncurl: (7) Failed to connect to 127.0.0.1 port 62668 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/one",
+          "status": 200,
+          "bytes": 24,
+          "body_sha256": "ad03fae89f3673109949bfacf4d1cbbf24ef2498b9e600168b5357953e7a1667",
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-final11/fixtures/upload-all-three.jsonl",
+      "stdin_bytes": 0,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "before": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "broad_upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    }
+  ],
+  "total": 44,
+  "bugs": [
+    "upload-dot-closed"
+  ],
+  "all_task_threads_closed": true,
+  "source_sha256": "4a4357276283e85fa98b80a5e6da522a3e2bbd75fb977fafa74b2947d76c295a",
+  "network_boundary": "clean allowlisted environment; all HTTP URL arguments use numeric 127.0.0.1; argv run without shell; curl -q --noproxy *; only loopback servers; no credentials used",
+  "causal_guard": "fresh broad upload rejection for conservative-cost control, not a product fix"
+}

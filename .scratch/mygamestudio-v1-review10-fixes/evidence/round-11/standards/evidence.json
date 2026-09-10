@@ -1,0 +1,291 @@
+{
+  "axis": "Standards",
+  "baseline": "66b8506",
+  "product": "d604b92",
+  "start_head": "b5f39c9aa334437901ccd6b1699e84b403fc7b83",
+  "start_porcelain_clean": true,
+  "hard_violations": [],
+  "judgment_smells": [],
+  "hard_violation_count": 0,
+  "judgment_smell_count": 0,
+  "standards_read": [
+    "AGENTS.md",
+    "AGENTS.zh-CN.md",
+    "CONTEXT.md",
+    "docs/agents/issue-tracker.md",
+    "docs/agents/triage-labels.md",
+    "docs/agents/domain.md",
+    "user supplied global rules and review handoff"
+  ],
+  "commits": [
+    {
+      "sha": "2288aeb86fac18c7d69e7a2ca291bbb6e50a32c5",
+      "changed_files": 1
+    },
+    {
+      "sha": "1927a4619d5b994181bf846e07b4333eaf74cf5d",
+      "changed_files": 214
+    },
+    {
+      "sha": "d604b92858bf2282de3327f5db4b9c71535762d0",
+      "changed_files": 25
+    }
+  ],
+  "run_scope": {
+    "outside_function_identical": true,
+    "sha256": "72a3d59a22e07cb467510014cd9ae31b99bb77c3524521b1cc1ecce01ac5f2d2",
+    "function_start_line": 196,
+    "heredoc_top_level_closing_brace_count": 1,
+    "value_tables_unchanged": true,
+    "added_guard_types": [
+      "long",
+      "short"
+    ],
+    "python_ast_without_two_new_guards_equals_baseline": true
+  },
+  "tests": {
+    "old_check_calls": 106,
+    "new_check_calls": 116,
+    "added_check_calls": 10,
+    "existing_check_multiset_unchanged": true,
+    "new_fixture_names": [
+      "g1_fixture_ck_events",
+      "g1_fixture_cl_events",
+      "g1_fixture_cm_events",
+      "g1_fixture_cn_events",
+      "g1_fixture_co_events",
+      "g1_fixture_cp_events",
+      "g1_fixture_cq_events",
+      "g1_fixture_cr_events",
+      "g1_fixture_cs_events",
+      "g1_fixture_ct_events"
+    ],
+    "entire_test_ast_after_removing_added_doc_fixtures_assertions_equals_baseline": true
+  },
+  "driver_refresh": {
+    "json_files": 21,
+    "environment_files": 1,
+    "files": [
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-environment.txt",
+        "changed_line_numbers": [
+          1
+        ],
+        "line_counts": [
+          4,
+          4
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-identity-deny.json",
+        "changed_json_paths": [
+          "$.reason",
+          "$.token_fp",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-lock-by-i2.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-occupancy.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.reason",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-plugin-install.json",
+        "changed_json_paths": [
+          "$.installedPath"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-policy-corrupt.json",
+        "changed_json_paths": [
+          "$.token_fp",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-policy-restored.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-publish-drafts.json",
+        "changed_json_paths": [
+          "$.results[0].draft",
+          "$.results[0].outcome.readback.body"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-reclaim-active.json",
+        "changed_json_paths": [
+          "$.instance_id"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-comment.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.result.readback.body",
+          "$.result.readback.body_sha256"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-offline.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.note.draft",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-read.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.result.task.body",
+          "$.result.task.body_sha256"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-task-deny.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-update.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.result.readback.body"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-role-deny.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-scope.json",
+        "changed_json_paths": [
+          "$.instance_id"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-set-remote.json",
+        "changed_json_paths": [
+          "$.remote.github.api_base"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-standin-final.json",
+        "changed_json_paths": [
+          "$.issues[0].body",
+          "$.issues[1].body",
+          "$.issues[2].body",
+          "$.issues[3].body"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-status-final.json",
+        "changed_json_paths": [
+          "$.instances[0].instance_id",
+          "$.instances[1].instance_id"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-symlink.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-task-deny.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.ts"
+        ]
+      },
+      {
+        "file": "acceptance/18-complete-package-acceptance/evidence/driver-write-allow.json",
+        "changed_json_paths": [
+          "$.instance_id",
+          "$.ts"
+        ]
+      }
+    ],
+    "semantic_fields_unchanged": {
+      "decision": true,
+      "rule_stage": true,
+      "target": true,
+      "policy_sha256": true
+    },
+    "body_sha256_checks": [
+      {
+        "path": "acceptance/18-complete-package-acceptance/evidence/driver-remote-comment.json.result.readback",
+        "base_valid": true,
+        "product_valid": true
+      },
+      {
+        "path": "acceptance/18-complete-package-acceptance/evidence/driver-remote-read.json.result.task",
+        "base_valid": true,
+        "product_valid": true
+      }
+    ],
+    "unclassified_changes": []
+  },
+  "plugin_dist": {
+    "changed_paths": [],
+    "package_sha256": "3c44e2c0aaa0f02571fc394b30dd4ed34a9d0833c554531856b6a04f47c37ea7",
+    "expected_sha256": "3c44e2c0aaa0f02571fc394b30dd4ed34a9d0833c554531856b6a04f47c37ea7",
+    "sha256_matches_declared": true,
+    "sha256_manifest_contains_digest": true,
+    "tar_matching_plugin_members": 79,
+    "tar_plugin_mismatches": []
+  },
+  "archive": {
+    "triage_added_evidence_count": 211,
+    "triage_followup_evidence": [
+      ".scratch/mygamestudio-v1-review10-fixes/evidence/spec/triage-rerun-new-curl-probes.json",
+      ".scratch/mygamestudio-v1-review10-fixes/evidence/spec/triage-rerun-probe-stdout.log",
+      ".scratch/mygamestudio-v1-review10-fixes/evidence/spec/triage-rerun-probe.py",
+      ".scratch/mygamestudio-v1-review10-fixes/evidence/triage-repro-verify.txt"
+    ],
+    "prior_review_archive_count": 207,
+    "archived_report_and_summary_hashes": {
+      "review-10.md": {
+        "stored": "c1e9e5be250d24e7b4304f641a1ed3b6ed7d78f6f2fd8ba537ae8acd1d7909d6",
+        "actual": "c1e9e5be250d24e7b4304f641a1ed3b6ed7d78f6f2fd8ba537ae8acd1d7909d6",
+        "matches": true
+      },
+      "verification-summary-10.json": {
+        "stored": "ec5d220419477d6a4c60eaa97e494262f585c9a9492e72573c40be4388bb1277",
+        "actual": "ec5d220419477d6a4c60eaa97e494262f585c9a9492e72573c40be4388bb1277",
+        "matches": true
+      }
+    }
+  },
+  "end_head": "b5f39c9aa334437901ccd6b1699e84b403fc7b83",
+  "end_porcelain_clean": true,
+  "boundary": {
+    "source_head_unchanged": true,
+    "executed_suites": false,
+    "executed_acceptance_run_sh": false,
+    "remote_requests": 0,
+    "product_model_calls": 0,
+    "driver_raw_values_output": false
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "scanned_files": 2632,
+  "raw_token_field_matches": [],
+  "raw_standalone_token_files": [],
+  "nonsecret_token_placeholders": [
+    {
+      "path": "repo/.scratch/mygamestudio-v1-review3-fixes/evidence/acceptance-fixtures/arena/g_o.token",
+      "contains_redaction_marker": true
+    }
+  ],
+  "scope": "Specific token fields and standalone .token files; historical incident exact-value sweep separately recorded. Not a universal secret scanner.",
+  "whole_run_no_plaintext_token_files": false
+}

@@ -1,0 +1,7 @@
+{
+  "exit": 0,
+  "passed": 33,
+  "failed": 0,
+  "auth_link_used": false,
+  "token_storage": "memory and internal pipes only"
+}

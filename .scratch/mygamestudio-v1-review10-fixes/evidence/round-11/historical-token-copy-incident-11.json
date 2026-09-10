@@ -1,0 +1,12 @@
+{
+  "incident": "Historical standalone .token file copied as tracked evidence before final artifact audit; plaintext existed in task copy, never emitted to conversation.",
+  "source_relative_path": ".scratch/mygamestudio-v1-review3-fixes/evidence/acceptance-fixtures/arena/g_o.token",
+  "affected_task_files_redacted": [
+    "repo/.scratch/mygamestudio-v1-review3-fixes/evidence/acceptance-fixtures/arena/g_o.token"
+  ],
+  "remaining_exact_value_matches": [],
+  "real_source_changed": false,
+  "token_active_or_revoked": "not verified; no use or authentication attempted",
+  "boundary_met_for_entire_run": false,
+  "current_task_copy_redacted": true
+}

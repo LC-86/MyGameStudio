@@ -1,0 +1,161 @@
+[
+  {
+    "name": "spec-custom-probes.py",
+    "exit": 0,
+    "seconds": 0.18,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/spec-custom-probes.py"
+    ]
+  },
+  {
+    "name": "spec-independent-probes.py",
+    "exit": 0,
+    "seconds": 0.39,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/spec-independent-probes.py"
+    ]
+  },
+  {
+    "name": "spec-extra-pending.py",
+    "exit": 0,
+    "seconds": 0.14,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/spec-extra-pending.py",
+      "--repo",
+      "/tmp/mgs-review11-kgohlovv/repo",
+      "--out",
+      "/tmp/mgs-review11-kgohlovv"
+    ]
+  },
+  {
+    "name": "curl-new-probes.py",
+    "exit": 0,
+    "seconds": 3.26,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/curl-new-probes.py"
+    ]
+  },
+  {
+    "name": "curl-extra-probes-5.py",
+    "exit": 0,
+    "seconds": 6.35,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/curl-extra-probes-5.py"
+    ]
+  },
+  {
+    "name": "path-extra-probes-5.py",
+    "exit": 0,
+    "seconds": 0.31,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/path-extra-probes-5.py"
+    ]
+  },
+  {
+    "name": "curl-boundaries-probe.py",
+    "exit": 0,
+    "seconds": 7.04,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/curl-boundaries-probe.py"
+    ]
+  },
+  {
+    "name": "path-and-retained.py",
+    "exit": 0,
+    "seconds": 0.85,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/path-and-retained.py"
+    ]
+  },
+  {
+    "name": "mixed-layout-standards.py",
+    "exit": 0,
+    "seconds": 0.08,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/mixed-layout-standards.py"
+    ]
+  },
+  {
+    "name": "curl-adversarial-7.py",
+    "exit": 0,
+    "seconds": 17.41,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/curl-adversarial-7.py"
+    ]
+  },
+  {
+    "name": "new-probes-8.py",
+    "exit": 0,
+    "seconds": 6.5,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/new-probes-8.py"
+    ]
+  },
+  {
+    "name": "new-probes-9.py",
+    "exit": 0,
+    "seconds": 9.75,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/new-probes-9.py"
+    ]
+  },
+  {
+    "name": "parallel-curl-supplement.py",
+    "exit": 0,
+    "seconds": 1.61,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/parallel-curl-supplement.py"
+    ]
+  },
+  {
+    "name": "mixed-spec-plain",
+    "exit": 0,
+    "seconds": 0.13,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/mixed-layout-spec-agent.py",
+      "--out",
+      "/tmp/mgs-review11-kgohlovv/mixed-plain"
+    ]
+  },
+  {
+    "name": "mixed-spec-guard",
+    "exit": 0,
+    "seconds": 0.12,
+    "command": [
+      "python3",
+      "-B",
+      "/tmp/mgs-review11-kgohlovv/mixed-layout-spec-agent.py",
+      "--out",
+      "/tmp/mgs-review11-kgohlovv/mixed-guard",
+      "--guard-each-path"
+    ]
+  }
+]

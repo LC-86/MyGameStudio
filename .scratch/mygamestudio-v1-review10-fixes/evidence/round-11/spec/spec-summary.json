@@ -1,0 +1,347 @@
+{
+  "axis": "Spec",
+  "finding_count": 0,
+  "missing_requirements": 0,
+  "partial_requirements": 0,
+  "scope_creep": 0,
+  "incorrect_implementation": 0,
+  "findings": [],
+  "sp30_local_implementation_matches_spec": true,
+  "new_regressions_observed": false,
+  "review_refs": {
+    "base": "66b8506",
+    "product": "d604b92",
+    "actual_head": "b5f39c9aa334437901ccd6b1699e84b403fc7b83"
+  },
+  "new_probes": {
+    "total": 44,
+    "raw_observed_bug_count": 1,
+    "raw_observed_bug": [
+      {
+        "id": "direct-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "output-short-success",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "output-short-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "output-long-success",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "output-long-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "data-short-success",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "data-short-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "data-long-success",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "data-long-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "data-raw-success",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "data-raw-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "data-binary-success",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "data-binary-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "form-short-glob-literal",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "form-long-glob-literal",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "form-long-two-files-one-post",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "form-long-data-glob",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "form-long-two-files-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-stdin-dash",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-stdin-dot",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-empty-value",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-short-missing-value",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-long-missing-value",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-aggregate-missing-value",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-stdin-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-dot-closed",
+        "expected": "OK",
+        "anchor": "MISSING",
+        "observed_bug": true
+      },
+      {
+        "id": "upload-step-braces",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-step-range",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-nested-braces",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-escaped-braces",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-singleton-glob",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-unmatched-open",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-unmatched-close",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-long-aggregate",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-duplicate-flags",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-disabled-literal-glob",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-disabled-literal-glob-closed",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-long-single-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-short-single-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-aggregate-single-closed",
+        "expected": "OK",
+        "anchor": "OK",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-plus-url-glob",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-plus-retry",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-plus-redirect",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      },
+      {
+        "id": "upload-all-three",
+        "expected": "MISSING",
+        "anchor": "MISSING",
+        "observed_bug": false
+      }
+    ],
+    "reportable_new_findings": 0,
+    "raw_fields_preserved": true,
+    "artifact": "/tmp/mgs-review11-kgohlovv/spec/spec-probes.json"
+  },
+  "calibrations": [
+    {
+      "id": "upload-dot-closed",
+      "raw_expected": "OK",
+      "raw_observed_bug": true,
+      "actual_anchor_before": "MISSING",
+      "actual_anchor_current": "MISSING",
+      "reportable_finding": false,
+      "reason": "Diagnostic is immediately preceded by progress text instead of starting a line; same prior/current behavior. Review9 issue 01 lines 13 and 47 accept line-start diagnostic conservative handling.",
+      "calibrated_expected": "MISSING"
+    }
+  ],
+  "conservative_costs": [
+    {
+      "id": "upload-disabled-literal-glob-closed",
+      "before": "OK",
+      "current": "MISSING",
+      "reason": "With -g and existing literal brace filename, real single upload fails to connect. Unconditional upload value glob-character rejection is explicitly mandated by review10 issue 01:14."
+    }
+  ],
+  "causal": {
+    "artifact": "/tmp/mgs-review11-kgohlovv/spec/spec-causal.json",
+    "withdraw_changes": [
+      "upload-step-range",
+      "upload-disabled-literal-glob-closed"
+    ],
+    "restored_matches_current": true,
+    "withdraw_python_ast_equals_batch_baseline": true,
+    "broad_upload_guard_changes": [
+      "upload-stdin-closed",
+      "upload-long-single-closed",
+      "upload-short-single-closed",
+      "upload-aggregate-single-closed"
+    ]
+  },
+  "network_boundary": "clean allowlisted environment; all HTTP URL arguments use numeric 127.0.0.1; argv run without shell; curl -q --noproxy *; only loopback servers; no credentials used",
+  "all_task_threads_closed": true,
+  "actual_commands": [
+    "Read-only Git status/rev-parse/show/diff",
+    "Read repository specifications and source text",
+    "Real /usr/bin/curl argv execution with only numeric loopback URLs and local payloads",
+    "Bash execution of extracted curl_direct_denied functions only",
+    "Python AST comparison and fixture replay in /tmp"
+  ],
+  "limits": [
+    "Bounded new probes do not prove all curl semantics.",
+    "Zero product/acceptance model rounds; full history, suites and drivers covered by main reviewer.",
+    "Main reviewer disclosed historical credential file copying deviation; overall token-file boundary must not be reported as fully satisfied."
+  ],
+  "repository_status_end": "",
+  "conditional_closeout": "Spec axis supports technical closeout pending main reviewer verification and explicit remaining user decisions.",
+  "memory_used": [
+    {
+      "path": "MEMORY.md",
+      "lines": "104-106",
+      "note": "Located review-scope history; all product claims verified against current source and specs."
+    }
+  ]
+}

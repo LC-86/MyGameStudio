@@ -1,0 +1,17 @@
+{
+  "head_start": "b5f39c9aa334437901ccd6b1699e84b403fc7b83",
+  "head_end": "b5f39c9aa334437901ccd6b1699e84b403fc7b83",
+  "head_unchanged": true,
+  "status_porcelain_start": "",
+  "status_porcelain_end": "",
+  "tracked_files": 2169,
+  "tracked_bytes_unchanged": true,
+  "changed_tracked_files": [],
+  "real_repository_write": false,
+  "acceptance_run_sh_started": false,
+  "product_acceptance_model_rounds": 0,
+  "real_remote_writes": 0,
+  "daily_client_install_changed": false,
+  "entire_run_no_plaintext_token_files": false,
+  "token_copy_incident": "historical-token-copy-incident-11.json"
+}

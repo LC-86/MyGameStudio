@@ -1,0 +1,22 @@
+--- current
++++ withdraw
+@@ -324,8 +324,6 @@
+                 # 上传文件名 glob 保守拒绝(SP-30):--upload-file 的值
+                 # 含花括号/方括号会把单 URL 展成多次 PUT,len(urls)==1
+                 # 不能证明单请求;缺值同样不能证明执行形态
+-                if tok == "--upload-file" and (i + 1 >= len(args) or any(ch in args[i + 1] for ch in "{}[]")):
+-                    return None
+                 i += 2
+                 continue
+             if tok in CURL_PLAIN_LONG:
+@@ -352,10 +350,6 @@
+                 # 上传文件名 glob 保守拒绝(SP-30):短旗标 T 的值按
+                 # SP-22 语义取值——位于 token 末尾取下一参数,粘连
+                 # (含聚合 -sST{a,b})取 token 余部
+-                if body[value_at] == "T":
+-                    value = args[i + 1] if value_at == len(body) - 1 and i + 1 < len(args) else body[value_at + 1:]
+-                    if any(ch in value for ch in "{}[]"):
+-                        return None
+                 i += 2 if value_at == len(body) - 1 else 1
+                 continue
+             if all(ch in CURL_PLAIN_SHORT for ch in body):

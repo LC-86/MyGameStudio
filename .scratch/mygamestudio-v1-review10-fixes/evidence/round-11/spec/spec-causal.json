@@ -1,0 +1,277 @@
+{
+  "rows": [
+    {
+      "id": "direct-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "output-short-success",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "output-short-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "output-long-success",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "output-long-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "data-short-success",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "data-short-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "data-long-success",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "data-long-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "data-raw-success",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "data-raw-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "data-binary-success",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "data-binary-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "form-short-glob-literal",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "form-long-glob-literal",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "form-long-two-files-one-post",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "form-long-data-glob",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "form-long-two-files-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "upload-stdin-dash",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-stdin-dot",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-empty-value",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-short-missing-value",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-long-missing-value",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-aggregate-missing-value",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-stdin-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "upload-dot-closed",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-step-braces",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-step-range",
+      "current": "MISSING",
+      "withdraw": "OK",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-nested-braces",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-escaped-braces",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-singleton-glob",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-unmatched-open",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-unmatched-close",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-long-aggregate",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-duplicate-flags",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-disabled-literal-glob",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-disabled-literal-glob-closed",
+      "current": "MISSING",
+      "withdraw": "OK",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-long-single-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "upload-short-single-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "upload-aggregate-single-closed",
+      "current": "OK",
+      "withdraw": "OK",
+      "restored": "OK"
+    },
+    {
+      "id": "upload-plus-url-glob",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-plus-retry",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-plus-redirect",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    },
+    {
+      "id": "upload-all-three",
+      "current": "MISSING",
+      "withdraw": "MISSING",
+      "restored": "MISSING"
+    }
+  ],
+  "total": 44,
+  "withdraw_changes": [
+    "upload-step-range",
+    "upload-disabled-literal-glob-closed"
+  ],
+  "restored_matches_current": true,
+  "withdraw_python_ast_equals_batch_baseline": true,
+  "source_sha256": "4a4357276283e85fa98b80a5e6da522a3e2bbd75fb977fafa74b2947d76c295a",
+  "source_unchanged": true
+}
