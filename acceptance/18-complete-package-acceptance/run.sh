@@ -219,6 +219,12 @@ curl_direct_denied() { # curl_direct_denied <事件JSONL>
   # 禁用前缀 L/K 出现即不成立,SP-24),失败证据须为 curl 诊断行形态
   # (错误前缀 curl: (N)+连接短语+目标主机,响应正文伪装不成立,SP-25)
   # 且诊断行中的目标主机身份与替身相等比较(非子串包含,SP-26)。
+  # 复审九口径:无值短旗标 g/J/Z 按本机 curl 语义入无值表(SP-27),
+  # --retry 保守拒绝(SP-28),URL 形态位置参数(含 -- 之后)含 glob
+  # 字符即不成立(SP-29)。复审十口径:上传旗标 -T/--upload-file 的
+  # **值**含 glob 字符同样使整个命令不成立(SP-30;curl 手册支持
+  # 单 URL+多文件名 glob 展开多次 PUT,首次成功后二次失败不能证明
+  # 直连被拒);既有 URL 位置参数检查不动,不采用移除上传旗标的宽方案。
   # 报告措辞词族不再独立成立直连探针判据。
   python3 -B - "$1" <<'PYEOF'
 import json, os, re, shlex, sys
@@ -253,7 +259,10 @@ SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 # 核对(SP-27):g(globoff)/J(remote-header-name)/Z(parallel) 均为无值,
 # 列入 CURL_PLAIN_SHORT——旧表把三者当带值会吞掉首个或唯一 URL。
 # --retry 保守拒绝(SP-28):固定探针不实现逐次尝试证明,出现即整个
-# 命令不成立;真失败+重试的对照随之 MISSING,属已披露取舍。集合用
+# 命令不成立;真失败+重试的对照随之 MISSING,属已披露取舍。上传值
+# glob 保守拒绝(SP-30):-T/--upload-file 的值(分离/粘连/聚合内粘连
+# 均按 SP-22 语义取值)含 {}[] 任一字符即整个命令不成立;不实现
+# curl 上传 glob 解析器。集合用
 # set((...)) 构造——heredoc 内不出现顶格 },保持函数可整体提取复审
 CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzD")
 CURL_PLAIN_SHORT = set("sSkvIifnN46qgJZ")
@@ -312,6 +321,11 @@ def url_targets(tokens):
             break
         if tok.startswith("--"):
             if tok in CURL_VALUE_LONG:
+                # 上传文件名 glob 保守拒绝(SP-30):--upload-file 的值
+                # 含花括号/方括号会把单 URL 展成多次 PUT,len(urls)==1
+                # 不能证明单请求;缺值同样不能证明执行形态
+                if tok == "--upload-file" and (i + 1 >= len(args) or any(ch in args[i + 1] for ch in "{}[]")):
+                    return None
                 i += 2
                 continue
             if tok in CURL_PLAIN_LONG:
@@ -335,6 +349,13 @@ def url_targets(tokens):
             if value_at is not None:
                 if not all(ch in CURL_PLAIN_SHORT for ch in body[:value_at]):
                     return None
+                # 上传文件名 glob 保守拒绝(SP-30):短旗标 T 的值按
+                # SP-22 语义取值——位于 token 末尾取下一参数,粘连
+                # (含聚合 -sST{a,b})取 token 余部
+                if body[value_at] == "T":
+                    value = args[i + 1] if value_at == len(body) - 1 and i + 1 < len(args) else body[value_at + 1:]
+                    if any(ch in value for ch in "{}[]"):
+                        return None
                 i += 2 if value_at == len(body) - 1 else 1
                 continue
             if all(ch in CURL_PLAIN_SHORT for ch in body):

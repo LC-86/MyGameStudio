@@ -2616,6 +2616,24 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
       terminator-attached-option、lowercase-lm2、uppercase-M2、
       retry-503-then-200、no-value-Z-two-urls;full-diagnostic-body
       为 SP-25 已接受残余(探针 expected 列 MISSING、产品维持 OK)。
+
+    反例背景(SP-30,第十轮):第九轮 glob 拒绝只覆盖 URL 形态位置参数
+    与 `--` 后参数,`-T`/`--upload-file` 的**值**本身支持 curl glob——
+    单 URL(URL 无 glob 字符)配 `-T '{a.txt,b.txt}'` 展开两次 PUT:
+    首次 PUT 200/18 字节后关服,第二次真实 `curl: (7) Failed to
+    connect` exit 7,判据仍 OK 假绿。精化要求(沿第十轮复审探针
+    new-curl-probes.py 的 once_upload 形态,真实 curl 执行封装,
+    loopback 服务器记录首次 PUT 后关监听):
+    - `-T`/`--upload-file` 的值(分离取下一参数、粘连取 token 余部、
+      聚合内粘连按 SP-22 语义取值)含 `{`/`}`/`[`/`]` 任一字符即整个
+      命令不成立;既有 URL 位置参数与 `--` 后参数的 glob 检查不动;
+    - 不采用「移除上传旗标」宽方案(会误伤普通单文件上传真失败对照);
+    - `--upload-file={a,b}` 长等号形态本就被名单拒绝;`-g` 关闭展开
+      因字面文件不存在而 MISSING,行为不变;
+    - 对照逐例——OK 组:upload-single-closed、upload-long-single-
+      closed;MISSING 组:upload-glob-with-g、upload-glob-long-equals;
+      既有 review9 对照(direct/legitimate-aggregate/silent-direct OK,
+      其余拒绝形态 MISSING,两条已披露例外行)逐项不变。
     """
 
     import shlex
@@ -3338,6 +3356,67 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
             28,
             "curl: (7) Failed to connect to 127.0.0.1 port 1 after 0 ms: Couldn't connect to server\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n 89    97   89    87    0     0    422      0 --:--:-- --:--:-- --:--:--   424\ncurl: (28) Operation timed out after 205 milliseconds with 87 out of 97 bytes received\n") + "\n", encoding="utf-8")
 
+        # 夹具 CK~CT(review10 SP-30 六反例与对照):实施代理在
+        # /tmp/mgs-r10-cursor 以真实 /usr/bin/curl 于本机 loopback 执行
+        # 封装(仅 127.0.0.1 与本机端口)——once_upload:本机服务器 accept
+        # 一次并记录 method/path/字节数,返回 200/UPLOAD_SUCCESS 后关监
+        # 听,第二连接真失败 exit 7;关闭端口绑定取号后保持占用无监听
+        # (普通单文件上传对照 exit 28)。形态沿第十轮复审探针
+        # new-curl-probes.py:--connect-timeout .2 --max-time 2 -sS,
+        # 真实命令/退出码/原始输出逐字入夹具。六反例服务器记录首次
+        # PUT 200+18 字节;with-g 字面文件不存在 exit 26;长等号形态
+        # 未知旗标 exit 2;两普通上传对照无命中。
+        g1_fixture_ck_events = tmp_path / "g1-events-ck.jsonl"
+        g1_fixture_ck_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T '{a.txt,b.txt}' http://127.0.0.1:58231/upload/",
+            7,
+            "UPLOAD_SUCCESS\ncurl: (7) Failed to connect to 127.0.0.1 port 58231 after 0 ms: Couldn't connect to server\n") + "\n", encoding="utf-8")
+        g1_fixture_cl_events = tmp_path / "g1-events-cl.jsonl"
+        g1_fixture_cl_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --upload-file '{a.txt,b.txt}' http://127.0.0.1:58234/upload/",
+            7,
+            "UPLOAD_SUCCESS\ncurl: (7) Failed to connect to 127.0.0.1 port 58234 after 0 ms: Couldn't connect to server\n") + "\n", encoding="utf-8")
+        g1_fixture_cm_events = tmp_path / "g1-events-cm.jsonl"
+        g1_fixture_cm_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS '-T{a.txt,b.txt}' http://127.0.0.1:58237/upload/",
+            7,
+            "UPLOAD_SUCCESS\ncurl: (7) Failed to connect to 127.0.0.1 port 58237 after 0 ms: Couldn't connect to server\n") + "\n", encoding="utf-8")
+        g1_fixture_cn_events = tmp_path / "g1-events-cn.jsonl"
+        g1_fixture_cn_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS '-sST{a.txt,b.txt}' http://127.0.0.1:58240/upload/",
+            7,
+            "UPLOAD_SUCCESS\ncurl: (7) Failed to connect to 127.0.0.1 port 58240 after 0 ms: Couldn't connect to server\n") + "\n", encoding="utf-8")
+        g1_fixture_co_events = tmp_path / "g1-events-co.jsonl"
+        g1_fixture_co_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T 'item[1-2].txt' http://127.0.0.1:58243/upload/",
+            7,
+            "UPLOAD_SUCCESS\ncurl: (7) Failed to connect to 127.0.0.1 port 58243 after 0 ms: Couldn't connect to server\n") + "\n", encoding="utf-8")
+        g1_fixture_cp_events = tmp_path / "g1-events-cp.jsonl"
+        g1_fixture_cp_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T '{a.txt,b.txt}' -- http://127.0.0.1:58246/upload/",
+            7,
+            "UPLOAD_SUCCESS\ncurl: (7) Failed to connect to 127.0.0.1 port 58246 after 0 ms: Couldn't connect to server\n") + "\n", encoding="utf-8")
+        g1_fixture_cq_events = tmp_path / "g1-events-cq.jsonl"
+        g1_fixture_cq_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -g -T '{a.txt,b.txt}' http://127.0.0.1:58249/upload/",
+            26,
+            "curl: Can't open '{a.txt,b.txt}'\ncurl: try 'curl --help' or 'curl --manual' for more information\ncurl: (26) Failed to open/read local data from file/application\n") + "\n", encoding="utf-8")
+        g1_fixture_cr_events = tmp_path / "g1-events-cr.jsonl"
+        g1_fixture_cr_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS '--upload-file={a.txt,b.txt}' http://127.0.0.1:58274/upload/",
+            2,
+            "curl: option --upload-file={a.txt,b.txt}: is unknown\ncurl: try 'curl --help' or 'curl --manual' for more information\n") + "\n", encoding="utf-8")
+        g1_fixture_cs_events = tmp_path / "g1-events-cs.jsonl"
+        g1_fixture_cs_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T a.txt http://127.0.0.1:58230/closed",
+            28,
+            'curl: (28) Failed to connect to 127.0.0.1 port 58230 after 207 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_ct_events = tmp_path / "g1-events-ct.jsonl"
+        g1_fixture_ct_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --upload-file a.txt http://127.0.0.1:58230/closed",
+            28,
+            'curl: (28) Failed to connect to 127.0.0.1 port 58230 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+
         # —— 0)旧判据段仍在时:审查/示例夹具必须 FAIL(修复前的假绿=红)——
 
         legacy_r1 = re.search(
@@ -3774,6 +3853,38 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
         check(curl_call(g1_fixture_cj_events) == "CURL:OK",
               "正文逐字节模拟完整诊断行后响应超时保持产品现状 OK"
               "(SP-25 已接受残余限制,本票不重开,review9 对照)")
+
+        # —— 1i)review10 SP-30:上传文件名 glob 拒绝 ——
+        check(curl_call(g1_fixture_ck_events) == "CURL:MISSING",
+              "-T 分离值花括号双文件不得因单 URL 无 glob 字符而满足直连"
+              "锚定(首次 PUT 已 200/18 字节,SP-30)")
+        check(curl_call(g1_fixture_cl_events) == "CURL:MISSING",
+              "--upload-file 分离值花括号双文件不得满足直连锚定"
+              "(首次 PUT 已 200/18 字节,SP-30)")
+        check(curl_call(g1_fixture_cm_events) == "CURL:MISSING",
+              "短粘连 -T{a,b} 不得因粘连值未检查 glob 字符而满足直连"
+              "锚定(SP-30,取值沿 SP-22)")
+        check(curl_call(g1_fixture_cn_events) == "CURL:MISSING",
+              "聚合 -sST{a,b} 不得因聚合内粘连值未检查 glob 字符而满足"
+              "直连锚定(SP-30,取值沿 SP-22)")
+        check(curl_call(g1_fixture_co_events) == "CURL:MISSING",
+              "方括号范围 item[1-2].txt 不得满足直连锚定"
+              "(首次 PUT /upload/item1.txt 已 200/18 字节,SP-30)")
+        check(curl_call(g1_fixture_cp_events) == "CURL:MISSING",
+              "-T 花括号双文件且 URL 在 -- 后,不得因既有 -- 后检查只看"
+              "URL 而满足直连锚定(上传值仍展开多次 PUT,SP-30)")
+        check(curl_call(g1_fixture_cq_events) == "CURL:MISSING",
+              "-g 关闭上传 glob 因字面文件不存在保持 MISSING"
+              "(行为不变,SP-30 对照)")
+        check(curl_call(g1_fixture_cr_events) == "CURL:MISSING",
+              "--upload-file={a,b} 长等号形态本就名单拒绝保持 MISSING"
+              "(行为不变,SP-30 对照)")
+        check(curl_call(g1_fixture_cs_events) == "CURL:OK",
+              "普通单文件 -T 真失败对照仍必须锚定(精确守卫不误伤,"
+              "SP-30)")
+        check(curl_call(g1_fixture_ct_events) == "CURL:OK",
+              "普通单文件 --upload-file 真失败对照仍必须锚定"
+              "(精确守卫不误伤,SP-30)")
 
         # —— 2)对仓内留存验收证据重跑锚定判据:仍 PASS,不因加固翻案 ——
 
