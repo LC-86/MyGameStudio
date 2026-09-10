@@ -2,7 +2,7 @@
   "ok": true,
   "remote": {
     "github": {
-      "api_base": "http://127.0.0.1:59935",
+      "api_base": "http://127.0.0.1:64040",
       "token_env": "MGS_GITHUB_TOKEN",
       "cache_dir": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-18-driver/gh-cache"
     }

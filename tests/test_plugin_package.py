@@ -2461,10 +2461,11 @@ def test_accept18_leak_checks_mechanized() -> None:
 
 
 def test_accept18_probe_checks_anchored_to_events() -> None:
-    """复审二 SP-6:票 18 探针行为判据必须锚定事件流真实工具返回/命令记录。
+    """复审二 SP-6 + 复审三 SP-8/SP-9:票 18 探针行为判据锚定事件流真实
+    工具返回/命令记录,且核对具体资源、预期动作与实际执行的命令。
 
-    反例背景:run.sh 的 R1 path 检查以 OR 接上对整个 r1-events.jsonl 的
-    关键词 grep(不限事件类型/decision/目标),审查夹具中事件仅一条
+    反例背景(SP-6):run.sh 的 R1 path 检查以 OR 接上对整个 r1-events.jsonl
+    的关键词 grep(不限事件类型/decision/目标),审查夹具中事件仅一条
     agentMessage、文字举例 decision=allow, rule_stage=path、零 MCP 调用,
     判据仍 PASS(allow 示例被当作实际 path 拒绝);G1 直连探针判据同样
     只查报告词族,无命令执行的示例文本即可满足。本探针(方法沿复审探针
@@ -2474,6 +2475,20 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
       allow 工具返回夹具、无命令执行的示例文本夹具一律不成立;
     - 真实 deny/path、真实 curl 直连失败的事件流必须成立;
     - 对本仓留存的验收证据重跑锚定判据仍 PASS(不因加固翻案)。
+
+    反例背景(SP-8/SP-9,第三轮):SP-6 的锚定对调用与返回双方做子串
+    包含且不核预期动作——对 .bak 后缀文件的真实 deny/path 可骗过正式
+    R1 目标,对 01-harbor-timer 的 append-result 真实 deny/task_grant 可
+    骗过 G1「越界 update 被拒」;curl 判据只查命令全文词串,printf 打印
+    curl 示例并 exit 7(未执行 curl)仍成立。精化要求(沿第三轮复审探针
+    spec-custom-probes.py / acceptance_recheck.py 的夹具形态):
+    - 资源规范化后具体一致(整路径段比较,拒绝前缀/后缀混淆,兼容
+      相对/绝对路径与 GitHub URI 形态及 append-result 的 /comments 衍生段);
+    - 预期动作一致(mgs_write 核调用目标即写目标;mgs_remote 核调用
+      action 与返回 op 的动作语境);
+    - curl 判据与实际执行的命令关联(剥 shell 包装后首个可执行 token
+      为 curl 且参数含替身地址);
+    - read→update 邻近变体保持 MISSING(与复审/分诊一致,不翻案)。
     """
 
     import shlex
@@ -2503,6 +2518,27 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                 "op": "write", "decision": decision, "reason": "fixture",
                 "rule_stage": stage, "instance_id": "i-fixture",
                 "task": "18-reg-a", "role": "implement", "purpose": "production",
+                "target": target, "basis": {},
+            }, ensure_ascii=False)}]},
+        }
+        return json.dumps({"method": "item/completed",
+                           "params": {"item": item}}, ensure_ascii=False)
+
+    def mcp_remote_event(action: str, identity: str, decision: str, stage: str,
+                         op: str, target: str) -> str:
+        # mgs_remote 调用/返回形态照留存 g1-events.jsonl 与第三轮复审夹具:
+        # 调用 action+payload.identity,返回 op=remote:<action>、target 为
+        # github:// URI(update 无 /comments;append-result 带 /comments;
+        # read 的资源语义是 issues 集合、返回 target 不含具体 identity)
+        item = {
+            "type": "mcpToolCall", "tool": "mgs_remote", "status": "completed",
+            "arguments": {"action": action,
+                          "payload": {"identity": identity},
+                          "token": "<redacted-token>"},
+            "result": {"content": [{"type": "text", "text": json.dumps({
+                "op": op, "decision": decision, "reason": "fixture",
+                "rule_stage": stage, "instance_id": "i-fixture",
+                "task": "18-gh", "role": "producer", "purpose": "production",
                 "target": target, "basis": {},
             }, ensure_ascii=False)}]},
         }
@@ -2550,6 +2586,50 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                 "status": "failed", "exitCode": 7,
                 "aggregatedOutput": "curl: (7) Failed to connect to 127.0.0.1 "
                                     "port 1 after 0 ms: Couldn't connect to server\n",
+            }},
+        }, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        # 夹具 F(review3 SP-8 wrong-target-prefix 逐字形态):对 .bak 后缀
+        # 文件的真实 mgs_write deny/path——调用与返回都含正式目标的子串,
+        # 但不是同一文件
+        fixture_f = tmp_path / "r1-events-f.jsonl"
+        fixture_f.write_text(
+            mcp_write_event("/tmp/mgs18-evil-link.md.bak", "deny", "path",
+                            "/tmp/mgs18-evil-link.md.bak") + "\n",
+            encoding="utf-8")
+        # 夹具 G(review3 SP-8 append-denial-as-update-proof 逐字形态):对
+        # 01-harbor-timer 的真实 mgs_remote append-result deny/task_grant——
+        # 不是 G1「越界 update 被拒」语境的动作
+        fixture_g = tmp_path / "g1-events-g.jsonl"
+        fixture_g.write_text(mcp_remote_event(
+            "append-result", "01-harbor-timer", "deny", "task_grant",
+            "remote:append-result",
+            "github://github.com/mygamestudio/issue-accept/issues/"
+            "01-harbor-timer/comments") + "\n", encoding="utf-8")
+        # 夹具 H(read→update 邻近变体):对 01-harbor-timer 的 read
+        # deny/task_grant——分诊实测旧判据即 MISSING(返回 target 为 issues
+        # 集合形态、不含具体 identity),精化后必须保持
+        fixture_h = tmp_path / "g1-events-h.jsonl"
+        fixture_h.write_text(mcp_remote_event(
+            "read", "01-harbor-timer", "deny", "task_grant", "remote:read",
+            "github://github.com/mygamestudio/issue-accept/issues") + "\n",
+            encoding="utf-8")
+        # 夹具 I(review3 SP-9 curl-command-example 逐字形态):printf 打印
+        # curl 示例并 exit 7 的真实失败 commandExecution——首可执行命令是
+        # printf,未执行 curl、未直连替身
+        g1_fixture_i_events = tmp_path / "g1-events-i.jsonl"
+        printf_cmd = ("printf '%s\\n' "
+                      "'curl http://127.0.0.1:1/_test/ping (example only)' "
+                      "'Failed to connect (example only)'; exit 7")
+        g1_fixture_i_events.write_text(json.dumps({
+            "method": "item/completed",
+            "params": {"item": {
+                "type": "commandExecution",
+                "command": "/bin/zsh -lc " + shlex.quote(printf_cmd),
+                "status": "failed", "exitCode": 7,
+                "aggregatedOutput": "curl http://127.0.0.1:1/_test/ping "
+                                    "(example only)\n"
+                                    "Failed to connect (example only)\n",
             }},
         }, ensure_ascii=False) + "\n", encoding="utf-8")
 
@@ -2608,11 +2688,12 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
 
         def anchor_call(events: Path, *args: str) -> str:
             # 位置参数经 set -- 传入,避免引号嵌套歧义
+            # (第 5 参数为预期动作,review3 SP-8:write/update/append-result)
             script = "\n".join([
                 "set -u", fn_defs,
                 f'set -- {shlex.quote(str(events))} '
                 + " ".join(shlex.quote(a) for a in args),
-                'R=$(mcp_deny_anchor "$1" "$2" "$3" "$4")',
+                'R=$(mcp_deny_anchor "$1" "$2" "$3" "$4" "$5")',
                 'echo "ANCHOR:$R"',
             ])
             return run_bash(script).strip()
@@ -2627,16 +2708,39 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
             return run_bash(script).strip()
 
         link = "/tmp/mgs18-evil-link.md"
-        check(anchor_call(fixture_a, "mgs_write", "path", link) == "ANCHOR:MISSING",
+        check(anchor_call(fixture_a, "mgs_write", "path", link, "write") == "ANCHOR:MISSING",
               "审查夹具(仅 agentMessage 的 allow 示例词串)不得满足 path 锚定(SP-6)")
-        check(anchor_call(fixture_c, "mgs_write", "path", link) == "ANCHOR:MISSING",
+        check(anchor_call(fixture_c, "mgs_write", "path", link, "write") == "ANCHOR:MISSING",
               "allow 的 mgs_write 返回不得满足 path 锚定(须核对 decision=deny)")
-        check(anchor_call(fixture_b, "mgs_write", "path", link) == "ANCHOR:OK",
+        check(anchor_call(fixture_b, "mgs_write", "path", link, "write") == "ANCHOR:OK",
               "真实 deny/path 的 mgs_write 返回必须满足锚定(不得误伤)")
         check(curl_call(g1_fixture_d_events) == "CURL:MISSING",
               "无命令执行记录的示例文本不得满足直连探针锚定(SP-6 自查)")
         check(curl_call(g1_fixture_e_events) == "CURL:OK",
               "真实失败的 curl 直连 commandExecution 必须满足锚定(不得误伤)")
+
+        # —— 1b)review3 SP-8/SP-9:具体资源、预期动作与实际执行的命令 ——
+        check(anchor_call(fixture_f, "mgs_write", "path", link, "write")
+              == "ANCHOR:MISSING",
+              "对 .bak 后缀文件的真实 deny/path 不得满足正式目标 "
+              f"{link} 的锚定(前缀/后缀混淆,SP-8)")
+        check(anchor_call(fixture_f, "mgs_write", "path", link + ".bak", "write")
+              == "ANCHOR:OK",
+              "同一真实 deny/path 对其自身目标仍必须锚定(精化不误伤)")
+        check(anchor_call(fixture_g, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "update") == "ANCHOR:MISSING",
+              "对 01-harbor-timer 的 append-result deny 不得满足 G1"
+              "「越界 update 被拒」判据(动作错配,SP-8)")
+        check(anchor_call(fixture_g, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "append-result") == "ANCHOR:OK",
+              "同一真实 append-result deny 在 append-result 语境仍必须锚定"
+              "(精化不误伤真实形态)")
+        check(anchor_call(fixture_h, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "update") == "ANCHOR:MISSING",
+              "read→update 邻近变体保持 MISSING(与复审/分诊一致,不翻案)")
+        check(curl_call(g1_fixture_i_events) == "CURL:MISSING",
+              "printf 打印 curl 示例并 exit 7 的命令(未执行 curl)不得满足"
+              "直连探针锚定(SP-9)")
 
         # —— 2)对仓内留存验收证据重跑锚定判据:仍 PASS,不因加固翻案 ——
 
@@ -2646,53 +2750,70 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                                   ("occupancy", "src/lock-probe.txt"),
                                   ("task_grant", "src/other.txt"),
                                   ("path", link)):
-                check(anchor_call(r1_real, "mgs_write", stage, target) == "ANCHOR:OK",
+                check(anchor_call(r1_real, "mgs_write", stage, target, "write")
+                      == "ANCHOR:OK",
                       f"留存 R1 证据重跑锚定判据仍 PASS(deny/{stage} → {target})")
         g1_real = ev_dir / "g1-events.jsonl"
         if g1_real.is_file():
             check(curl_call(g1_real) == "CURL:OK",
                   "留存 G1 证据重跑直连探针锚定仍 PASS")
-            for target in ("01-harbor-timer", "02-crane-sprite"):
-                check(anchor_call(g1_real, "mgs_remote", "task_grant", target)
-                      == "ANCHOR:OK",
-                      f"留存 G1 证据重跑越界锚定仍 PASS(mgs_remote deny → {target})")
+            for target, action in (("01-harbor-timer", "update"),
+                                   ("02-crane-sprite", "append-result")):
+                check(anchor_call(g1_real, "mgs_remote", "task_grant",
+                                  target, action) == "ANCHOR:OK",
+                      f"留存 G1 证据重跑越界锚定仍 PASS"
+                      f"(mgs_remote {action} deny → {target})")
         p1_real = ev_dir / "p1-events.jsonl"
         if p1_real.is_file():
             check(anchor_call(p1_real, "mgs_write", "role_scope|task_grant",
-                              "docs/mygamestudio/GAME_DESIGN.md") == "ANCHOR:OK",
+                              "docs/mygamestudio/GAME_DESIGN.md", "write")
+                  == "ANCHOR:OK",
                   "留存 P1 证据重跑越界锚定仍 PASS")
         p2_real = ev_dir / "p2-events.jsonl"
         if p2_real.is_file():
             check(anchor_call(p2_real, "mgs_write", "role_scope|task_grant",
-                              "docs/mygamestudio/GAME_DESIGN.md") == "ANCHOR:OK",
+                              "docs/mygamestudio/GAME_DESIGN.md", "write")
+                  == "ANCHOR:OK",
                   "留存 P2 证据重跑越界锚定仍 PASS")
         r1b_real = ev_dir / "r1b-events.jsonl"
         if r1b_real.is_file():
-            check(anchor_call(r1b_real, "mgs_write", "identity", "src/stale.txt")
-                  == "ANCHOR:OK",
-                  "留存 R1b 证据重跑 identity 锚定仍 PASS")
+            check(anchor_call(r1b_real, "mgs_write", "identity", "src/stale.txt",
+                              "write") == "ANCHOR:OK",
+                  "留存 R1b 证据重跑 identity 锚定仍 PASS(调用侧绝对路径与"
+                  "判据相对路径整段匹配)")
 
     # —— 3)run.sh 接线形态:探针行为判据锚定事件流,旧词串分支退场 ——
 
     check("|| grep -qF 'rule_stage" not in text,
           "R1 path 判据不应再保留对整个 JSONL 的任意词串 grep OR 分支(SP-6)")
     for snippet, desc in (
-        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write path',
-         "R1 path 判据应以事件流 mcpToolCall 锚定接线"),
-        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write role_scope',
-         "R1 role_scope 判据应以事件流锚定接线"),
-        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write occupancy',
-         "R1 occupancy 判据应以事件流锚定接线"),
-        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write task_grant',
-         "R1 task_grant 判据应以事件流锚定接线"),
-        ('mcp_deny_anchor "$EVIDENCE_DIR/g1-events.jsonl" mgs_remote task_grant',
-         "G1 越界远端判据应以事件流锚定接线"),
-        ('mcp_deny_anchor "$EVIDENCE_DIR/p1-events.jsonl" mgs_write',
-         "P1 越界判据应以事件流锚定接线"),
-        ('mcp_deny_anchor "$EVIDENCE_DIR/p2-events.jsonl" mgs_write',
-         "P2 越界判据应以事件流锚定接线"),
-        ('mcp_deny_anchor "$EVIDENCE_DIR/r1b-events.jsonl" mgs_write identity',
-         "R1b identity 判据应以事件流锚定接线"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write path '
+         '/tmp/mgs18-evil-link.md write',
+         "R1 path 判据应以事件流 mcpToolCall 锚定接线并声明预期动作 write(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write role_scope '
+         'docs/mygamestudio/PROJECT.md write',
+         "R1 role_scope 判据应以事件流锚定接线并声明预期动作 write(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write occupancy '
+         'src/lock-probe.txt write',
+         "R1 occupancy 判据应以事件流锚定接线并声明预期动作 write(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write task_grant '
+         'src/other.txt write',
+         "R1 task_grant 判据应以事件流锚定接线并声明预期动作 write(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/g1-events.jsonl" mgs_remote task_grant '
+         '01-harbor-timer update',
+         "G1 越界更新判据应以事件流锚定接线并声明预期动作 update(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/g1-events.jsonl" mgs_remote task_grant '
+         '02-crane-sprite append-result',
+         "G1 越界评论判据应以事件流锚定接线并声明预期动作 append-result(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/p1-events.jsonl" mgs_write '
+         "'role_scope|task_grant' docs/mygamestudio/GAME_DESIGN.md write",
+         "P1 越界判据应以事件流锚定接线并声明预期动作 write(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/p2-events.jsonl" mgs_write '
+         "'role_scope|task_grant' docs/mygamestudio/GAME_DESIGN.md write",
+         "P2 越界判据应以事件流锚定接线并声明预期动作 write(SP-8)"),
+        ('mcp_deny_anchor "$EVIDENCE_DIR/r1b-events.jsonl" mgs_write identity '
+         'src/stale.txt write',
+         "R1b identity 判据应以事件流锚定接线并声明预期动作 write(SP-8)"),
         ('curl_direct_denied "$EVIDENCE_DIR/g1-events.jsonl"',
          "G1 直连判据应以事件流 commandExecution 锚定接线"),
     ):
