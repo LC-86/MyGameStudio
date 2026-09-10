@@ -57,3 +57,7 @@ SP-2/SP-3 均为独立 Spec 复审进程内替身实证;原 S2(回读失败不�
 - **Spec(对照票面三条验收标准)**:①SP-2 探针固化先红后绿——通道级注入 POST 成功+PATCH 超时:首次非 deny、result 携带 comment_id/published=true/index_updated=false,恢复后重试替身评论恰 1、全程恰 1 次 POST、索引补齐(后端级另固化收养与幂等重试);②SP-3 探针固化先红后绿——双仓库同秒同参数两份草稿各存各的(repo 各自记录)、发布各归各仓(S1 拒绝旧仓库草稿、本仓库恰一次 POST)、同仓库重复保存 idempotent:true 且草稿数不增(S6 回归绿);③五套件+33 驱动全过(见上)。合同依据:runtime 合同第 16 行(已写入待表达)、records 合同第 39 行(结果不确定先回读避免重复创建)、project-configuration 合同第 37 行(草稿保存语义)。
 
 **边界**:SP-1/4/5/6 未触碰(review2-01 的锁内 CONFIG 重读语义保持,`remote_record` 临界区结构未改动);真实远端写入、推送、模型轮均未执行;`.scratch/mygamestudio-v1-review2-fixes/evidence/` 原始材料未改动。
+
+### 2026-09-10 — 第三轮复审影响本票结论
+
+第三轮复审(报告:[../../mygamestudio-v1-review3-fixes/evidence/review-3.md](../../mygamestudio-v1-review3-fixes/evidence/review-3.md))核实:SP-2 原底稿修复(首轮 partial 返回+正常恢复恰 1 评论)、SP-3、ST-1 共享分发、partial 草稿保留全部成立,四项变异均红→绿。但新增 SP-7(P2):已确认部分成功后,重试的**读前收养查询超时**被当作全新发布,累计 2 条重复评论——本票「恢复/重试只补未完成的索引更新」的完整要求未闭合(Implementation 已披露的读前失败取舍被复审否定)。勾选状态不动;完整恢复语义以 [review3 票 01](../../mygamestudio-v1-review3-fixes/issues/) 完成为准。

@@ -1,0 +1,13 @@
+# 第三轮分诊探针重跑验证(2026-09-10,当前 HEAD=8cdc4c4)
+
+沿用第一/二轮分诊标准,在 /tmp/mgs-triage3 隔离副本重跑三项新发现探针:
+
+| 发现 | 探针 | 重跑结果 |
+| --- | --- | --- |
+| SP-7 部分成功后读前查询失败重复发布 | spec-custom-probes.py `partial-retry-read-first-timeout` | observed_bug=True(累计 2 条评论) |
+| SP-8 锚定可被错误目标/错误动作满足 | 同脚本 `wrong-target-prefix`/`append-denial-as-update-proof` | 均 observed_bug=True(锚定输出 OK) |
+| SP-8 邻近 read→update 变体 | 同脚本 `read-denial-as-update-proof` | observed_bug=False(MISSING)——与复审一致,不列问题 |
+| SP-9 printf 假 curl 骗过直连判据 | acceptance_recheck.py `curl_example_false_positive` | 锚定输出 OK 而 curl_was_executed=False |
+| 留存证据不翻案 | acceptance_recheck.py `retained_anchors` | 10/10 全 OK |
+
+结论:SP-7/SP-8/SP-9 全部复现,两张修复票成立。原始输出:spec-out.json / acc-out3.json(同目录)。

@@ -1,0 +1,154 @@
+[
+  {
+    "id": "01-SP1-lock-config",
+    "path": "plugin/runtime/mgs_runtime.py",
+    "test": "test_runtime_gate.review2_sp1_section",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"SP-1:CONFIG 授权撤销后,在途远端写入必须以 remote_scope 拒绝,实际 {'op': 'remote:append-result', 'instance_id': 'i-ba736cfedfed', 'task': 'remote', 'role': 'producer', 'purpose': 'production', 'target': 'github://github.com/mygamestudio/issue-accept/issues/01-task/comments', 'basis': {'policy_version': 1, 'role_resources_source': 'runtime policy.json (trusted scheduler channel)', 'task_grant_source': 'instance registry issued by trusted scheduler'}, 'note': {'action': 'append-result', 'repo': 'github.com/mygamestudio/issue-accept'}, 'decision': 'allow', 'rule_stage': 'granted', 'reason': 'granted by identity+task+role+purpose+config-scope intersection', 'result': {'published': True, 'comment_id': 5101, 'ref': '#issuecomment-5101', 'issue_number': 1, 'readback': {'identity': '01-task', 'title': 'Existing', 'triage': 'ready-for-agent', 'progress': '待执行', 'issue_number': 1, 'issue_id': 1001, 'state': 'open', 'state_reason': None, 'labels': ['agent-ready'], 'triage_source': 'label', 'triage_conflict': False, 'request': {'当前目标': '演示目标', '输入与基线': 'GAME_DESIGN v1', '本次交付': '示例交付', '允许修改范围': 'src/**', '所需能力': '文件读写', '完成标准': '示例标准', '执行责任': 'Agent(制作实现)', '验收方式': '代码级检查', '依赖': '无'}, 'sections': {'工作请求': True, '结果索引': True, '状态变化': True}, 'results': [{'ref': '#issuecomment-5100', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-task'}, {'ref': '#issuecomment-5101', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-task'}], 'result_index_text': '\\\\n- #issuecomment-5100:撤销前\\\\n\\\\n- #issuecomment-5101:撤销后在途\\\\n', 'body': '# Existing\\\\n\\\\n任务身份:01-task。当前分流:ready-for-agent。进度:待执行。\\\\n\\\\n## 工作请求\\\\n\\\\n- 当前目标:演示目标\\\\n- 输入与基线:GAME_DESIGN v1\\\\n- 本次交付:示例交付\\\\n- 允许修改范围:src/**\\\\n- 所需能力:文件读写\\\\n- 完成标准:示例标准\\\\n- 执行责任:Agent(制作实现)\\\\n- 验收方式:代码级检查\\\\n- 依赖:无\\\\n\\\\n## 结果索引\\\\n\\\\n- #issuecomment-5100:撤销前\\\\n\\\\n- #issuecomment-5101:撤销后在途\\\\n\\\\n## 状态变化\\\\n\\\\n2026-09-10 经统一接口建立 GitHub Issues 任务记录。\\\\n\\\\n2026-09-10 追加结果评论 #issuecomment-5100\\\\n\\\\n2026-09-10 追加结果评论 #issuecomment-5101\\\\n', 'body_sha256': '0955c3091e1dd210f79f34b8d7d3534e9e462c73acef84f11a1f4789c08cd69e', 'html_url': 'https://example.invalid/i/1'}, 'attempts': [{'step': 'comment-1', 'outcome': 'created'}], 'index_updated': True}}\",\n  \"SP-1:被拒的在途请求不得产生远端写入(评论数应保持 1,实际 2)\",\n  \"SP-1:全程应只发出撤销前那 1 次评论 POST,实际 2 次\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "57009cdfc9d6348d20a50cb4060beab5937bade44266f73aece6a1e1e38d83dc"
+  },
+  {
+    "id": "02-SP2-partial-and-adoption",
+    "path": "plugin/records/mgs_github.py",
+    "test": "test_github_backend.test_append_result_partial_success_and_retry_completion",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"评论已发布的部分成功应如实保留(不整体报错),实际 {'raised': 'timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1'}\",\n  \"结果应携带已发布评论身份,实际 {'raised': 'timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1'}\",\n  \"未完成部分(结果索引)应如实表达,实际 {'raised': 'timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1'}\",\n  \"恢复后重试应完成索引并如实回报,实际 {'published': True, 'comment_id': 5101, 'ref': '#issuecomment-5101', 'issue_number': 1, 'readback': {'identity': '01-alpha', 'title': '甲任务', 'triage': 'ready-for-agent', 'progress': '待执行', 'issue_number': 1, 'issue_id': 1001, 'state': 'open', 'state_reason': None, 'labels': ['agent-ready'], 'triage_source': 'label', 'triage_conflict': False, 'request': {'当前目标': '演示目标', '输入与基线': 'GAME_DESIGN v1', '本次交付': '示例交付', '允许修改范围': 'src/**', '所需能力': '文件读写', '完成标准': '示例标准', '执行责任': 'Agent(制作实现)', '验收方式': '代码级检查', '依赖': '无'}, 'sections': {'工作请求': True, '结果索引': True, '状态变化': True}, 'results': [{'ref': '#issuecomment-5100', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-alpha'}, {'ref': '#issuecomment-5101', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-alpha'}], 'result_index_text': '\\\\n- #issuecomment-5101:交付证据\\\\n', 'body': '# 甲任务\\\\n\\\\n任务身份:01-alpha。当前分流:ready-for-agent。进度:待执行。\\\\n\\\\n## 工作请求\\\\n\\\\n- 当前目标:演示目标\\\\n- 输入与基线:GAME_DESIGN v1\\\\n- 本次交付:示例交付\\\\n- 允许修改范围:src/**\\\\n- 所需能力:文件读写\\\\n- 完成标准:示例标准\\\\n- 执行责任:Agent(制作实现)\\\\n- 验收方式:代码级检查\\\\n- 依赖:无\\\\n\\\\n## 结果索引\\\\n\\\\n- #issuecomment-5101:交付证据\\\\n\\\\n## 状态变化\\\\n\\\\n2026-09-10 经统一接口建立 GitHub Issues 任务记录。\\\\n\\\\n2026-09-10 追加结果评论 #issuecomment-5101\\\\n', 'body_sha256': 'b8373f109ec6ac8c01f9abdfc3013991f521aa5aac71d69b09056b087b93baeb', 'html_url': 'https://example.invalid/i/1'}, 'attempts': [{'step': 'comment-1', 'outcome': 'created'}]}\",\n  \"重试应收养既有评论(同一评论身份),实际 5101 vs None\",\n  \"重试不得再发评论 POST(全程恰 1 次),实际 2 次\",\n  \"替身评论数应恰 1(不重复发布),实际 2 条\",\n  \"重试后结果索引应补齐该评论引用\",\n  \"完成后的重复请求应幂等(收养既有评论),实际 {'published': True, 'comment_id': 5102, 'ref': '#issuecomment-5102', 'issue_number': 1, 'readback': {'identity': '01-alpha', 'title': '甲任务', 'triage': 'ready-for-agent', 'progress': '待执行', 'issue_number': 1, 'issue_id': 1001, 'state': 'open', 'state_reason': None, 'labels': ['agent-ready'], 'triage_source': 'label', 'triage_conflict': False, 'request': {'当前目标': '演示目标', '输入与基线': 'GAME_DESIGN v1', '本次交付': '示例交付', '允许修改范围': 'src/**', '所需能力': '文件读写', '完成标准': '示例标准', '执行责任': 'Agent(制作实现)', '验收方式': '代码级检查', '依赖': '无'}, 'sections': {'工作请求': True, '结果索引': True, '状态变化': True}, 'results': [{'ref': '#issuecomment-5100', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-alpha'}, {'ref': '#issuecomment-5101', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-alpha'}, {'ref': '#issuecomment-5102', 'created_at': '2026-09-08T12:00:00Z', 'excerpt': '任务:01-alpha'}], 'result_index_text': '\\\\n- #issuecomment-5101:交付证据\\\\n\\\\n- #issuecomment-5102:交付证据\\\\n', 'body': '# 甲任务\\\\n\\\\n任务身份:01-alpha。当前分流:ready-for-agent。进度:待执行。\\\\n\\\\n## 工作请求\\\\n\\\\n- 当前目标:演示目标\\\\n- 输入与基线:GAME_DESIGN v1\\\\n- 本次交付:示例交付\\\\n- 允许修改范围:src/**\\\\n- 所需能力:文件读写\\\\n- 完成标准:示例标准\\\\n- 执行责任:Agent(制作实现)\\\\n- 验收方式:代码级检查\\\\n- 依赖:无\\\\n\\\\n## 结果索引\\\\n\\\\n- #issuecomment-5101:交付证据\\\\n\\\\n- #issuecomment-5102:交付证据\\\\n\\\\n## 状态变化\\\\n\\\\n2026-09-10 经统一接口建立 GitHub Issues 任务记录。\\\\n\\\\n2026-09-10 追加结果评论 #issuecomment-5101\\\\n\\\\n2026-09-10 追加结果评论 #issuecomment-5102\\\\n', 'body_sha256': '60fc64056512a232d907c82c9c8788b886cf75e8f9ff621d31b2866ef18579ab', 'html_url': 'https://example.invalid/i/1'}, 'attempts': [{'step': 'comment-1', 'outcome': 'created'}]}\",\n  \"幂等重试后评论数仍应恰 1\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "a0632afe5765ab68bafe2c5ddb6c96854fa84227dfb6b76d74c03217002a106a"
+  },
+  {
+    "id": "02-SP3-repo-identity",
+    "path": "plugin/records/mgs_github.py",
+    "test": "test_github_backend.test_draft_identity_includes_repo_cross_repo",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"两仓库同秒同参数的草稿身份应不同(身份含仓库),实际 /tmp/tmphjhyweu7/shared-cache/drafts/20260909-010203-create_task-09-same-53d94b1d.json / /tmp/tmphjhyweu7/shared-cache/drafts/20260909-010203-create_task-09-same-53d94b1d.json\",\n  \"跨仓库请求不是同一操作的重放,不得按幂等顶替,实际 {'published': False, 'status': '未发布草稿', 'draft': '/tmp/tmphjhyweu7/shared-cache/drafts/20260909-010203-create_task-09-same-53d94b1d.json', 'cause': '读前核对失败(offline: connection refused (stand-in));无法确认是否已存在,不发创建请求', 'note': '远端不可用:已保存未发布草稿(标明来源与状态);草稿不是已发布任务,发布需在远端可用后重试;不静默切换本地后端。', 'idempotent': True, 'created': False, 'attempts': [{'step': 'read-first', 'outcome': 'offline'}]}\",\n  \"两仓库应各存各的草稿,实际 1 份:['github.com/old-owner/private-repo']\",\n  \"两份草稿应各自记录目标仓库,实际 ['github.com/old-owner/private-repo']\",\n  \"幂等重放不得产生第三份草稿\",\n  \"只有本仓库草稿可发布,实际 {'published_count': 0, 'results': [{'draft': '/tmp/tmphjhyweu7/shared-cache/drafts/20260909-010203-create_task-09-same-53d94b1d.json', 'published': False, 'outcome': \\\"拒绝发布:草稿记录的目标仓库 'github.com/old-owner/private-repo' 与当前后端仓库 'github.com/mygamestudio/issue-accept' 不一致;选择/切换新后端不构成旧草稿的迁移授权,跨仓库移动需经明确的迁移流程另行确认\\\"}]}\",\n  \"当前仓库应恰收到一次创建请求,实际 []\",\n  \"本仓库草稿应实际创建为任务\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "a0632afe5765ab68bafe2c5ddb6c96854fa84227dfb6b76d74c03217002a106a"
+  },
+  {
+    "id": "02-partial-draft-retention",
+    "path": "plugin/records/mgs_github.py",
+    "test": "test_github_backend.test_append_result_draft_replay_partial_keeps_draft",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"部分成功不算完成(草稿保留),实际 {'published_count': 1, 'results': [{'draft': '/tmp/tmp28_8jxza/cache/drafts/20260910-101449-append_result-01-alpha-2f0ea512.json', 'published': True, 'outcome': {'published': True, 'partial': True, 'comment_id': 5100, 'ref': '#issuecomment-5100', 'issue_number': 1, 'index_updated': False, 'attempts': [{'step': 'comment-1', 'outcome': 'created'}, {'step': 'index-patch', 'outcome': 'timeout', 'detail': 'timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1'}], 'note': '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'}}]}\",\n  \"部分成功的草稿应保留在待发布目录\",\n  \"恢复后重放应补齐索引并完成,实际 {'published_count': 0, 'results': []}\",\n  \"结果索引应补齐该评论引用\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "a0632afe5765ab68bafe2c5ddb6c96854fa84227dfb6b76d74c03217002a106a"
+  },
+  {
+    "id": "03-SP4-per-root-scan",
+    "path": "acceptance/16-producer-complete-loop/secret_scan.py",
+    "test": "test_plugin_package.test_accept16_secret_scan_gate",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"任一指定扫描根缺失时应逐根报输入错误(退出 2),不得因其他根非空而静默成功(SP-4)\",\n  \"扫描报告应指认缺失的扫描根(退出 2 且点名,SP-4)\",\n  \"扫描根不可遍历(子目录不可读)应报输入错误(退出 2),不得静默跳过该子树(SP-4)\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "4777983f34ba849e7177167fb6cd05e6d7adba86053770b21a806158ac2c6bf7"
+  },
+  {
+    "id": "03-SP5-sanitize",
+    "path": "acceptance/18-complete-package-acceptance/run.sh",
+    "test": "test_plugin_package.test_accept18_leak_checks_mechanized",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"sanitize 后证据仍含名单外实例 g_o 的令牌明文(枚举漏覆盖,SP-5)\",\n  \"sanitize 未把名单外实例 g_o 的令牌替换为占位符(SP-5)\",\n  \"sanitize 应遍历 ARENA 全部 *.token(glob,不枚举实例名)\",\n  \"run.sh 不应再枚举固定实例前缀(脱敏与泄漏检查均机制化)\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "0620f457ba38e424ed385bf0d85fa2bc9a297882b6021eef256b1de5a9b25b8c"
+  },
+  {
+    "id": "03-SP5-scan-wiring",
+    "path": "acceptance/18-complete-package-acceptance/run.sh",
+    "test": "test_plugin_package.test_accept18_leak_checks_mechanized",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"注入名单外实例 g_o 凭据明文时泄漏检查必须判 FAIL,不得假绿(SP-5)\",\n  \"注入名单外实例 g_o 凭据明文时泄漏检查不得报 PASS(假绿,SP-5)\",\n  \"run.sh 不应再枚举固定实例前缀(脱敏与泄漏检查均机制化)\",\n  \"泄漏检查应以命令形态调用独立扫描脚本(注释字样不算)\",\n  \"泄漏检查应按各运行根实例登记全量比对(--registry 指向运行根)\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "0620f457ba38e424ed385bf0d85fa2bc9a297882b6021eef256b1de5a9b25b8c"
+  },
+  {
+    "id": "04-SP6-r1-legacy-check",
+    "path": "acceptance/18-complete-package-acceptance/run.sh",
+    "test": "test_plugin_package.test_accept18_probe_checks_anchored_to_events",
+    "before": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "mutation": {
+      "exit": 1,
+      "output": "[\n  \"旧 R1 path 判据对无 MCP 调用的 allow 示例夹具必须 FAIL,当前词串 grep 分支假绿(SP-6)\",\n  \"审查夹具(仅 agentMessage 的 allow 示例词串)不得满足 path 锚定(SP-6)\",\n  \"R1 path 判据不应再保留对整个 JSONL 的任意词串 grep OR 分支(SP-6)\",\n  \"R1 path 判据应以事件流 mcpToolCall 锚定接线\"\n]\n"
+    },
+    "restored": {
+      "exit": 0,
+      "output": "[]\n"
+    },
+    "byte_restored": true,
+    "sha256": "0620f457ba38e424ed385bf0d85fa2bc9a297882b6021eef256b1de5a9b25b8c"
+  }
+]

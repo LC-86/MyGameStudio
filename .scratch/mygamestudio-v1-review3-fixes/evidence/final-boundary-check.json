@@ -1,0 +1,30 @@
+{
+  "head": "8cdc4c425e11864f96d755b6c2cdb573a97fe7b9",
+  "status": "",
+  "head_unchanged": true,
+  "status_empty": true,
+  "syntax": [
+    {
+      "path": "acceptance/18-complete-package-acceptance/run.sh",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "acceptance/18-complete-package-acceptance/driver-probes.sh",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "acceptance/16-producer-complete-loop/run.sh",
+      "exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "dist/verify-reproducible.sh",
+      "exit": 0,
+      "stderr": ""
+    }
+  ],
+  "copy_source_mismatches_after_mutation": [],
+  "package_sha256": "dcaa012e49ede08c3e4d12a15b3aaaa0f610505de85349240348aefea91a0f91"
+}

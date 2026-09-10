@@ -1,0 +1,15 @@
+{
+  "repo": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+  "workspace": "/tmp/mygamestudio-review-3-v9s0lp_z",
+  "start_head": "8cdc4c425e11864f96d755b6c2cdb573a97fe7b9",
+  "start_status": "",
+  "base": "9376deccf8a3d0125a0f7598872ae37d64a55d94",
+  "target": "18df620185c6ef920e9f33f7dea27631ea35e98b",
+  "extra_diff": " .../evidence/review-3-handoff.md                   | 51 ++++++++++++++++++++++\n 1 file changed, 51 insertions(+)\n",
+  "commits": [
+    "e482f84",
+    "7667d69",
+    "fe4004f",
+    "18df620"
+  ]
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "partial-retry-read-first-timeout",
+    "observed_bug": true,
+    "comments": 2,
+    "actual_anchor": null
+  },
+  {
+    "id": "wrong-target-prefix",
+    "observed_bug": true,
+    "comments": null,
+    "actual_anchor": "OK"
+  },
+  {
+    "id": "read-denial-as-update-proof",
+    "observed_bug": false,
+    "comments": null,
+    "actual_anchor": "MISSING"
+  },
+  {
+    "id": "append-denial-as-update-proof",
+    "observed_bug": true,
+    "comments": null,
+    "actual_anchor": "OK"
+  }
+]

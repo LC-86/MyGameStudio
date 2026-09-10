@@ -1,0 +1,177 @@
+{
+  "id": "R4-partial-remote-result-misreported",
+  "first": {
+    "op": "remote:append-result",
+    "instance_id": "i-e6340f106d9a",
+    "task": "T",
+    "role": "producer",
+    "purpose": "production",
+    "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+    "basis": {
+      "policy_version": 1,
+      "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+      "task_grant_source": "instance registry issued by trusted scheduler"
+    },
+    "note": {
+      "action": "append-result",
+      "repo": "github.com/mygamestudio/issue-accept"
+    },
+    "decision": "allow",
+    "rule_stage": "granted",
+    "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+    "result": {
+      "published": true,
+      "partial": true,
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "comment-1",
+          "outcome": "created"
+        },
+        {
+          "step": "index-patch",
+          "outcome": "timeout",
+          "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+        }
+      ],
+      "note": "部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+    }
+  },
+  "comments_after_first": 1,
+  "second_decision": "allow",
+  "comments_after_retry": 1,
+  "audit": [
+    {
+      "op": "policy/init",
+      "decision": "record",
+      "rule_stage": "admin",
+      "reason": "policy written via trusted scheduler channel",
+      "instance_id": null,
+      "task": null,
+      "role": "scheduler",
+      "purpose": null,
+      "target": "policy.json",
+      "note": null,
+      "basis": {
+        "channel": "trusted scheduler CLI (mgsrt_admin.py)"
+      },
+      "ts": "2026-09-10T10:12:44+0800",
+      "policy_sha256": "cae2f621961974da0dd4069fef0968140b36f3cc0ffebeb0ee0b00c424a468b0"
+    },
+    {
+      "op": "instance/create",
+      "decision": "record",
+      "rule_stage": "admin",
+      "reason": "execution binding issued by trusted scheduler",
+      "instance_id": "i-e6340f106d9a",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": null,
+      "note": {
+        "resources": [
+          "github://github.com/mygamestudio/issue-accept/issues/**"
+        ]
+      },
+      "basis": {
+        "channel": "trusted scheduler CLI (mgsrt_admin.py)"
+      },
+      "ts": "2026-09-10T10:12:44+0800",
+      "policy_sha256": "cae2f621961974da0dd4069fef0968140b36f3cc0ffebeb0ee0b00c424a468b0"
+    },
+    {
+      "op": "remote:append-result",
+      "instance_id": "i-e6340f106d9a",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "intent",
+      "rule_stage": "granted",
+      "reason": "remote write intent recorded before execution",
+      "ts": "2026-09-10T10:12:44+0800",
+      "policy_sha256": "cae2f621961974da0dd4069fef0968140b36f3cc0ffebeb0ee0b00c424a468b0"
+    },
+    {
+      "op": "remote:append-result",
+      "instance_id": "i-e6340f106d9a",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "summary": "issue_number=1,published=True,partial=True,index_updated=False,comment_id=5100",
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "ts": "2026-09-10T10:12:44+0800",
+      "policy_sha256": "cae2f621961974da0dd4069fef0968140b36f3cc0ffebeb0ee0b00c424a468b0"
+    },
+    {
+      "op": "remote:append-result",
+      "instance_id": "i-e6340f106d9a",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "intent",
+      "rule_stage": "granted",
+      "reason": "remote write intent recorded before execution",
+      "ts": "2026-09-10T10:12:44+0800",
+      "policy_sha256": "cae2f621961974da0dd4069fef0968140b36f3cc0ffebeb0ee0b00c424a468b0"
+    },
+    {
+      "op": "remote:append-result",
+      "instance_id": "i-e6340f106d9a",
+      "task": "T",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "summary": "issue_number=1,published=True,index_updated=True,comment_id=5100",
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection",
+      "ts": "2026-09-10T10:12:44+0800",
+      "policy_sha256": "cae2f621961974da0dd4069fef0968140b36f3cc0ffebeb0ee0b00c424a468b0"
+    }
+  ],
+  "observed_bug": false
+}
