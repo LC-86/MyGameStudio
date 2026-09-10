@@ -1,0 +1,1604 @@
+{
+  "rows": [
+    {
+      "id": "direct",
+      "group": "control",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS http://127.0.0.1:51243/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/direct.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "aggregate-Zg-single",
+      "group": "short",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -Zg http://127.0.0.1:51243/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 202 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/aggregate-Zg-single.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "aggregate-gJ-single",
+      "group": "short",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -gJ http://127.0.0.1:51243/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/aggregate-gJ-single.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "aggregate-Zg-two",
+      "group": "short",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -Zg http://127.0.0.1:51244/ok http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/ok",
+          "status": 200
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/aggregate-Zg-two.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "aggregate-gJ-two",
+      "group": "short",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -gJ http://127.0.0.1:51244/ok http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 207 ms: Timeout was reached\n",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/ok",
+          "status": 200
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/aggregate-gJ-two.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "aggregate-JO-single",
+      "group": "short-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -JO http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/aggregate-JO-single.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "J-O-single",
+      "group": "short-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -J -O http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/J-O-single.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-query-plain",
+      "group": "glob-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS 'http://127.0.0.1:51243/closed?a[]=1'",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 203 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-query-plain.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-query-off-short",
+      "group": "glob-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -g 'http://127.0.0.1:51243/closed?a[]=1'",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-query-off-short.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-query-off-long",
+      "group": "glob-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --globoff 'http://127.0.0.1:51243/closed?a[]=1'",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 204 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-query-off-long.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-encoded-braces",
+      "group": "glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS http://127.0.0.1:51243/closed/%7Ba,b%7D",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 202 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-encoded-braces.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-encoded-brackets",
+      "group": "glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS 'http://127.0.0.1:51243/closed?a%5B%5D=1'",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 202 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-encoded-brackets.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-escaped-braces",
+      "group": "glob-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS 'http://127.0.0.1:51243/closed/\\{a,b\\}'",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-escaped-braces.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-after-terminator-encoded",
+      "group": "glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -- http://127.0.0.1:51243/closed/%7Ba,b%7D",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 204 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-after-terminator-encoded.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-after-terminator-query",
+      "group": "glob-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -- 'http://127.0.0.1:51243/closed?a[]=1'",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 207 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-after-terminator-query.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "glob-retry-redirect",
+      "group": "composed",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --retry 1 -L 'http://127.0.0.1:51244/{redirect,ok}'",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\ncurl: (28) Failed to connect to 127.0.0.1 port 51243 after 204 ms: Timeout was reached\n",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/redirect",
+          "status": 302
+        },
+        {
+          "method": "GET",
+          "path": "/redirect",
+          "status": 302
+        },
+        {
+          "method": "GET",
+          "path": "/ok",
+          "status": 200
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/glob-retry-redirect.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "retry-all-errors-no-retry",
+      "group": "retry-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --retry-all-errors http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 207 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/retry-all-errors-no-retry.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "retry-connrefused-no-retry",
+      "group": "retry-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --retry-connrefused http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 204 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/retry-connrefused-no-retry.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "retry-delay-no-retry",
+      "group": "retry-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --retry-delay 0 http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 201 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/retry-delay-no-retry.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "retry-max-time-no-retry",
+      "group": "retry-conservative",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --retry-max-time 1 http://127.0.0.1:51243/closed",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 203 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/retry-max-time-no-retry.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "auth-challenge-no-credentials",
+      "group": "auth-control",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS http://127.0.0.1:51244/auth",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/auth",
+          "status": 401
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/auth-challenge-no-credentials.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "http2-plain",
+      "group": "http-control",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --http2 http://127.0.0.1:51244/ok",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/ok",
+          "status": 200
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/http2-plain.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "encoded-literal-success",
+      "group": "glob-control",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS http://127.0.0.1:51244/%7Ba,b%7D",
+      "expected": "MISSING",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/%7Ba,b%7D",
+          "status": 200
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/encoded-literal-success.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-glob-short",
+      "group": "upload-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T '{a.txt,b.txt}' http://127.0.0.1:51325/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "UPLOAD_SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 51325 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "received_bytes": 18,
+          "listening_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-glob-short.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "upload-glob-long",
+      "group": "upload-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --upload-file '{a.txt,b.txt}' http://127.0.0.1:51328/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "UPLOAD_SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 51328 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "received_bytes": 18,
+          "listening_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-glob-long.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "upload-glob-short-attached",
+      "group": "upload-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS '-T{a.txt,b.txt}' http://127.0.0.1:51331/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "UPLOAD_SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 51331 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "received_bytes": 18,
+          "listening_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-glob-short-attached.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "upload-glob-short-aggregate",
+      "group": "upload-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS '-sST{a.txt,b.txt}' http://127.0.0.1:51334/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "UPLOAD_SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 51334 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "received_bytes": 18,
+          "listening_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-glob-short-aggregate.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "upload-glob-range",
+      "group": "upload-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T 'item[1-2].txt' http://127.0.0.1:51339/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "UPLOAD_SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 51339 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/item1.txt",
+          "status": 200,
+          "received_bytes": 18,
+          "listening_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-glob-range.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "upload-glob-after-terminator",
+      "group": "upload-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T '{a.txt,b.txt}' -- http://127.0.0.1:51342/upload/",
+      "expected": "MISSING",
+      "exit": 7,
+      "stdout": "UPLOAD_SUCCESS\n",
+      "stderr": "curl: (7) Failed to connect to 127.0.0.1 port 51342 after 0 ms: Couldn't connect to server\n",
+      "server_hits": [
+        {
+          "method": "PUT",
+          "path": "/upload/a.txt",
+          "status": 200,
+          "received_bytes": 18,
+          "listening_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-glob-after-terminator.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "upload-glob-with-g",
+      "group": "upload-glob",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -g -T '{a.txt,b.txt}' http://127.0.0.1:51345/upload/",
+      "expected": "MISSING",
+      "exit": 26,
+      "stdout": "",
+      "stderr": "curl: Can't open '{a.txt,b.txt}'\ncurl: try 'curl --help' or 'curl --manual' for more information\ncurl: (26) Failed to open/read local data from file/application\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-glob-with-g.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-single-closed",
+      "group": "upload-control",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T a.txt http://127.0.0.1:51243/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 207 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-single-closed.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "upload-long-single-closed",
+      "group": "upload-control",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --upload-file a.txt http://127.0.0.1:51243/closed",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 202 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/upload-long-single-closed.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "ftp-passive-default",
+      "group": "protocol",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS ftp://127.0.0.1:51406/file",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Connection time-out\n",
+      "server_hits": [
+        {
+          "verb": "USER"
+        },
+        {
+          "verb": "PASS"
+        },
+        {
+          "verb": "PWD"
+        },
+        {
+          "verb": "EPSV"
+        },
+        {
+          "verb": "PASV"
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/ftp-passive-default.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "ftp-passive-parallel",
+      "group": "protocol",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -Z ftp://127.0.0.1:51410/file",
+      "expected": "MISSING",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Connection time-out\n",
+      "server_hits": [
+        {
+          "verb": "USER"
+        },
+        {
+          "verb": "PASS"
+        },
+        {
+          "verb": "PWD"
+        },
+        {
+          "verb": "EPSV"
+        },
+        {
+          "verb": "PASV"
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/ftp-passive-parallel.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "ftp-control-port-closed",
+      "group": "protocol-control",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS ftp://127.0.0.1:51243/file",
+      "expected": "OK",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 51243 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/ftp-control-port-closed.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "upload_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "protocol_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    }
+  ],
+  "all_task_server_threads_closed": true,
+  "source_sha256": "c0b9f047a580450d935888b38c8c58405ab1af9f5d3d236d5ffcd0e6ccd3c112",
+  "event_provenance": "real loopback /usr/bin/curl command, exit, stdout and stderr wrapped as item/completed; not a product/model run; FTP server records only command verbs",
+  "guards": "conservative causal controls, not product changes"
+}

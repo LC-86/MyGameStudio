@@ -1,0 +1,1 @@
+{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -ms2 http://127.0.0.1:50886/closed", "status": "failed", "exitCode": 2, "aggregatedOutput": "curl: option -ms2: expected a proper numerical parameter\ncurl: try 'curl --help' or 'curl --manual' for more information\n"}}}

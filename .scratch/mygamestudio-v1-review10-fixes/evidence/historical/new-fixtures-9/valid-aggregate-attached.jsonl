@@ -1,0 +1,1 @@
+{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sSm2 http://127.0.0.1:50886/closed", "status": "failed", "exitCode": 28, "aggregatedOutput": "curl: (28) Failed to connect to 127.0.0.1 port 50886 after 207 ms: Timeout was reached\n"}}}

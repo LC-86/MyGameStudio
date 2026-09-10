@@ -1,0 +1,106 @@
+{
+  "checks": [
+    {
+      "id": "required-artifacts-exist",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "conclusion-leading",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "axes-consistent",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "finding-priority-and-provenance",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "original-observed-fields-retained",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "raw-exception-full-diagnostic-body",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "raw-exception-retry-closed-control",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "raw-exception-true-url-flag",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "new-six-probes-confirmed",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "mutations-nine-runs",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "no-placeholder-comments",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "all-report-file-links-exist",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "id": "coverage-limits-prominent",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "history-audit-pass",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "source-head-unchanged",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "source-worktree-clean",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "source-all-tracked-bytes-unchanged",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "artifact-raw-token-scan-zero",
+      "passed": true,
+      "detail": null
+    }
+  ],
+  "passed": 18,
+  "total": 18,
+  "artifacts": {
+    "review-10.md": {
+      "sha256": "c1e9e5be250d24e7b4304f641a1ed3b6ed7d78f6f2fd8ba537ae8acd1d7909d6",
+      "bytes": 20820
+    },
+    "verification-summary-10.json": {
+      "sha256": "ec5d220419477d6a4c60eaa97e494262f585c9a9492e72573c40be4388bb1277",
+      "bytes": 95129
+    }
+  }
+}

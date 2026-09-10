@@ -1,0 +1,178 @@
+[
+  {
+    "id": "partial-retry-read-first-timeout",
+    "first": {
+      "op": "remote:append-result",
+      "instance_id": "i-1f1cf46fbbc8",
+      "task": "spec-probe",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5100,
+        "ref": "#issuecomment-5100",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "comment-1",
+            "outcome": "created"
+          },
+          {
+            "step": "index-patch",
+            "outcome": "timeout",
+            "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+          }
+        ],
+        "note": "部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+      }
+    },
+    "second": {
+      "op": "remote:append-result",
+      "instance_id": "i-1f1cf46fbbc8",
+      "task": "spec-probe",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5100,
+        "ref": "#issuecomment-5100",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "read-first",
+            "outcome": "timeout",
+            "detail": "timeout: one read-first timeout"
+          },
+          {
+            "step": "pending-index",
+            "outcome": "kept"
+          }
+        ],
+        "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记:#issuecomment-5100),本次读前收养查询失败(timeout: one read-first timeout)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引"
+      }
+    },
+    "comments": 1,
+    "post_count": 1,
+    "observed_bug": false
+  },
+  {
+    "id": "wrong-target-prefix",
+    "arguments": {
+      "path": "/tmp/mgs18-evil-link.md.bak"
+    },
+    "real_gate_result": {
+      "op": "write",
+      "decision": "deny",
+      "reason": "path escapes project root: /tmp/mgs18-evil-link.md.bak",
+      "rule_stage": "path",
+      "instance_id": "i-1f1cf46fbbc8",
+      "task": "spec-probe",
+      "role": "producer",
+      "purpose": "production",
+      "target": "/tmp/mgs18-evil-link.md.bak",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": null,
+      "ts": "2026-09-10T23:01:53+0800",
+      "policy_sha256": "1ba0aeec7437d51e1676ff7826bcce4afff116d6cd5378d4cd70938d5e532a79"
+    },
+    "expected_anchor": "MISSING",
+    "actual_anchor": "MISSING",
+    "observed_bug": false
+  },
+  {
+    "id": "read-denial-as-update-proof",
+    "arguments": {
+      "action": "read",
+      "payload": {
+        "identity": "01-harbor-timer"
+      }
+    },
+    "real_gate_result": {
+      "op": "remote:read",
+      "decision": "deny",
+      "reason": "remote resource not granted to task limited: github://github.com/mygamestudio/issue-accept/issues",
+      "rule_stage": "task_grant",
+      "instance_id": "i-9929cb323a8e",
+      "task": "limited",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": null,
+      "ts": "2026-09-10T23:01:53+0800",
+      "policy_sha256": "1ba0aeec7437d51e1676ff7826bcce4afff116d6cd5378d4cd70938d5e532a79"
+    },
+    "expected_anchor": "MISSING",
+    "actual_anchor": "MISSING",
+    "observed_bug": false
+  },
+  {
+    "id": "append-denial-as-update-proof",
+    "arguments": {
+      "action": "append-result",
+      "payload": {
+        "identity": "01-harbor-timer"
+      }
+    },
+    "real_gate_result": {
+      "op": "remote:append-result",
+      "decision": "deny",
+      "reason": "remote resource not granted to task limited: github://github.com/mygamestudio/issue-accept/issues/01-harbor-timer/comments",
+      "rule_stage": "task_grant",
+      "instance_id": "i-9929cb323a8e",
+      "task": "limited",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-harbor-timer/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": null,
+      "ts": "2026-09-10T23:01:53+0800",
+      "policy_sha256": "1ba0aeec7437d51e1676ff7826bcce4afff116d6cd5378d4cd70938d5e532a79"
+    },
+    "expected_anchor": "MISSING",
+    "actual_anchor": "MISSING",
+    "observed_bug": false
+  }
+]

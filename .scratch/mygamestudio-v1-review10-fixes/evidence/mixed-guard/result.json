@@ -1,0 +1,288 @@
+{
+  "id": "mixed-layout-clear-deletes-foreign-legacy",
+  "entry": "old GithubBackend -> upgraded MCP -> GateService -> FakeTransport",
+  "old_source": "git show 1eef7d8:plugin/records/mgs_github.py",
+  "old_source_sha256": "7b4fbc13c1191b2a78bac2838f15ebb16ac7e6ad20989dcad55e44e3766c1e18",
+  "fake_only": true,
+  "manual_receipt_edits": false,
+  "guard_each_path_control": true,
+  "first_old_b": {
+    "published": true,
+    "partial": true,
+    "comment_id": 5100,
+    "ref": "#issuecomment-5100",
+    "issue_number": 1,
+    "index_updated": false,
+    "attempts": [
+      {
+        "step": "comment-1",
+        "outcome": "created"
+      },
+      {
+        "step": "index-patch",
+        "outcome": "timeout",
+        "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+      }
+    ],
+    "note": "部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+  },
+  "second_new_a": {
+    "op": "remote:append-result",
+    "instance_id": "i-bbd460856d8d",
+    "task": "review6-spec",
+    "role": "producer",
+    "purpose": "production",
+    "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+    "basis": {
+      "policy_version": 1,
+      "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+      "task_grant_source": "instance registry issued by trusted scheduler"
+    },
+    "note": {
+      "action": "append-result",
+      "repo": "github.com/mygamestudio/issue-accept"
+    },
+    "decision": "allow",
+    "rule_stage": "granted",
+    "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+    "result": {
+      "published": true,
+      "partial": true,
+      "comment_id": 5101,
+      "ref": "#issuecomment-5101",
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "comment-1",
+          "outcome": "created"
+        },
+        {
+          "step": "index-patch",
+          "outcome": "timeout",
+          "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+        }
+      ],
+      "note": "部分成功:结果评论已发布(#issuecomment-5101),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+    }
+  },
+  "third_a_complete": {
+    "op": "remote:append-result",
+    "instance_id": "i-bbd460856d8d",
+    "task": "review6-spec",
+    "role": "producer",
+    "purpose": "production",
+    "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+    "basis": {
+      "policy_version": 1,
+      "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+      "task_grant_source": "instance registry issued by trusted scheduler"
+    },
+    "note": {
+      "action": "append-result",
+      "repo": "github.com/mygamestudio/issue-accept"
+    },
+    "decision": "allow",
+    "rule_stage": "granted",
+    "reason": "granted by identity+task+role+purpose+config-scope intersection",
+    "result": {
+      "published": true,
+      "comment_id": 5101,
+      "ref": "#issuecomment-5101",
+      "issue_number": 1,
+      "readback": {
+        "identity": "01-task",
+        "title": "Existing",
+        "triage": "ready-for-agent",
+        "progress": "待执行",
+        "issue_number": 1,
+        "issue_id": 1001,
+        "state": "open",
+        "state_reason": null,
+        "labels": [
+          "agent-ready"
+        ],
+        "triage_source": "label",
+        "triage_conflict": false,
+        "request": {
+          "当前目标": "演示目标",
+          "输入与基线": "GAME_DESIGN v1",
+          "本次交付": "示例交付",
+          "允许修改范围": "src/**",
+          "所需能力": "文件读写",
+          "完成标准": "示例标准",
+          "执行责任": "Agent(制作实现)",
+          "验收方式": "代码级检查",
+          "依赖": "无"
+        },
+        "sections": {
+          "工作请求": true,
+          "结果索引": true,
+          "状态变化": true
+        },
+        "results": [
+          {
+            "ref": "#issuecomment-5100",
+            "created_at": "2026-09-08T12:00:00Z",
+            "excerpt": "任务:01-task"
+          },
+          {
+            "ref": "#issuecomment-5101",
+            "created_at": "2026-09-08T12:00:00Z",
+            "excerpt": "任务:01-task"
+          }
+        ],
+        "result_index_text": "\n- #issuecomment-5101:collision-result-79891\n",
+        "body": "# Existing\n\n任务身份:01-task。当前分流:ready-for-agent。进度:待执行。\n\n## 工作请求\n\n- 当前目标:演示目标\n- 输入与基线:GAME_DESIGN v1\n- 本次交付:示例交付\n- 允许修改范围:src/**\n- 所需能力:文件读写\n- 完成标准:示例标准\n- 执行责任:Agent(制作实现)\n- 验收方式:代码级检查\n- 依赖:无\n\n## 结果索引\n\n- #issuecomment-5101:collision-result-79891\n\n## 状态变化\n\n2026-09-10 经统一接口建立 GitHub Issues 任务记录。\n\n2026-09-10 追加结果评论 #issuecomment-5101\n",
+        "body_sha256": "9cd17c92db0d668ea53f20b50f35466f2d4f594dbac537b8d20c7f0daef42b5f",
+        "html_url": "https://example.invalid/i/1"
+      },
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "exists"
+        }
+      ],
+      "index_updated": true
+    }
+  },
+  "fourth_b_retry": {
+    "op": "remote:append-result",
+    "instance_id": "i-bbd460856d8d",
+    "task": "review6-spec",
+    "role": "producer",
+    "purpose": "production",
+    "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+    "basis": {
+      "policy_version": 1,
+      "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+      "task_grant_source": "instance registry issued by trusted scheduler"
+    },
+    "note": {
+      "action": "append-result",
+      "repo": "github.com/mygamestudio/issue-accept"
+    },
+    "decision": "allow",
+    "rule_stage": "granted",
+    "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+    "result": {
+      "published": true,
+      "partial": true,
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "pending-index",
+          "outcome": "kept"
+        }
+      ],
+      "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记:#issuecomment-5100),本次读前收养查询失败(timeout: one read-first timeout)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引"
+    }
+  },
+  "pending_before_upgrade": {
+    "pending-index/append-result-01-task-346df0e9.json": {
+      "op": "append_result",
+      "args": {
+        "identity": "01-task",
+        "result_markdown": "collision-result-80657"
+      },
+      "repo": "github.com/mygamestudio/issue-accept",
+      "status": "已发布未补索引",
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "created_at": "2026-09-10T23:02:48+08:00",
+      "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+      "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+    }
+  },
+  "pending_after_a_partial": {
+    "pending-index/append-result-01-task-346df0e9/346df0e9f3c1a37fabe0a6d5d973c52a53c6dd35e3b3f6bc2672a1154b092467.json": {
+      "op": "append_result",
+      "args": {
+        "identity": "01-task",
+        "result_markdown": "collision-result-79891"
+      },
+      "repo": "github.com/mygamestudio/issue-accept",
+      "status": "已发布未补索引",
+      "comment_id": 5101,
+      "ref": "#issuecomment-5101",
+      "created_at": "2026-09-10T23:02:48+08:00",
+      "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+      "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+    },
+    "pending-index/append-result-01-task-346df0e9.json": {
+      "op": "append_result",
+      "args": {
+        "identity": "01-task",
+        "result_markdown": "collision-result-80657"
+      },
+      "repo": "github.com/mygamestudio/issue-accept",
+      "status": "已发布未补索引",
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "created_at": "2026-09-10T23:02:48+08:00",
+      "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+      "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+    }
+  },
+  "pending_after_a_complete": {
+    "pending-index/append-result-01-task-346df0e9.json": {
+      "op": "append_result",
+      "args": {
+        "identity": "01-task",
+        "result_markdown": "collision-result-80657"
+      },
+      "repo": "github.com/mygamestudio/issue-accept",
+      "status": "已发布未补索引",
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "created_at": "2026-09-10T23:02:48+08:00",
+      "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+      "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+    }
+  },
+  "pending_after_b_retry": {
+    "pending-index/append-result-01-task-346df0e9/346df0e978e0332bc2e9b8ba66c73894b755953485f5f4eadc5ea0653aa362c7.json": {
+      "op": "append_result",
+      "args": {
+        "identity": "01-task",
+        "result_markdown": "collision-result-80657"
+      },
+      "repo": "github.com/mygamestudio/issue-accept",
+      "status": "已发布未补索引",
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "created_at": "2026-09-10T23:02:48+08:00",
+      "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+      "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+    }
+  },
+  "posts": 2,
+  "b_comment_count": 1,
+  "comments": [
+    {
+      "id": 5100,
+      "body": "任务:01-task\n\ncollision-result-80657",
+      "created_at": "2026-09-08T12:00:00Z"
+    },
+    {
+      "id": 5101,
+      "body": "任务:01-task\n\ncollision-result-79891",
+      "created_at": "2026-09-08T12:00:00Z"
+    }
+  ],
+  "observed_bug": false,
+  "expected": "B legacy receipt survives A completion; B retry returns B first comment identity without POST."
+}

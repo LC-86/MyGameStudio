@@ -1,0 +1,11 @@
+--- current-extracted
++++ http2_guard
+@@ -71,7 +71,7 @@
+ CURL_PLAIN_LONG = set((
+     "--version", "--silent", "--show-error", "--insecure",
+     "--verbose", "--head", "--fail", "--compressed", "--no-buffer",
+-    "--progress-bar", "--ipv4", "--ipv6", "--http1.1", "--http2",
++    "--progress-bar", "--ipv4", "--ipv6", "--http1.1",
+ ))
+ 
+ def executed_tokens(command):

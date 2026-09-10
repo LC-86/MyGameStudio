@@ -1,0 +1,48 @@
+[
+  {
+    "name": "plugin_package",
+    "exit": 0,
+    "seconds": 6.85,
+    "skipped": [
+      "test_accept16_sanitize_covers_unenumerated_tokens",
+      "test_accept16_secret_scan_gate",
+      "test_accept18_leak_checks_mechanized"
+    ],
+    "complete_suite": false,
+    "log": "/tmp/mgs-review10-j5225ubn/logs/suite-plugin_package-rerun.log",
+    "initial_exit": 1,
+    "initial_failure": "review copy missing design templates; copied required templates and reran"
+  },
+  {
+    "name": "runtime_gate",
+    "exit": 0,
+    "seconds": 1.73,
+    "skipped": [],
+    "complete_suite": true,
+    "log": "/tmp/mgs-review10-j5225ubn/logs/suite-runtime_gate.log"
+  },
+  {
+    "name": "runtime_boundaries",
+    "exit": 0,
+    "seconds": 0.74,
+    "skipped": [],
+    "complete_suite": true,
+    "log": "/tmp/mgs-review10-j5225ubn/logs/suite-runtime_boundaries.log"
+  },
+  {
+    "name": "records_backend",
+    "exit": 0,
+    "seconds": 2.63,
+    "skipped": [],
+    "complete_suite": true,
+    "log": "/tmp/mgs-review10-j5225ubn/logs/suite-records_backend.log"
+  },
+  {
+    "name": "github_backend",
+    "exit": 0,
+    "seconds": 2.58,
+    "skipped": [],
+    "complete_suite": true,
+    "log": "/tmp/mgs-review10-j5225ubn/logs/suite-github_backend.log"
+  }
+]

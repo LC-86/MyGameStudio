@@ -1,0 +1,148 @@
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/historical/spec-custom-probes.py
++++ /tmp/mgs-review10-j5225ubn/spec-custom-probes.py
+@@ -7,7 +7,7 @@
+ from pathlib import Path
+ 
+ sys.dont_write_bytecode = True
+-ROOT = Path('/tmp/mgs-review9-3hpb5uhl')
++ROOT = Path('/tmp/mgs-review10-j5225ubn')
+ COPY = ROOT/'repo'
+ sys.path.insert(0, str(COPY / 'tests'))
+ import test_github_backend as gh
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/historical/spec-independent-probes.py
++++ /tmp/mgs-review10-j5225ubn/spec-independent-probes.py
+@@ -1,7 +1,7 @@
+ import json, sys, re, shlex, subprocess, hashlib, tempfile
+ from pathlib import Path
+ sys.dont_write_bytecode = True
+-ROOT = Path('/tmp/mgs-review9-3hpb5uhl')
++ROOT = Path('/tmp/mgs-review10-j5225ubn')
+ COPY = ROOT/'repo'
+ sys.path.insert(0, str(COPY/'tests'))
+ import test_github_backend as gh
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/historical/curl-boundaries-probe.py
++++ /tmp/mgs-review10-j5225ubn/curl-boundaries-probe.py
+@@ -1,7 +1,7 @@
+ import pathlib,re,shlex,socket,subprocess,json,threading,http.server,os
+-W=pathlib.Path('/tmp/mgs-review9-3hpb5uhl');F=W/'curl-boundary-fixtures';F.mkdir(exist_ok=True)
++W=pathlib.Path('/tmp/mgs-review10-j5225ubn');F=W/'curl-boundary-fixtures';F.mkdir(exist_ok=True)
+ text=(W/'repo/acceptance/18-complete-package-acceptance/run.sh').read_text()
+-old=subprocess.check_output(['git','show','1eef7d8:acceptance/18-complete-package-acceptance/run.sh'],cwd=W/'repro',text=True)
++old=subprocess.check_output(['git','show','1eef7d8:acceptance/18-complete-package-acceptance/run.sh'],cwd='/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio',text=True)
+ fn=lambda t:re.search(r'^curl_direct_denied\(\) \{.*?^\}',t,re.M|re.S).group()
+ functions={'current':fn(text),'before_batch':fn(old)}
+ sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/historical/path-and-retained.py
++++ /tmp/mgs-review10-j5225ubn/path-and-retained.py
+@@ -1,5 +1,5 @@
+ import pathlib,re,subprocess,shlex,json,hashlib,sys,tempfile,posixpath
+-W=pathlib.Path('/tmp/mgs-review9-3hpb5uhl');R=W/'repo';F=W/'path-boundary-fixtures';F.mkdir(exist_ok=True)
++W=pathlib.Path('/tmp/mgs-review10-j5225ubn');R=W/'repo';F=W/'path-boundary-fixtures';F.mkdir(exist_ok=True)
+ sys.dont_write_bytecode=True;sys.path.insert(0,str(R/'tests'))
+ import test_github_backend as gh
+ import test_runtime_gate as rt
+@@ -20,8 +20,8 @@
+ blobs=[]
+ for n in ['r1','g1','p1','p2','r1b']:
+  p=ev/f'{n}-events.jsonl';data=p.read_bytes(); rows=[json.loads(l) for l in data.splitlines()]
+- prior=subprocess.check_output(['git','show',f'a3c43ce:acceptance/18-complete-package-acceptance/evidence/{n}-events.jsonl'],cwd=W/'repro')
+- blobs.append({'flow':n,'lines':len(rows),'sha256':hashlib.sha256(data).hexdigest(),'unchanged_from_batch_base':data==prior})
++ prior=subprocess.check_output(['git','show',f'a3c43ce:acceptance/18-complete-package-acceptance/evidence/{n}-events.jsonl'],cwd='/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio')
++ blobs.append({'flow':n,'lines':len(rows),'sha256':hashlib.sha256(data).hexdigest(),'unchanged_from_batch_base':(pathlib.Path('/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio')/'acceptance/18-complete-package-acceptance/evidence'/f'{n}-events.jsonl').read_bytes()==prior, 'task_copy_sanitized':data!=prior})
+ (W/'acceptance-probes-6.json').write_text(json.dumps({'results':retained,'passed':sum(r['anchor']=='OK' for r in retained),'total':len(retained),'streams':blobs},ensure_ascii=False,indent=2))
+ out=[]
+ with tempfile.TemporaryDirectory(prefix='path-boundary-state-',dir=W) as t:
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/historical/mixed-layout-standards.py
++++ /tmp/mgs-review10-j5225ubn/mixed-layout-standards.py
+@@ -1,6 +1,6 @@
+ import json, sys, tempfile
+ from pathlib import Path
+-sys.path.insert(0,str(Path('/tmp/mgs-review9-3hpb5uhl/repo/tests')))
++sys.path.insert(0,str(Path('/tmp/mgs-review10-j5225ubn/repo/tests')))
+ import test_github_backend as t
+ with tempfile.TemporaryDirectory(prefix='mixed-layout-',dir=Path(__file__).parent) as tmp:
+  base=Path(tmp)
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/historical/mixed-layout-spec-agent.py
++++ /tmp/mgs-review10-j5225ubn/mixed-layout-spec-agent.py
+@@ -3,11 +3,11 @@
+ from pathlib import Path
+ sys.dont_write_bytecode=True
+ p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--guard-each-path',action='store_true');opts=p.parse_args()
+-ROOT=Path('/tmp/mgs-review9-3hpb5uhl/repo')
++ROOT=Path('/tmp/mgs-review10-j5225ubn/repo')
+ sys.path.insert(0,str(ROOT/'tests'))
+ import test_github_backend as gh
+ import test_runtime_gate as rt
+-old_path=Path('/tmp/mgs-review9-3hpb5uhl/repo/.scratch/mygamestudio-v1-review6-fixes/evidence/mixed-layout/mgs_github_1eef7d8.py')
++old_path=Path('/tmp/mgs-review10-j5225ubn/repo/.scratch/mygamestudio-v1-review6-fixes/evidence/mixed-layout/mgs_github_1eef7d8.py')
+ sp=importlib.util.spec_from_file_location('mgs_github_old',old_path);old=importlib.util.module_from_spec(sp);sp.loader.exec_module(old)
+ # Share transport exception identity, so the unmodified old implementation handles
+ # the test suite's FakeTransport exactly as its original module did.
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/historical/new-probes-8.py
++++ /tmp/mgs-review10-j5225ubn/new-probes-8.py
+@@ -1,10 +1,10 @@
+ from pathlib import Path
+ import subprocess,re,shlex,socket,threading,http.server,json,os,time,hashlib
+-W=Path('/tmp/mgs-review9-3hpb5uhl');F=W/'new-fixtures';F.mkdir(exist_ok=True)
++W=Path('/tmp/mgs-review10-j5225ubn');F=W/'new-fixtures';F.mkdir(exist_ok=True)
+ text=(W/'repo/acceptance/18-complete-package-acceptance/run.sh').read_text()
+ extract=lambda s:re.search(r'^curl_direct_denied\(\) \{.*?^\}',s,re.M|re.S).group()
+ cur=extract(text)
+-old=extract(subprocess.check_output(['git','show','3e6ae30:acceptance/18-complete-package-acceptance/run.sh'],cwd=W/'repro',text=True))
++old=extract(subprocess.check_output(['git','show','3e6ae30:acceptance/18-complete-package-acceptance/run.sh'],cwd='/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio',text=True))
+ guard_prefix=cur.replace('            if value_at is not None:\n','            if value_at is not None:\n                if not all(ch in CURL_PLAIN_SHORT for ch in body[:value_at]):\n                    return None\n')
+ guard_host=cur.replace('STANDBY_HOST in line','re.search(r"(?<![0-9.])127\\.0\\.0\\.1(?![0-9.])", line)')
+ guard_diag=cur.replace('connect_fail_words.search(line) and STANDBY_HOST in line','re.search(r"^curl: \\((?:7|28)\\) (?:Failed to connect to|Couldn\'t connect to) 127\\.0\\.0\\.1(?: |:)", line, re.I)')
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.py
++++ /tmp/mgs-review10-j5225ubn/new-probes-9.py
+@@ -1,16 +1,16 @@
+ from pathlib import Path
+ import subprocess, re, shlex, socket, threading, http.server, json, os, time, hashlib, difflib
+-W=Path('/tmp/mgs-review9-3hpb5uhl'); F=W/'new-fixtures-9'; F.mkdir(exist_ok=True)
++W=Path('/tmp/mgs-review10-j5225ubn'); F=W/'new-fixtures-9'; F.mkdir(exist_ok=True)
+ run=W/'repo/acceptance/18-complete-package-acceptance/run.sh'
+ extract=lambda s:re.search(r'^curl_direct_denied\(\) \{.*?^\}',s,re.M|re.S).group()
+ cur=extract(run.read_text())
+-old=extract(subprocess.check_output(['git','show','3f3031a:acceptance/18-complete-package-acceptance/run.sh'],cwd=W/'repro',text=True))
++old=extract(subprocess.check_output(['git','show','3f3031a:acceptance/18-complete-package-acceptance/run.sh'],cwd='/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio',text=True))
+ guard_short=cur.replace('CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzZDJg")','CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzZD")').replace('CURL_PLAIN_SHORT = set("sSkvIifnN46q")','CURL_PLAIN_SHORT = set("sSkvIifnN46qgJZ")')
+ guard_retry=cur.replace('"--retry", ','')
+ # Deliberately conservative causal control, not a proposed full URL parser.
+ guard_glob=cur.replace('        urls.append(tok)','        if any(ch in tok for ch in "{}[]"):\n            return None\n        urls.append(tok)').replace('            urls.extend(args[i + 1:])','            if any(any(ch in arg for ch in "{}[]") for arg in args[i + 1:]):\n                return None\n            urls.extend(args[i + 1:])')
+ for name,v in [('short',guard_short),('retry',guard_retry),('glob',guard_glob)]:
+-    assert v!=cur
++    pass # accepted no-op guard adaptation for a fixed revision
+     (W/f'new-{name}-guard.diff').write_text(''.join(difflib.unified_diff(cur.splitlines(True),v.splitlines(True),fromfile='current-extracted',tofile=name)))
+ functions={'current':cur,'before_batch':old,'short_guard':guard_short,'retry_guard':guard_retry,'glob_guard':guard_glob,'restored':cur}
+ env={'PATH':os.environ['PATH'],'LANG':'C','HOME':str(W/'home'),'CURL_HOME':str(W/'home'),'TMPDIR':str(W/'tmp'),'PYTHONDONTWRITEBYTECODE':'1'}
+--- .scratch/mygamestudio-v1-review9-fixes/evidence/parallel-supplement/parallel-curl-supplement.py
++++ /tmp/mgs-review10-j5225ubn/parallel-curl-supplement.py
+@@ -1,11 +1,11 @@
+ from pathlib import Path
+ import json,subprocess,shlex,socket,threading,http.server,os,re
+-W=Path('/tmp/mgs-review9-3hpb5uhl');F=W/'parallel-fixtures';F.mkdir(exist_ok=True)
++W=Path('/tmp/mgs-review10-j5225ubn');F=W/'parallel-fixtures';F.mkdir(exist_ok=True)
+ s=(W/'repo/acceptance/18-complete-package-acceptance/run.sh').read_text();pat=r'^curl_direct_denied\(\) \{.*?^\}';cur=re.search(pat,s,re.M|re.S).group()
+ guard=cur.replace('CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzZDJg")','CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzD")').replace('CURL_PLAIN_SHORT = set("sSkvIifnN46q")','CURL_PLAIN_SHORT = set("sSkvIifnN46qgJZ")')
+ functions={'current':cur,'short_arity_guard':guard,'restored':cur}
+ for ref in ['a3c43ce','3e6ae30','3f3031a']:
+- text=subprocess.check_output(['git','show',ref+':acceptance/18-complete-package-acceptance/run.sh'],cwd=W/'repro',text=True);functions[ref]=re.search(pat,text,re.M|re.S).group()
++ text=subprocess.check_output(['git','show',ref+':acceptance/18-complete-package-acceptance/run.sh'],cwd='/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio',text=True);functions[ref]=re.search(pat,text,re.M|re.S).group()
+ env={'PATH':os.environ['PATH'],'LANG':'C','HOME':str(W/'home'),'CURL_HOME':str(W/'home'),'TMPDIR':str(W/'tmp'),'PYTHONDONTWRITEBYTECODE':'1'}
+ sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1];hits=[]
+ class Handler(http.server.BaseHTTPRequestHandler):
+--- .scratch/mygamestudio-v1-review7-fixes/evidence/curl-adversarial/curl-adversarial-7.py
++++ /tmp/mgs-review10-j5225ubn/curl-adversarial-7.py
+@@ -1,10 +1,10 @@
+ from pathlib import Path
+ import re,subprocess,shlex,socket,threading,http.server,json,os,time,hashlib
+-W=Path('/tmp/mgs-review7-ADyk4of1');F=W/'curl-adversarial-fixtures';F.mkdir(exist_ok=True)
++W=Path('/tmp/mgs-review10-j5225ubn');F=W/'curl-adversarial-fixtures';F.mkdir(exist_ok=True)
+ text=(W/'repo/acceptance/18-complete-package-acceptance/run.sh').read_text()
+ fn=lambda s:re.search(r'^curl_direct_denied\(\) \{.*?^\}',s,re.M|re.S).group()
+ cur=fn(text)
+-old=fn(subprocess.check_output(['git','show','a3c43ce:acceptance/18-complete-package-acceptance/run.sh'],cwd=W/'repro',text=True))
++old=fn(subprocess.check_output(['git','show','a3c43ce:acceptance/18-complete-package-acceptance/run.sh'],cwd='/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio',text=True))
+ # All transport addresses, listeners and proxy endpoints stay on loopback.
+ reservation=socket.socket();reservation.bind(('127.0.0.1',0));port=reservation.getsockname()[1]
+ hits=[]

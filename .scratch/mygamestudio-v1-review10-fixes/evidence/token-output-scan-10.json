@@ -1,0 +1,16 @@
+{
+  "scanned_files": 1768,
+  "raw_token_field_hits": [],
+  "token_files": [],
+  "scope": "quoted token/token_in_args field names followed by raw 64-hex literals, plus token-file inventory; not a universal secret detector",
+  "historical_copy_redactions": [
+    {
+      "file": "acceptance/03-indirect-write-failure/evidence/w1b-events.jsonl",
+      "count": 1
+    }
+  ],
+  "initial_scan_false_positive": {
+    "file": "source-manifest-start.json",
+    "reason": "unanchored key match treated a filename ending token as a raw token field; value was the file SHA256"
+  }
+}

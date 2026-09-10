@@ -1,0 +1,449 @@
+{
+  "rows": [
+    {
+      "id": "direct",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "OK",
+      "expected": "OK",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/direct.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "no-value-g-two-urls",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/no-value-g-two-urls.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "no-value-J-two-urls",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/no-value-J-two-urls.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "no-value-Z-two-urls",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/no-value-Z-two-urls.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "no-value-g-single-url",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "OK",
+      "expected": "OK",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/no-value-g-single-url.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "two-urls-plain",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/two-urls-plain.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "mixed-prefix-sLm2",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/mixed-prefix-sLm2.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "single-dash",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/single-dash.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "terminator-attached-option",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/terminator-attached-option.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "lowercase-lm2",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/lowercase-lm2.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "uppercase-M2",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/uppercase-M2.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "legitimate-aggregate",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "OK",
+      "expected": "OK",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/legitimate-aggregate.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "url-glob-two-ports",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/url-glob-two-ports.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "url-glob-after-terminator",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/url-glob-after-terminator.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "url-glob-disabled-long",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/url-glob-disabled-long.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "full-diagnostic-body",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "accepted-output-origin-limit",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/full-diagnostic-body.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "retry-stop-after-503",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/retry-stop-after-503.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "retry-503-then-200",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/retry-503-then-200.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "retry-closed-control",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/new-probes/new-probes-9.json",
+      "source_sha256": "4a46c4aa8eaadcfae6540956d70f9a22ce6622095b655be759efc868a3965633",
+      "original_expected": "OK",
+      "expected": "MISSING",
+      "classification": "disclosed-conservative-flip",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/retry-closed-control.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "silent-Z-two-urls",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/parallel-supplement/parallel-curl-supplement.json",
+      "source_sha256": "48f4f1ea6c1834a3a65b2c7ccef552408b9fb4ac4a18e3166f6ff9e216b80aad",
+      "original_expected": "MISSING",
+      "expected": "MISSING",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/silent-Z-two-urls.jsonl",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "silent-Z-one-url",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/parallel-supplement/parallel-curl-supplement.json",
+      "source_sha256": "48f4f1ea6c1834a3a65b2c7ccef552408b9fb4ac4a18e3166f6ff9e216b80aad",
+      "original_expected": "OK",
+      "expected": "OK",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/silent-Z-one-url.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "silent-direct",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review9-fixes/evidence/parallel-supplement/parallel-curl-supplement.json",
+      "source_sha256": "48f4f1ea6c1834a3a65b2c7ccef552408b9fb4ac4a18e3166f6ff9e216b80aad",
+      "original_expected": "OK",
+      "expected": "OK",
+      "classification": "required",
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/archive-fixtures/silent-direct.jsonl",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    }
+  ],
+  "total": 22,
+  "raw_current_mismatches": [
+    "full-diagnostic-body"
+  ],
+  "source": "archive command, exit and stdout/stderr replayed only; no historical commands executed and no new network curl process"
+}

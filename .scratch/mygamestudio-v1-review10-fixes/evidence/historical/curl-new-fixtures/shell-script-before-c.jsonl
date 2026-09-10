@@ -1,0 +1,1 @@
+{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/bin/sh /tmp/mgs-review10-j5225ubn/curl-new-fixtures/script-before-c.sh -c '/usr/bin/curl http://127.0.0.1:50458/_test/ping'", "status": "failed", "exitCode": 7, "aggregatedOutput": "Failed to connect (printed by script; no curl execution)\n"}}}

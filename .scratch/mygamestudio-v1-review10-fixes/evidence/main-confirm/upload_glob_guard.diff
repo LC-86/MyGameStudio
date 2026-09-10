@@ -1,0 +1,22 @@
+--- current-extracted
++++ upload_glob_guard
+@@ -117,6 +117,8 @@
+             break
+         if tok.startswith("--"):
+             if tok in CURL_VALUE_LONG:
++                if tok == "--upload-file" and (i + 1 >= len(args) or any(ch in args[i + 1] for ch in "{}[]")):
++                    return None
+                 i += 2
+                 continue
+             if tok in CURL_PLAIN_LONG:
+@@ -140,6 +142,10 @@
+             if value_at is not None:
+                 if not all(ch in CURL_PLAIN_SHORT for ch in body[:value_at]):
+                     return None
++                if body[value_at] == "T":
++                    value = args[i + 1] if value_at == len(body) - 1 and i + 1 < len(args) else body[value_at + 1:]
++                    if any(ch in value for ch in "{}[]"):
++                        return None
+                 i += 2 if value_at == len(body) - 1 else 1
+                 continue
+             if all(ch in CURL_PLAIN_SHORT for ch in body):

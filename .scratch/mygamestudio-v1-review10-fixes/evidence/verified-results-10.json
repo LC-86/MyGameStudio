@@ -1,0 +1,187 @@
+{
+  "checks": [
+    {
+      "id": "history-15-scripts-exit0",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "curl-new-probes.json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "path-extra-probes-5.json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "path-boundaries-6.json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "curl-boundaries-6.json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "curl-adversarial-7.json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "new-probes-8.json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "parallel-curl-supplement.json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "new9-original-19-rows-preserved",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "new9-two-disclosed-exceptions-only",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "new9-SP27-29-current-outcomes",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "new9-full-diagnostic-body-accepted",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "new9-retry-closed-accepted-flip",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP7-partial-retry-post1",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP8-anchor-retained",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP10-no-cache-disclosed",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP11-corrupt-json",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP11-corrupt-shape-object",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP12-collision-own-body",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP12-resource-anchors",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP14-dual-identities",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP14-corrupt-receipts",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP14-body-boundaries",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP15-url-known-limit-only",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP17-mixed-plain",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP17-mixed-guard",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "SP17-standards",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "retained-10-of-10",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "retained-original-bytes-unchanged",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "mutations-expected-counts",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "mutations-byte-restored",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "four-complete-suites-pass",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "package-permitted-checks-pass",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "driver-33-pass",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "syntax18-pass",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "id": "product-diff-check",
+      "passed": true,
+      "detail": null
+    }
+  ],
+  "passed": 36,
+  "total": 36,
+  "meaning": "evidence and expected-result consistency, not overall product acceptance"
+}

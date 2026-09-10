@@ -1,0 +1,191 @@
+{
+  "rows": [
+    {
+      "id": "h2-refused-stream",
+      "expected": "MISSING",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --http2 http://127.0.0.1:52937/h2",
+      "exit": 56,
+      "stdout": "",
+      "stderr": "curl: (56) Failure when receiving data from the peer\n",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/h2",
+          "upgrade_h2c": true,
+          "listener_closed_before_response": true
+        },
+        {
+          "http2_client_preface": true
+        },
+        {
+          "sent": "RST_STREAM",
+          "stream": 1,
+          "error_code": 7
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/h2-refused-stream.jsonl",
+      "server_thread_closed": true,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "http2_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "h2-goaway-unprocessed",
+      "expected": "MISSING",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --http2 http://127.0.0.1:52939/h2",
+      "exit": 56,
+      "stdout": "",
+      "stderr": "curl: (56) Failure when receiving data from the peer\n",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/h2",
+          "upgrade_h2c": true,
+          "listener_closed_before_response": true
+        },
+        {
+          "http2_client_preface": true
+        },
+        {
+          "sent": "GOAWAY",
+          "last_stream_id": 0,
+          "error_code": 0
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/h2-goaway-unprocessed.jsonl",
+      "server_thread_closed": true,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "http2_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "h2-http1-control",
+      "expected": "MISSING",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --http2 http://127.0.0.1:52941/h2",
+      "exit": 0,
+      "stdout": "",
+      "stderr": "",
+      "server_hits": [
+        {
+          "method": "GET",
+          "path": "/h2",
+          "upgrade_h2c": true,
+          "listener_closed_before_response": true
+        }
+      ],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/h2-http1-control.jsonl",
+      "server_thread_closed": true,
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "http2_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    },
+    {
+      "id": "h2-closed-http2-control",
+      "expected": "OK",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --http2 http://127.0.0.1:52943/h2",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 52943 after 205 ms: Timeout was reached\n",
+      "server_hits": [],
+      "fixture": "/tmp/mgs-review10-j5225ubn/spec/fixtures/h2-closed-http2-control.jsonl",
+      "server_thread_closed": true,
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "http2_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "e3741c6": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    }
+  ],
+  "source_sha256": "c0b9f047a580450d935888b38c8c58405ab1af9f5d3d236d5ffcd0e6ccd3c112",
+  "event_provenance": "real loopback curl; h2c upgrade followed by protocol-native RST_STREAM/GOAWAY; no --retry, auth or TLS credentials"
+}

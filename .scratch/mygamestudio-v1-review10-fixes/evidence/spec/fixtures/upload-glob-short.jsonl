@@ -1,0 +1,1 @@
+{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -T '{a.txt,b.txt}' http://127.0.0.1:53579/upload/", "status": "failed", "exitCode": 7, "aggregatedOutput": "UPLOAD_SUCCESS\ncurl: (7) Failed to connect to 127.0.0.1 port 53579 after 0 ms: Couldn't connect to server\n"}}}

@@ -1,0 +1,13 @@
+{
+  "row_count": 36,
+  "same_results_as_independent_spec": true,
+  "observed_bug_ids": [
+    "upload-glob-short",
+    "upload-glob-long",
+    "upload-glob-short-attached",
+    "upload-glob-short-aggregate",
+    "upload-glob-range",
+    "upload-glob-after-terminator"
+  ],
+  "all_servers_closed": true
+}

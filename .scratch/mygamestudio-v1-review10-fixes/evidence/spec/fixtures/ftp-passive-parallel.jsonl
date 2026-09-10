@@ -1,0 +1,1 @@
+{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -Z ftp://127.0.0.1:53682/file", "status": "failed", "exitCode": 28, "aggregatedOutput": "curl: (28) Connection time-out\n"}}}
