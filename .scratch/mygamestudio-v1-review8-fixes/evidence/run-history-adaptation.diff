@@ -1,0 +1,9 @@
+--- /tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review7-fixes/evidence/run-history.py
++++ /tmp/mgs-review8-60iu1bo4/run-history.py
+@@ -1,5 +1,5 @@
+ import pathlib,re,os,subprocess,json,difflib
+-W=pathlib.Path('/tmp/mgs-review7-ADyk4of1'); R=W/'repo'
++W=pathlib.Path('/tmp/mgs-review8-60iu1bo4'); R=W/'repo'
+ (W/'copy').symlink_to(R,target_is_directory=True)
+ e=R/'.scratch/mygamestudio-v1-review5-fixes/evidence'
+ files={n:e/n for n in ['spec-extra-pending.py','curl-extra-probes-5.py','path-extra-probes-5.py']}

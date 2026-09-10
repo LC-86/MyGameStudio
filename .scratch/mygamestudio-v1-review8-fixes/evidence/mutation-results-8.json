@@ -1,0 +1,115 @@
+{
+  "runs": [
+    {
+      "id": "initial-green",
+      "exit": 0,
+      "failure_count": 0,
+      "expected_count": 0,
+      "matches_expected": true,
+      "failures": []
+    },
+    {
+      "id": "baseline-red",
+      "exit": 1,
+      "failure_count": 10,
+      "expected_count": 10,
+      "matches_expected": true,
+      "failures": [
+        "-x 短旗标指向 127.0.0.2(URL 仍为 127.0.0.1、curl 实连 .2 超时 exit 28)不得满足直连锚定(改变连接语义的短旗标保守拒绝,SP-20)",
+        "-K 配置文件内设同一代理(实连 .2 超时 exit 28)不得满足直连锚定(配置来源同口径保守拒绝,SP-20)",
+        "-L 跟随 302 重定向后转向 127.0.0.2 连接失败(.1 已被直连访问、命中已记录)不得满足直连锚定(重定向旗标保守拒绝,SP-21)",
+        "--location 跟随重定向的同义长参数形态同样不得满足直连锚定(重定向旗标保守拒绝,SP-21)",
+        "粘连短值 -m2 <成功URL> <失败URL>(首 URL 真拿到 200、次 URL 失败 exit 28)不得因首 URL 被当值吞掉而绕过单 URL 限制(短旗标值按 curl 语义消费,SP-22)",
+        "连接已成功、响应阶段超时(200 + 15/25 字节后延迟)不得判「替身直连被拒」(连接阶段失败词族+实际尝试主机绑定,SP-23)",
+        "-K 配置文件内 resolve 把 127.0.0.1:端口 重映射到 .2(失败输出点名 .1)不得满足直连锚定(配置来源保守拒绝的独立防护,SP-20 变体)",
+        "-L 跟随 302 回环跳到 127.0.0.1 预留端口(初始 .1 已被直连访问、失败输出点名 .1)不得满足直连锚定(重定向保守拒绝的独立防护,SP-21 变体)",
+        "任务专属 CURL_HOME/.curlrc 设代理使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)",
+        "子进程 http_proxy 使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)"
+      ]
+    },
+    {
+      "id": "baseline-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "expected_count": 0,
+      "matches_expected": true,
+      "failures": []
+    },
+    {
+      "id": "A-short-red",
+      "exit": 1,
+      "failure_count": 1,
+      "expected_count": 1,
+      "matches_expected": true,
+      "failures": [
+        "-K 配置文件内 resolve 把 127.0.0.1:端口 重映射到 .2(失败输出点名 .1)不得满足直连锚定(配置来源保守拒绝的独立防护,SP-20 变体)"
+      ]
+    },
+    {
+      "id": "A-short-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "expected_count": 0,
+      "matches_expected": true,
+      "failures": []
+    },
+    {
+      "id": "B-redirect-red",
+      "exit": 1,
+      "failure_count": 1,
+      "expected_count": 1,
+      "matches_expected": true,
+      "failures": [
+        "-L 跟随 302 回环跳到 127.0.0.1 预留端口(初始 .1 已被直连访问、失败输出点名 .1)不得满足直连锚定(重定向保守拒绝的独立防护,SP-21 变体)"
+      ]
+    },
+    {
+      "id": "B-redirect-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "expected_count": 0,
+      "matches_expected": true,
+      "failures": []
+    },
+    {
+      "id": "C-consumption-red",
+      "exit": 1,
+      "failure_count": 1,
+      "expected_count": 1,
+      "matches_expected": true,
+      "failures": [
+        "粘连短值 -m2 <成功URL> <失败URL>(首 URL 真拿到 200、次 URL 失败 exit 28)不得因首 URL 被当值吞掉而绕过单 URL 限制(短旗标值按 curl 语义消费,SP-22)"
+      ]
+    },
+    {
+      "id": "C-consumption-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "expected_count": 0,
+      "matches_expected": true,
+      "failures": []
+    },
+    {
+      "id": "D-failure-red",
+      "exit": 1,
+      "failure_count": 3,
+      "expected_count": 3,
+      "matches_expected": true,
+      "failures": [
+        "连接已成功、响应阶段超时(200 + 15/25 字节后延迟)不得判「替身直连被拒」(连接阶段失败词族+实际尝试主机绑定,SP-23)",
+        "任务专属 CURL_HOME/.curlrc 设代理使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)",
+        "子进程 http_proxy 使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)"
+      ]
+    },
+    {
+      "id": "D-failure-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "expected_count": 0,
+      "matches_expected": true,
+      "failures": []
+    }
+  ],
+  "byte_restored": true,
+  "run_sha256": "2f276460e55d04e3b529e4c82e85bedd935dccd73dd66779c1cfe363736a3543"
+}

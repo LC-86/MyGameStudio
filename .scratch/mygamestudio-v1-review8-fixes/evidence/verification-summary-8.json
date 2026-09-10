@@ -1,0 +1,1143 @@
+{
+  "schema_version": 1,
+  "review": 8,
+  "date": "2026-09-10",
+  "timezone": "Asia/Shanghai",
+  "workspace": "/tmp/mgs-review8-60iu1bo4",
+  "repository": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+  "baseline": {
+    "root": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+    "workspace": "/tmp/mgs-review8-60iu1bo4",
+    "start_head": "1512d110e927029db2facdf26a020710779d7934",
+    "status": "",
+    "branch": "main",
+    "product_target": "3f3031a5ad8e5957f9c0ad3255ea5ab4de597a06",
+    "baseline": "3e6ae308f34cc1f4547211e253842a3dcddb37ae"
+  },
+  "reviewed_head": "1512d110e927029db2facdf26a020710779d7934",
+  "diff": "git diff 3e6ae30..3f3031a",
+  "batch_commits": [
+    "02fc73b",
+    "2b4217d",
+    "3f3031a"
+  ],
+  "batch_commit_count": 3,
+  "verdict": {
+    "original_sp20_sp23_counterexamples_fixed": true,
+    "overall_requirements_closed": false,
+    "new_findings_count": 3,
+    "new_regression_confirmed": true,
+    "new_regression_finding": "SP-24",
+    "v1_ready_for_closeout": false,
+    "reason": "三个 P2 验收假阳性仍存在，其中 SP-24 粘连形态由本批引入。"
+  },
+  "axes": {
+    "Standards": {
+      "hard_violations": 0,
+      "reportable_smells": 0,
+      "worst_priority": null,
+      "report": "/tmp/mgs-review8-60iu1bo4/standards/standards-review.md"
+    },
+    "Spec": {
+      "findings": 3,
+      "worst_priority": "P2",
+      "ids": [
+        "SP-24",
+        "SP-25",
+        "SP-26"
+      ],
+      "scope_creep_count": 0,
+      "report": "/tmp/mgs-review8-60iu1bo4/spec/spec-review.md",
+      "independent_experimental_replay": false,
+      "evidence_reviewed_independently": true,
+      "execution_note": "Spec agent completed static candidates and read-only independent verification of main reviewer loopback evidence after a content-review interruption."
+    }
+  },
+  "original_probe": {
+    "source": "/tmp/mgs-review8-60iu1bo4/curl-adversarial-7.py",
+    "adaptation": "W constant only; stdout redirected then consumed",
+    "raw_before_batch_ref": "a3c43ce",
+    "total": 17,
+    "matched_expected": 17,
+    "observed_bug_count": 0,
+    "rows": [
+      {
+        "id": "direct",
+        "expected": "OK",
+        "actual": "OK",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "correct-userinfo",
+        "expected": "OK",
+        "actual": "OK",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "long-proxy",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "short-proxy",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "short-config",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "connect-to",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "default-config",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "environment-proxy",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "redirect-short",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "redirect-long",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "redirect-not-followed",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 0
+      },
+      {
+        "id": "attached-short-value-hides-first-url",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "separate-short-value-two-urls",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "successful-target",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 0
+      },
+      {
+        "id": "target-200-body-then-timeout",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "two-shell-layers",
+        "expected": "OK",
+        "actual": "OK",
+        "observed_bug": false,
+        "exit_code": 28
+      },
+      {
+        "id": "three-shell-layers",
+        "expected": "MISSING",
+        "actual": "MISSING",
+        "observed_bug": false,
+        "exit_code": 28
+      }
+    ],
+    "historical_guard_noops_expected": true,
+    "result": "/tmp/mgs-review8-60iu1bo4/curl-adversarial-7.json"
+  },
+  "original_fix_mutations": {
+    "runs": [
+      {
+        "id": "initial-green",
+        "exit": 0,
+        "failure_count": 0,
+        "expected_count": 0,
+        "matches_expected": true,
+        "failures": []
+      },
+      {
+        "id": "baseline-red",
+        "exit": 1,
+        "failure_count": 10,
+        "expected_count": 10,
+        "matches_expected": true,
+        "failures": [
+          "-x 短旗标指向 127.0.0.2(URL 仍为 127.0.0.1、curl 实连 .2 超时 exit 28)不得满足直连锚定(改变连接语义的短旗标保守拒绝,SP-20)",
+          "-K 配置文件内设同一代理(实连 .2 超时 exit 28)不得满足直连锚定(配置来源同口径保守拒绝,SP-20)",
+          "-L 跟随 302 重定向后转向 127.0.0.2 连接失败(.1 已被直连访问、命中已记录)不得满足直连锚定(重定向旗标保守拒绝,SP-21)",
+          "--location 跟随重定向的同义长参数形态同样不得满足直连锚定(重定向旗标保守拒绝,SP-21)",
+          "粘连短值 -m2 <成功URL> <失败URL>(首 URL 真拿到 200、次 URL 失败 exit 28)不得因首 URL 被当值吞掉而绕过单 URL 限制(短旗标值按 curl 语义消费,SP-22)",
+          "连接已成功、响应阶段超时(200 + 15/25 字节后延迟)不得判「替身直连被拒」(连接阶段失败词族+实际尝试主机绑定,SP-23)",
+          "-K 配置文件内 resolve 把 127.0.0.1:端口 重映射到 .2(失败输出点名 .1)不得满足直连锚定(配置来源保守拒绝的独立防护,SP-20 变体)",
+          "-L 跟随 302 回环跳到 127.0.0.1 预留端口(初始 .1 已被直连访问、失败输出点名 .1)不得满足直连锚定(重定向保守拒绝的独立防护,SP-21 变体)",
+          "任务专属 CURL_HOME/.curlrc 设代理使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)",
+          "子进程 http_proxy 使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)"
+        ]
+      },
+      {
+        "id": "baseline-restored-green",
+        "exit": 0,
+        "failure_count": 0,
+        "expected_count": 0,
+        "matches_expected": true,
+        "failures": []
+      },
+      {
+        "id": "A-short-red",
+        "exit": 1,
+        "failure_count": 1,
+        "expected_count": 1,
+        "matches_expected": true,
+        "failures": [
+          "-K 配置文件内 resolve 把 127.0.0.1:端口 重映射到 .2(失败输出点名 .1)不得满足直连锚定(配置来源保守拒绝的独立防护,SP-20 变体)"
+        ]
+      },
+      {
+        "id": "A-short-restored-green",
+        "exit": 0,
+        "failure_count": 0,
+        "expected_count": 0,
+        "matches_expected": true,
+        "failures": []
+      },
+      {
+        "id": "B-redirect-red",
+        "exit": 1,
+        "failure_count": 1,
+        "expected_count": 1,
+        "matches_expected": true,
+        "failures": [
+          "-L 跟随 302 回环跳到 127.0.0.1 预留端口(初始 .1 已被直连访问、失败输出点名 .1)不得满足直连锚定(重定向保守拒绝的独立防护,SP-21 变体)"
+        ]
+      },
+      {
+        "id": "B-redirect-restored-green",
+        "exit": 0,
+        "failure_count": 0,
+        "expected_count": 0,
+        "matches_expected": true,
+        "failures": []
+      },
+      {
+        "id": "C-consumption-red",
+        "exit": 1,
+        "failure_count": 1,
+        "expected_count": 1,
+        "matches_expected": true,
+        "failures": [
+          "粘连短值 -m2 <成功URL> <失败URL>(首 URL 真拿到 200、次 URL 失败 exit 28)不得因首 URL 被当值吞掉而绕过单 URL 限制(短旗标值按 curl 语义消费,SP-22)"
+        ]
+      },
+      {
+        "id": "C-consumption-restored-green",
+        "exit": 0,
+        "failure_count": 0,
+        "expected_count": 0,
+        "matches_expected": true,
+        "failures": []
+      },
+      {
+        "id": "D-failure-red",
+        "exit": 1,
+        "failure_count": 3,
+        "expected_count": 3,
+        "matches_expected": true,
+        "failures": [
+          "连接已成功、响应阶段超时(200 + 15/25 字节后延迟)不得判「替身直连被拒」(连接阶段失败词族+实际尝试主机绑定,SP-23)",
+          "任务专属 CURL_HOME/.curlrc 设代理使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)",
+          "子进程 http_proxy 使实连 .2(输出点名 .2)不得满足直连锚定(ambient 处置 (a):失败输出绑定实际尝试主机)"
+        ]
+      },
+      {
+        "id": "D-failure-restored-green",
+        "exit": 0,
+        "failure_count": 0,
+        "expected_count": 0,
+        "matches_expected": true,
+        "failures": []
+      }
+    ],
+    "byte_restored": true,
+    "run_sha256": "2f276460e55d04e3b529e4c82e85bedd935dccd73dd66779c1cfe363736a3543"
+  },
+  "new_findings": [
+    {
+      "id": "SP-24",
+      "axis": "Spec",
+      "priority": "P2",
+      "title": "短 token 禁用前缀被后面的带值字符掩盖",
+      "file": "acceptance/18-complete-package-acceptance/run.sh",
+      "line_start": 311,
+      "line_end": 315,
+      "origin": "introduced_for_attached_forms; separate -Lm 2 preexisting",
+      "cases": [
+        {
+          "id": "aggregate-redirect-attached",
+          "expected": "MISSING",
+          "current": "OK",
+          "baseline_3e6ae30": "MISSING",
+          "guard": "MISSING",
+          "restored": "OK",
+          "observed_bug": true,
+          "exit_code": 28,
+          "server_hits": [
+            {
+              "path": "/redirect",
+              "status": 302,
+              "host": "127.0.0.1:54810"
+            }
+          ],
+          "fixture": "/tmp/mgs-review8-60iu1bo4/new-fixtures/aggregate-redirect-attached.jsonl"
+        },
+        {
+          "id": "aggregate-redirect-separate",
+          "expected": "MISSING",
+          "current": "OK",
+          "baseline_3e6ae30": "OK",
+          "guard": "MISSING",
+          "restored": "OK",
+          "observed_bug": true,
+          "exit_code": 28,
+          "server_hits": [
+            {
+              "path": "/redirect",
+              "status": 302,
+              "host": "127.0.0.1:54810"
+            }
+          ],
+          "fixture": "/tmp/mgs-review8-60iu1bo4/new-fixtures/aggregate-redirect-separate.jsonl"
+        },
+        {
+          "id": "aggregate-redirect-sSm2",
+          "expected": "MISSING",
+          "current": "OK",
+          "baseline_3e6ae30": "MISSING",
+          "guard": "MISSING",
+          "restored": "OK",
+          "observed_bug": true,
+          "exit_code": 28,
+          "server_hits": [
+            {
+              "path": "/redirect",
+              "status": 302,
+              "host": "127.0.0.1:54810"
+            }
+          ],
+          "fixture": "/tmp/mgs-review8-60iu1bo4/new-fixtures/aggregate-redirect-sSm2.jsonl"
+        },
+        {
+          "id": "attached-config",
+          "expected": "MISSING",
+          "current": "OK",
+          "baseline_3e6ae30": "MISSING",
+          "guard": "MISSING",
+          "restored": "OK",
+          "observed_bug": true,
+          "exit_code": 28,
+          "server_hits": [],
+          "fixture": "/tmp/mgs-review8-60iu1bo4/new-fixtures/attached-config.jsonl"
+        }
+      ],
+      "evidence": "/tmp/mgs-review8-60iu1bo4/new-probes-8.json",
+      "source": "/tmp/mgs-review8-60iu1bo4/new-probes-8.py"
+    },
+    {
+      "id": "SP-25",
+      "axis": "Spec",
+      "priority": "P2",
+      "title": "响应正文中的连接失败措辞冒充连接诊断",
+      "file": "acceptance/18-complete-package-acceptance/run.sh",
+      "line_start": 362,
+      "line_end": 364,
+      "origin": "preexisting_at_3e6ae30",
+      "cases": [
+        {
+          "id": "response-body-then-timeout",
+          "expected": "MISSING",
+          "current": "OK",
+          "baseline_3e6ae30": "OK",
+          "guard": "MISSING",
+          "restored": "OK",
+          "observed_bug": true,
+          "exit_code": 28,
+          "server_hits": [
+            {
+              "path": "/diagnostic-body",
+              "status": 200,
+              "host": "127.0.0.1:54810"
+            }
+          ],
+          "fixture": "/tmp/mgs-review8-60iu1bo4/new-fixtures/response-body-then-timeout.jsonl"
+        }
+      ],
+      "evidence": "/tmp/mgs-review8-60iu1bo4/new-probes-8.json",
+      "source": "/tmp/mgs-review8-60iu1bo4/new-probes-8.py"
+    },
+    {
+      "id": "SP-26",
+      "axis": "Spec",
+      "priority": "P2",
+      "title": "127.0.0.10 被 127.0.0.1 子串误认",
+      "file": "acceptance/18-complete-package-acceptance/run.sh",
+      "line_start": 363,
+      "line_end": 364,
+      "origin": "preexisting_at_3e6ae30; incomplete new binding",
+      "cases": [
+        {
+          "id": "ambient-proxy-dot10",
+          "expected": "MISSING",
+          "current": "OK",
+          "baseline_3e6ae30": "OK",
+          "guard": "MISSING",
+          "restored": "OK",
+          "observed_bug": true,
+          "exit_code": 28,
+          "server_hits": [],
+          "fixture": "/tmp/mgs-review8-60iu1bo4/new-fixtures/ambient-proxy-dot10.jsonl"
+        }
+      ],
+      "evidence": "/tmp/mgs-review8-60iu1bo4/new-probes-8.json",
+      "source": "/tmp/mgs-review8-60iu1bo4/new-probes-8.py"
+    }
+  ],
+  "new_probe": {
+    "total": 17,
+    "unexpected_cases": 6,
+    "control_count": 11,
+    "all_controls_expected": true,
+    "result": "/tmp/mgs-review8-60iu1bo4/new-probes-8.json",
+    "guard_limits": "Diagnostic guard affects SP-25 and SP-26; guards are scoped causal controls, not complete product fixes. K case does not independently observe .2 endpoint hit.",
+    "initial_probe_calibration": {
+      "directory": "/tmp/mgs-review8-60iu1bo4/new-initial-controls",
+      "reason": "Equal 1s connect and whole-operation deadlines produced generic timeout diagnostics in positive controls; corrected to .2s connect and 2s overall. Initial results retained and not numbered."
+    }
+  },
+  "history": {
+    "specified_counterexamples_regressed": false,
+    "raw_results": [
+      {
+        "file": "/tmp/mgs-review8-60iu1bo4/spec-probes.json",
+        "rows": 4,
+        "raw_observed_bug": [
+          {
+            "id": "partial-retry-read-first-timeout",
+            "observed_bug": false
+          },
+          {
+            "id": "wrong-target-prefix",
+            "observed_bug": false
+          },
+          {
+            "id": "read-denial-as-update-proof",
+            "observed_bug": false
+          },
+          {
+            "id": "append-denial-as-update-proof",
+            "observed_bug": false
+          }
+        ],
+        "raw_true_ids": []
+      },
+      {
+        "file": "/tmp/mgs-review8-60iu1bo4/spec-independent-probes.json",
+        "rows": 7,
+        "raw_observed_bug": [
+          {
+            "id": "no-cache-partial-retry",
+            "observed_bug": null
+          },
+          {
+            "id": "absolute-prefix",
+            "observed_bug": null
+          },
+          {
+            "id": "identity-comments-suffix",
+            "observed_bug": null
+          },
+          {
+            "id": "identity-double-comments",
+            "observed_bug": null
+          },
+          {
+            "id": "pending-hash-collision",
+            "observed_bug": null
+          },
+          {
+            "id": "corrupt-json",
+            "observed_bug": null
+          },
+          {
+            "id": "corrupt-shape-object",
+            "observed_bug": null
+          }
+        ],
+        "raw_true_ids": []
+      },
+      {
+        "file": "/tmp/mgs-review8-60iu1bo4/spec-extra-pending.json",
+        "rows": 7,
+        "raw_observed_bug": [
+          {
+            "id": "collision-both-partial-overwrites-a",
+            "observed_bug": false
+          },
+          {
+            "id": "missing-comment_id",
+            "observed_bug": null
+          },
+          {
+            "id": "missing-ref",
+            "observed_bug": null
+          },
+          {
+            "id": "missing-comment_id-ref",
+            "observed_bug": null
+          },
+          {
+            "id": "args-empty",
+            "observed_bug": false
+          },
+          {
+            "id": "args-unicode",
+            "observed_bug": false
+          },
+          {
+            "id": "args-long",
+            "observed_bug": false
+          }
+        ],
+        "raw_true_ids": []
+      },
+      {
+        "file": "/tmp/mgs-review8-60iu1bo4/curl-new-probes.json",
+        "rows": 5,
+        "raw_observed_bug": [
+          {
+            "id": "real-bare-curl",
+            "observed_bug": false
+          },
+          {
+            "id": "real-zsh-curl",
+            "observed_bug": false
+          },
+          {
+            "id": "shell-script-before-c",
+            "observed_bug": false
+          },
+          {
+            "id": "wrong-host-only-header-has-target",
+            "observed_bug": false
+          },
+          {
+            "id": "curl-version-then-failure",
+            "observed_bug": false
+          }
+        ],
+        "raw_true_ids": []
+      },
+      {
+        "file": "/tmp/mgs-review8-60iu1bo4/curl-extra-probes-5.json",
+        "rows": 7,
+        "raw_observed_bug": [
+          {
+            "id": "true-direct",
+            "observed_bug": false
+          },
+          {
+            "id": "userinfo-wrong-host",
+            "observed_bug": false
+          },
+          {
+            "id": "shell-userinfo-wrong-host",
+            "observed_bug": false
+          },
+          {
+            "id": "true-url-flag",
+            "observed_bug": true
+          },
+          {
+            "id": "unsupported-env",
+            "observed_bug": false
+          },
+          {
+            "id": "unsupported-xargs",
+            "observed_bug": false
+          },
+          {
+            "id": "ipv6-other-host",
+            "observed_bug": false
+          }
+        ],
+        "raw_true_ids": [
+          "true-url-flag"
+        ]
+      },
+      {
+        "file": "/tmp/mgs-review8-60iu1bo4/path-extra-probes-5.json",
+        "rows": 8,
+        "raw_observed_bug": [
+          {
+            "id": "exact",
+            "observed_bug": false
+          },
+          {
+            "id": "trailing-slash",
+            "observed_bug": false
+          },
+          {
+            "id": "dot-component",
+            "observed_bug": false
+          },
+          {
+            "id": "duplicate-slash",
+            "observed_bug": false
+          },
+          {
+            "id": "repeat-path",
+            "observed_bug": false
+          },
+          {
+            "id": "case-variant",
+            "observed_bug": false
+          },
+          {
+            "id": "space-suffix",
+            "observed_bug": false
+          },
+          {
+            "id": "space-prefix",
+            "observed_bug": false
+          }
+        ],
+        "raw_true_ids": []
+      },
+      {
+        "file": "/tmp/mgs-review8-60iu1bo4/curl-boundaries-6.json",
+        "rows": 11,
+        "raw_observed_bug": [
+          {
+            "id": "direct",
+            "observed_bug": false
+          },
+          {
+            "id": "userinfo-correct-host",
+            "observed_bug": false
+          },
+          {
+            "id": "proxy-overrides-url-host",
+            "observed_bug": false
+          },
+          {
+            "id": "resolve-overrides-url-host",
+            "observed_bug": false
+          },
+          {
+            "id": "target-success-other-failed",
+            "observed_bug": false
+          },
+          {
+            "id": "ipv6-loopback",
+            "observed_bug": false
+          },
+          {
+            "id": "uppercase-dns-host",
+            "observed_bug": false
+          },
+          {
+            "id": "port-overflow",
+            "observed_bug": false
+          },
+          {
+            "id": "port-negative",
+            "observed_bug": false
+          },
+          {
+            "id": "port-text",
+            "observed_bug": false
+          },
+          {
+            "id": "host-tab",
+            "observed_bug": false
+          }
+        ],
+        "raw_true_ids": []
+      }
+    ],
+    "accepted_raw_bug": {
+      "id": "true-url-flag",
+      "file": "/tmp/mgs-review8-60iu1bo4/curl-extra-probes-5.json",
+      "expected": "OK",
+      "actual": "MISSING",
+      "observed_bug": true,
+      "reason": "Previously accepted --url support limitation; raw result preserved."
+    },
+    "mixed_layout_plain": {
+      "posts": 2,
+      "b_comment_count": 1,
+      "observed_bug": false,
+      "manual_receipt_edits": false
+    },
+    "mixed_layout_guard": {
+      "posts": 2,
+      "b_comment_count": 1,
+      "observed_bug": false,
+      "manual_receipt_edits": false
+    },
+    "execution": [
+      {
+        "name": "spec-extra-pending.py",
+        "source": ".scratch/mygamestudio-v1-review5-fixes/evidence/spec-extra-pending.py",
+        "exit": 0,
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/spec-extra-pending.py",
+          "--repo",
+          "/tmp/mgs-review8-60iu1bo4/repo",
+          "--out",
+          "/tmp/mgs-review8-60iu1bo4"
+        ]
+      },
+      {
+        "name": "curl-extra-probes-5.py",
+        "source": ".scratch/mygamestudio-v1-review5-fixes/evidence/curl-extra-probes-5.py",
+        "exit": 0,
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/curl-extra-probes-5.py"
+        ]
+      },
+      {
+        "name": "path-extra-probes-5.py",
+        "source": ".scratch/mygamestudio-v1-review5-fixes/evidence/path-extra-probes-5.py",
+        "exit": 0,
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/path-extra-probes-5.py"
+        ]
+      },
+      {
+        "name": "spec-custom-probes.py",
+        "source": ".scratch/mygamestudio-v1-review3-fixes/evidence/spec-custom-probes.py",
+        "exit": 0,
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/spec-custom-probes.py"
+        ]
+      },
+      {
+        "name": "spec-independent-probes.py",
+        "source": ".scratch/mygamestudio-v1-review4-fixes/evidence/spec-independent-probes.py",
+        "exit": 0,
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/spec-independent-probes.py"
+        ]
+      },
+      {
+        "name": "curl-new-probes.py",
+        "source": ".scratch/mygamestudio-v1-review4-fixes/evidence/curl-new-probes.py",
+        "exit": 0,
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/curl-new-probes.py"
+        ]
+      }
+    ],
+    "additional_execution": [
+      {
+        "id": "curl-boundaries",
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/curl-boundaries-probe.py"
+        ],
+        "exit": 0
+      },
+      {
+        "id": "path-and-retained",
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/path-and-retained.py"
+        ],
+        "exit": 0
+      },
+      {
+        "id": "mixed-standards",
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/mixed-layout-standards.py"
+        ],
+        "exit": 0
+      },
+      {
+        "id": "mixed-spec-plain",
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/mixed-layout-spec-agent.py",
+          "--out",
+          "/tmp/mgs-review8-60iu1bo4/mixed-plain"
+        ],
+        "exit": 0
+      },
+      {
+        "id": "mixed-spec-guard",
+        "command": [
+          "python3",
+          "-B",
+          "/tmp/mgs-review8-60iu1bo4/mixed-layout-spec-agent.py",
+          "--out",
+          "/tmp/mgs-review8-60iu1bo4/mixed-guard",
+          "--guard-each-path"
+        ],
+        "exit": 0
+      }
+    ]
+  },
+  "regression": {
+    "suites": [
+      {
+        "name": "plugin_package",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_plugin_package.py"
+        ],
+        "cwd": "/tmp/mgs-review8-60iu1bo4/repo",
+        "exit": 0,
+        "seconds": 6.38,
+        "log": "/tmp/mgs-review8-60iu1bo4/logs/plugin_package.log"
+      },
+      {
+        "name": "runtime_gate",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_runtime_gate.py"
+        ],
+        "cwd": "/tmp/mgs-review8-60iu1bo4/repo",
+        "exit": 0,
+        "seconds": 1.72,
+        "log": "/tmp/mgs-review8-60iu1bo4/logs/runtime_gate.log"
+      },
+      {
+        "name": "runtime_boundaries",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_runtime_boundaries.py"
+        ],
+        "cwd": "/tmp/mgs-review8-60iu1bo4/repo",
+        "exit": 0,
+        "seconds": 0.76,
+        "log": "/tmp/mgs-review8-60iu1bo4/logs/runtime_boundaries.log"
+      },
+      {
+        "name": "records_backend",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_records_backend.py"
+        ],
+        "cwd": "/tmp/mgs-review8-60iu1bo4/repo",
+        "exit": 0,
+        "seconds": 2.05,
+        "log": "/tmp/mgs-review8-60iu1bo4/logs/records_backend.log"
+      },
+      {
+        "name": "github_backend",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_github_backend.py"
+        ],
+        "cwd": "/tmp/mgs-review8-60iu1bo4/repo",
+        "exit": 0,
+        "seconds": 2.51,
+        "log": "/tmp/mgs-review8-60iu1bo4/logs/github_backend.log"
+      }
+    ],
+    "driver": {
+      "passed": 33,
+      "failed": 0,
+      "exit": 0,
+      "isolated_no_auth": true,
+      "log": "/tmp/mgs-review8-60iu1bo4/logs/driver-probes.log"
+    },
+    "retained_streams": {
+      "results": [
+        {
+          "flow": "r1",
+          "args": [
+            "mgs_write",
+            "role_scope",
+            "docs/mygamestudio/PROJECT.md",
+            "write"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "r1",
+          "args": [
+            "mgs_write",
+            "occupancy",
+            "src/lock-probe.txt",
+            "write"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "r1",
+          "args": [
+            "mgs_write",
+            "task_grant",
+            "src/other.txt",
+            "write"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "r1",
+          "args": [
+            "mgs_write",
+            "path",
+            "/tmp/mgs18-evil-link.md",
+            "write"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "g1",
+          "args": [
+            "mgs_remote",
+            "task_grant",
+            "01-harbor-timer",
+            "update"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "g1",
+          "args": [
+            "mgs_remote",
+            "task_grant",
+            "02-crane-sprite",
+            "append-result"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "p1",
+          "args": [
+            "mgs_write",
+            "role_scope|task_grant",
+            "docs/mygamestudio/GAME_DESIGN.md",
+            "write"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "p2",
+          "args": [
+            "mgs_write",
+            "role_scope|task_grant",
+            "docs/mygamestudio/GAME_DESIGN.md",
+            "write"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "r1b",
+          "args": [
+            "mgs_write",
+            "identity",
+            "src/stale.txt",
+            "write"
+          ],
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "flow": "g1",
+          "kind": "curl",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        }
+      ],
+      "passed": 10,
+      "total": 10,
+      "streams": [
+        {
+          "flow": "r1",
+          "lines": 14,
+          "sha256": "1768de3ceffd2f8670516f9d20b09f2705d1920cec249d781e19c325daa41344",
+          "unchanged_from_batch_base": true
+        },
+        {
+          "flow": "g1",
+          "lines": 15,
+          "sha256": "726b270c48c3b3c46caabf87c415876a1a9d1394692195ff0da5c0f56345ac92",
+          "unchanged_from_batch_base": true
+        },
+        {
+          "flow": "p1",
+          "lines": 33,
+          "sha256": "aa9c14d40b3a40829ae215eb92edb4ae7a2b24e900c1279d1d1afb060cb27ed0",
+          "unchanged_from_batch_base": true
+        },
+        {
+          "flow": "p2",
+          "lines": 22,
+          "sha256": "70ad90c9e334194fba801397b3a63cae3483255bbb39ed67e9d95ef708781e17",
+          "unchanged_from_batch_base": true
+        },
+        {
+          "flow": "r1b",
+          "lines": 5,
+          "sha256": "b56b92ea28f068818f46dea34338a71f46e7fb610499ff0b0e638cdea059b55d",
+          "unchanged_from_batch_base": true
+        }
+      ]
+    },
+    "bash_n": {
+      "total": 18,
+      "failed": 0,
+      "details": "/tmp/mgs-review8-60iu1bo4/syntax-checks.json"
+    },
+    "result_audit": {
+      "passed": 35,
+      "failed": 0,
+      "file": "/tmp/mgs-review8-60iu1bo4/verified-results-8.json"
+    },
+    "product_diff_check": {
+      "exit": 0
+    },
+    "whole_batch_diff_check": {
+      "exit": 2,
+      "nonzero_reason": "archived patch blank context lines contain trailing spaces",
+      "log": "/tmp/mgs-review8-60iu1bo4/logs/diff-check-batch.log"
+    }
+  },
+  "package": {
+    "plugin_diff_files": 0,
+    "dist_diff_files": 0,
+    "delivered_sha256": "3c44e2c0aaa0f02571fc394b30dd4ed34a9d0833c554531856b6a04f47c37ea7",
+    "files_compared": 79,
+    "pax_entries": 0,
+    "real_dist_rebuilt": false,
+    "suite_internal_disposable_rebuilds": 2,
+    "driver_refresh_semantic_differences": 0
+  },
+  "boundaries": {
+    "start_head": "1512d110e927029db2facdf26a020710779d7934",
+    "end_head": "1512d110e927029db2facdf26a020710779d7934",
+    "head_unchanged": true,
+    "start_status": "",
+    "end_status": "",
+    "worktree_clean": true,
+    "branch": "main",
+    "diff_command": "git diff 3e6ae30..3f3031a",
+    "batch_commit_count": 3,
+    "head_extra_files": [
+      ".scratch/mygamestudio-v1-review7-fixes/evidence/review-8-handoff.md"
+    ],
+    "plugin_dist_diff": [],
+    "real_repo_mutations": 0,
+    "git_commits": 0,
+    "git_pushes": 0,
+    "git_tags": 0,
+    "real_remote_writes": 0,
+    "product_model_rounds": 0,
+    "acceptance_run_scripts_started": 0,
+    "real_account_credentials_accessed": false,
+    "driver_auth_link_removed_in_copy": true,
+    "driver_install_removed": true,
+    "driver_arena_removed": true,
+    "original_run_sha256": "2f276460e55d04e3b529e4c82e85bedd935dccd73dd66779c1cfe363736a3543",
+    "all_probe_servers_closed": true,
+    "test_token_policy": "No real account secrets read or copied; existing suites and isolated driver generated disposable test tokens in their own temporary state, then cleaned; output evidence redacted.",
+    "remaining_task_python_processes": []
+  },
+  "accepted_limits": [
+    "--url parsing",
+    "three or more shell layers",
+    "conservative multi URL rejection",
+    "no-cache posts=2 disclosed degradation",
+    "active old writer concurrency",
+    "truncated current during migration",
+    "ambient remapping where diagnostic names exact .1"
+  ],
+  "not_verified": [
+    "real remote HEAD or GitHub writes",
+    "daily client install/publish",
+    "new product/acceptance model session",
+    "all curl/shell/localization forms",
+    "manual visual/audio/gameplay acceptance and user design decisions"
+  ],
+  "report": "/tmp/mgs-review8-60iu1bo4/review-8.md"
+}

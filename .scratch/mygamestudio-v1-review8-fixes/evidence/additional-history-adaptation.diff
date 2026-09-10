@@ -1,0 +1,44 @@
+--- /tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review6-fixes/evidence/curl-boundaries-6/curl-boundaries-6-main.py
++++ curl-boundaries-probe.py
+@@ -1,5 +1,5 @@
+ import pathlib,re,shlex,socket,subprocess,json,threading,http.server,os
+-W=pathlib.Path('/tmp/mgs-review6-zonhimd1');F=W/'curl-boundary-fixtures';F.mkdir(exist_ok=True)
++W=pathlib.Path('/tmp/mgs-review8-60iu1bo4');F=W/'curl-boundary-fixtures';F.mkdir(exist_ok=True)
+ text=(W/'repo/acceptance/18-complete-package-acceptance/run.sh').read_text()
+ old=subprocess.check_output(['git','show','1eef7d8:acceptance/18-complete-package-acceptance/run.sh'],cwd=W/'repro',text=True)
+ fn=lambda t:re.search(r'^curl_direct_denied\(\) \{.*?^\}',t,re.M|re.S).group()
+--- /tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review7-fixes/evidence/historical/path-and-retained.py
++++ path-and-retained.py
+@@ -1,5 +1,5 @@
+ import pathlib,re,subprocess,shlex,json,hashlib,sys,tempfile,posixpath
+-W=pathlib.Path('/tmp/mgs-review7-ADyk4of1');R=W/'repo';F=W/'path-boundary-fixtures';F.mkdir(exist_ok=True)
++W=pathlib.Path('/tmp/mgs-review8-60iu1bo4');R=W/'repo';F=W/'path-boundary-fixtures';F.mkdir(exist_ok=True)
+ sys.dont_write_bytecode=True;sys.path.insert(0,str(R/'tests'))
+ import test_github_backend as gh
+ import test_runtime_gate as rt
+--- /tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review6-fixes/evidence/mixed-layout/mixed-layout-spec-agent-probe.py
++++ mixed-layout-spec-agent.py
+@@ -3,11 +3,11 @@
+ from pathlib import Path
+ sys.dont_write_bytecode=True
+ p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--guard-each-path',action='store_true');opts=p.parse_args()
+-ROOT=Path('/tmp/mgs-review6-zonhimd1/spec-agent/repo-tracked')
++ROOT=Path('/tmp/mgs-review8-60iu1bo4/repo')
+ sys.path.insert(0,str(ROOT/'tests'))
+ import test_github_backend as gh
+ import test_runtime_gate as rt
+-old_path=Path('/tmp/mgs-review6-zonhimd1/spec-agent/mgs_github_old.py')
++old_path=Path('/tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review6-fixes/evidence/mixed-layout/mgs_github_1eef7d8.py')
+ sp=importlib.util.spec_from_file_location('mgs_github_old',old_path);old=importlib.util.module_from_spec(sp);sp.loader.exec_module(old)
+ # Share transport exception identity, so the unmodified old implementation handles
+ # the test suite's FakeTransport exactly as its original module did.
+--- /tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review6-fixes/evidence/mixed-layout/mixed-layout-standards-probe.py
++++ mixed-layout-standards.py
+@@ -1,6 +1,6 @@
+ import json, sys, tempfile
+ from pathlib import Path
+-sys.path.insert(0,str(Path(__file__).parent/'tests'))
++sys.path.insert(0,str(Path('/tmp/mgs-review8-60iu1bo4/repo/tests')))
+ import test_github_backend as t
+ with tempfile.TemporaryDirectory(prefix='mixed-layout-',dir=Path(__file__).parent) as tmp:
+  base=Path(tmp)

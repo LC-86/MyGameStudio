@@ -1,0 +1,5 @@
+{
+  "exit": 2,
+  "nonzero_reason": "archived patch blank context lines contain trailing spaces",
+  "log": "/tmp/mgs-review8-60iu1bo4/logs/diff-check-batch.log"
+}

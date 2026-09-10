@@ -1,0 +1,11 @@
+# Spec 独立轴
+
+**SP-20～23 指定原反例真实修复；新增 SP-24～26 共 3 项 P2 验收假阳性，不具备 v1 收口条件。** 范围扩大确认项 0。
+
+1. **SP-24：短 token 前缀未校验。** [acceptance/18-complete-package-acceptance/run.sh:311](/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/18-complete-package-acceptance/run.sh:311) 先搜任意带值字符并直接消费，绕过前缀 L/K。票[.scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md:13](/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md:13)要求名单外连接旗标“出现即整个命令不成立”，第14行要求“保守拒绝重定向形态”。主审真实 `-Lm2` / `-LsSm2` 获 `.1` 服务器 302，再连接同主机另一端口失败，却判 OK；3e6ae30 均 MISSING，证明本批使这些形态新假绿。`-K` 粘连路径同样新假绿；`-Lm 2` 旧新均 OK，属同根既有漏洞。前缀守卫使四例 MISSING，恢复再 OK，正常聚合短旗标仍 OK。K 例未独立观察实际 `.2` 命中，结论限于配置旗标拒绝合同被绕过。
+2. **SP-25：响应正文被当作连接诊断。** [acceptance/18-complete-package-acceptance/run.sh:363](/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/18-complete-package-acceptance/run.sh:363) 搜索聚合输出任意行，违反票[.scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md:16](/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md:16)“失败证据须能证明对替身的连接未被允许”。真实 HTTP 200，stdout 正文含失败短语及 `.1`；stderr 只有收到31/41字节后的响应超时。当前与3e6ae30均 OK；诊断形态守卫 MISSING，恢复 OK。普通正文超时与同正文完整成功对照均 MISSING。属新确认的既有边界。
+3. **SP-26：主机子串冒充绑定。** [acceptance/18-complete-package-acceptance/run.sh:363](/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/18-complete-package-acceptance/run.sh:363)中 `.1` 匹配 `.10`。票[.scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md:17](/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md:17)按实际主机闭合 ambient 他址形态。真实 proxy 失败明确点名127.0.0.10，当前与3e6ae30均 OK；主机边界守卫 MISSING，恢复 OK，`.2` 对照 MISSING。该证据可见明确他址，不属于已接受的重映射诊断恰点名 `.1` 限制。
+
+已核对主审原17例全部 observed_bug=false；回退旧实现恰红10，四方向撤回恰红1/1/1/3，恢复全绿。新17份夹具与摘要的命令、退出码、输出一致，提取函数哈希一致。诊断守卫同时拒SP-25/26，只是因果定位，不宣称完整修复。
+
+**执行边界：** 本轴先前因内容审查中断而未执行独立实验；本次仅只读复核主审 [脚本](/tmp/mgs-review8-60iu1bo4/new-probes-8.py)、[运行证据](/tmp/mgs-review8-60iu1bo4/new-probes-8.json)、原探针和变异摘要。真实curl、服务器命中、stdout/stderr均来自主审；事件按历史惯例由真实输出封装，并非模型会话新证据。原仓库零改动。

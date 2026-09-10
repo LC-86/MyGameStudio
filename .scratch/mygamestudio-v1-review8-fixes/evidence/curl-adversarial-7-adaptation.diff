@@ -1,0 +1,10 @@
+--- /tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review7-fixes/evidence/curl-adversarial/curl-adversarial-7.py
++++ /tmp/mgs-review8-60iu1bo4/curl-adversarial-7.py
+@@ -1,6 +1,6 @@
+ from pathlib import Path
+ import re,subprocess,shlex,socket,threading,http.server,json,os,time,hashlib
+-W=Path('/tmp/mgs-review7-ADyk4of1');F=W/'curl-adversarial-fixtures';F.mkdir(exist_ok=True)
++W=Path('/tmp/mgs-review8-60iu1bo4');F=W/'curl-adversarial-fixtures';F.mkdir(exist_ok=True)
+ text=(W/'repo/acceptance/18-complete-package-acceptance/run.sh').read_text()
+ fn=lambda s:re.search(r'^curl_direct_denied\(\) \{.*?^\}',s,re.M|re.S).group()
+ cur=fn(text)

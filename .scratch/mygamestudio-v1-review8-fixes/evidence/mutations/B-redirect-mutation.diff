@@ -1,0 +1,20 @@
+--- current
++++ B-redirect
+@@ -242,7 +242,7 @@
+ # .2 连接失败也会冒充初始目标被拒。集合用 set((...)) 构造——
+ # heredoc 内不出现顶格 },保持函数可整体提取复审
+ CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzZDJg")
+-CURL_PLAIN_SHORT = set("sSkvIifnN46q")
++CURL_PLAIN_SHORT = set("sSLkvIifnN46q")
+ CURL_VALUE_LONG = set((
+     "--header", "--max-time", "--request", "--data", "--data-raw",
+     "--data-binary", "--output", "--user-agent", "--user", "--write-out",
+@@ -250,7 +250,7 @@
+     "--retry", "--form", "--upload-file", "--cert", "--key", "--cacert",
+ ))
+ CURL_PLAIN_LONG = set((
+-    "--version", "--silent", "--show-error", "--insecure",
++    "--version", "--location", "--silent", "--show-error", "--insecure",
+     "--verbose", "--head", "--fail", "--compressed", "--no-buffer",
+     "--progress-bar", "--ipv4", "--ipv6", "--http1.1", "--http2",
+ ))

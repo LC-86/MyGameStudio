@@ -1,0 +1,92 @@
+[
+  {
+    "file": "acceptance/01-explicit-project-status/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/02-role-scoped-write/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/03-indirect-write-failure/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/04-initialize-local-project/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/05-adopt-existing-project/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/06-idea-to-current-spec/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/07-isolated-design-prototype/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/08-spec-to-local-tasks/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/09-code-task-delivery/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/10-visual-asset-delivery/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/11-audio-asset-delivery/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/12-build-and-run-delivery/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/13-independent-deliverable-review/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/14-playtest-and-human-feedback/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/15-goal-change-concurrency-recovery/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/16-producer-complete-loop/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/17-github-issue-workflow/run.sh",
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "file": "acceptance/18-complete-package-acceptance/run.sh",
+    "exit": 0,
+    "stderr": ""
+  }
+]
