@@ -1,0 +1,507 @@
+{
+  "schema_version": 1,
+  "review": "MyGameStudio v1 review 4",
+  "date": "2026-09-10",
+  "timezone": "Asia/Shanghai",
+  "workspace": "/tmp/mygamestudio-review-4-6hm1q78i",
+  "report": "/tmp/mygamestudio-review-4-6hm1q78i/review-4.md",
+  "scope": {
+    "repo": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+    "base": "521c4652e35614501d1b241b28ba4cc09a4a2742",
+    "target": "05a277677e191672237e658c27daa867c217360b",
+    "commits": [
+      "c9a8021",
+      "05a2776"
+    ],
+    "diff_command": "git diff 521c465..05a2776",
+    "head_start": "5a3ea4f63bc746257c0df13c5938101ca1faaf74",
+    "head_end": "5a3ea4f63bc746257c0df13c5938101ca1faaf74",
+    "status_start": "",
+    "status_end": "",
+    "extra_commit": "5a3ea4f",
+    "extra_commit_is_handoff_only": true
+  },
+  "axes": {
+    "Standards": {
+      "hard_violations": 0,
+      "judgment_smells": 0,
+      "report": "/tmp/mygamestudio-review-4-6hm1q78i/standards-review.md"
+    },
+    "Spec": {
+      "confirmed_findings": 4,
+      "worst_priority": 2,
+      "independent_report": "/tmp/mygamestudio-review-4-6hm1q78i/spec-independent-review.md",
+      "main_added_finding": "SP-13"
+    }
+  },
+  "findings": [
+    {
+      "id": "SP-10",
+      "axis": "Spec",
+      "priority": 2,
+      "ticket": "review3-01",
+      "title": "无缓存配置未披露恢复退化，重试实际重复发布",
+      "status": "confirmed",
+      "introduced_by_batch": "missing disclosure for a retained degraded behavior",
+      "locations": [
+        {
+          "file": "plugin/records/mgs_github.py",
+          "start": 630,
+          "end": 632
+        },
+        {
+          "file": "plugin/records/mgs_github.py",
+          "start": 1041,
+          "end": 1043
+        }
+      ],
+      "evidence": "spec-independent-probes.json",
+      "probe_ids": [
+        "no-cache-partial-retry"
+      ],
+      "observed": {
+        "first_has_warning": false,
+        "comment_ids": [
+          5100,
+          5101
+        ],
+        "comments": 2,
+        "post_count": 2
+      }
+    },
+    {
+      "id": "SP-11",
+      "axis": "Spec",
+      "priority": 2,
+      "ticket": "review3-01",
+      "title": "pending-index SHA8 碰撞导致另一请求误报已发布",
+      "status": "confirmed",
+      "introduced_by_batch": true,
+      "locations": [
+        {
+          "file": "plugin/records/mgs_github.py",
+          "start": 614,
+          "end": 620
+        },
+        {
+          "file": "plugin/records/mgs_github.py",
+          "start": 664,
+          "end": 669
+        }
+      ],
+      "evidence": "spec-independent-probes.json",
+      "probe_ids": [
+        "pending-hash-collision",
+        "corrupt-json",
+        "corrupt-shape-object"
+      ],
+      "observed": {
+        "a": "collision-result-79891",
+        "b": "collision-result-80657",
+        "digest": "346df0e9",
+        "searched_local_candidates": 80658,
+        "b_published_claim": true,
+        "b_actual_comment_exists": false,
+        "total_posts": 1
+      }
+    },
+    {
+      "id": "SP-12",
+      "axis": "Spec",
+      "priority": 2,
+      "ticket": "review3-02",
+      "title": "绝对路径前缀和 comments 衍生身份可冒充具体目标",
+      "status": "confirmed",
+      "introduced_by_batch": "full resource-matching requirement remains incomplete",
+      "locations": [
+        {
+          "file": "acceptance/18-complete-package-acceptance/run.sh",
+          "start": 129,
+          "end": 136
+        },
+        {
+          "file": "acceptance/18-complete-package-acceptance/run.sh",
+          "start": 164,
+          "end": 165
+        }
+      ],
+      "evidence": "spec-independent-probes.json",
+      "probe_ids": [
+        "absolute-prefix",
+        "identity-comments-suffix",
+        "identity-double-comments"
+      ],
+      "observed": {
+        "expected": "MISSING",
+        "actual": "OK",
+        "real_gate_denials_used": true,
+        "synthetic_event_envelopes": true
+      }
+    },
+    {
+      "id": "SP-13",
+      "axis": "Spec",
+      "priority": 2,
+      "ticket": "review3-02",
+      "title": "shell 脚本参数内未执行的 curl 仍被锚定为直连失败",
+      "status": "confirmed",
+      "introduced_by_batch": "new shell parser has a bypass; direct-execution requirement remains incomplete",
+      "locations": [
+        {
+          "file": "acceptance/18-complete-package-acceptance/run.sh",
+          "start": 195,
+          "end": 204
+        },
+        {
+          "file": "acceptance/18-complete-package-acceptance/run.sh",
+          "start": 217,
+          "end": 224
+        }
+      ],
+      "evidence": "curl-new-probes.json",
+      "probe_ids": [
+        "shell-script-before-c",
+        "wrong-host-only-header-has-target",
+        "curl-version-then-failure"
+      ],
+      "observed": {
+        "expected": "MISSING",
+        "actual": "OK",
+        "actual_process_execution": true,
+        "synthetic_event_envelopes": true
+      }
+    }
+  ],
+  "original_requirements": {
+    "SP-7": {
+      "original_probe_fixed": true,
+      "full_requirement_closed": false,
+      "limitations": [
+        "SP-10",
+        "SP-11"
+      ]
+    },
+    "SP-8": {
+      "original_probe_fixed": true,
+      "full_requirement_closed": false,
+      "limitations": [
+        "SP-12"
+      ]
+    },
+    "SP-9": {
+      "original_probe_fixed": true,
+      "full_requirement_closed": false,
+      "limitations": [
+        "SP-13"
+      ]
+    }
+  },
+  "original_probes": [
+    {
+      "id": "partial-retry-read-first-timeout",
+      "observed_bug": false,
+      "comments": 1,
+      "post_count": 1,
+      "actual_anchor": null
+    },
+    {
+      "id": "wrong-target-prefix",
+      "observed_bug": false,
+      "comments": null,
+      "post_count": null,
+      "actual_anchor": "MISSING"
+    },
+    {
+      "id": "read-denial-as-update-proof",
+      "observed_bug": false,
+      "comments": null,
+      "post_count": null,
+      "actual_anchor": "MISSING"
+    },
+    {
+      "id": "append-denial-as-update-proof",
+      "observed_bug": false,
+      "comments": null,
+      "post_count": null,
+      "actual_anchor": "MISSING"
+    }
+  ],
+  "acceptance": {
+    "retained_event_streams": 5,
+    "retained_anchors_pass": 10,
+    "retained_anchors_total": 10,
+    "printf_fixture_anchor": {
+      "exit": 0,
+      "stdout": "MISSING",
+      "stderr": ""
+    },
+    "p1_p2_actual_stages": {
+      "p1": [
+        {
+          "op": "write",
+          "target": "docs/mygamestudio/GAME_DESIGN.md",
+          "decision": "deny",
+          "rule_stage": "task_grant"
+        }
+      ],
+      "p2": [
+        {
+          "op": "write",
+          "target": "docs/mygamestudio/GAME_DESIGN.md",
+          "decision": "deny",
+          "rule_stage": "task_grant"
+        }
+      ]
+    },
+    "probe_adaptation": "/tmp/mygamestudio-review-4-6hm1q78i/probe-adaptation.diff",
+    "old_four_arg_calls_not_counted_as_fix_evidence": true
+  },
+  "validation": {
+    "suites": [
+      {
+        "id": "plugin_package",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_plugin_package.py"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 39.53,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/plugin_package.log"
+      },
+      {
+        "id": "runtime_gate",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_runtime_gate.py"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 1.72,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/runtime_gate.log"
+      },
+      {
+        "id": "runtime_boundaries",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_runtime_boundaries.py"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 0.73,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/runtime_boundaries.log"
+      },
+      {
+        "id": "records_backend",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_records_backend.py"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 2.05,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/records_backend.log"
+      },
+      {
+        "id": "github_backend",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_github_backend.py"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 2.55,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/github_backend.log"
+      },
+      {
+        "id": "bash-syntax",
+        "command": [
+          "bash",
+          "-n",
+          "acceptance/18-complete-package-acceptance/run.sh"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 0.0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/bash-syntax.log"
+      },
+      {
+        "id": "reproducible",
+        "command": [
+          "bash",
+          "dist/verify-reproducible.sh"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 2.47,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/reproducible.log"
+      },
+      {
+        "id": "driver-probes",
+        "command": [
+          "bash",
+          "acceptance/18-complete-package-acceptance/driver-probes.sh",
+          "/tmp/mygamestudio-review-4-6hm1q78i/driver-env"
+        ],
+        "cwd": "/tmp/mygamestudio-review-4-6hm1q78i/copy",
+        "exit": 0,
+        "seconds": 3.54,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/driver-probes.log"
+      }
+    ],
+    "five_suites_pass": true,
+    "driver_pass": 33,
+    "driver_fail": 0,
+    "reproducible_pass": true,
+    "dist_sha256": "f8c68739dc75cf94f311f8dd2f9a98e14090ecc0ef8669461f02723a792a2ae1",
+    "mutations": [
+      {
+        "phase": "baseline",
+        "suite": "github_backend",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-baseline-github_backend.log",
+        "failure_count": 0
+      },
+      {
+        "phase": "baseline",
+        "suite": "runtime_gate",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-baseline-runtime_gate.log",
+        "failure_count": 0
+      },
+      {
+        "phase": "baseline",
+        "suite": "anchor",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-baseline-anchor.log",
+        "failure_count": 0
+      },
+      {
+        "phase": "A-remove-SP7-fix",
+        "suite": "github_backend",
+        "exit": 1,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-A-remove-SP7-fix-github_backend.log",
+        "failure_count": 8
+      },
+      {
+        "phase": "A-remove-SP7-fix",
+        "suite": "runtime_gate",
+        "exit": 1,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-A-remove-SP7-fix-runtime_gate.log",
+        "failure_count": 6
+      },
+      {
+        "phase": "A-restored",
+        "suite": "github_backend",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-A-restored-github_backend.log",
+        "failure_count": 0
+      },
+      {
+        "phase": "A-restored",
+        "suite": "runtime_gate",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-A-restored-runtime_gate.log",
+        "failure_count": 0
+      },
+      {
+        "phase": "C-always-pending",
+        "suite": "github_backend",
+        "exit": 1,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-C-always-pending-github_backend.log",
+        "failure_count": 7
+      },
+      {
+        "phase": "C-restored",
+        "suite": "github_backend",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-C-restored-github_backend.log",
+        "failure_count": 0
+      },
+      {
+        "phase": "B-restore-old-mcp-anchor",
+        "suite": "anchor",
+        "exit": 1,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-B-restore-old-mcp-anchor-anchor.log",
+        "failure_count": 2
+      },
+      {
+        "phase": "B-restore-old-mcp-anchor-restored",
+        "suite": "anchor",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-B-restore-old-mcp-anchor-restored-anchor.log",
+        "failure_count": 0
+      },
+      {
+        "phase": "D-restore-old-curl-anchor",
+        "suite": "anchor",
+        "exit": 1,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-D-restore-old-curl-anchor-anchor.log",
+        "failure_count": 1
+      },
+      {
+        "phase": "D-restore-old-curl-anchor-restored",
+        "suite": "anchor",
+        "exit": 0,
+        "log": "/tmp/mygamestudio-review-4-6hm1q78i/logs/mutation-D-restore-old-curl-anchor-restored-anchor.log",
+        "failure_count": 0
+      }
+    ],
+    "mutation_restoration": {
+      "module_restored_byte_exact": true,
+      "runsh_restored_byte_exact": true,
+      "module_sha256": "54fe802535148995a2551e42c018a6b5a8691e443ce0980917f7b7ff0c6755ac",
+      "runsh_sha256": "9cd9dfe32ffd3f1e4007257c965358c131062c8971d9d71aa39c2d736bb8135b"
+    }
+  },
+  "boundary": {
+    "recorded_at": "2026-09-10T04:04:06.877410+00:00",
+    "head": "5a3ea4f63bc746257c0df13c5938101ca1faaf74",
+    "status_porcelain": "",
+    "head_unchanged": true,
+    "worktree_clean": true,
+    "isolated_product_files_match_target": {
+      "plugin/records/mgs_github.py": true,
+      "acceptance/18-complete-package-acceptance/run.sh": true
+    },
+    "real_repo_mutations": false,
+    "real_remote_writes": false,
+    "acceptance_model_turns": 0,
+    "real_remote_head_checked": false
+  },
+  "unverified": [
+    "crash or power-loss recovery",
+    "production/cross-runtime concurrency",
+    "GitHub comment pagination",
+    "all filesystem I/O faults",
+    "complete shell grammar",
+    "production latency or collision frequency",
+    "real remote HEAD",
+    "new real remote writes or acceptance model turns",
+    "daily-client install or publishing",
+    "06/10 asset aesthetics/audio; 08 seagull; two design decisions"
+  ],
+  "verdict": {
+    "v1_closure_ready": false,
+    "original_SP7_SP8_SP9_probes_actually_fixed": true,
+    "new_confirmed_defects": 4,
+    "new_pending_identity_defect_introduced_by_batch": true,
+    "human_acceptance_and_release_decisions_preserved": true
+  },
+  "command_categories": [
+    "read-only Git on real repository",
+    "local clone/archive/detached checkout under tmp",
+    "text/JSON/hash/byte comparison reads",
+    "five Python suites",
+    "MCP GateService FakeTransport probes",
+    "four isolated source mutations and restoration",
+    "temporary codex plugin installation and 33 deterministic drivers",
+    "localhost stand-in and curl shell fixtures",
+    "bash syntax and reproducible package rebuild"
+  ]
+}

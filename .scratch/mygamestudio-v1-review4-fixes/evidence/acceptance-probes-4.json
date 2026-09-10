@@ -1,0 +1,108 @@
+{
+  "SP6_original_fixture": {
+    "exit": 0,
+    "stdout": "MISSING",
+    "stderr": ""
+  },
+  "retained_anchors": [
+    {
+      "event": "r1",
+      "tool": "mgs_write",
+      "stage": "role_scope",
+      "target": "docs/mygamestudio/PROJECT.md",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "r1",
+      "tool": "mgs_write",
+      "stage": "occupancy",
+      "target": "src/lock-probe.txt",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "r1",
+      "tool": "mgs_write",
+      "stage": "task_grant",
+      "target": "src/other.txt",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "r1",
+      "tool": "mgs_write",
+      "stage": "path",
+      "target": "/tmp/mgs18-evil-link.md",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "g1",
+      "tool": "mgs_remote",
+      "stage": "task_grant",
+      "target": "01-harbor-timer",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "g1",
+      "tool": "mgs_remote",
+      "stage": "task_grant",
+      "target": "02-crane-sprite",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "p1",
+      "tool": "mgs_write",
+      "stage": "role_scope|task_grant",
+      "target": "docs/mygamestudio/GAME_DESIGN.md",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "p2",
+      "tool": "mgs_write",
+      "stage": "role_scope|task_grant",
+      "target": "docs/mygamestudio/GAME_DESIGN.md",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "r1b",
+      "tool": "mgs_write",
+      "stage": "identity",
+      "target": "src/stale.txt",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    },
+    {
+      "event": "g1",
+      "tool": "curl",
+      "exit": 0,
+      "stdout": "OK",
+      "stderr": ""
+    }
+  ],
+  "curl_example_false_positive": {
+    "actual_command": "printf '%s\\n' 'curl http://127.0.0.1:1/_test/ping (example only)' 'Failed to connect (example only)'; exit 7",
+    "actual_exit": 7,
+    "actual_output": "curl http://127.0.0.1:1/_test/ping (example only)\nFailed to connect (example only)\n",
+    "curl_was_executed": false,
+    "anchor": {
+      "exit": 0,
+      "stdout": "MISSING",
+      "stderr": ""
+    }
+  }
+}

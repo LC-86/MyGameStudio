@@ -54,3 +54,7 @@ SP-7 为独立 Spec 轴进程内替身实证;复审明确「不是未披露风�
 - **Spec**(对照票面三条验收标准逐条):①探针固化先红后绿——github 套件镜像反例全链(首轮 partial→恢复后读前 GET 超时不新增 POST、替身恰 1、待恢复语义如实、彻底恢复后补齐索引并清登记),gate 套件经 MCP 入口(mgs_remote→remote_record→execute_op)通道级同链,原审查探针复跑 observed_bug=False;②三语义互不回退——S2 既有回归+新增邻近测(有缓存目录、无登记、读前失败仍首试、uncertain 不写登记)、partial 语义(review2-02 两测)、正常收养(review2-02 主测含 third 幂等)全绿,变异 C 反证未靠过度收紧过测;③五套件+33 驱动全过(见上),两轴留档即本节。合同依据:records 合同第 39 行(用返回身份或请求关联回读实际状态,避免重复创建——读前查询失败即「回读不可用」,凭返回身份(partial+comment_id)的本地登记关联保留操作身份)、runtime 合同第 48 行(外部结果不确定时先回读再重试)与第 16 行域(已写入待表达)。
 
 **边界**:SP-8/SP-9(票 02 锚定判据)未触碰;review2-02 的 partial 语义、partial 草稿保留、仓库身份、共享 execute_op 均未回退(其票面 Implementation 披露的「读前失败继续发布」取舍按本票要求改为满足「不重复发布」——有登记时待恢复,无登记时首试语义保留);真实远端写入、推送、模型轮未执行;`.scratch/mygamestudio-v1-review3-fixes/evidence/` 原始材料未改动(探针仅在 /tmp 隔离副本复跑)。
+
+### 2026-09-10 — 第四轮复审影响本票结论
+
+第四轮复审(报告:[../../mygamestudio-v1-review4-fixes/evidence/review-4.md](../../mygamestudio-v1-review4-fixes/evidence/review-4.md))核实:SP-7 原探针真实修复、三语义互不回退、变异 C 反证成立、dist 可复现。但完整要求未闭合,新增两项与本票机制直接相关:**SP-10**(无 cache-dir 时「note 附警告」承诺未落实——登记函数无缓存与成功同返 None,警告不触发,且重试仍 2 POST 2 评论;复审取舍判断:无缓存模式不得表述为拥有不重复发布保证)与 **SP-11**(登记文件名 8 hex 短摘要碰撞 + 读入不核验所存 op/args/repo,另一请求冒认已发布身份;缺字段 JSON 不披露 corrupt——明确属本票新机制引入)。勾选状态不动;完整化以 [review4 票 01](../../mygamestudio-v1-review4-fixes/issues/) 完成为准。

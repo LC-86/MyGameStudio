@@ -1,0 +1,18 @@
+{
+  "p1": [
+    {
+      "op": "write",
+      "target": "docs/mygamestudio/GAME_DESIGN.md",
+      "decision": "deny",
+      "rule_stage": "task_grant"
+    }
+  ],
+  "p2": [
+    {
+      "op": "write",
+      "target": "docs/mygamestudio/GAME_DESIGN.md",
+      "decision": "deny",
+      "rule_stage": "task_grant"
+    }
+  ]
+}
