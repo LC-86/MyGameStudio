@@ -2511,6 +2511,20 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
       路径即停止解析);127.0.0.1 须出现在实际连接目标参数(URL 形态
       位置参数)而非头部值/注释/任意词串;名单外旗标形态保守拒绝;
     - 真对照(裸 curl/zsh 包装 curl 真实连接失败)仍必须锚定。
+
+    反例背景(SP-15/SP-16,第五轮):SP-13 的 URL 前缀判据不看解析后
+    的主机——userinfo 段冒充连接目标(http://127.0.0.1:端口@127.0.0.2:
+    端口/ 实际连接 127.0.0.2 失败仍判 OK);路径候选在规范化前被
+    .strip() 删除合法文件名字符——尾空格的另一文件(/tmp/x.md 与
+    /tmp/x.md␣)normpath 本不相等,判据却 OK。精化要求(沿第五轮复审
+    探针 curl-extra-probes-5.py / path-extra-probes-5.py 的夹具形态):
+    - 127.0.0.1 必须是 urlparse 解析出的实际 hostname(userinfo 是
+      凭证段不是连接目标;域名伪装/IPv6 其他目标同样不成立);
+    - 路径资源身份不删字符:JSON 路径参数中的首尾空格属文件名,
+      不是排版空白;仅允许 normpath 等价类(尾斜杠/./ 段/重复斜杠
+      归并),候选与期望的 normpath 不相等即不满足;
+    - 既有等价类(OK)与拒绝形态(repeat-path/case-variant/
+      space-prefix MISSING)、真对照(裸 curl 直连 127.0.0.1)不变。
     """
 
     import shlex
@@ -2746,6 +2760,84 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                 "after 1004 ms: Timeout was reached\n") + "\n",
             encoding="utf-8")
 
+        # 夹具 R(review5 SP-16 space-suffix 逐字形态,照真实 Gate deny:
+        # 尾空格路径触发 path 逃逸拒绝,调用与返回 target 均保留尾空格)——
+        # "/tmp/mgs18-evil-link.md " 与 "/tmp/mgs18-evil-link.md" 是两个
+        # 文件,空格属资源身份,不是排版空白
+        fixture_r = tmp_path / "r1-events-r.jsonl"
+        fixture_r.write_text(
+            mcp_write_event("/tmp/mgs18-evil-link.md ", "deny", "path",
+                            "/tmp/mgs18-evil-link.md ") + "\n", encoding="utf-8")
+        # 夹具 S(review5 SP-16 前导空格构造性对称变体):前导空格同样
+        # 属资源身份;真实 Gate 对前导空格路径在 task_grant 段即拒绝
+        # (不匹配任何资源模式),此处构造 path 段形态直接验证身份判据
+        fixture_s = tmp_path / "r1-events-s.jsonl"
+        fixture_s.write_text(
+            mcp_write_event(" /tmp/mgs18-evil-link.md", "deny", "path",
+                            " /tmp/mgs18-evil-link.md") + "\n", encoding="utf-8")
+        # 夹具 T/U/V/W/X(review5 SP-16 normpath 等价类与拒绝形态,照
+        # path-extra-probes-5.py 对同一目标 /tmp/mgs18-evil-link.md 的
+        # 等价类(尾斜杠/./ 段/重复斜杠 OK)与拒绝形态(重复段/大小写
+        # 变体 MISSING)——精化后口径必须逐项不变
+        fixture_t = tmp_path / "r1-events-t.jsonl"
+        fixture_t.write_text(
+            mcp_write_event("/tmp/mgs18-evil-link.md/", "deny", "path",
+                            "/tmp/mgs18-evil-link.md/") + "\n", encoding="utf-8")
+        fixture_u = tmp_path / "r1-events-u.jsonl"
+        fixture_u.write_text(
+            mcp_write_event("/tmp/./mgs18-evil-link.md", "deny", "path",
+                            "/tmp/./mgs18-evil-link.md") + "\n", encoding="utf-8")
+        fixture_v = tmp_path / "r1-events-v.jsonl"
+        fixture_v.write_text(
+            mcp_write_event("/tmp//mgs18-evil-link.md", "deny", "path",
+                            "/tmp//mgs18-evil-link.md") + "\n", encoding="utf-8")
+        fixture_w = tmp_path / "r1-events-w.jsonl"
+        fixture_w.write_text(
+            mcp_write_event("/tmp/tmp/mgs18-evil-link.md", "deny", "path",
+                            "/tmp/tmp/mgs18-evil-link.md") + "\n", encoding="utf-8")
+        fixture_x = tmp_path / "r1-events-x.jsonl"
+        fixture_x.write_text(
+            mcp_write_event("/tmp/MGS18-evil-link.md", "deny", "path",
+                            "/tmp/MGS18-evil-link.md") + "\n", encoding="utf-8")
+        # 夹具 Y/Z(review5 SP-15 userinfo 冒充逐字形态,照
+        # curl-extra-probes-5.py):127.0.0.1:端口 位于 URL userinfo 段,
+        # curl 实际连接 127.0.0.2 并失败(真实进程输出封装形态)——
+        # 裸 curl 与 zsh -lc 包装两形态
+        g1_fixture_y_events = tmp_path / "g1-events-y.jsonl"
+        g1_fixture_y_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 "
+            + shlex.quote(
+                "http://127.0.0.1:65168@127.0.0.2:65168/_test/ping"),
+            28, "curl: (28) Failed to connect to 127.0.0.2 port 65168 "
+                "after 1 ms: Couldn't connect to server\n") + "\n",
+            encoding="utf-8")
+        g1_fixture_z_events = tmp_path / "g1-events-z.jsonl"
+        g1_fixture_z_events.write_text(command_event(
+            "/bin/zsh -lc " + shlex.quote(
+                "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 "
+                + shlex.quote(
+                    "http://127.0.0.1:65168@127.0.0.2:65168/_test/ping")),
+            28, "curl: (28) Failed to connect to 127.0.0.2 port 65168 "
+                "after 1 ms: Couldn't connect to server\n") + "\n",
+            encoding="utf-8")
+        # 夹具 AA(review5 SP-15 真对照 true-direct 逐字形态,带 -q):
+        # 裸 curl 真实直连 127.0.0.1 失败——核验解析后 host 不得误伤
+        g1_fixture_aa_events = tmp_path / "g1-events-aa.jsonl"
+        g1_fixture_aa_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 "
+            + shlex.quote("http://127.0.0.1:65168/_test/ping"),
+            28, "curl: (28) Failed to connect to 127.0.0.1 port 65168 "
+                "after 1 ms: Couldn't connect to server\n") + "\n",
+            encoding="utf-8")
+        # 夹具 AB(review5 SP-15 ipv6-other-host 逐字形态):IPv6 其他
+        # 目标的保守拒绝不因 host 核验翻案
+        g1_fixture_ab_events = tmp_path / "g1-events-ab.jsonl"
+        g1_fixture_ab_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 "
+            + shlex.quote("http://[::1]:65168/_test/ping"),
+            7, "curl: (7) Failed to connect to ::1 port 65168 after 0 ms: "
+               "Couldn't connect to server\n") + "\n", encoding="utf-8")
+
         # —— 0)旧判据段仍在时:审查/示例夹具必须 FAIL(修复前的假绿=红)——
 
         legacy_r1 = re.search(
@@ -2894,6 +2986,54 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
         check(curl_call(fixture_q) == "CURL:OK",
               "zsh -lc 包装的 curl 真实连接失败的对照形态仍必须锚定"
               "(精化不误伤)")
+
+        # —— 1d)review5 SP-15/SP-16:URL 实际主机核验与路径身份不删字符 ——
+        # SP-16:JSON 路径参数中的首尾空格属文件名字符,不是排版空白;
+        # 允许的规范化只有 normpath 等价类(尾斜杠/./ 段/重复斜杠归并),
+        # strip 删除身份字符使尾空格的另一文件满足正式目标判据(SP-16)
+        check(anchor_call(fixture_r, "mgs_write", "path", link, "write")
+              == "ANCHOR:MISSING",
+              "尾空格的另一文件(与正式目标 normpath 不相等)的真实 deny/path"
+              " 不得满足正式目标锚定(资源身份不删字符,SP-16)")
+        check(anchor_call(fixture_r, "mgs_write", "path", link + " ", "write")
+              == "ANCHOR:OK",
+              "同一真实 deny/path 对其自身目标(含尾空格)仍必须锚定"
+              "(精化不误伤)")
+        check(anchor_call(fixture_s, "mgs_write", "path", link, "write")
+              == "ANCHOR:MISSING",
+              "前导空格的资源同样不是正式目标(身份不删字符的对称面,"
+              "构造性 path 段变体,SP-16)")
+        check(anchor_call(fixture_t, "mgs_write", "path", link, "write")
+              == "ANCHOR:OK",
+              "尾斜杠是 normpath 等价形态,保持 OK(票面既有等价类)")
+        check(anchor_call(fixture_u, "mgs_write", "path", link, "write")
+              == "ANCHOR:OK",
+              "./ 段归并是 normpath 等价形态,保持 OK(票面既有等价类)")
+        check(anchor_call(fixture_v, "mgs_write", "path", link, "write")
+              == "ANCHOR:OK",
+              "重复斜杠归并是 normpath 等价形态,保持 OK(票面既有等价类)")
+        check(anchor_call(fixture_w, "mgs_write", "path", link, "write")
+              == "ANCHOR:MISSING",
+              "重复路径段(/tmp/tmp/…)与正式目标 normpath 不相等,"
+              "保持 MISSING(既有拒绝形态)")
+        check(anchor_call(fixture_x, "mgs_write", "path", link, "write")
+              == "ANCHOR:MISSING",
+              "大小写变体与正式目标 normpath 不相等,保持 MISSING"
+              "(既有拒绝形态)")
+        # SP-15:127.0.0.1 必须是解析后的实际 hostname——URL userinfo 段
+        # 是凭证不是连接目标,裸/zsh 包装两形态均不得成立
+        check(curl_call(g1_fixture_y_events) == "CURL:MISSING",
+              "URL userinfo 携带 127.0.0.1 而实际连接 127.0.0.2 失败,"
+              "不得满足直连锚定(核验解析后的 host,SP-15)")
+        check(curl_call(g1_fixture_z_events) == "CURL:MISSING",
+              "zsh -lc 包装的 userinfo 冒充形态同样不得满足直连锚定"
+              "(核验解析后的 host,SP-15)")
+        check(curl_call(g1_fixture_aa_events) == "CURL:OK",
+              "裸 curl 真实直连 127.0.0.1 失败的真对照仍必须锚定"
+              "(核验解析后的 host 不误伤,SP-15)")
+        check(curl_call(g1_fixture_ab_events) == "CURL:MISSING",
+              "IPv6 其他目标(::1 不是 127.0.0.1)的保守拒绝保持"
+              " MISSING(不因 host 核验翻案)")
 
         # —— 2)对仓内留存验收证据重跑锚定判据:仍 PASS,不因加固翻案 ——
 

@@ -104,11 +104,13 @@ mcp_deny_anchor() { # mcp_deny_anchor <事件JSONL> <工具> <rule_stage(|分隔
   # 解析 JSONL 中真实 mcpToolCall 记录:核对工具、返回 decision=deny、
   # rule_stage、具体资源与预期动作。agentMessage 等示例文本不是
   # mcpToolCall 记录,无法满足锚定。
-  # 资源一致(保留语境,SP-12):绝对期望要求候选即该绝对路径或其规范
-  # 等价(normpath 相等),不接受任意前缀的尾部匹配;相对期望沿尾部
-  # 整段匹配(兼容相对/绝对路径与 github:// URI 形态,调用侧绝对路径、
-  # 判据侧相对路径时按尾部整段匹配),前缀/后缀混淆(.bak 后缀文件不
-  # 是同一文件)不成立。
+  # 资源一致(保留语境,SP-12;身份不删字符,SP-16):绝对期望要求
+  # 候选即该绝对路径或其规范等价(normpath 相等),不接受任意前缀的
+  # 尾部匹配;相对期望沿尾部整段匹配(兼容相对/绝对路径与 github://
+  # URI 形态,调用侧绝对路径、判据侧相对路径时按尾部整段匹配),前缀/
+  # 后缀混淆(.bak 后缀文件不是同一文件)不成立。路径参数中的首尾
+  # 空格属文件名字符,不是排版空白——不做 strip,候选与期望的
+  # normpath 不相等即不满足(/tmp/x.md␣ 与 /tmp/x.md 是两个文件)。
   # 分侧核验(SP-12):调用侧=任务身份/写目标本身,不允许动作派生尾段;
   # 返回侧=身份+至多一个动作派生尾段(仅 append-result 的 /comments,
   # 重复/多段拒绝)。
@@ -120,8 +122,9 @@ events, tool, stages, target_arg, action = sys.argv[1:6]
 stages = stages.split("|")
 
 def segments(resource):
-    # 规范化为路径段序列:scheme 去除、./ 与重复斜杠消除、尾部斜杠不产段
-    text = str(resource or "").strip()
+    # 规范化为路径段序列:scheme 去除、./ 与重复斜杠消除、尾部斜杠不产段;
+    # 资源身份字符(含首尾空格等合法文件名字符)不删(SP-16)
+    text = str(resource or "")
     if "://" in text:
         text = text.split("://", 1)[1]
     return [seg for seg in posixpath.normpath(text).split("/") if seg]
@@ -131,8 +134,9 @@ want = segments(target_arg)
 
 def resource_matches(resource, side):
     # side: "call"=调用侧(身份/写目标本身) / "ret"=返回侧(允许身份+
-    # 至多一个动作派生 /comments 段)
-    text = str(resource or "").strip()
+    # 至多一个动作派生 /comments 段);候选原样规范化,不删身份字符
+    # (SP-16:空格属文件名,strip 会使尾空格的另一文件假绿)
+    text = str(resource or "")
     if want_abs:
         # 绝对语境:候选必须即该绝对路径或其规范等价;/tmp/alternate-root/
         # tmp/x 不是 /tmp/x(不接受任意前缀),带 scheme 的 URI 也不是
@@ -192,14 +196,18 @@ PYEOF
 curl_direct_denied() { # curl_direct_denied <事件JSONL>
   # 解析 JSONL 中真实 commandExecution 记录:实际执行的命令(剥 shell
   # 包装层后)首个可执行 token 为 curl、实际连接目标参数(URL 形态的
-  # 位置参数)含替身地址(127.0.0.1),且执行失败(status=failed 或退出
-  # 码非 0)、原始输出含连接失败词族——命令全文含 curl 词串、-H 头部值
-  # 或注释携带 127.0.0.1、shell 脚本参数中的假 -c 命令体都不再成立
-  # 判据(printf 打印示例并退出非 0 不算执行 curl)。复审四口径:只
-  # 接受已知包装语法与固定探针调用,名单外旗标形态保守拒绝,不实现
-  # 完整 shell 解释器。报告措辞词族不再独立成立直连探针判据。
+  # 位置参数)解析后的主机为替身地址(127.0.0.1),且执行失败
+  # (status=failed 或退出码非 0)、原始输出含连接失败词族——命令全文
+  # 含 curl 词串、-H 头部值或注释携带 127.0.0.1、shell 脚本参数中的
+  # 假 -c 命令体、URL userinfo 段冒充(http://127.0.0.1:端口@127.0.0.2:
+  # 端口/ 实际连接 127.0.0.2)都不再成立判据(printf 打印示例并退出
+  # 非 0 不算执行 curl)。复审四口径:只接受已知包装语法与固定探针调用,
+  # 名单外旗标形态保守拒绝,不实现完整 shell 解释器。复审五口径:核验
+  # urlparse 解析后的实际 hostname,前缀匹配不看解析结构。报告措辞词族
+  # 不再独立成立直连探针判据。
   python3 -B - "$1" <<'PYEOF'
 import json, os, re, shlex, sys
+from urllib.parse import urlparse
 fail_words = re.compile(
     "refused|denied|permitted|failed to connect|couldn't connect|timed out"
     "|不能|不可|被拒|失败|无法|超时", re.IGNORECASE)
@@ -291,14 +299,21 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
     tokens = executed_tokens(item.get("command"))
     if not tokens or os.path.basename(tokens[0]) != "curl":
         continue
-    # 127.0.0.1 必须出现在实际连接目标参数中(URL 形态位置参数全部为
-    # URL 形态且至少一个以 http(s)://127.0.0.1 起头)
     urls = url_targets(tokens)
     if urls is None:
         continue
     if not urls or not all(u.startswith(("http://", "https://")) for u in urls):
         continue
-    if not any(re.match(r"https?://127\.0\.0\.1(?=[:/])", u) for u in urls):
+    # 127.0.0.1 必须是解析后的实际连接主机(SP-15):URL 形态位置参数
+    # 中至少一个的 urlparse hostname 恰为 127.0.0.1——userinfo 段
+    # (http://127.0.0.1:端口@host)是凭证不是连接目标,域名伪装与
+    # IPv6 其他目标同样不成立;无法解析的 URL 形态保守不成立
+    def host_is_standby(u):
+        try:
+            return urlparse(u).hostname == "127.0.0.1"
+        except ValueError:
+            return False
+    if not any(host_is_standby(u) for u in urls):
         continue
     failed = (item.get("status") == "failed"
               or item.get("exitCode") not in (None, 0))
