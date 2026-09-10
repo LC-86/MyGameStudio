@@ -8,7 +8,7 @@
 
 ## 缺陷与期望行为
 
-审查详情:[../evidence/review-6.md](../evidence/review-6.md) SP-17(P2),探针 [../evidence/mixed-layout/mixed-layout-probe.py](../evidence/mixed-layout/mixed-layout-probe.py)(当前 HEAD 复现:observed_bug=True,3 POST、B 正文评论 2 条;`--guard-each-path` 因果守卫为 2 POST、B 1 条、observed_bug=False,见 [../evidence/triage-repro-verify.txt](../evidence/triage-repro-verify.txt))。
+审查详情:[../evidence/review-6.md](../evidence/review-6.md) SP-17(P2),探针 [../evidence/mixed-layout/mixed-layout-spec-agent-probe.py](../evidence/mixed-layout/mixed-layout-spec-agent-probe.py)(完整原版,带 `--out`/`--guard-each-path`;归档另有同场景简化变体 mixed-layout-standards-probe.py)(当前 HEAD 复现:observed_bug=True,3 POST、B 正文评论 2 条;`--guard-each-path` 因果守卫为 2 POST、B 1 条、observed_bug=False,见 [../evidence/triage-repro-verify.txt](../evidence/triage-repro-verify.txt))。
 
 - **单次核验授权删除两路径**:`plugin/records/mgs_github.py` `_clear_pending_index`(约 784 行)调用一次 `_load_pending_index()`(优先核验**新布局**里 A 的登记),随后(约 787-789 行)对 `[当前布局文件, 旧平铺文件]` 两个路径**无条件 unlink**。旧平铺路径可能保存**另一完整身份 B** 的健康登记(自然升级序列:旧实现发布 B 留下平铺登记 → 升级后同任务碰撞对 A 读前失败 partial 写新布局登记 → A 补齐索引触发清理 → B 的平铺登记被误删 → B 重试读前失败,登记已丢,被当作全新发布重新 POST)。期望:**每个待删除文件分别通过自身完整身份核验**——读该文件自己的登记,`{op,args,repo}` 与当前请求 `_pending_identity()` 一致且回执字段(comment_id/ref)完整才 unlink;不匹配/不可读/形态不完整一律保守保留。守卫对照已证明该口径消除缺陷(2 POST、B 恰 1 条、B 重试凭自己登记待恢复)。
 - **不复活语义保持**:同身份双布局残留(迁移中途失败留下的旧副本)在逐路径核验下两处都属当前请求、都应清除,「已清除的登记不因迁移残留复活」语义不变;corrupt 登记保持原位由人工按哨兵处置(既有披露口径零变化)。
