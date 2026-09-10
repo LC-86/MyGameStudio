@@ -249,15 +249,19 @@ SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 # (返回 None);--noproxy 是禁止代理、保持直连语义,固定探针自身
 # 在用,保留。重定向旗标 -L/--location 同口径保守拒绝(SP-21):
 # curl 跟随 302 后判据无法确认最终目标归属——.1 被直连访问、转向
-# .2 连接失败也会冒充初始目标被拒。集合用 set((...)) 构造——
-# heredoc 内不出现顶格 },保持函数可整体提取复审
-CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzZDJg")
-CURL_PLAIN_SHORT = set("sSkvIifnN46q")
+# .2 连接失败也会冒充初始目标被拒。短旗标带值/无值按本机 curl 语义
+# 核对(SP-27):g(globoff)/J(remote-header-name)/Z(parallel) 均为无值,
+# 列入 CURL_PLAIN_SHORT——旧表把三者当带值会吞掉首个或唯一 URL。
+# --retry 保守拒绝(SP-28):固定探针不实现逐次尝试证明,出现即整个
+# 命令不成立;真失败+重试的对照随之 MISSING,属已披露取舍。集合用
+# set((...)) 构造——heredoc 内不出现顶格 },保持函数可整体提取复审
+CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzD")
+CURL_PLAIN_SHORT = set("sSkvIifnN46qgJZ")
 CURL_VALUE_LONG = set((
     "--header", "--max-time", "--request", "--data", "--data-raw",
     "--data-binary", "--output", "--user-agent", "--user", "--write-out",
     "--cookie", "--connect-timeout", "--noproxy", "--url",
-    "--retry", "--form", "--upload-file", "--cert", "--key", "--cacert",
+    "--form", "--upload-file", "--cert", "--key", "--cacert",
 ))
 CURL_PLAIN_LONG = set((
     "--version", "--silent", "--show-error", "--insecure",
@@ -300,6 +304,10 @@ def url_targets(tokens):
     while i < len(args):
         tok = args[i]
         if tok == "--":
+            # URL glob 形态保守拒绝(SP-29):花括号/方括号展开会把一个
+            # 位置参数变成多次请求,len(urls)==1 不能证明单请求
+            if any(any(ch in arg for ch in "{}[]") for arg in args[i + 1:]):
+                return None
             urls.extend(args[i + 1:])
             break
         if tok.startswith("--"):
@@ -332,6 +340,8 @@ def url_targets(tokens):
             if all(ch in CURL_PLAIN_SHORT for ch in body):
                 i += 1
                 continue
+            return None
+        if any(ch in tok for ch in "{}[]"):
             return None
         urls.append(tok)
         i += 1

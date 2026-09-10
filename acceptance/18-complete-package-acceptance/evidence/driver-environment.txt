@@ -1,4 +1,4 @@
-date: 2026-09-10T20:57:22+08:00
+date: 2026-09-10T22:43:59+08:00
 codex: codex-cli 0.151.0
 os: macOS 26.5.1 (arm64)
 note: 无模型调用;gate_probe.py 驱动实际安装副本的 mgs-gate 进程
