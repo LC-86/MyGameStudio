@@ -1,0 +1,186 @@
+{
+  "tracked_count": 119,
+  "find_file_count": 119,
+  "missing": [],
+  "untracked_extra": [],
+  "original_bytes_different_from_target": [],
+  "streams": {
+    "r1": {
+      "lines": 14,
+      "json_records": 14,
+      "parse_errors": [],
+      "item_types": {
+        "userMessage": 1,
+        "agentMessage": 3,
+        "mcpToolCall": 7,
+        "commandExecution": 2,
+        "null": 1
+      },
+      "sha256": "1768de3ceffd2f8670516f9d20b09f2705d1920cec249d781e19c325daa41344",
+      "unchanged_since_8dfd706": true
+    },
+    "g1": {
+      "lines": 15,
+      "json_records": 15,
+      "parse_errors": [],
+      "item_types": {
+        "userMessage": 1,
+        "agentMessage": 4,
+        "mcpToolCall": 8,
+        "commandExecution": 1,
+        "null": 1
+      },
+      "sha256": "726b270c48c3b3c46caabf87c415876a1a9d1394692195ff0da5c0f56345ac92",
+      "unchanged_since_8dfd706": true
+    },
+    "p1": {
+      "lines": 33,
+      "json_records": 33,
+      "parse_errors": [],
+      "item_types": {
+        "userMessage": 1,
+        "agentMessage": 3,
+        "commandExecution": 22,
+        "mcpToolCall": 6,
+        "null": 1
+      },
+      "sha256": "aa9c14d40b3a40829ae215eb92edb4ae7a2b24e900c1279d1d1afb060cb27ed0",
+      "unchanged_since_8dfd706": true
+    },
+    "p2": {
+      "lines": 22,
+      "json_records": 22,
+      "parse_errors": [],
+      "item_types": {
+        "userMessage": 1,
+        "agentMessage": 3,
+        "commandExecution": 14,
+        "mcpToolCall": 3,
+        "null": 1
+      },
+      "sha256": "70ad90c9e334194fba801397b3a63cae3483255bbb39ed67e9d95ef708781e17",
+      "unchanged_since_8dfd706": true
+    },
+    "r1b": {
+      "lines": 5,
+      "json_records": 5,
+      "parse_errors": [],
+      "item_types": {
+        "userMessage": 1,
+        "agentMessage": 2,
+        "mcpToolCall": 1,
+        "null": 1
+      },
+      "sha256": "b56b92ea28f068818f46dea34338a71f46e7fb610499ff0b0e638cdea059b55d",
+      "unchanged_since_8dfd706": true
+    }
+  },
+  "changed_evidence_files": 20,
+  "changed_fields": {
+    "acceptance/18-complete-package-acceptance/evidence/driver-environment.txt": {
+      "before": "date: 2026-09-10T11:09:28+08:00\ncodex: codex-cli 0.151.0\nos: macOS 26.5.1 (arm64)\nnote: 无模型调用;gate_probe.py 驱动实际安装副本的 mgs-gate 进程\n",
+      "after": "date: 2026-09-10T13:07:42+08:00\ncodex: codex-cli 0.151.0\nos: macOS 26.5.1 (arm64)\nnote: 无模型调用;gate_probe.py 驱动实际安装副本的 mgs-gate 进程\n"
+    },
+    "acceptance/18-complete-package-acceptance/evidence/driver-identity-deny.json": [
+      "reason",
+      "token_fp",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-lock-by-i2.json": [
+      "instance_id",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-occupancy.json": [
+      "instance_id",
+      "reason",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-policy-corrupt.json": [
+      "token_fp",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-policy-restored.json": [
+      "instance_id",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-publish-drafts.json": [
+      "results[0].draft"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-reclaim-active.json": [
+      "instance_id"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-remote-comment.json": [
+      "instance_id"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-remote-offline.json": [
+      "instance_id",
+      "note.draft",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-remote-read.json": [
+      "instance_id"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-remote-task-deny.json": [
+      "instance_id",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-remote-update.json": [
+      "instance_id"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-role-deny.json": [
+      "instance_id",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-scope.json": [
+      "instance_id"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-set-remote.json": [
+      "remote.github.api_base"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-status-final.json": [
+      "instances[0].instance_id",
+      "instances[1].instance_id"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-symlink.json": [
+      "instance_id",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-task-deny.json": [
+      "instance_id",
+      "ts"
+    ],
+    "acceptance/18-complete-package-acceptance/evidence/driver-write-allow.json": [
+      "instance_id",
+      "ts"
+    ]
+  },
+  "critical_field_changes": [
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-identity-deny.json",
+      "path": "reason"
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-occupancy.json",
+      "path": "reason"
+    }
+  ],
+  "original_head": "929ff4cf4895d83bc060d37474eaf0fe97a91c72",
+  "original_status": "",
+  "cleanup_pattern_match_count": 109,
+  "cleanup_pattern_preserved_count": 10,
+  "reason_field_normalization": [
+    {
+      "file": "driver-identity-deny.json",
+      "before": "instance i-b027faa6f85b released",
+      "after": "instance i-486ec88537fc released",
+      "equal_after_instance_id_normalization": true
+    },
+    {
+      "file": "driver-occupancy.json",
+      "before": "resource held by instance i-e9a5b17a1367",
+      "after": "resource held by instance i-0d0bb31ae110",
+      "equal_after_instance_id_normalization": true
+    }
+  ],
+  "critical_fields_semantically_preserved": true
+}

@@ -1,0 +1,47 @@
+{
+  "artifact": "/tmp/mgs-triage5/spec-extra-pending.json",
+  "summary": [
+    {
+      "id": "collision-both-partial-overwrites-a",
+      "posts": 3,
+      "a_comment_count": 2,
+      "observed_bug": true
+    },
+    {
+      "id": "missing-comment_id",
+      "posts": 1,
+      "disclosed_corrupt": false,
+      "missing_published_identity": true
+    },
+    {
+      "id": "missing-ref",
+      "posts": 1,
+      "disclosed_corrupt": false,
+      "missing_published_identity": true
+    },
+    {
+      "id": "missing-comment_id-ref",
+      "posts": 1,
+      "disclosed_corrupt": false,
+      "missing_published_identity": true
+    },
+    {
+      "id": "args-empty",
+      "body_length": 0,
+      "posts": 1,
+      "observed_bug": false
+    },
+    {
+      "id": "args-unicode",
+      "body_length": 15,
+      "posts": 1,
+      "observed_bug": false
+    },
+    {
+      "id": "args-long",
+      "body_length": 100000,
+      "posts": 1,
+      "observed_bug": false
+    }
+  ]
+}

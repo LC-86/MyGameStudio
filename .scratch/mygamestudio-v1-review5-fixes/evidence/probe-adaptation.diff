@@ -1,0 +1,44 @@
+--- /tmp/mygamestudio-review-5-niculnow/copy/.scratch/mygamestudio-v1-review4-fixes/evidence/spec-independent-probes.py
++++ /tmp/mygamestudio-review-5-niculnow/spec-independent-probes.py
+@@ -1,8 +1,8 @@
+ import json, sys, re, shlex, subprocess, hashlib, tempfile
+ from pathlib import Path
+ sys.dont_write_bytecode = True
+-ROOT = Path('/tmp/mygamestudio-review-4-6hm1q78i')
+-COPY = ROOT/'spec'
++ROOT = Path('/tmp/mygamestudio-review-5-niculnow')
++COPY = ROOT/'copy'
+ sys.path.insert(0, str(COPY/'tests'))
+ import test_github_backend as gh
+ import test_runtime_gate as rt
+--- /tmp/mygamestudio-review-5-niculnow/copy/.scratch/mygamestudio-v1-review3-fixes/evidence/spec-custom-probes.py
++++ /tmp/mygamestudio-review-5-niculnow/spec-custom-probes.py
+@@ -7,8 +7,8 @@
+ from pathlib import Path
+ 
+ sys.dont_write_bytecode = True
+-ROOT = Path('/tmp/mygamestudio-review-3-v9s0lp_z')
+-COPY = ROOT / 'spec'
++ROOT = Path('/tmp/mygamestudio-review-5-niculnow')
++COPY = ROOT / 'copy'
+ sys.path.insert(0, str(COPY / 'tests'))
+ import test_github_backend as gh
+ import test_runtime_gate as rt
+@@ -64,7 +64,7 @@
+             'arguments': args, 'result': {'content': [{'type': 'text',
+                                                       'text': json.dumps(ret)}]}}}}) + '\n')
+         cmd = fn + '\nmcp_deny_anchor ' + ' '.join(map(shlex.quote,
+-                                            [str(ev), tool, stage, wanted]))
++                                            [str(ev), tool, stage, wanted, 'write' if tool == 'mgs_write' else 'update']))
+         out = subprocess.run(['bash', '-c', cmd], text=True, capture_output=True)
+         results.append({'id': name, 'arguments': args, 'real_gate_result': ret,
+                         'expected_anchor': 'MISSING', 'actual_anchor': out.stdout.strip(),
+--- /tmp/mygamestudio-review-5-niculnow/copy/.scratch/mygamestudio-v1-review4-fixes/evidence/acceptance_recheck.py
++++ /tmp/mygamestudio-review-5-niculnow/acceptance_recheck.py
+@@ -38,5 +38,5 @@
+ curl_example=event(F/'curl-command-example.jsonl',item)
+ out['curl_example_false_positive']={'actual_command':command,'actual_exit':executed.returncode,'actual_output':executed.stdout+executed.stderr,'curl_was_executed':False,'anchor':curl(curl_example)}
+ 
+-(W/'acceptance-probes-4.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
++(W/'acceptance-probes-5.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
+ print(json.dumps(out,ensure_ascii=False,indent=2))

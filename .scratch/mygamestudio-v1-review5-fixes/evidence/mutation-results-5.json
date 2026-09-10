@@ -1,0 +1,134 @@
+{
+  "results": [
+    {
+      "name": "mutation-baseline-github",
+      "cmd": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ],
+      "exit": 0,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-baseline-github.log",
+      "output": "OK: GitHub Issues 任务后端检查全部通过\n"
+    },
+    {
+      "name": "mutation-baseline-gate",
+      "cmd": [
+        "python3",
+        "-B",
+        "tests/test_runtime_gate.py"
+      ],
+      "exit": 0,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-baseline-gate.log",
+      "output": "OK: 受控写入服务确定性检查全部通过\n"
+    },
+    {
+      "name": "mutation-baseline-anchor",
+      "cmd": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ],
+      "exit": 0,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-baseline-anchor.log",
+      "output": "FAILURES 0\n\n"
+    },
+    {
+      "name": "mutation-ticket01-revert-github",
+      "cmd": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ],
+      "exit": 1,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket01-revert-github.log",
+      "output": "FAIL (10 项):\n  - SP-10:无缓存目录的 partial note 应实际携带警告,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n  - SP-10:警告应说明本模式重试可能重复发布,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n  - SP-10:警告应建议配置缓存目录,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n  - SP-10:无缓存模式不得表述为拥有不重复发布保证,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n  - SP-11:B 不得冒认 A 的 comment_id,实际 5100 vs 5100\n  - SP-11:B 应按首试语义发布自己的评论并补齐索引,实际 {'published': True, 'partial': True, 'comment_id': 5100, 'ref': '#issuecomment-5100', 'issue_number': 1, 'index_updated': False, 'attempts': [{'step': 'read-first', 'outcome': 'timeout', 'detail': 'timeout: one read-first timeout'}, {'step': 'pending-index', 'outcome': 'kept'}], 'note': '待恢复:前次调用已确认发布该结果评论(本地待补索引登记:#issuecomment-5100),本次读前收养查询失败(timeout: one read-first timeout)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引'}\n  - SP-11:B 应已发布自己的评论正文(而非只认 A 的评论)\n  - 全程应恰 2 次 POST(A 首试 1 次+B 首试 1 次;A 待恢复不发布),实际 1 次\n  - SP-11:缺字段登记应披露登记损坏(形态不完整),实际 note='待恢复:前次调用已确认发布该结果评论(本地待补索引登记:None),本次读前收养查询失败(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1/comments?per_page=100)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引'\n  - SP-11:登记损坏披露应提示人工核对,实际 note='待恢复:前次调用已确认发布该结果评论(本地待补索引登记:None),本次读前收养查询失败(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1/comments?per_page=100)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引'\n"
+    },
+    {
+      "name": "mutation-ticket01-revert-gate",
+      "cmd": [
+        "python3",
+        "-B",
+        "tests/test_runtime_gate.py"
+      ],
+      "exit": 1,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket01-revert-gate.log",
+      "output": "FAIL (4 项):\n  - SP-10:无 cache_dir 的 partial 运行结果 note 应实际携带警告,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n  - SP-10:警告应说明本模式重试可能重复发布,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n  - SP-10:警告应建议配置缓存目录,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n  - SP-10:无缓存模式不得表述为拥有不重复发布保证,实际 '部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布'\n"
+    },
+    {
+      "name": "mutation-ticket01-restored-github",
+      "cmd": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ],
+      "exit": 0,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket01-restored-github.log",
+      "output": "OK: GitHub Issues 任务后端检查全部通过\n"
+    },
+    {
+      "name": "mutation-ticket01-restored-gate",
+      "cmd": [
+        "python3",
+        "-B",
+        "tests/test_runtime_gate.py"
+      ],
+      "exit": 0,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket01-restored-gate.log",
+      "output": "OK: 受控写入服务确定性检查全部通过\n"
+    },
+    {
+      "name": "mutation-ticket02-revert-mcp_deny_anchor",
+      "cmd": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ],
+      "exit": 1,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket02-revert-mcp_deny_anchor.log",
+      "output": "FAILURES 3\n绝对期望路径不得接受任意前缀的尾匹配(/tmp/alternate-root/tmp/… 不是 /tmp/mgs18-evil-link.md,SP-12)\n调用身份 01-harbor-timer/comments 不是任务身份本身,不得满足 01-harbor-timer 的评论探针(调用侧分侧核验,SP-12)\n双 comments 身份变体(调用侧+返回侧派生段重复/多段)不得满足 01-harbor-timer 的评论探针(SP-12)\n"
+    },
+    {
+      "name": "mutation-ticket02-restored-mcp_deny_anchor",
+      "cmd": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ],
+      "exit": 0,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket02-restored-mcp_deny_anchor.log",
+      "output": "FAILURES 0\n\n"
+    },
+    {
+      "name": "mutation-ticket02-revert-curl_direct_denied",
+      "cmd": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ],
+      "exit": 1,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket02-revert-curl_direct_denied.log",
+      "output": "FAILURES 3\nshell 脚本路径后的 -c 旗标与 curl 字符串只是脚本参数(实际执行的是脚本本身,未执行 curl),不得满足直连锚定(包装解析按位置,SP-13)\n127.0.0.1 仅出现在 -H 头部值而实际连接 127.0.0.2,不得满足直连锚定(目标绑定实际连接参数,SP-13)\ncurl --version 后接 printf/exit 7 与注释(未执行直连,127.0.0.1 只在注释词串中),不得满足直连锚定(SP-13)\n"
+    },
+    {
+      "name": "mutation-ticket02-restored-curl_direct_denied",
+      "cmd": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ],
+      "exit": 0,
+      "log": "/private/tmp/mygamestudio-review-5-niculnow/logs/mutation-ticket02-restored-curl_direct_denied.log",
+      "output": "FAILURES 0\n\n"
+    }
+  ],
+  "restored_bytes": {
+    "plugin/records/mgs_github.py": true,
+    "acceptance/18-complete-package-acceptance/run.sh": true
+  }
+}
