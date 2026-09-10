@@ -215,18 +215,28 @@ curl_direct_denied() { # curl_direct_denied <事件JSONL>
   # 重定向形态同口径保守拒绝,短旗标值按 curl 语义消费(粘连值即 token
   # 余部、只消费当前 token),失败证据须能证明对替身的连接未被允许
   # (连接阶段词族+实际尝试主机绑定,通用超时/响应阶段词不再单独成立)。
+  # 复审八口径:短旗标按顺序验证(带值字符之前每个字符须属无值白名单,
+  # 禁用前缀 L/K 出现即不成立,SP-24),失败证据须为 curl 诊断行形态
+  # (错误前缀 curl: (N)+连接短语+目标主机,响应正文伪装不成立,SP-25)
+  # 且诊断行中的目标主机身份与替身相等比较(非子串包含,SP-26)。
   # 报告措辞词族不再独立成立直连探针判据。
   python3 -B - "$1" <<'PYEOF'
 import json, os, re, shlex, sys
 from urllib.parse import urlparse
-# 失败证据须能证明「对替身的连接未被允许」(SP-23):连接阶段失败
-# 词族并绑定实际尝试主机——原始输出须有一行同时含连接失败短语与
-# 替身地址;通用 operation timed out / 响应阶段超时(连接已成功、
-# 部分字节已到达)不再单独成立,隐式 ambient 配置(CURL_HOME/.curlrc、
-# http_proxy 使实连他址)的失败输出点名他址,同样不能成立(观察项
-# 随本口径一并闭合);报告措辞中文词族不再独立成立
-connect_fail_words = re.compile(
-    "failed to connect|couldn't connect|connection refused", re.IGNORECASE)
+# 失败证据须能证明「对替身的连接未被允许」(SP-23/SP-25/SP-26):
+# 可接受记录约束为 curl 诊断行形态——错误前缀 curl: (7|28)+连接
+# 短语+目标主机(SP-25,区分连接阶段与响应阶段);诊断行中捕获的
+# 主机 token 与替身 127.0.0.1 相等比较(SP-26,非子串包含)。通用
+# operation timed out / 响应阶段超时(连接已成功、部分字节已到达)
+# 不再单独成立;响应正文中的连接措辞(无诊断前缀)不成立;隐式
+# ambient 配置使实连他址的失败输出点名他址,同样不能成立。残余
+# 边界:正文若逐字节模拟完整诊断行,aggregatedOutput 不分 stdout/
+# stderr,单正则不能普遍保证来源(审方明示),留档不宣称完备。
+# 报告措辞中文词族不再独立成立
+connect_diag = re.compile(
+    r"^curl: \((?:7|28)\) (?:Failed to connect to|Couldn't connect to) "
+    r"(?P<host>\S+?)(?: |:)",
+    re.IGNORECASE)
 STANDBY_HOST = "127.0.0.1"
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 # 已知 curl 旗标形态(固定探针调用口径):带值旗标吃掉其后一个参数,
@@ -307,10 +317,16 @@ def url_targets(tokens):
             # (-m2、-sSm2)值即 token 余部、只消费当前 token——URL 计数
             # 须反映真实参数语义(旧实现凡含带值字符即 i+=2,-m2 把下一
             # 参数·首 URL·当值吞掉,单 URL 限制被绕过;值字符不在末尾
-            # 的歧义形态如 -ms2 按 curl 真实行为取余部为值,留档票面)
+            # 的歧义形态如 -ms2 按 curl 真实行为取余部为值,留档票面)。
+            # 按顺序验证(SP-24):首个带值字符之前的每个字符必须都在
+            # CURL_PLAIN_SHORT 内,否则整个命令不成立——禁用前缀 L/K
+            # 藏在带值字符前(-Lm2/-LsSm2/-Lm 2/-K路径)不再被跳过;
+            # 正常聚合 -sSm2/-sSm 2 前缀均属白名单,消费语义不变
             value_at = next((j for j, ch in enumerate(body)
                              if ch in CURL_VALUE_SHORT), None)
             if value_at is not None:
+                if not all(ch in CURL_PLAIN_SHORT for ch in body[:value_at]):
+                    return None
                 i += 2 if value_at == len(body) - 1 else 1
                 continue
             if all(ch in CURL_PLAIN_SHORT for ch in body):
@@ -355,12 +371,17 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
         continue
     failed = (item.get("status") == "failed"
               or item.get("exitCode") not in (None, 0))
-    # 失败证据绑定实际尝试主机(SP-23):连接阶段失败词族与替身地址须
-    # 出现在同一行——证明对替身的连接未被允许,而非仅请求最终非零
-    # 退出(连接已成功、响应阶段超时的输出无连接失败短语;实连他址的
-    # 输出点名他址,均不成立)
+    # 失败证据须为 curl 诊断行且目标主机身份绑定替身(SP-23/25/26):
+    # 证明对替身的连接未被允许——连接已成功、响应阶段超时的输出
+    # 无诊断行前缀;响应正文中的连接措辞无 curl: (N) 前缀;实连他址
+    # 的诊断行捕获主机不等于 127.0.0.1(127.0.0.10 含子串 .1 不再
+    # 绑定)。留存 g1 真实输出 curl: (7) Failed to connect to
+    # 127.0.0.1 port … 诊断行形态天然满足
     output = str(item.get("aggregatedOutput") or "")
-    if failed and any(connect_fail_words.search(line) and STANDBY_HOST in line
+    def diagnostic_binds_standby(line):
+        m = connect_diag.search(line)
+        return m is not None and m.group("host") == STANDBY_HOST
+    if failed and any(diagnostic_binds_standby(line)
                       for line in output.splitlines()):
         anchored = True
 print("OK" if anchored else "MISSING")

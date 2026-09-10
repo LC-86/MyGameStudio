@@ -2564,6 +2564,30 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
     - 真对照(direct、correct-userinfo、two-shell-layers、
       redirect-not-followed、separate-short-value-two-urls、
       successful-target)逐项不变。
+
+    反例背景(SP-24~SP-26,第八轮):SP-22 粘连值消费修改后,短 token
+    内先找任意带值字符即消费,未确认该字符前每个字符均属无值白名
+    单——`-Lm2`/`-LsSm2`/`-Lm 2` 禁用前缀 L 被 m 掩盖、`-K路径` 的
+    K 被路径中 m 误认为带值旗标,四例判 OK 假绿(SP-24;前三例为本
+    批粘连消费引入的新回归,`-Lm 2` 为同根既有遗漏);失败判定任意
+    行同时含连接短语与 `.1` 子串即成立,响应正文
+    `Failed to connect to 127.0.0.1` 冒充连接诊断(连接已成功、部分
+    字节到达后超时,SP-25),主机子串把 127.0.0.10 当 127.0.0.1
+    (SP-26)。精化要求(沿第八轮复审探针 new-probes-8.py 形态,真实
+    curl 执行封装,loopback 服务器记录命中佐证):
+    - 短旗标按顺序验证:首个带值字符之前的每个字符必须都在
+      CURL_PLAIN_SHORT 内,否则整个命令不成立;正常聚合 `-sSm2`/
+      `-sSm 2` 保持 OK;
+    - 失败证据约束为 curl 诊断行形态(错误前缀 `curl: (N)` + 连接
+      短语 + 目标主机),响应正文伪装不成立;正文逐字节模拟诊断
+      行的残余边界留档(aggregatedOutput 不分 stdout/stderr,单正则
+      不宣称来源完备);诊断行中的目标主机身份与替身相等比较,
+      非子串包含;
+    - 对照逐例不变——OK 组:direct、valid-aggregate-attached/
+      separate、terminator-url;MISSING 组:standalone-config/
+      redirect、invalid-short-value、proxy-user-short、
+      plain-body-then-timeout、response-body-completed、
+      ambient-proxy-dot2。
     """
 
     import shlex
@@ -3063,6 +3087,105 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
             0,
             'TARGET_SUCCESS\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n100    15  100    15    0     0  19659      0 --:--:-- --:--:-- --:--:-- 15000\n') + "\n", encoding="utf-8")
 
+        # 夹具 AX~BN(review8 SP-24~SP-26 六假例与 11 对照):实施代理在
+        # /tmp/mgs-r8-cursor 以真实 /usr/bin/curl 于本机 loopback 执行封装
+        # (仅 127.0.0.1/127.0.0.2/127.0.0.10 与本机端口)——预留端口 62661
+        # 绑定取号后关闭无监听,127.0.0.1:62662 本机 HTTP 服务器记录命中
+        # (/redirect 返回 302 且 Location 指向 62661;/diagnostic-body 与
+        # /plain-body 返回 200 后延迟剩余字节;/complete-diagnostic-body
+        # 完整返回);形态沿第八轮复审探针 new-probes-8.py:--connect-timeout
+        # .2 --max-time 2(校准后连接诊断先于通用超时发生),真实命令/退出
+        # 码/原始输出逐字入夹具。SP-24 三例 /redirect 于 .1 命中 302;
+        # SP-25 例 /diagnostic-body 200、stdout 正文 Failed to connect to
+        # 127.0.0.1、stderr Operation timed out … 31 out of 41 bytes
+        # received;SP-26 例子进程 http_proxy=http://127.0.0.10:62661、
+        # 失败输出点名 127.0.0.10。
+        g1_fixture_ax_events = tmp_path / "g1-events-ax.jsonl"
+        g1_fixture_ax_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -Lm2 http://127.0.0.1:62662/redirect",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_ay_events = tmp_path / "g1-events-ay.jsonl"
+        g1_fixture_ay_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -Lm 2 http://127.0.0.1:62662/redirect",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 204 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_az_events = tmp_path / "g1-events-az.jsonl"
+        g1_fixture_az_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -LsSm2 http://127.0.0.1:62662/redirect",
+            28,
+            'curl: (28) Failed to connect to 127.0.0.1 port 62661 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_ba_events = tmp_path / "g1-events-ba.jsonl"
+        g1_fixture_ba_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -K/tmp/mgs-r8-cursor/fixtures-real/resolve.curlrc http://127.0.0.1:62661/closed",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bb_events = tmp_path / "g1-events-bb.jsonl"
+        g1_fixture_bb_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 --max-time .2 http://127.0.0.1:62662/diagnostic-body",
+            28,
+            'Failed to connect to 127.0.0.1\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n 75    41   75    31    0     0    150      0 --:--:-- --:--:-- --:--:--   150\ncurl: (28) Operation timed out after 207 milliseconds with 31 out of 41 bytes received\n') + "\n", encoding="utf-8")
+        g1_fixture_bc_events = tmp_path / "g1-events-bc.jsonl"
+        g1_fixture_bc_events.write_text(command_event(
+            '/usr/bin/curl -q --connect-timeout .2 --max-time .5 http://127.0.0.1:62661/closed',
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.10 port 62661 after 201 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bd_events = tmp_path / "g1-events-bd.jsonl"
+        g1_fixture_bd_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 http://127.0.0.1:62661/closed",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_be_events = tmp_path / "g1-events-be.jsonl"
+        g1_fixture_be_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sSm2 http://127.0.0.1:62661/closed",
+            28,
+            'curl: (28) Failed to connect to 127.0.0.1 port 62661 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bf_events = tmp_path / "g1-events-bf.jsonl"
+        g1_fixture_bf_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sSm 2 http://127.0.0.1:62661/closed",
+            28,
+            'curl: (28) Failed to connect to 127.0.0.1 port 62661 after 201 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bg_events = tmp_path / "g1-events-bg.jsonl"
+        g1_fixture_bg_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -- http://127.0.0.1:62661/closed",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 204 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bh_events = tmp_path / "g1-events-bh.jsonl"
+        g1_fixture_bh_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -K /tmp/mgs-r8-cursor/fixtures-real/resolve.curlrc http://127.0.0.1:62661/closed",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bi_events = tmp_path / "g1-events-bi.jsonl"
+        g1_fixture_bi_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -L http://127.0.0.1:62662/redirect",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 207 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bj_events = tmp_path / "g1-events-bj.jsonl"
+        g1_fixture_bj_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -ms2 http://127.0.0.1:62661/closed",
+            2,
+            "curl: option -ms2: expected a proper numerical parameter\ncurl: try 'curl --help' or 'curl --manual' for more information\n") + "\n", encoding="utf-8")
+        g1_fixture_bk_events = tmp_path / "g1-events-bk.jsonl"
+        g1_fixture_bk_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -U demo:fixture http://127.0.0.1:62661/closed",
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 62661 after 201 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+        g1_fixture_bl_events = tmp_path / "g1-events-bl.jsonl"
+        g1_fixture_bl_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 --max-time .2 http://127.0.0.1:62662/plain-body",
+            28,
+            'TARGET_SUCCESS\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n 60    25   60    15    0     0     73      0 --:--:-- --:--:-- --:--:--    73\ncurl: (28) Operation timed out after 205 milliseconds with 15 out of 25 bytes received\n') + "\n", encoding="utf-8")
+        g1_fixture_bm_events = tmp_path / "g1-events-bm.jsonl"
+        g1_fixture_bm_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 http://127.0.0.1:62662/complete-diagnostic-body",
+            0,
+            'Failed to connect to 127.0.0.1\n  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n100    31  100    31    0     0  30214      0 --:--:-- --:--:-- --:--:-- 31000\n') + "\n", encoding="utf-8")
+        g1_fixture_bn_events = tmp_path / "g1-events-bn.jsonl"
+        g1_fixture_bn_events.write_text(command_event(
+            '/usr/bin/curl -q --connect-timeout .2 --max-time .5 http://127.0.0.1:62661/closed',
+            28,
+            '  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.2 port 62661 after 205 ms: Timeout was reached\n') + "\n", encoding="utf-8")
+
         # —— 0)旧判据段仍在时:审查/示例夹具必须 FAIL(修复前的假绿=红)——
 
         legacy_r1 = re.search(
@@ -3365,6 +3488,72 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
         check(curl_call(g1_fixture_aw_events) == "CURL:MISSING",
               "成功完成的直连(exit 0)不构成连接被拒,保持 MISSING"
               "(review7 对照)")
+
+        # —— 1g)review8 SP-24~SP-26:前缀按序验证/诊断来源/主机身份 ——
+        # SP-24:短 token 禁用前缀(L/K)藏在带值字符前不得被跳过——
+        # 首个带值字符之前每个字符须属无值白名单,否则整个命令不成立
+        check(curl_call(g1_fixture_ax_events) == "CURL:MISSING",
+              "-Lm2 跟随 302 重定向(.1 命中后转向预留端口、exit 28)不得"
+              "因粘连值消费跳过禁用前缀 L 而满足直连锚定(短旗标按顺序"
+              "验证,SP-24)")
+        check(curl_call(g1_fixture_ay_events) == "CURL:MISSING",
+              "-Lm 2 分离值形态同样不得因带值字符掩盖禁用前缀 L 而满足"
+              "直连锚定(短旗标按顺序验证,SP-24)")
+        check(curl_call(g1_fixture_az_events) == "CURL:MISSING",
+              "-LsSm2 聚合形态不得因 sSm 合法无值/带值字符掩盖禁用前缀"
+              " L 而满足直连锚定(短旗标按顺序验证,SP-24)")
+        check(curl_call(g1_fixture_ba_events) == "CURL:MISSING",
+              "-K路径 粘连配置旗标(路径含带值字符 m)不得因先找任意带值"
+              "字符而跳过禁用前缀 K 满足直连锚定(短旗标按顺序验证,"
+              "SP-24)")
+        # SP-25:响应正文伪装连接诊断——200 + 正文 Failed to connect to
+        # 127.0.0.1 + 响应阶段超时(31/41 字节已到达)不能证明连接未被
+        # 允许;可接受证据须为 curl 诊断行形态
+        check(curl_call(g1_fixture_bb_events) == "CURL:MISSING",
+              "响应正文含连接失败措辞后响应阶段超时(部分字节已到达)"
+              "不得判「替身直连被拒」(失败证据须区分连接阶段诊断与响"
+              "应正文,SP-25)")
+        # SP-26:主机子串冒充身份——失败诊断点名 127.0.0.10,不得因含
+        # 子串 .1 而绑定替身
+        check(curl_call(g1_fixture_bc_events) == "CURL:MISSING",
+              "子进程 http_proxy 使实连 127.0.0.10(诊断行点名 .10)不得"
+              "因主机子串包含 .1 而满足直连锚定(诊断行目标主机身份相"
+              "等比较,SP-26)")
+        # 对照:正常聚合/终结符/直连失败仍 OK;独立 -K/-L、歧义短值、
+        # -U、普通正文超时、完整诊断正文、ambient .2 保持 MISSING
+        check(curl_call(g1_fixture_bd_events) == "CURL:OK",
+              "单 URL 直连 127.0.0.1 真实失败的真对照仍必须锚定"
+              "(收窄不误伤,review8 对照)")
+        check(curl_call(g1_fixture_be_events) == "CURL:OK",
+              "正常聚合 -sSm2(前缀均属无值白名单、粘连值只消费当前"
+              " token)仍必须锚定(按序验证不误伤,review8 对照)")
+        check(curl_call(g1_fixture_bf_events) == "CURL:OK",
+              "正常聚合 -sSm 2 分离值仍必须锚定(按序验证不误伤,"
+              "review8 对照)")
+        check(curl_call(g1_fixture_bg_events) == "CURL:OK",
+              "-- 后单 URL 直连 127.0.0.1 真实失败仍必须锚定"
+              "(终结符形态,review8 对照)")
+        check(curl_call(g1_fixture_bh_events) == "CURL:MISSING",
+              "独立 -K 配置文件旗标保持 MISSING(配置来源保守拒绝,"
+              "review8 对照)")
+        check(curl_call(g1_fixture_bi_events) == "CURL:MISSING",
+              "独立 -L 重定向旗标保持 MISSING(重定向形态保守拒绝,"
+              "review8 对照)")
+        check(curl_call(g1_fixture_bj_events) == "CURL:MISSING",
+              "歧义短值 -ms2 保持 MISSING(curl 报无效超时、review8"
+              " 对照)")
+        check(curl_call(g1_fixture_bk_events) == "CURL:MISSING",
+              "-U 代理凭据短旗标保持 MISSING(代理域旗标宁严勿宽,"
+              "review8 对照)")
+        check(curl_call(g1_fixture_bl_events) == "CURL:MISSING",
+              "普通正文后响应阶段超时保持 MISSING(无连接诊断行,"
+              "review8 对照)")
+        check(curl_call(g1_fixture_bm_events) == "CURL:MISSING",
+              "相同诊断措辞正文完整成功(exit 0)保持 MISSING(未失败,"
+              "review8 对照)")
+        check(curl_call(g1_fixture_bn_events) == "CURL:MISSING",
+              "子进程 http_proxy 使实连 127.0.0.2(诊断行点名 .2)保持"
+              " MISSING(主机身份比较,review8 对照)")
 
         # —— 2)对仓内留存验收证据重跑锚定判据:仍 PASS,不因加固翻案 ——
 
