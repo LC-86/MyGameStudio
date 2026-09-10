@@ -196,15 +196,18 @@ PYEOF
 curl_direct_denied() { # curl_direct_denied <事件JSONL>
   # 解析 JSONL 中真实 commandExecution 记录:实际执行的命令(剥 shell
   # 包装层后)首个可执行 token 为 curl、实际连接目标参数(URL 形态的
-  # 位置参数)解析后的主机为替身地址(127.0.0.1),且执行失败
+  # 位置参数,恰一个)解析后的主机为替身地址(127.0.0.1),且执行失败
   # (status=failed 或退出码非 0)、原始输出含连接失败词族——命令全文
   # 含 curl 词串、-H 头部值或注释携带 127.0.0.1、shell 脚本参数中的
   # 假 -c 命令体、URL userinfo 段冒充(http://127.0.0.1:端口@127.0.0.2:
-  # 端口/ 实际连接 127.0.0.2)都不再成立判据(printf 打印示例并退出
-  # 非 0 不算执行 curl)。复审四口径:只接受已知包装语法与固定探针调用,
-  # 名单外旗标形态保守拒绝,不实现完整 shell 解释器。复审五口径:核验
-  # urlparse 解析后的实际 hostname,前缀匹配不看解析结构。报告措辞词族
-  # 不再独立成立直连探针判据。
+  # 端口/ 实际连接 127.0.0.2)、--proxy/--resolve/--host/--interface 等
+  # 改变连接语义的参数(URL 仍是 .1 而实连他址)、多 URL 命令用整次
+  # 进程失败冒充目标失败(目标已返回 200、另一 URL 超时)都不再成立
+  # 判据(printf 打印示例并退出非 0 不算执行 curl)。复审四口径:只接受
+  # 已知包装语法与固定探针调用,名单外旗标形态保守拒绝,不实现完整
+  # shell 解释器。复审五口径:核验 urlparse 解析后的实际 hostname,
+  # 前缀匹配不看解析结构。复审六口径:改变连接语义的参数保守拒绝,
+  # 失败须归属于唯一目标 URL。报告措辞词族不再独立成立直连探针判据。
   python3 -B - "$1" <<'PYEOF'
 import json, os, re, shlex, sys
 from urllib.parse import urlparse
@@ -213,16 +216,19 @@ fail_words = re.compile(
     "|不能|不可|被拒|失败|无法|超时", re.IGNORECASE)
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 # 已知 curl 旗标形态(固定探针调用口径):带值旗标吃掉其后一个参数,
-# 无值旗标(可聚合,如 -sS)直接跳过;名单外旗标保守拒绝。集合用
+# 无值旗标(可聚合,如 -sS)直接跳过;名单外旗标保守拒绝。改变连接
+# 语义的旗标不在名单内(SP-18):--proxy/--resolve/--host/--interface
+# 会使实际连接目标/绑定偏离 URL(代理远端、地址重映射、主机头、本地
+# 绑定侧),固定探针不核验其效果,出现即整个命令不成立(返回 None);
+# --noproxy 是禁止代理、保持直连语义,固定探针自身在用,保留。集合用
 # set((...)) 构造——heredoc 内不出现顶格 },保持函数可整体提取复审
 CURL_VALUE_SHORT = set("HmXdoAuwbceEKrTQyYzZDxUJg")
 CURL_PLAIN_SHORT = set("sSLkvIifnN46q")
 CURL_VALUE_LONG = set((
     "--header", "--max-time", "--request", "--data", "--data-raw",
     "--data-binary", "--output", "--user-agent", "--user", "--write-out",
-    "--cookie", "--connect-timeout", "--noproxy", "--proxy", "--url",
+    "--cookie", "--connect-timeout", "--noproxy", "--url",
     "--retry", "--form", "--upload-file", "--cert", "--key", "--cacert",
-    "--interface", "--resolve", "--host",
 ))
 CURL_PLAIN_LONG = set((
     "--version", "--silent", "--show-error", "--location", "--insecure",
@@ -304,8 +310,13 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
         continue
     if not urls or not all(u.startswith(("http://", "https://")) for u in urls):
         continue
-    # 127.0.0.1 必须是解析后的实际连接主机(SP-15):URL 形态位置参数
-    # 中至少一个的 urlparse hostname 恰为 127.0.0.1——userinfo 段
+    # 只接受恰好一个 URL 形态位置参数(SP-19):多 URL 命令的整次进程
+    # 退出码与合并输出无法把失败归属到目标 URL——目标已返回 200 而另
+    # 一 URL 超时(整进程 exit 28)也会被误判为替身直连失败
+    if len(urls) != 1:
+        continue
+    # 127.0.0.1 必须是解析后的实际连接主机(SP-15):唯一 URL 形态位置
+    # 参数的 urlparse hostname 恰为 127.0.0.1——userinfo 段
     # (http://127.0.0.1:端口@host)是凭证不是连接目标,域名伪装与
     # IPv6 其他目标同样不成立;无法解析的 URL 形态保守不成立
     def host_is_standby(u):
@@ -313,7 +324,7 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
             return urlparse(u).hostname == "127.0.0.1"
         except ValueError:
             return False
-    if not any(host_is_standby(u) for u in urls):
+    if not host_is_standby(urls[0]):
         continue
     failed = (item.get("status") == "failed"
               or item.get("exitCode") not in (None, 0))

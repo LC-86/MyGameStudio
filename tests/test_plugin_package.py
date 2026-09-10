@@ -2525,6 +2525,18 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
       归并),候选与期望的 normpath 不相等即不满足;
     - 既有等价类(OK)与拒绝形态(repeat-path/case-variant/
       space-prefix MISSING)、真对照(裸 curl 直连 127.0.0.1)不变。
+
+    反例背景(SP-18/SP-19,第六轮):SP-15 的 host 核验仍只看 URL 字符串
+    ——--proxy http://127.0.0.2:端口 / --resolve 127.0.0.1:端口:127.0.0.2
+    改变实际连接目标(URL 仍是 .1,curl 实连 .2 失败仍判 OK 假绿);多
+    URL 命令用整次进程退出码+合并输出判失败——目标 .1 已返回 200/
+    TARGET_SUCCESS 后另一 .2 超时使 exit 28,仍判「替身直连失败」。
+    精化要求(沿第六轮复审探针 curl-boundaries-6.py 的夹具形态,真实
+    curl 执行封装):改变连接语义的参数(--proxy/--resolve/--host/
+    --interface)保守拒绝,出现即整个命令不成立(--noproxy 禁止代理、
+    保持直连语义,固定探针自身在用,保留);只接受恰好一个 URL 形态
+    位置参数(多 URL 的整次进程失败无法归属到目标 URL);真对照
+    (direct、userinfo-correct-host)不因收窄误伤。
     """
 
     import shlex
@@ -2838,6 +2850,89 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
             7, "curl: (7) Failed to connect to ::1 port 65168 after 0 ms: "
                "Couldn't connect to server\n") + "\n", encoding="utf-8")
 
+        # 夹具 AC/AD/AE(review6 SP-18/SP-19 三假例逐字形态)与 AF/AG
+        # (真对照):实施代理在 /tmp/mgs-r6-02 以真实 /usr/bin/curl 于
+        # 本机 loopback 执行封装(仅 127.0.0.1/127.0.0.2 与本机端口)——
+        # 保留端口 62483 绑定取号后关闭无监听(连接超时 exit 28)、
+        # 127.0.0.1:62484 本机 HTTP 服务器记录 /_test/ping 命中并返回
+        # TARGET_SUCCESS;形态沿复审探针 curl-boundaries-6.py:
+        # --connect-timeout 1 --max-time 2,真实命令/退出码/原始输出
+        # 逐字入夹具。SP-19 例目标 URL 先返回 200(服务器已记录命中)、
+        # 另一 .2 URL 超时使整进程 exit 28
+        g1_fixture_ac_events = tmp_path / "g1-events-ac.jsonl"
+        g1_fixture_ac_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '' --connect-timeout 1 --max-time 2 "
+            "--proxy http://127.0.0.2:62483 http://127.0.0.1:62483/_test/ping",
+            28,
+            "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n"
+            "                                 Dload  Upload   Total   Spent    Left  Speed\n"
+            "\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n"
+            "  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\n"
+            "curl: (28) Failed to connect to 127.0.0.2 port 62483 after "
+            "1005 ms: Timeout was reached\n") + "\n", encoding="utf-8")
+        g1_fixture_ad_events = tmp_path / "g1-events-ad.jsonl"
+        g1_fixture_ad_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 --max-time 2 "
+            "--verbose --resolve 127.0.0.1:62483:127.0.0.2 "
+            "http://127.0.0.1:62483/_test/ping",
+            28,
+            "* Added 127.0.0.1:62483:127.0.0.2 to DNS cache\n"
+            "* Hostname 127.0.0.1 was found in DNS cache\n"
+            "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n"
+            "                                 Dload  Upload   Total   Spent    Left  Speed\n"
+            "\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 127.0.0.2:62483...\n"
+            "* ipv4 connect timeout after 1000ms, move on!\n"
+            "* Failed to connect to 127.0.0.1 port 62483 after 1005 ms: "
+            "Timeout was reached\n"
+            "\n"
+            "  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\n"
+            "* Closing connection\n"
+            "curl: (28) Failed to connect to 127.0.0.1 port 62483 after "
+            "1005 ms: Timeout was reached\n") + "\n", encoding="utf-8")
+        g1_fixture_ae_events = tmp_path / "g1-events-ae.jsonl"
+        g1_fixture_ae_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 --max-time 2 "
+            "http://127.0.0.1:62484/_test/ping http://127.0.0.2:62483/_test/ping",
+            28,
+            "TARGET_SUCCESS  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n"
+            "                                 Dload  Upload   Total   Spent    Left  Speed\n"
+            "\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n"
+            "100    14    0    14    0     0  15659      0 --:--:-- --:--:-- --:--:-- 14000\n"
+            "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n"
+            "                                 Dload  Upload   Total   Spent    Left  Speed\n"
+            "\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n"
+            "  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\n"
+            "curl: (28) Failed to connect to 127.0.0.2 port 62483 after "
+            "1005 ms: Timeout was reached\n") + "\n", encoding="utf-8")
+        g1_fixture_af_events = tmp_path / "g1-events-af.jsonl"
+        g1_fixture_af_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 --max-time 2 "
+            "http://127.0.0.1:62483/_test/ping",
+            7,
+            "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n"
+            "                                 Dload  Upload   Total   Spent    Left  Speed\n"
+            "\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n"
+            "curl: (7) Failed to connect to 127.0.0.1 port 62483 after 0 ms: "
+            "Couldn't connect to server\n") + "\n", encoding="utf-8")
+        g1_fixture_ag_events = tmp_path / "g1-events-ag.jsonl"
+        g1_fixture_ag_events.write_text(command_event(
+            "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 --max-time 2 "
+            "http://user:pw@127.0.0.1:62483/_test/ping",
+            7,
+            "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n"
+            "                                 Dload  Upload   Total   Spent    Left  Speed\n"
+            "\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n"
+            "  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n"
+            "curl: (7) Failed to connect to 127.0.0.1 port 62483 after 0 ms: "
+            "Couldn't connect to server\n") + "\n", encoding="utf-8")
+
         # —— 0)旧判据段仍在时:审查/示例夹具必须 FAIL(修复前的假绿=红)——
 
         legacy_r1 = re.search(
@@ -3034,6 +3129,31 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
         check(curl_call(g1_fixture_ab_events) == "CURL:MISSING",
               "IPv6 其他目标(::1 不是 127.0.0.1)的保守拒绝保持"
               " MISSING(不因 host 核验翻案)")
+
+        # —— 1e)review6 SP-18/SP-19:连接语义参数保守拒绝与单 URL 失败归属 ——
+        # SP-18:--proxy/--resolve/--host/--interface 改变实际连接语义
+        # (代理远端/地址重映射/主机头/本地绑定侧),固定探针口径保守拒绝,
+        # 出现即整个命令不成立;--noproxy 禁止代理、保持直连语义,保留
+        check(curl_call(g1_fixture_ac_events) == "CURL:MISSING",
+              "--proxy 指向 127.0.0.2(URL 仍为 127.0.0.1、curl 实连 .2 "
+              "超时 exit 28)不得满足直连锚定(连接语义参数保守拒绝,SP-18)")
+        check(curl_call(g1_fixture_ad_events) == "CURL:MISSING",
+              "--resolve 把 127.0.0.1:端口 重映射到 127.0.0.2(verbose 显示"
+              "实际尝试 .2)不得满足直连锚定(连接语义参数保守拒绝,SP-18)")
+        # SP-19:多 URL 命令的整次进程退出码+合并输出无法把失败归属到
+        # 目标 URL——目标已返回 200/TARGET_SUCCESS、另一 URL 超时使
+        # exit 28 也会被判「替身直连失败」;只接受恰好一个 URL 形态
+        # 位置参数
+        check(curl_call(g1_fixture_ae_events) == "CURL:MISSING",
+              "目标 URL 已返回 200/TARGET_SUCCESS、另一 URL 超时使整进程 "
+              "exit 28 的多 URL 命令不得判「替身直连失败」(单 URL 要求,"
+              "SP-19)")
+        check(curl_call(g1_fixture_af_events) == "CURL:OK",
+              "单 URL 直连 127.0.0.1 真实失败的真对照仍必须锚定"
+              "(收窄不误伤,SP-19 对照)")
+        check(curl_call(g1_fixture_ag_events) == "CURL:OK",
+              "userinfo 段携带凭证而解析后主机为 127.0.0.1 的真对照仍必须"
+              "锚定(host 核验与参数收窄均不误伤,SP-15 口径保持)")
 
         # —— 2)对仓内留存验收证据重跑锚定判据:仍 PASS,不因加固翻案 ——
 
