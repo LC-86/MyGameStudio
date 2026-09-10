@@ -1,0 +1,134 @@
+{
+  "rows": [
+    {
+      "id": "silent-Z-two-urls",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -Z http://127.0.0.1:65529/ok http://127.0.0.1:65528/closed",
+      "exit": 28,
+      "stdout": "PARALLEL_SUCCESS\n",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 65528 after 205 ms: Timeout was reached\n",
+      "target_server_hits": [
+        {
+          "path": "/ok",
+          "status": 200,
+          "host": "127.0.0.1:65529"
+        }
+      ],
+      "fixture": "/tmp/mgs-triage9-rerun/parallel-fixtures/silent-Z-two-urls.jsonl",
+      "expected": "MISSING",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "short_arity_guard": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "a3c43ce": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3e6ae30": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "silent-Z-one-url",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS -Z http://127.0.0.1:65528/closed",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 65528 after 205 ms: Timeout was reached\n",
+      "target_server_hits": [],
+      "fixture": "/tmp/mgs-triage9-rerun/parallel-fixtures/silent-Z-one-url.jsonl",
+      "expected": "OK",
+      "current": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "short_arity_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "a3c43ce": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3e6ae30": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "MISSING",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": true
+    },
+    {
+      "id": "silent-direct",
+      "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS http://127.0.0.1:65528/closed",
+      "exit": 28,
+      "stdout": "",
+      "stderr": "curl: (28) Failed to connect to 127.0.0.1 port 65528 after 205 ms: Timeout was reached\n",
+      "target_server_hits": [],
+      "fixture": "/tmp/mgs-triage9-rerun/parallel-fixtures/silent-direct.jsonl",
+      "expected": "OK",
+      "current": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "short_arity_guard": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "restored": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "a3c43ce": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3e6ae30": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "3f3031a": {
+        "anchor": "OK",
+        "exit": 0,
+        "stderr": ""
+      },
+      "observed_bug": false
+    }
+  ],
+  "all_task_servers_closed": true
+}

@@ -1,0 +1,11 @@
+--- current
++++ prefix
+@@ -325,8 +325,6 @@
+             value_at = next((j for j, ch in enumerate(body)
+                              if ch in CURL_VALUE_SHORT), None)
+             if value_at is not None:
+-                if not all(ch in CURL_PLAIN_SHORT for ch in body[:value_at]):
+-                    return None
+                 i += 2 if value_at == len(body) - 1 else 1
+                 continue
+             if all(ch in CURL_PLAIN_SHORT for ch in body):

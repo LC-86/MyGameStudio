@@ -1,0 +1,51 @@
+# 第九轮复审发现 triage 再现核验（2026-09-10）
+
+主审会话在收到 review-9.md 后、开票前，独立复跑三项新发现的原审探针。
+环境：真实仓库 HEAD=00229067（相对产品目标 e3741c6 仅多 review-9-handoff.md，
+git status 除本批次新目录外干净）；复跑全部在本任务 /tmp/mgs-triage9-rerun/，
+真实仓库零改动、零远端写入。
+
+## 依赖身份核实（复跑前）
+
+- 审方 repo/ 的 run.sh SHA-256=55e7243bbfc9a3a8385a5a578a78b9866dc3b3855211dd3b4aece970a8b412e1
+  == git show e3741c6:acceptance/18-complete-package-acceptance/run.sh（目标版本，与报告第 92 行声明一致）。
+- 复跑用克隆：git clone --no-hardlinks --no-checkout 真实仓库；repo/ 放 e3741c6 的 run.sh，
+  repro/ 供探针 `git show 3f3031a:…`（before_batch 列）。
+- 探针适配仅 W 常量一处（主探针与补充探针分别替换），用例、判据、守卫零改动。
+
+## 复跑结果一：new-probes-9.py（19 例，current=e3741c6 函数）
+
+observed_bug 共 7 行，与审方逐行一致：
+
+| 用例 | 组 | 期望 | current | observed_bug |
+| --- | --- | --- | --- | --- |
+| **no-value-g-two-urls（SP-27 假绿）** | short-arity | MISSING | OK | true |
+| **no-value-J-two-urls（SP-27 假绿）** | short-arity | MISSING | OK | true |
+| **no-value-g-single-url（SP-27 反向假阴性）** | short-arity | OK | MISSING | true |
+| no-value-Z-two-urls | short-arity | MISSING | MISSING | false（裸 -Z 诊断行前有进度文字,行首正则拒,非假绿——审方校准） |
+| **url-glob-two-ports（SP-29）** | url-glob | MISSING | OK | true |
+| **url-glob-after-terminator（SP-29）** | url-glob | MISSING | OK | true |
+| **retry-stop-after-503（SP-28）** | retry | MISSING | OK | true |
+| full-diagnostic-body | accepted-output-origin-limit | MISSING | OK | true（SP-25 残余边界复现,已接受不另编号） |
+| direct / legitimate-aggregate / retry-closed-control | control | OK | OK | false |
+| 其余对照 9 例 | control | MISSING | MISSING | false |
+
+守卫因果与审方一致：short_guard 修 g/J 两例+反向例；retry_guard 拒 SP-28 例（同时拒
+retry-closed-control 真对照,审方已披露该取舍）;glob_guard 拒两例花括号。
+
+## 复跑结果二：parallel-curl-supplement.py（3 例）
+
+| 用例 | 期望 | current | observed_bug |
+| --- | --- | --- | --- |
+| **silent-Z-two-urls（-sS -Z,SP-27 假绿确认）** | MISSING | OK | true |
+| **silent-Z-one-url（反向假阴性）** | OK | MISSING | true |
+| silent-direct（对照） | OK | OK | false |
+
+## 结论
+
+三项 P2 全部再现成立（SP-27 含假绿与反向假阴性两向、SP-28、SP-29），无降级、
+无误报;SP-25 残余边界复现行归已接受限制不重开。三项同属 run.sh
+`curl_direct_denied` 一个函数域,按批次惯例合一票。三项均在 3f3031a 上同样
+成立（审方 before_batch 列）,系既有遗漏非上批引入。
+
+复跑产物：new-probes/ 与 parallel-supplement/ 下 triage-rerun 三件套已并入。

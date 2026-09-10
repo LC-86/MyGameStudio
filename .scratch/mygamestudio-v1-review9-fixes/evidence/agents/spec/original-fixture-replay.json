@@ -1,0 +1,167 @@
+{
+  "total": 17,
+  "before_false_positives": [
+    "aggregate-redirect-attached",
+    "aggregate-redirect-sSm2",
+    "aggregate-redirect-separate",
+    "ambient-proxy-dot10",
+    "attached-config",
+    "response-body-then-timeout"
+  ],
+  "current_observed_bug_count": 0,
+  "rows": [
+    {
+      "id": "aggregate-redirect-attached",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/aggregate-redirect-attached.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "aggregate-redirect-sSm2",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/aggregate-redirect-sSm2.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "aggregate-redirect-separate",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/aggregate-redirect-separate.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "ambient-proxy-dot10",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/ambient-proxy-dot10.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "ambient-proxy-dot2",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/ambient-proxy-dot2.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "MISSING",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "attached-config",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/attached-config.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "direct",
+      "expected": "OK",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/direct.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "OK",
+      "observed_bug": false
+    },
+    {
+      "id": "invalid-short-value",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/invalid-short-value.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "MISSING",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "plain-body-then-timeout",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/plain-body-then-timeout.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "MISSING",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "proxy-user-short",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/proxy-user-short.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "MISSING",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "response-body-completed",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/response-body-completed.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "MISSING",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "response-body-then-timeout",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/response-body-then-timeout.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "standalone-config",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/standalone-config.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "MISSING",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "standalone-redirect",
+      "expected": "MISSING",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/standalone-redirect.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "MISSING",
+      "e3741c6": "MISSING",
+      "observed_bug": false
+    },
+    {
+      "id": "terminator-url",
+      "expected": "OK",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/terminator-url.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "OK",
+      "observed_bug": false
+    },
+    {
+      "id": "valid-aggregate-attached",
+      "expected": "OK",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/valid-aggregate-attached.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "OK",
+      "observed_bug": false
+    },
+    {
+      "id": "valid-aggregate-separate",
+      "expected": "OK",
+      "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/fixtures/valid-aggregate-separate.jsonl",
+      "validation_mode": "archived-real-curl-fixture-replay-not-new-network",
+      "3f3031a": "OK",
+      "e3741c6": "OK",
+      "observed_bug": false
+    }
+  ]
+}

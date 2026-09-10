@@ -1,0 +1,20 @@
+--- current-extracted
++++ glob
+@@ -105,6 +105,8 @@
+     while i < len(args):
+         tok = args[i]
+         if tok == "--":
++            if any(any(ch in arg for ch in "{}[]") for arg in args[i + 1:]):
++                return None
+             urls.extend(args[i + 1:])
+             break
+         if tok.startswith("--"):
+@@ -137,6 +139,8 @@
+             if all(ch in CURL_PLAIN_SHORT for ch in body):
+                 i += 1
+                 continue
++            return None
++        if any(ch in tok for ch in "{}[]"):
+             return None
+         urls.append(tok)
+         i += 1

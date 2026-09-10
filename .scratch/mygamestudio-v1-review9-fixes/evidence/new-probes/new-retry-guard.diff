@@ -1,0 +1,11 @@
+--- current-extracted
++++ retry
+@@ -62,7 +62,7 @@
+     "--header", "--max-time", "--request", "--data", "--data-raw",
+     "--data-binary", "--output", "--user-agent", "--user", "--write-out",
+     "--cookie", "--connect-timeout", "--noproxy", "--url",
+-    "--retry", "--form", "--upload-file", "--cert", "--key", "--cacert",
++    "--form", "--upload-file", "--cert", "--key", "--cacert",
+ ))
+ CURL_PLAIN_LONG = set((
+     "--version", "--silent", "--show-error", "--insecure",

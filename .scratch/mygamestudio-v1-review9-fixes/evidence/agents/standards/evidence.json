@@ -1,0 +1,539 @@
+{
+  "head": "0029067ebfc55b3977dd813c066e78f400ba1ec8",
+  "status": "",
+  "diff_command": "git diff 3f3031a..e3741c6",
+  "commits": [
+    "1512d110e927029db2facdf26a020710779d7934",
+    "91991d977d55385555c322e6e0950b1d15b0e092",
+    "e3741c61527e07c8c6e06a5f8063021457f80d35"
+  ],
+  "head_extra_files": [
+    ".scratch/mygamestudio-v1-review8-fixes/evidence/review-9-handoff.md"
+  ],
+  "plugin_dist_changes": [],
+  "driver_refresh": [
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-environment.txt",
+      "changed_fields": [
+        {
+          "path": "date",
+          "accepted_dynamic_field": true,
+          "category": "date"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-identity-deny.json",
+      "changed_fields": [
+        {
+          "path": "/reason",
+          "accepted_dynamic_field": true,
+          "category": "reason"
+        },
+        {
+          "path": "/token_fp",
+          "accepted_dynamic_field": true,
+          "category": "token_fp"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-lock-by-i2.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-occupancy.json",
+      "changed_fields": [
+        {
+          "path": "/reason",
+          "accepted_dynamic_field": true,
+          "category": "reason"
+        },
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-plugin-install.json",
+      "changed_fields": [
+        {
+          "path": "/installedPath",
+          "accepted_dynamic_field": true,
+          "category": "installedPath"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-policy-corrupt.json",
+      "changed_fields": [
+        {
+          "path": "/token_fp",
+          "accepted_dynamic_field": true,
+          "category": "token_fp"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-policy-restored.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-publish-drafts.json",
+      "changed_fields": [
+        {
+          "path": "/results/0/draft",
+          "accepted_dynamic_field": true,
+          "category": "draft"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-reclaim-active.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-comment.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-offline.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/note/draft",
+          "accepted_dynamic_field": true,
+          "category": "draft"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-read.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-task-deny.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-remote-update.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-role-deny.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-scope.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-set-remote.json",
+      "changed_fields": [
+        {
+          "path": "/remote/github/api_base",
+          "accepted_dynamic_field": true,
+          "category": "api_base"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-status-final.json",
+      "changed_fields": [
+        {
+          "path": "/instances/0/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/instances/1/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-symlink.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-task-deny.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/driver-write-allow.json",
+      "changed_fields": [
+        {
+          "path": "/instance_id",
+          "accepted_dynamic_field": true,
+          "category": "instance_id"
+        },
+        {
+          "path": "/ts",
+          "accepted_dynamic_field": true,
+          "category": "ts"
+        }
+      ]
+    }
+  ],
+  "driver_semantic_mismatches": [],
+  "driver_refresh_count": 21,
+  "driver_instance_id_bijection_valid": true,
+  "retained_five_flows": [
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/r1-events.jsonl",
+      "sha256": "1768de3ceffd2f8670516f9d20b09f2705d1920cec249d781e19c325daa41344",
+      "equals_baseline_3f3031a": true,
+      "equals_historical_a3c43ce": true
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/g1-events.jsonl",
+      "sha256": "726b270c48c3b3c46caabf87c415876a1a9d1394692195ff0da5c0f56345ac92",
+      "equals_baseline_3f3031a": true,
+      "equals_historical_a3c43ce": true
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/p1-events.jsonl",
+      "sha256": "aa9c14d40b3a40829ae215eb92edb4ae7a2b24e900c1279d1d1afb060cb27ed0",
+      "equals_baseline_3f3031a": true,
+      "equals_historical_a3c43ce": true
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/p2-events.jsonl",
+      "sha256": "70ad90c9e334194fba801397b3a63cae3483255bbb39ed67e9d95ef708781e17",
+      "equals_baseline_3f3031a": true,
+      "equals_historical_a3c43ce": true
+    },
+    {
+      "file": "acceptance/18-complete-package-acceptance/evidence/r1b-events.jsonl",
+      "sha256": "b56b92ea28f068818f46dea34338a71f46e7fb610499ff0b0e638cdea059b55d",
+      "equals_baseline_3f3031a": true,
+      "equals_historical_a3c43ce": true
+    }
+  ],
+  "archive_count": 132,
+  "archive_since_triage_changes": [],
+  "archive_parse_errors": [],
+  "archive_json_files_parsed": 29,
+  "archive_jsonl_files_parsed": 62,
+  "archive_hashes": [
+    {
+      "file": ".scratch/mygamestudio-v1-review8-fixes/evidence/review-8.md",
+      "sha256": "11d9af5064428d39d9cbc6ded08708ba3ab799f77473bf5f6e94ad55a01a1a24",
+      "bytes": 18577,
+      "matches_manifest": true
+    },
+    {
+      "file": ".scratch/mygamestudio-v1-review8-fixes/evidence/verification-summary-8.json",
+      "sha256": "8f010ebdbb07c8ed54db571a426d4c3aade41824bcffc0f22b0f5500e4cb3693",
+      "bytes": 33121,
+      "matches_manifest": true
+    },
+    {
+      "file": ".scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/new-probes-8.py",
+      "sha256": "32738b5a58775cd4f1745b34f552a3632eb20c0f8099a31c35f22d985121d411",
+      "bytes": 6011,
+      "matches_manifest": true
+    },
+    {
+      "file": ".scratch/mygamestudio-v1-review8-fixes/evidence/new-probes/new-probes-8.json",
+      "sha256": "3b221ee8ea8cc31d53a78bbb837c5172beb893d66ce4c27c9177e31aa69a42bf",
+      "bytes": 31844,
+      "matches_manifest": true
+    },
+    {
+      "file": ".scratch/mygamestudio-v1-review8-fixes/evidence/mutation-results-8.json",
+      "sha256": "b8e19e153bca2ba61c8998826a4bd2e7219556445ee9ca71bf516f348c784394",
+      "bytes": 4699,
+      "matches_manifest": true
+    },
+    {
+      "file": ".scratch/mygamestudio-v1-review8-fixes/evidence/curl-adversarial-7.json",
+      "sha256": "1b4b428018a83702044638dd1333b631da7625147ed83abb712071f070e11eac",
+      "bytes": 26085,
+      "matches_manifest": true
+    }
+  ],
+  "archived_new_probe_fixture_consistency": [
+    {
+      "id": "direct",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "aggregate-redirect-attached",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "aggregate-redirect-separate",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "aggregate-redirect-sSm2",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "attached-config",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "standalone-config",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "standalone-redirect",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "valid-aggregate-attached",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "valid-aggregate-separate",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "terminator-url",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "invalid-short-value",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "proxy-user-short",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "response-body-then-timeout",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "plain-body-then-timeout",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "response-body-completed",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "ambient-proxy-dot10",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    },
+    {
+      "id": "ambient-proxy-dot2",
+      "command_exit_output_equal": true,
+      "aggregation_matches_channels": true,
+      "triage_matches_matrix": true,
+      "triage_matches_expectation": true
+    }
+  ],
+  "archive_summary_agrees": {
+    "standards_hard_zero": true,
+    "spec_three": true,
+    "new_probe_total": true,
+    "unexpected_six": true,
+    "prior_closeout_false": true
+  },
+  "dist_hashes": [
+    {
+      "file": "dist/mygamestudio-0.18.0.tar.gz",
+      "sha256": "3c44e2c0aaa0f02571fc394b30dd4ed34a9d0833c554531856b6a04f47c37ea7",
+      "matches_manifest": true
+    },
+    {
+      "file": "dist/package-manifest.txt",
+      "sha256": "9711a8a4c354ea2abfe00074cbf087b2591c69723d357bc6996999329277895f",
+      "matches_manifest": true
+    }
+  ],
+  "tar_source_mismatches": [],
+  "tar_file_count": 79,
+  "tar_pax_count": 0,
+  "tar_source_file_set_equal": true,
+  "standards": {
+    "hard_violations": 0,
+    "reportable_smells": 0,
+    "findings": [],
+    "worst_priority": null
+  },
+  "limits": [
+    "Read-only static evidence audit; no suite, network probe, install, or acceptance run.sh executed.",
+    "Historical JSON consistency and hashes do not independently prove historical execution ordering or implementation-time provenance.",
+    "Review8 original capture and triage capture are distinct runs: fixture bytes compared only to corresponding original rows.",
+    "Parent reviewer is responsible for fresh regressions, causal mutation and new adversarial experiments."
+  ],
+  "boundary_end": {
+    "head": "0029067ebfc55b3977dd813c066e78f400ba1ec8",
+    "status": ""
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "axis": "Spec",
+  "status": "repair_verified_three_existing_spec_defects_confirmed",
+  "product_target": "e3741c6",
+  "actual_head": "0029067ebfc55b3977dd813c066e78f400ba1ec8",
+  "real_repo_status_porcelain": "",
+  "confirmed_findings_count": 3,
+  "confirmed_findings": [
+    {
+      "id": "SP-27",
+      "priority": "P2",
+      "title": "无值短旗标错误消费URL",
+      "source_file": "acceptance/18-complete-package-acceptance/run.sh",
+      "source_lines": [
+        254,
+        330
+      ],
+      "contract_file": ".scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md",
+      "contract_line": 15,
+      "contract_quote": "URL 计数须反映真实参数语义",
+      "secondary_contract": ".scratch/mygamestudio-v1-review6-fixes/issues/02-curl-anchor-connection-params-and-single-url.md:14",
+      "real_evidence_ids": [
+        "no-value-g-two-urls",
+        "no-value-J-two-urls",
+        "no-value-g-single-url",
+        "silent-Z-two-urls",
+        "silent-Z-one-url"
+      ],
+      "observed": "g/J and -sS -Z two URLs: HTTP200 response/body obtained, final real curl28 connection diagnostic; anchor OK. g and -sS -Z single-URL real connection failures yield false negative MISSING.",
+      "causality": "For g/J, initial short_guard makes two-URL cases MISSING and single-URL case OK; corrected supplemental short_arity_guard also fixes Z. Restoring current restores wrong outcomes.",
+      "origin": "Existing in 3f3031a for all confirmed shapes; supplementary -sS -Z rows also reproduced with a3c43ce and 3e6ae30.",
+      "qualification": "The initial bare -Z two-URL case is MISSING because progress text prefixes the diagnostic. Supplemental -sS -Z yields a line-start diagnostic and confirms the false positive; the initial guard still contained Z, while the supplemental guard removes g/J/Z from value flags."
+    },
+    {
+      "id": "SP-28",
+      "priority": "P2",
+      "title": "重试末次失败冒充未曾连接",
+      "source_file": "acceptance/18-complete-package-acceptance/run.sh",
+      "source_lines": [
+        260,
+        384
+      ],
+      "contract_file": ".scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md",
+      "contract_line": 16,
+      "contract_quote": "失败证据须能证明对替身的连接未被允许",
+      "real_evidence_ids": [
+        "retry-stop-after-503"
+      ],
+      "observed": "HTTP503 with complete response body, then server closes; retry gets real stderr curl7 for same host; anchor OK",
+      "causality": "retry_guard MISSING; restored OK",
+      "origin": "existing in 3f3031a; not new in this batch",
+      "qualification": "Rejecting retry also rejects retry-closed-control, a real connection-failure positive control; causal localization only, not a complete proposed fix."
+    },
+    {
+      "id": "SP-29",
+      "priority": "P2",
+      "title": "单URL参数展开多请求",
+      "source_file": "acceptance/18-complete-package-acceptance/run.sh",
+      "source_lines": [
+        359,
+        367,
+        384
+      ],
+      "contract_file": ".scratch/mygamestudio-v1-review7-fixes/issues/01-curl-anchor-connection-proof-completion.md",
+      "contract_line": 16,
+      "contract_quote": "失败证据须能证明对替身的连接未被允许",
+      "secondary_contract": ".scratch/mygamestudio-v1-review6-fixes/issues/02-curl-anchor-connection-params-and-single-url.md:14",
+      "real_evidence_ids": [
+        "url-glob-two-ports",
+        "url-glob-after-terminator"
+      ],
+      "observed": "One quoted URL positional argument contains a port list; curl expands it to success HTTP200 then connection failure; anchor OK with and without --",
+      "causality": "glob_guard MISSING; restored OK",
+      "origin": "existing in 3f3031a; not new in this batch",
+      "qualification": "Conservative glob guard is scoped causal control, not a complete URL parser."
+    }
+  ],
+  "unverified_candidates_count": 0,
+  "repair_checks": {
+    "SP-24": "verified_by_archived_real_curl_fixture_replay_and_source",
+    "SP-25": "verified_by_archived_real_curl_fixture_replay_and_source_accepted_residual_retained",
+    "SP-26": "verified_by_archived_real_curl_fixture_replay_and_source"
+  },
+  "archived_fixture_replay": {
+    "total": 17,
+    "before_false_positive_count": 6,
+    "current_observed_bug_count": 0,
+    "evidence": "/tmp/mgs-review9-3hpb5uhl/agents/spec/original-fixture-replay.json",
+    "fresh_network_run": false
+  },
+  "synthetic_probes": {
+    "total": 37,
+    "matched_expected": 37,
+    "evidence": "/tmp/mgs-review9-3hpb5uhl/agents/spec/synthetic-results.json",
+    "not_a_new_real_curl_validation": true
+  },
+  "limits": [
+    "No fresh curl/network run by this axis; the root performed the new real curl processes",
+    "No suites/drivers/installation by this axis",
+    "No product/acceptance model turn or acceptance run.sh startup by this axis",
+    "Three confirmed issues are acceptance-predicate defects, not evidence of a runtime permission breach",
+    "Retry causal guard also rejects a legitimate retry connection-failure control; it is not claimed as a complete fix"
+  ],
+  "v1_closure": "blocked_by_SP27_SP28_SP29",
+  "artifacts": [
+    "spec-review.md",
+    "original-fixture-replay.json",
+    "synthetic-results.json",
+    "candidate-origin.json",
+    "curl-option-reference.txt",
+    "parent-evidence-audit.json",
+    "parallel-evidence-audit.json"
+  ],
+  "new_batch_regressions_found": 0,
+  "real_evidence_audit": {
+    "source": "/tmp/mgs-review9-3hpb5uhl/new-probes-9.json",
+    "script": "/tmp/mgs-review9-3hpb5uhl/new-probes-9.py",
+    "log": "/tmp/mgs-review9-3hpb5uhl/logs/new-probes-9.log",
+    "rows": 19,
+    "all_fixture_and_log_checks_pass": true,
+    "source_hash_matches_e3741c6": true,
+    "before_batch_is": "3f3031a",
+    "fresh_network_executor": "root",
+    "independent_axis_role": "static candidate discovery plus read-only audit of real process evidence",
+    "audit_file": "/tmp/mgs-review9-3hpb5uhl/agents/spec/parent-evidence-audit.json",
+    "supplement": {
+      "source": "/tmp/mgs-review9-3hpb5uhl/parallel-curl-supplement.json",
+      "script": "/tmp/mgs-review9-3hpb5uhl/parallel-curl-supplement.py",
+      "rows": 3,
+      "fixture_checks_pass": true,
+      "audit_file": "/tmp/mgs-review9-3hpb5uhl/agents/spec/parallel-evidence-audit.json",
+      "fresh_network_executor": "root"
+    }
+  },
+  "accepted_residuals": [
+    {
+      "id": "full-diagnostic-body",
+      "raw_observed_bug": true,
+      "counted_as_new_finding": false,
+      "contract": ".scratch/mygamestudio-v1-review8-fixes/issues/01-curl-anchor-prefix-diagnostic-host.md:30,48"
+    }
+  ],
+  "repair_mutation_evidence": {
+    "source": "/tmp/mgs-review9-3hpb5uhl/mutation-results-9.json",
+    "read_only_checked": true,
+    "counts": {
+      "baseline": 6,
+      "prefix": 4,
+      "diagnostic_form": 1,
+      "host": 1,
+      "combined_old": 2
+    },
+    "all_restored_green": true,
+    "byte_restored": true,
+    "initial_diagnostic_calibration": "Removing only curl error prefix causes zero failing assertions: SP25 fixture ends at hostname. Relaxing diagnostic shape to allow hostname at end of line as well gives one failing assertion while host equality remains. Do not claim prefix removal alone gave one red."
+  }
+}
