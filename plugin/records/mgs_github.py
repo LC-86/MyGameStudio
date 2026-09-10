@@ -768,23 +768,59 @@ class GithubBackend:
                 pass
         return pending
 
-    def _clear_pending_index(self, identity: str, result_markdown: str) -> None:
-        """结果索引补齐后清除登记。只清除**经身份核验属于当前请求**的
-        登记(SP-11):碰撞同目录可能是另一请求的登记,不误删;不可读/
-        形态不完整(含回执不完整,review5-01)的登记无法归属,同样保守
-        保留。当前与旧(平铺)两布局一并清除——迁移中途失败留下的旧文件
-        不会让已清除的登记复活。残留与清除失败(极端 I/O 故障)都保持
-        沉默:只会让后续读前查询失败的重试多保持一次待恢复或一次损坏
-        披露(保守方向,不会重复发布),远端可读时按远端权威修正。"""
+    def _pending_receipt_matches_request(self, pending: object,
+                                         identity: str,
+                                         result_markdown: str) -> bool:
+        """单份登记内容是否经**完整身份核验与回执核验**归属当前请求
+        (审查修复票 review6-01/SP-17):{op,args,repo} 逐键等于当前请求
+        _pending_identity() 的对应值(逐键相等蕴含身份字段形态完整),
+        且回执字段完整(comment_id 非 None、ref 为非空字符串)。形态不
+        完整、身份不一致(他人登记)或回执缺失都不归属——与读入路径
+        (_load_pending_index)同一核验粒度;清除路径据此对每个待删除
+        文件独立判定,不由任一路径的核验代劳另一路径。"""
 
-        paths = [self._pending_index_file(identity, result_markdown),
-                 self._legacy_pending_index_file(identity, result_markdown)]
-        if paths[0] is None:
-            return
-        pending = self._load_pending_index(identity, result_markdown)
-        if pending is None or pending.get("corrupt"):
-            return
-        for path in paths:
+        if not isinstance(pending, dict):
+            return False
+        if {key: pending.get(key) for key in ("op", "args", "repo")} \
+                != self._pending_identity(identity, result_markdown):
+            return False
+        ref = pending.get("ref")
+        return pending.get("comment_id") is not None \
+            and isinstance(ref, str) and bool(ref)
+
+    def _clear_pending_index(self, identity: str, result_markdown: str) -> None:
+        """结果索引补齐后清除登记。**每个待删除文件分别通过自身完整身份
+        核验**(审查修复票 review6-01/SP-17):读该文件自己的登记 JSON,
+        {op,args,repo} 逐键等于当前请求 _pending_identity() 的对应值且回执
+        字段(comment_id/ref)完整才 unlink——清除路径的核验粒度与读入
+        路径(_load_pending_index)一致。此前只凭一次读入核验(优先当前
+        布局)就对当前与旧(平铺)两路径无条件 unlink,会误删旧平铺路径
+        上**另一完整身份**的健康登记(自然升级序列:旧版本给 B 留平铺
+        登记 → 升级后碰撞对 A 写新布局登记 → A 补齐清理误删 B 的登记 →
+        B 重试读前失败失去登记被当作全新发布而重复)。不匹配(他人登记,
+        SP-11 不误删)/不可读/JSON 无效/形态不完整(含回执不完整,
+        review5-01)一律保守保留;若一布局损坏而另一布局是同身份健康
+        登记,按各自内容独立判定(健康侧清除、损坏侧保持原位由人工按
+        哨兵处置)。
+
+        同身份双布局残留(迁移中途失败留下的旧副本)在逐路径核验下两处
+        都属当前请求、都清除——「已清除的登记不因迁移残留复活」语义保持
+        (review5-01)。残留与清除失败(极端 I/O 故障)都保持沉默:只会
+        让后续读前查询失败的重试多保持一次待恢复或一次损坏披露(保守
+        方向,不会重复发布),远端可读时按远端权威修正。"""
+
+        for path in (self._pending_index_file(identity, result_markdown),
+                     self._legacy_pending_index_file(identity,
+                                                     result_markdown)):
+            if path is None:
+                continue
+            try:
+                pending = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue  # 不可读/JSON 无效:保守保留
+            if not self._pending_receipt_matches_request(pending, identity,
+                                                         result_markdown):
+                continue
             try:
                 path.unlink(missing_ok=True)
             except OSError:
