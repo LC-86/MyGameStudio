@@ -604,31 +604,61 @@ class GithubBackend:
     def _pending_identity(self, identity: str, result_markdown: str) -> dict:
         """待补索引登记的**完整内容身份**:操作+参数+**目标仓库**(审查
         修复票 review4-01/SP-11,与草稿身份及登记文件名的摘要构造同一
-        形态)。登记文件内容即保留该全量身份;文件名的 8 hex 只是短摘要
-        (确定性可碰撞),登记归属以文件内的完整身份核对为准。"""
+        形态)。登记文件内容即保留该全量身份;登记归属以文件内的完整
+        身份核对为准(文件名摘要只是寻址,见 _pending_index_file)。"""
 
         return {"op": "append_result",
                 "args": {"identity": identity,
                          "result_markdown": result_markdown},
                 "repo": _repo_str(self.repo)}
 
+    def _pending_identity_digest(self, identity: str,
+                                 result_markdown: str) -> str:
+        """完整内容身份的 SHA-256 **全长**摘要(_pending_identity 的唯一
+        摘要形态;前 8 hex 与草稿身份及既有登记文件名的短摘要逐字节
+        一致,review5-01 抽出共用)。"""
+
+        return hashlib.sha256(json.dumps(
+            self._pending_identity(identity, result_markdown),
+            ensure_ascii=False, sort_keys=True)
+            .encode("utf-8")).hexdigest()
+
     def _pending_index_file(self, identity: str,
                             result_markdown: str) -> Path | None:
-        """待补索引登记文件路径(完整内容身份哈希的**短摘要** 8 hex 作
-        文件名,与草稿身份同形态——review2-02/SP-3 的仓库身份纪律在此
-        同用:同一缓存目录服务多个仓库时各仓各的登记,互不顶替)。短
-        摘要可碰撞,读入/清除时以登记内的完整身份核对归属(SP-11)。
+        """待补索引登记文件路径(当前请求的**完整身份全长哈希**作文件名,
+        审查修复票 review5-01/SP-14):布局为 pending-index/
+        append-result-{safe}-{短摘要 8 hex}/{完整身份全长哈希}.json。
+        短摘要仍与草稿身份的摘要构造同一形态(review2-02/SP-3 的仓库
+        身份纪律:同一缓存目录服务多个仓库时各仓各的登记),但只作
+        **目录**名;文件名用完整身份全长哈希——确定性碰撞对(同一短
+        摘要)同目录不同文件,不同完整身份的登记**共存**、互不覆盖,
+        任一请求的重试都能找回自己的登记(此前平铺短摘要文件名在碰撞
+        对先后 partial 时后者覆盖前者,前者的重试失去登记被当作全新
+        发布而重复)。读入/清除仍以登记内的完整身份核对归属(SP-11)。
         未配置缓存目录时不可用(能力边界,由调用侧如实说明)。"""
 
         if self.cache_dir is None:
             return None
-        digest = hashlib.sha256(json.dumps(
-            self._pending_identity(identity, result_markdown),
-            ensure_ascii=False, sort_keys=True)
-            .encode("utf-8")).hexdigest()[:8]
+        digest = self._pending_identity_digest(identity, result_markdown)
         safe = re.sub(r"[^A-Za-z0-9._-]", "-", identity)
         return (self.cache_dir / "pending-index"
-                / f"append-result-{safe}-{digest}.json")
+                / f"append-result-{safe}-{digest[:8]}" / f"{digest}.json")
+
+    def _legacy_pending_index_file(self, identity: str,
+                                   result_markdown: str) -> Path | None:
+        """修复前布局(review5-01 之前写入)的登记文件路径:平铺的
+        append-result-{safe}-{短摘要 8 hex}.json。只读兼容——在盘旧登记
+        的读入/清除与当前布局走同一身份核验语义;经核验属于当前请求的
+        健康登记在读入时按当前布局重写迁移(见 _load_pending_index)。
+        与当前布局的目录同名不同型(一个带 .json 后缀的文件、一个是
+        目录),互不冲突。"""
+
+        if self.cache_dir is None:
+            return None
+        digest = self._pending_identity_digest(identity, result_markdown)
+        safe = re.sub(r"[^A-Za-z0-9._-]", "-", identity)
+        return (self.cache_dir / "pending-index"
+                / f"append-result-{safe}-{digest[:8]}.json")
 
     def _record_pending_index(self, identity: str, result_markdown: str,
                               comment: dict, ref: str,
@@ -636,10 +666,12 @@ class GithubBackend:
         """登记已发布评论身份(审查修复票 review3-01/SP-7):部分成功发生时
         把「已确认发布、索引未完成」的操作身份(含完整内容身份,SP-11)
         留在本地——重试的读前收养查询失败(无法看远端)时,凭登记保留
-        待恢复状态,不当作全新发布。索引补齐后由 _clear_pending_index
-        清除。返回错误说明即登记**未生效**(未配置缓存目录,或写入失败
-        /SP-10)——调用侧据此如实披露退化模式,不把已发生的远端结果
-        包装成异常(R4 同一纪律)。"""
+        待恢复状态,不当作全新发布。写入当前布局(完整身份哈希文件名,
+        review5-01/SP-14):碰撞对先后 partial 各写各的文件、共存互不
+        覆盖。索引补齐后由 _clear_pending_index 清除。返回错误说明即
+        登记**未生效**(未配置缓存目录,或写入失败/SP-10)——调用侧
+        据此如实披露退化模式,不把已发生的远端结果包装成异常(R4 同一
+        纪律)。"""
 
         path = self._pending_index_file(identity, result_markdown)
         if path is None:
@@ -668,16 +700,34 @@ class GithubBackend:
         改变「不当作全新发布」的判定(结果未知 ≠ 确认不存在,S2 语义
         家族);无登记返回 None(首试语义)。
 
-        身份核验(审查修复票 review4-01/SP-11):文件名 8 hex 短摘要可
-        碰撞,登记归属以文件内的完整身份为准——①形态不完整(缺
-        op/args/repo 任一身份字段或空身份)无法归属任何请求,按登记
-        损坏披露(corrupt 语义沿既有非法 JSON 行为);②身份完整但与
-        当前请求不一致,说明这份登记属于**另一请求**(碰撞共用文件),
-        按无登记处理:不冒认他人已发布身份,也不动他人登记。"""
+        身份核验(审查修复票 review4-01/SP-11):文件名摘要可碰撞,登记
+        归属以文件内的完整身份为准——①形态不完整(缺 op/args/repo 任一
+        身份字段或空身份)无法归属任何请求,按登记损坏披露(corrupt
+        语义沿既有非法 JSON 行为);②身份完整但与当前请求不一致,说明
+        这份登记属于**另一请求**(碰撞同目录),按无登记处理:不冒认
+        他人已发布身份,也不动他人登记。
+
+        回执核验(审查修复票 review5-01/SP-14 复审观察项):身份匹配但
+        登记缺 comment_id/ref 回执字段(无法确认已发布评论身份)按登记
+        损坏披露(口径沿既有:待恢复、不重发、提示人工核对),不再静默
+        返回缺失发布身份仍称已确认发布。
+
+        布局兼容(review5-01/SP-14):当前布局为短摘要目录下的完整身份
+        哈希文件(不同完整身份共存);修复前的平铺短摘要文件名(_legacy_
+        pending_index_file)只读兼容——先查当前布局,未命中再查旧布局,
+        两处同一身份核验语义。经核验属于当前请求的健康登记若仍在旧布局,
+        读入时按当前布局重写迁移并移除旧文件(尽力而为,失败沉默:
+        不影响本次读入返回,下次读入再试;清除时两布局一并处理,迁移
+        中途失败也不会「清除后自旧文件复活」)。"""
 
         path = self._pending_index_file(identity, result_markdown)
-        if path is None or not path.exists():
+        if path is None:
             return None
+        if not path.exists():
+            legacy = self._legacy_pending_index_file(identity, result_markdown)
+            if legacy is None or not legacy.exists():
+                return None
+            path = legacy
         try:
             pending = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
@@ -700,26 +750,45 @@ class GithubBackend:
         if {"op": op, "args": args, "repo": repo} != \
                 self._pending_identity(identity, result_markdown):
             return None
+        ref = pending.get("ref")
+        if pending.get("comment_id") is None \
+                or not isinstance(ref, str) or not ref:
+            return {"corrupt": ("登记回执不完整(缺 comment_id/ref 之一"
+                                "或为空,无法确认已发布评论身份)"),
+                    "path": str(path)}
+        if path == self._legacy_pending_index_file(identity, result_markdown):
+            # 旧布局健康登记:按当前布局重写迁移,移除旧文件(尽力而为)
+            try:
+                current = self._pending_index_file(identity, result_markdown)
+                current.parent.mkdir(parents=True, exist_ok=True)
+                current.write_text(json.dumps(pending, ensure_ascii=False,
+                                              indent=2), encoding="utf-8")
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
         return pending
 
     def _clear_pending_index(self, identity: str, result_markdown: str) -> None:
         """结果索引补齐后清除登记。只清除**经身份核验属于当前请求**的
-        登记(SP-11):短摘要碰撞共用文件时可能是另一请求的登记,不误删;
-        不可读/形态不完整的登记无法归属,同样保守保留。残留与清除失败
-        (极端 I/O 故障)都保持沉默:只会让后续读前查询失败的重试多保持
-        一次待恢复或一次损坏披露(保守方向,不会重复发布),远端可读时
-        按远端权威修正。"""
+        登记(SP-11):碰撞同目录可能是另一请求的登记,不误删;不可读/
+        形态不完整(含回执不完整,review5-01)的登记无法归属,同样保守
+        保留。当前与旧(平铺)两布局一并清除——迁移中途失败留下的旧文件
+        不会让已清除的登记复活。残留与清除失败(极端 I/O 故障)都保持
+        沉默:只会让后续读前查询失败的重试多保持一次待恢复或一次损坏
+        披露(保守方向,不会重复发布),远端可读时按远端权威修正。"""
 
-        path = self._pending_index_file(identity, result_markdown)
-        if path is None:
+        paths = [self._pending_index_file(identity, result_markdown),
+                 self._legacy_pending_index_file(identity, result_markdown)]
+        if paths[0] is None:
             return
         pending = self._load_pending_index(identity, result_markdown)
         if pending is None or pending.get("corrupt"):
             return
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        for path in paths:
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     def _pending_recovery_result(self, number: int, pending: dict,
                                  failure: str, attempts: list) -> dict:

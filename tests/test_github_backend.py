@@ -1507,7 +1507,7 @@ def test_append_result_partial_retry_read_first_timeout_no_duplicate() -> None:
               f"首轮结果应携带已发布评论身份与索引未完成状态,实际 {first}")
         check(len(fake.comments[1]) == 1,
               f"首轮替身应已有 1 条评论,实际 {len(fake.comments[1])} 条")
-        check(len(list((cache / "pending-index").glob("*.json"))) == 1,
+        check(len(list((cache / "pending-index").rglob("*.json"))) == 1,
               "部分成功应在本地登记已发布评论身份(待补索引登记)")
         # 恢复索引 PATCH,但重试的读前收养查询超时(SP-7 反例:
         # 当前实现把它当作全新发布再 POST 一条)
@@ -1533,7 +1533,7 @@ def test_append_result_partial_retry_read_first_timeout_no_duplicate() -> None:
         posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
         check(len(posts) == 1,
               f"全程应只发出 1 次评论 POST,实际 {len(posts)} 次")
-        check(len(list((cache / "pending-index").glob("*.json"))) == 1,
+        check(len(list((cache / "pending-index").rglob("*.json"))) == 1,
               "待恢复期间登记应保留(索引未补齐)")
         # 彻底恢复后重试:读前收养既有评论,只补索引
         fake._fail = []
@@ -1547,7 +1547,7 @@ def test_append_result_partial_retry_read_first_timeout_no_duplicate() -> None:
         check(f"#issuecomment-{first.get('comment_id')}"
               in (fake.issues[0].get("body") or ""),
               "彻底恢复后结果索引应补齐该评论引用")
-        check(not list((cache / "pending-index").glob("*.json")),
+        check(not list((cache / "pending-index").rglob("*.json")),
               "索引补齐后应清除待补索引登记")
 
 
@@ -1576,7 +1576,7 @@ def test_append_result_read_first_failure_without_pending_keeps_first_try() -> N
               f"实际 {outcome}")
         check(len(fake.comments[1]) == 1,
               f"替身应只有 1 条评论,实际 {len(fake.comments[1])} 条")
-        check(not list((cache / "pending-index").glob("*.json")),
+        check(not list((cache / "pending-index").rglob("*.json")),
               "uncertain(结果未知)不应写待补索引登记——登记只表达已确认发布")
 
 
@@ -1639,7 +1639,7 @@ def test_append_result_pending_collision_does_not_adopt_foreign_identity() -> No
         first = backend.append_result("01-task", result_a)
         check(first.get("published") is True and first.get("partial") is True,
               f"前置:A 首轮应如实部分成功,实际 {first}")
-        registration = list((cache / "pending-index").glob("*.json"))
+        registration = list((cache / "pending-index").rglob("*.json"))
         check(len(registration) == 1, "前置:A 的部分成功应留下待补索引登记")
         # B 的第一次调用仅读前 GET 超时(反例靶点):不得冒认 A 的登记
         fake._fail = []
@@ -1654,7 +1654,7 @@ def test_append_result_pending_collision_does_not_adopt_foreign_identity() -> No
         check(any(c["body"] == f"任务:01-task\n\n{result_b}"
                   for c in fake.comments[1]),
               "SP-11:B 应已发布自己的评论正文(而非只认 A 的评论)")
-        check(list((cache / "pending-index").glob("*.json")) == registration,
+        check(list((cache / "pending-index").rglob("*.json")) == registration,
               "SP-11:B 的补齐清除不得误删 A 的登记(不误删他人登记)")
         # A 重试且读前查询又失败:凭自己的登记保持待恢复(既有语义不回退)
         fake._fail = []
@@ -1685,7 +1685,7 @@ def test_append_result_pending_registration_missing_fields_disclosed_corrupt() -
         backend = backend_for(root, fake, cache)
         fake.fail("PATCH", "/issues/1", "timeout")
         backend.append_result("01-alpha", "交付证据")  # 部分成功留登记
-        pending_file = next((cache / "pending-index").glob("*.json"))
+        pending_file = next((cache / "pending-index").rglob("*.json"))
         pending_file.write_text("{}", encoding="utf-8")  # 合法 JSON、缺字段
         fake._fail = []
         fake.fail("GET", "/comments", "timeout")
@@ -1719,7 +1719,7 @@ def test_append_result_pending_registration_corrupt_json_keeps_recovery() -> Non
         backend = backend_for(root, fake, cache)
         fake.fail("PATCH", "/issues/1", "timeout")
         backend.append_result("01-alpha", "交付证据")  # 部分成功留登记
-        pending_file = next((cache / "pending-index").glob("*.json"))
+        pending_file = next((cache / "pending-index").rglob("*.json"))
         pending_file.write_text("{", encoding="utf-8")  # 非法 JSON
         fake._fail = []
         fake.fail("GET", "/comments", "timeout")
@@ -1774,8 +1774,206 @@ def test_append_result_partial_without_cache_dir_carries_degraded_warning() -> N
               f"SP-10 对照:登记落盘时「不会重复发布」承诺保持,实际 {note_cached!r}")
         check("警告" not in note_cached,
               f"SP-10 对照:登记落盘时不应出现登记不可用警告,实际 {note_cached!r}")
-        check(len(list((cache / "pending-index").glob("*.json"))) == 1,
+        check(len(list((cache / "pending-index").rglob("*.json"))) == 1,
               "SP-10 对照:有缓存目录时登记照常落盘")
+
+
+# ---------- 第五轮审查修复票 review5-01:反例固化(修复前红、修复后绿) ----------
+
+
+def _pending_full_digest(identity: str, result_markdown: str) -> str:
+    """复算待补索引登记完整内容身份的全长 SHA-256 摘要(与实现同一构造
+    形态;前 8 hex 即 _pending_digest 复算的既有短摘要,用于自证碰撞对
+    在共存布局下分别解析到同目录的不同登记文件)。"""
+
+    payload = json.dumps({"op": "append_result",
+                          "args": {"identity": identity,
+                                   "result_markdown": result_markdown},
+                          "repo": "github.com/mygamestudio/issue-accept"},
+                         ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def test_append_result_pending_collision_both_partial_coexist() -> None:
+    """SP-14:碰撞对(A/B 同仓库同任务不同正文、同一 8 hex 短摘要)先后
+    partial 时,后者的登记不得覆盖前者——不同完整身份的登记共存,任一
+    请求的重试都能找回自己的登记:A 恢复重试(仅读前 GET 超时)不重新
+    POST、保持待恢复;B 同理;互不干扰、互不误删;补齐后各自清除。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        cache = base / "cache"
+        fake = _OnceReadFailTransport()
+        fake.seed_issue("01-task", "甲任务")
+        backend = backend_for(root, fake, cache)
+        result_a = "collision-result-79891"
+        result_b = "collision-result-80657"
+        check(_pending_digest("01-task", result_a)
+              == _pending_digest("01-task", result_b),
+              "前置:碰撞对两正文应得到同一 8 hex 短摘要(同一登记短摘要)")
+        # A 首次调用部分成功:评论已发布、索引 PATCH 超时 → 留下 A 的登记
+        fake.fail("PATCH", "/issues/1", "timeout")
+        first = backend.append_result("01-task", result_a)
+        check(first.get("published") is True and first.get("partial") is True,
+              f"前置:A 首轮应如实部分成功,实际 {first}")
+        # B 的首次调用读前 GET 超时:无自己的登记(不冒认 A 的,SP-11 语义
+        # 保持)→ 按首试语义发布自己的评论;索引 PATCH 仍超时 → B 也部分
+        # 成功、留下 B 的登记(不得覆盖 A 的)
+        fake.read_fail = True
+        second = backend.append_result("01-task", result_b)
+        check(second.get("published") is True and second.get("partial") is True,
+              f"前置:B 首轮应如实部分成功,实际 {second}")
+        registrations = sorted(
+            p.relative_to(cache / "pending-index").as_posix()
+            for p in (cache / "pending-index").rglob("*.json"))
+        check(len(registrations) == 2,
+              f"SP-14:碰撞对先后 partial 的两份登记应共存(不同完整身份"
+              f"不同文件),实际 {registrations}")
+        check(any(_pending_full_digest("01-task", result_a) in name
+                  for name in registrations)
+              and any(_pending_full_digest("01-task", result_b) in name
+                      for name in registrations),
+              f"SP-14:两份登记应分别以 A/B 完整身份哈希为文件名落盘,"
+              f"实际 {registrations}")
+        # A 恢复重试,仅读前 GET 超时(反例靶点;PATCH 已恢复):必须凭
+        # 自己的登记保持待恢复,不得当作全新发布而重新 POST(登记被 B
+        # 覆盖时 A 会失去登记、被当成首试重新 POST 第三条)
+        fake._fail = []
+        fake.read_fail = True
+        third = backend.append_result("01-task", result_a)
+        check(third.get("published") is True and third.get("partial") is True
+              and third.get("comment_id") == first.get("comment_id"),
+              f"SP-14:A 恢复重试应凭自己的登记保持待恢复(不重新 POST),"
+              f"实际 {third}")
+        # B 恢复重试,仅读前 GET 超时:同理凭自己的登记保持待恢复
+        fake._fail = []
+        fake.read_fail = True
+        fourth = backend.append_result("01-task", result_b)
+        check(fourth.get("published") is True and fourth.get("partial") is True
+              and fourth.get("comment_id") == second.get("comment_id"),
+              f"SP-14:B 恢复重试应凭自己的登记保持待恢复(不重新 POST),"
+              f"实际 {fourth}")
+        check(sum(c["body"] == f"任务:01-task\n\n{result_a}"
+                  for c in fake.comments[1]) == 1,
+              "SP-14:A 正文评论应恰 1 条(重试不重复发布)")
+        check(sum(c["body"] == f"任务:01-task\n\n{result_b}"
+                  for c in fake.comments[1]) == 1,
+              "SP-14:B 正文评论应恰 1 条(重试不重复发布)")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 2,
+              f"SP-14:至此应恰 2 次 POST(A/B 首试各 1 次;重试均不发布),"
+              f"实际 {len(posts)} 次")
+        # 索引补齐:远端恢复后两请求各自重试,经读前收养只补索引,
+        # 登记各自清除(互不误删)
+        fifth = backend.append_result("01-task", result_a)
+        sixth = backend.append_result("01-task", result_b)
+        check(fifth.get("index_updated") is True
+              and fifth.get("comment_id") == first.get("comment_id"),
+              f"SP-14:A 补齐应收养既有评论并完成索引,实际 {fifth}")
+        check(sixth.get("index_updated") is True
+              and sixth.get("comment_id") == second.get("comment_id"),
+              f"SP-14:B 补齐应收养既有评论并完成索引,实际 {sixth}")
+        check(not list((cache / "pending-index").rglob("*.json")),
+              "SP-14:两请求各自补齐后登记应全部清除(互不误删)")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 2,
+              f"SP-14:补齐重试经读前收养不新增 POST,实际 {len(posts)} 次")
+
+
+def test_append_result_pending_registration_missing_receipt_disclosed_corrupt() -> None:
+    """SP-14 复审观察项(并入本票):登记保留完整身份(op/args/repo)但缺
+    comment_id/ref 回执字段时,不得静默返回缺失发布身份仍称已确认发布——
+    回执字段纳入形态完整性校验,缺失按登记损坏披露(corrupt 语义沿既有:
+    待恢复、不重发、提示人工核对)。"""
+
+    for fields in (("comment_id",), ("ref",), ("comment_id", "ref")):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = make_github_project(base / "project")
+            cache = base / "cache"
+            fake = FakeTransport()
+            fake.seed_issue("01-alpha", "甲任务")
+            backend = backend_for(root, fake, cache)
+            fake.fail("PATCH", "/issues/1", "timeout")
+            backend.append_result("01-alpha", "交付证据")  # 部分成功留登记
+            pending_file = next((cache / "pending-index").rglob("*.json"))
+            pending = json.loads(pending_file.read_text(encoding="utf-8"))
+            for field in fields:
+                pending.pop(field)
+            pending_file.write_text(json.dumps(pending, ensure_ascii=False),
+                                    encoding="utf-8")
+            fake._fail = [("GET", "/comments", "timeout")]
+            second = backend.append_result("01-alpha", "交付证据")
+            note = second.get("note") or ""
+            check(second.get("published") is True
+                  and second.get("partial") is True,
+                  f"回执缺失{fields}:应保持待恢复(不当作全新发布),"
+                  f"实际 {second}")
+            check(second.get("comment_id") is None and second.get("ref") is None,
+                  f"回执缺失{fields}:不得冒用发布身份,实际 {second}")
+            check("不可读" in note or "不完整" in note,
+                  f"回执缺失{fields}:应披露登记不完整,实际 note={note!r}")
+            check("人工核对" in note,
+                  f"回执缺失{fields}:应提示人工核对,实际 note={note!r}")
+            check(len(fake.comments[1]) == 1,
+                  f"回执缺失{fields}:保守方向是不重发,替身评论应仍恰 1,"
+                  f"实际 {len(fake.comments[1])} 条")
+            posts = [c for c in fake.calls
+                     if c[0] == "POST" and "/comments" in c[1]]
+            check(len(posts) == 1,
+                  f"回执缺失{fields}:不应触发重发(全程恰 1 次 POST),"
+                  f"实际 {len(posts)} 次")
+
+
+def test_append_result_pending_legacy_flat_registration_compatible() -> None:
+    """兼容:修复前的在盘登记(平铺 8 hex 短摘要文件名,c9a8021/bc230ea
+    写入的布局)读入语义不破坏——身份核验、待恢复、补齐清除全部沿用;
+    读入经身份核验属于当前请求后按新布局(完整身份哈希文件名)重写迁移,
+    消除新旧双份并存与「清除后自旧文件复活」。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        cache = base / "cache"
+        fake = _OnceReadFailTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        # 部分成功留登记,再手工归位到修复前的平铺布局(内容一字不差)
+        fake.fail("PATCH", "/issues/1", "timeout")
+        first = backend.append_result("01-alpha", "交付证据")
+        current = next((cache / "pending-index").rglob("*.json"))
+        content = current.read_text(encoding="utf-8")
+        legacy = (cache / "pending-index"
+                  / f"append-result-01-alpha-"
+                    f"{_pending_digest('01-alpha', '交付证据')}.json")
+        legacy.write_text(content, encoding="utf-8")
+        current.unlink()
+        # 旧布局读入兼容:读前 GET 超时的重试凭旧登记保持待恢复、不重发
+        fake.read_fail = True
+        second = backend.append_result("01-alpha", "交付证据")
+        check(second.get("published") is True and second.get("partial") is True
+              and second.get("comment_id") == first.get("comment_id"),
+              f"兼容:旧布局登记应照常支撑待恢复,实际 {second}")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 1,
+              f"兼容:旧布局登记不应触发重发,实际 {len(posts)} 次")
+        # 迁移:身份核验通过的旧布局登记在读入后应按新布局重写并移除旧文件
+        check(any(_pending_full_digest("01-alpha", "交付证据")
+                  in p.relative_to(cache / "pending-index").as_posix()
+                  for p in (cache / "pending-index").rglob("*.json")),
+              "兼容:旧布局登记读入后应迁移为新布局(完整身份哈希文件名)")
+        check(not legacy.exists(),
+              "兼容:迁移后旧布局文件应移除(不双份并存)")
+        # 补齐:远端恢复后重试经读前收养补齐索引,新旧布局登记一并清除
+        fake._fail = []
+        third = backend.append_result("01-alpha", "交付证据")
+        check(third.get("index_updated") is True
+              and third.get("comment_id") == first.get("comment_id"),
+              f"兼容:迁移后的登记应照常补齐收养,实际 {third}")
+        check(not list((cache / "pending-index").rglob("*.json"))
+              and not legacy.exists(),
+              "兼容:补齐后新旧布局登记应一并清除(不自旧文件复活)")
 
 
 def main() -> int:
