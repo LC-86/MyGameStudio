@@ -1,0 +1,83 @@
+[
+  {
+    "id": "json",
+    "corrupt_disclosed": true,
+    "posts": 1,
+    "legacy_bytes_unchanged": true,
+    "current_created": false,
+    "second": {
+      "published": true,
+      "partial": true,
+      "comment_id": null,
+      "ref": null,
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "pending-index",
+          "outcome": "kept"
+        }
+      ],
+      "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记存在),本次读前收养查询失败(timeout: one read-first timeout)且登记不可读(JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1);登记文件 /tmp/mgs-review7-ADyk4of1/legacy-corrupt-yfu3ngd8/json/cache/pending-index/append-result-01-task-b81d9d78.json);已保留待恢复状态、不当作全新发布;请人工核对远端评论与登记文件后重试(远端可读时重试同一请求即经读前收养补齐索引)"
+    }
+  },
+  {
+    "id": "shape",
+    "corrupt_disclosed": true,
+    "posts": 1,
+    "legacy_bytes_unchanged": true,
+    "current_created": false,
+    "second": {
+      "published": true,
+      "partial": true,
+      "comment_id": null,
+      "ref": null,
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "pending-index",
+          "outcome": "kept"
+        }
+      ],
+      "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记存在),本次读前收养查询失败(timeout: one read-first timeout)且登记不可读(登记身份不完整(缺 op/args(identity,result_markdown)/repo 之一或为空,无法归属任何请求);登记文件 /tmp/mgs-review7-ADyk4of1/legacy-corrupt-yfu3ngd8/shape/cache/pending-index/append-result-01-task-b81d9d78.json);已保留待恢复状态、不当作全新发布;请人工核对远端评论与登记文件后重试(远端可读时重试同一请求即经读前收养补齐索引)"
+    }
+  },
+  {
+    "id": "receipt",
+    "corrupt_disclosed": true,
+    "posts": 1,
+    "legacy_bytes_unchanged": true,
+    "current_created": false,
+    "second": {
+      "published": true,
+      "partial": true,
+      "comment_id": null,
+      "ref": null,
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "pending-index",
+          "outcome": "kept"
+        }
+      ],
+      "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记存在),本次读前收养查询失败(timeout: one read-first timeout)且登记不可读(登记回执不完整(缺 comment_id/ref 之一或为空,无法确认已发布评论身份);登记文件 /tmp/mgs-review7-ADyk4of1/legacy-corrupt-yfu3ngd8/receipt/cache/pending-index/append-result-01-task-b81d9d78.json);已保留待恢复状态、不当作全新发布;请人工核对远端评论与登记文件后重试(远端可读时重试同一请求即经读前收养补齐索引)"
+    }
+  }
+]

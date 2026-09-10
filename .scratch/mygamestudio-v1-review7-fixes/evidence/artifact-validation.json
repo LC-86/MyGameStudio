@@ -1,0 +1,10 @@
+{
+  "report_links_checked": 50,
+  "broken_links": [],
+  "json_valid": true,
+  "report_sha256": "690f8fc200db4ca22a312c0aaa11713236125e9d2c59950e458e7a825f7dd8ec",
+  "summary_sha256": "b11ac93adef3d737b82f734f46bfcdaf552fbdb1d5a0bcef21b083dd17dabd0a",
+  "original_repository_head": "02fc73bbd9969216830be0f1de87733afadcf73e",
+  "status_porcelain": "",
+  "consistency_checks_passed": true
+}

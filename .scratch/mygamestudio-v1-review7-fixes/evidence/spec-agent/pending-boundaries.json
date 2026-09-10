@@ -1,0 +1,284 @@
+{
+  "rows": [
+    {
+      "id": "invalid-json-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "invalid-json-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "invalid-utf8-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "invalid-utf8-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "json-null-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "json-null-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "json-list-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "json-list-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "missing-args-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "missing-args-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "foreign-unicode-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "foreign-unicode-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-comment_id-6-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-comment_id-6-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-ref-7-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-ref-7-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-ref-8-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-ref-8-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-ref-9-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-ref-9-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-op-10-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-op-10-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-repo-11-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-repo-11-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-args-12-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "field-args-12-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "top-level-extra-current",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "top-level-extra-legacy",
+      "checks": {
+        "tested_side_expected": true,
+        "healthy_other_side_cleared": true,
+        "preserved_bytes": true
+      },
+      "pass": true
+    },
+    {
+      "id": "exact-identity-0",
+      "pass": true
+    },
+    {
+      "id": "exact-identity-1",
+      "pass": true
+    },
+    {
+      "id": "exact-identity-2",
+      "pass": true
+    },
+    {
+      "id": "exact-identity-3",
+      "pass": true
+    },
+    {
+      "id": "exact-identity-4",
+      "pass": true
+    },
+    {
+      "id": "exact-identity-5",
+      "pass": true
+    }
+  ],
+  "case_count": 34,
+  "assertions": 90,
+  "failed": 0,
+  "real_remote_calls": 0
+}

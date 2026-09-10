@@ -1,0 +1,496 @@
+[
+  {
+    "id": "collision-both-partial-overwrites-a",
+    "entry": "MCP -> GateService -> FakeTransport",
+    "same_pending_file": false,
+    "result_a": "collision-result-79891",
+    "result_b": "collision-result-80657",
+    "first": {
+      "op": "remote:append-result",
+      "instance_id": "i-2990472ee98a",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5100,
+        "ref": "#issuecomment-5100",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "comment-1",
+            "outcome": "created"
+          },
+          {
+            "step": "index-patch",
+            "outcome": "timeout",
+            "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+          }
+        ],
+        "note": "部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+      }
+    },
+    "second": {
+      "op": "remote:append-result",
+      "instance_id": "i-2990472ee98a",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5101,
+        "ref": "#issuecomment-5101",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "read-first",
+            "outcome": "timeout",
+            "detail": "timeout: one read-first timeout"
+          },
+          {
+            "step": "comment-1",
+            "outcome": "created"
+          },
+          {
+            "step": "index-patch",
+            "outcome": "timeout",
+            "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+          }
+        ],
+        "note": "部分成功:结果评论已发布(#issuecomment-5101),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+      }
+    },
+    "third": {
+      "op": "remote:append-result",
+      "instance_id": "i-2990472ee98a",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5100,
+        "ref": "#issuecomment-5100",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "read-first",
+            "outcome": "timeout",
+            "detail": "timeout: one read-first timeout"
+          },
+          {
+            "step": "pending-index",
+            "outcome": "kept"
+          }
+        ],
+        "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记:#issuecomment-5100),本次读前收养查询失败(timeout: one read-first timeout)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引"
+      }
+    },
+    "pending_after_a": [
+      {
+        "name": "346df0e9f3c1a37fabe0a6d5d973c52a53c6dd35e3b3f6bc2672a1154b092467.json",
+        "data": {
+          "op": "append_result",
+          "args": {
+            "identity": "01-task",
+            "result_markdown": "collision-result-79891"
+          },
+          "repo": "github.com/mygamestudio/issue-accept",
+          "status": "已发布未补索引",
+          "comment_id": 5100,
+          "ref": "#issuecomment-5100",
+          "created_at": "2026-09-10T16:43:57+08:00",
+          "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+          "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+        }
+      }
+    ],
+    "pending_after_b": [
+      {
+        "name": "346df0e978e0332bc2e9b8ba66c73894b755953485f5f4eadc5ea0653aa362c7.json",
+        "data": {
+          "op": "append_result",
+          "args": {
+            "identity": "01-task",
+            "result_markdown": "collision-result-80657"
+          },
+          "repo": "github.com/mygamestudio/issue-accept",
+          "status": "已发布未补索引",
+          "comment_id": 5101,
+          "ref": "#issuecomment-5101",
+          "created_at": "2026-09-10T16:43:57+08:00",
+          "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+          "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+        }
+      },
+      {
+        "name": "346df0e9f3c1a37fabe0a6d5d973c52a53c6dd35e3b3f6bc2672a1154b092467.json",
+        "data": {
+          "op": "append_result",
+          "args": {
+            "identity": "01-task",
+            "result_markdown": "collision-result-79891"
+          },
+          "repo": "github.com/mygamestudio/issue-accept",
+          "status": "已发布未补索引",
+          "comment_id": 5100,
+          "ref": "#issuecomment-5100",
+          "created_at": "2026-09-10T16:43:57+08:00",
+          "cause": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1",
+          "note": "部分成功的本地身份登记:读前收养查询失败时保留待恢复状态(不当作全新发布);远端恢复后重试同一请求只收养既有评论并补齐索引"
+        }
+      }
+    ],
+    "posts": 2,
+    "comments": [
+      {
+        "id": 5100,
+        "body": "任务:01-task\n\ncollision-result-79891",
+        "created_at": "2026-09-08T12:00:00Z"
+      },
+      {
+        "id": 5101,
+        "body": "任务:01-task\n\ncollision-result-80657",
+        "created_at": "2026-09-08T12:00:00Z"
+      }
+    ],
+    "a_comment_count": 1,
+    "observed_bug": false,
+    "expected": "Keep both pending identities; A retry with failed read-first must not POST."
+  },
+  {
+    "id": "missing-comment_id",
+    "first": {
+      "op": "remote:append-result",
+      "instance_id": "i-5ecf35c47173",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5100,
+        "ref": "#issuecomment-5100",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "comment-1",
+            "outcome": "created"
+          },
+          {
+            "step": "index-patch",
+            "outcome": "timeout",
+            "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+          }
+        ],
+        "note": "部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+      }
+    },
+    "second": {
+      "op": "remote:append-result",
+      "instance_id": "i-5ecf35c47173",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": null,
+        "ref": null,
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "read-first",
+            "outcome": "timeout",
+            "detail": "timeout: one read-first timeout"
+          },
+          {
+            "step": "pending-index",
+            "outcome": "kept"
+          }
+        ],
+        "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记存在),本次读前收养查询失败(timeout: one read-first timeout)且登记不可读(登记回执不完整(缺 comment_id/ref 之一或为空,无法确认已发布评论身份);登记文件 /tmp/mgs-review7-ADyk4of1/spec-extra-pending-state-b_x009c4/missing-comment_id/cache/pending-index/append-result-01-task-186e3c34/186e3c34d187c4e46ed7c75aa1a4c277da4c16263810968b8a76d916687222d2.json);已保留待恢复状态、不当作全新发布;请人工核对远端评论与登记文件后重试(远端可读时重试同一请求即经读前收养补齐索引)"
+      }
+    },
+    "posts": 1,
+    "disclosed_corrupt": true,
+    "missing_published_identity": true
+  },
+  {
+    "id": "missing-ref",
+    "first": {
+      "op": "remote:append-result",
+      "instance_id": "i-5caf0d2641b7",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5100,
+        "ref": "#issuecomment-5100",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "comment-1",
+            "outcome": "created"
+          },
+          {
+            "step": "index-patch",
+            "outcome": "timeout",
+            "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+          }
+        ],
+        "note": "部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+      }
+    },
+    "second": {
+      "op": "remote:append-result",
+      "instance_id": "i-5caf0d2641b7",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": null,
+        "ref": null,
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "read-first",
+            "outcome": "timeout",
+            "detail": "timeout: one read-first timeout"
+          },
+          {
+            "step": "pending-index",
+            "outcome": "kept"
+          }
+        ],
+        "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记存在),本次读前收养查询失败(timeout: one read-first timeout)且登记不可读(登记回执不完整(缺 comment_id/ref 之一或为空,无法确认已发布评论身份);登记文件 /tmp/mgs-review7-ADyk4of1/spec-extra-pending-state-b_x009c4/missing-ref/cache/pending-index/append-result-01-task-186e3c34/186e3c34d187c4e46ed7c75aa1a4c277da4c16263810968b8a76d916687222d2.json);已保留待恢复状态、不当作全新发布;请人工核对远端评论与登记文件后重试(远端可读时重试同一请求即经读前收养补齐索引)"
+      }
+    },
+    "posts": 1,
+    "disclosed_corrupt": true,
+    "missing_published_identity": true
+  },
+  {
+    "id": "missing-comment_id-ref",
+    "first": {
+      "op": "remote:append-result",
+      "instance_id": "i-e396a90aef99",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": 5100,
+        "ref": "#issuecomment-5100",
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "comment-1",
+            "outcome": "created"
+          },
+          {
+            "step": "index-patch",
+            "outcome": "timeout",
+            "detail": "timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1"
+          }
+        ],
+        "note": "部分成功:结果评论已发布(#issuecomment-5100),但正文结果索引更新未完成(timeout: injected timeout at /repos/mygamestudio/issue-accept/issues/1);重试同一请求只会收养既有评论并补齐索引,不会重复发布"
+      }
+    },
+    "second": {
+      "op": "remote:append-result",
+      "instance_id": "i-e396a90aef99",
+      "task": "review5-spec",
+      "role": "producer",
+      "purpose": "production",
+      "target": "github://github.com/mygamestudio/issue-accept/issues/01-task/comments",
+      "basis": {
+        "policy_version": 1,
+        "role_resources_source": "runtime policy.json (trusted scheduler channel)",
+        "task_grant_source": "instance registry issued by trusted scheduler"
+      },
+      "note": {
+        "action": "append-result",
+        "repo": "github.com/mygamestudio/issue-accept"
+      },
+      "decision": "allow",
+      "rule_stage": "granted",
+      "reason": "granted by identity+task+role+purpose+config-scope intersection; partial success: published part carried in result with its incomplete part (retry the same request to complete only what remains)",
+      "result": {
+        "published": true,
+        "partial": true,
+        "comment_id": null,
+        "ref": null,
+        "issue_number": 1,
+        "index_updated": false,
+        "attempts": [
+          {
+            "step": "read-first",
+            "outcome": "timeout",
+            "detail": "timeout: one read-first timeout"
+          },
+          {
+            "step": "pending-index",
+            "outcome": "kept"
+          }
+        ],
+        "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记存在),本次读前收养查询失败(timeout: one read-first timeout)且登记不可读(登记回执不完整(缺 comment_id/ref 之一或为空,无法确认已发布评论身份);登记文件 /tmp/mgs-review7-ADyk4of1/spec-extra-pending-state-b_x009c4/missing-comment_id-ref/cache/pending-index/append-result-01-task-186e3c34/186e3c34d187c4e46ed7c75aa1a4c277da4c16263810968b8a76d916687222d2.json);已保留待恢复状态、不当作全新发布;请人工核对远端评论与登记文件后重试(远端可读时重试同一请求即经读前收养补齐索引)"
+      }
+    },
+    "posts": 1,
+    "disclosed_corrupt": true,
+    "missing_published_identity": true
+  },
+  {
+    "id": "args-empty",
+    "body_length": 0,
+    "first_comment_id": 5100,
+    "second_comment_id": 5100,
+    "second_partial": true,
+    "final_index_updated": true,
+    "posts": 1,
+    "pending_remaining": 0,
+    "observed_bug": false
+  },
+  {
+    "id": "args-unicode",
+    "body_length": 15,
+    "first_comment_id": 5100,
+    "second_comment_id": 5100,
+    "second_partial": true,
+    "final_index_updated": true,
+    "posts": 1,
+    "pending_remaining": 0,
+    "observed_bug": false
+  },
+  {
+    "id": "args-long",
+    "body_length": 100000,
+    "first_comment_id": 5100,
+    "second_comment_id": 5100,
+    "second_partial": true,
+    "final_index_updated": true,
+    "posts": 1,
+    "pending_remaining": 0,
+    "observed_bug": false
+  }
+]

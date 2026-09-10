@@ -1,0 +1,139 @@
+{
+  "main": [
+    {
+      "case": "direct",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "userinfo-correct-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "proxy-overrides-url-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "resolve-overrides-url-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "target-success-other-failed",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "ipv6-loopback",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "uppercase-dns-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "port-overflow",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "port-negative",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "port-text",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "host-tab",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    }
+  ],
+  "spec-agent": [
+    {
+      "case": "direct",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "userinfo-correct-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "proxy-overrides-url-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "resolve-overrides-url-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "target-success-other-failed",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "ipv6-loopback",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "uppercase-dns-host",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "port-overflow",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "port-negative",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "port-text",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    },
+    {
+      "case": "host-tab",
+      "command_equal": true,
+      "exit_equal": true,
+      "output_equal": true
+    }
+  ],
+  "review6_report_sha256_matches_summary": true
+}

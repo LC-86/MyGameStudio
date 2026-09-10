@@ -1,0 +1,18 @@
+{
+  "head": "02fc73bbd9969216830be0f1de87733afadcf73e",
+  "status": "",
+  "task_processes": [],
+  "cleaned_task_generated_paths": [
+    "/tmp/mgs-review7-ADyk4of1/driver-env",
+    "/tmp/mgs-review7-ADyk4of1/repo/.tmp/accept-18-driver"
+  ],
+  "driver_original_bytes_restored_in_copy": true,
+  "real_auth_file_used": false,
+  "product_model_turns": 0,
+  "acceptance_model_turns": 0,
+  "real_remote_writes": 0,
+  "acceptance_run_sh_started": false,
+  "process_inventory_note": "Initial process-list UTF-8 decoding failed; rerun with replacement decoding succeeded. No process arguments persisted.",
+  "head_unchanged": true,
+  "clean": true
+}

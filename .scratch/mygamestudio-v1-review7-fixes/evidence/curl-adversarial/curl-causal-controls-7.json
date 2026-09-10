@@ -1,0 +1,1379 @@
+{
+  "caveat": "Narrow causal controls in extracted text, not proposed complete fixes or product edits.",
+  "variants": [
+    {
+      "variant": "original",
+      "cases": [
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "correct-userinfo",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/correct-userinfo.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "long-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/long-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "connect-to",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/connect-to.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "default-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/default-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "environment-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/environment-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-short",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-short.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-long",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-long.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-not-followed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-not-followed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "attached-short-value-hides-first-url",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/attached-short-value-hides-first-url.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "separate-short-value-two-urls",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/separate-short-value-two-urls.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "successful-target",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/successful-target.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-200-body-then-timeout",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/target-200-body-then-timeout.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "two-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/two-shell-layers.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "three-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/three-shell-layers.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "userinfo-correct-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/userinfo-correct-host.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "proxy-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/proxy-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "resolve-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/resolve-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-success-other-failed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/target-success-other-failed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "ipv6-loopback",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/ipv6-loopback.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "uppercase-dns-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/uppercase-dns-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-overflow",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-overflow.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-negative",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-negative.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-text",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-text.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "host-tab",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/host-tab.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "variant": "short-xK-only",
+      "cases": [
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "correct-userinfo",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/correct-userinfo.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "long-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/long-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "connect-to",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/connect-to.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "default-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/default-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "environment-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/environment-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-short",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-short.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-long",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-long.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-not-followed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-not-followed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "attached-short-value-hides-first-url",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/attached-short-value-hides-first-url.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "separate-short-value-two-urls",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/separate-short-value-two-urls.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "successful-target",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/successful-target.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-200-body-then-timeout",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/target-200-body-then-timeout.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "two-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/two-shell-layers.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "three-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/three-shell-layers.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "userinfo-correct-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/userinfo-correct-host.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "proxy-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/proxy-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "resolve-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/resolve-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-success-other-failed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/target-success-other-failed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "ipv6-loopback",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/ipv6-loopback.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "uppercase-dns-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/uppercase-dns-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-overflow",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-overflow.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-negative",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-negative.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-text",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-text.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "host-tab",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/host-tab.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "variant": "redirect-only",
+      "cases": [
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "correct-userinfo",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/correct-userinfo.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "long-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/long-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "connect-to",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/connect-to.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "default-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/default-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "environment-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/environment-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-short",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-short.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-long",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-long.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-not-followed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-not-followed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "attached-short-value-hides-first-url",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/attached-short-value-hides-first-url.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "separate-short-value-two-urls",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/separate-short-value-two-urls.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "successful-target",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/successful-target.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-200-body-then-timeout",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/target-200-body-then-timeout.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "two-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/two-shell-layers.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "three-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/three-shell-layers.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "userinfo-correct-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/userinfo-correct-host.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "proxy-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/proxy-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "resolve-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/resolve-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-success-other-failed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/target-success-other-failed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "ipv6-loopback",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/ipv6-loopback.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "uppercase-dns-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/uppercase-dns-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-overflow",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-overflow.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-negative",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-negative.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-text",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-text.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "host-tab",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/host-tab.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "variant": "attached-value-only",
+      "cases": [
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "correct-userinfo",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/correct-userinfo.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "long-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/long-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "connect-to",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/connect-to.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "default-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/default-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "environment-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/environment-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-short",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-short.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-long",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-long.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-not-followed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-not-followed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "attached-short-value-hides-first-url",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/attached-short-value-hides-first-url.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "separate-short-value-two-urls",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/separate-short-value-two-urls.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "successful-target",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/successful-target.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-200-body-then-timeout",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/target-200-body-then-timeout.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "two-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/two-shell-layers.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "three-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/three-shell-layers.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "userinfo-correct-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/userinfo-correct-host.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "proxy-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/proxy-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "resolve-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/resolve-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-success-other-failed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/target-success-other-failed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "ipv6-loopback",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/ipv6-loopback.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "uppercase-dns-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/uppercase-dns-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-overflow",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-overflow.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-negative",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-negative.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-text",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-text.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "host-tab",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/host-tab.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "variant": "exclude-generic-timeout-only",
+      "cases": [
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "correct-userinfo",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/correct-userinfo.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "long-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/long-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "connect-to",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/connect-to.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "default-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/default-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "environment-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/environment-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-short",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-short.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-long",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-long.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-not-followed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-not-followed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "attached-short-value-hides-first-url",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/attached-short-value-hides-first-url.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "separate-short-value-two-urls",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/separate-short-value-two-urls.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "successful-target",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/successful-target.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-200-body-then-timeout",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/target-200-body-then-timeout.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "two-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/two-shell-layers.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "three-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/three-shell-layers.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "userinfo-correct-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/userinfo-correct-host.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "proxy-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/proxy-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "resolve-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/resolve-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-success-other-failed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/target-success-other-failed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "ipv6-loopback",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/ipv6-loopback.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "uppercase-dns-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/uppercase-dns-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-overflow",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-overflow.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-negative",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-negative.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-text",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-text.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "host-tab",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/host-tab.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "variant": "restored",
+      "cases": [
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "correct-userinfo",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/correct-userinfo.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "long-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/long-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "short-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/short-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "connect-to",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/connect-to.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "default-config",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/default-config.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "environment-proxy",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/environment-proxy.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-short",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-short.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-long",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-long.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "redirect-not-followed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/redirect-not-followed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "attached-short-value-hides-first-url",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/attached-short-value-hides-first-url.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "separate-short-value-two-urls",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/separate-short-value-two-urls.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "successful-target",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/successful-target.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-200-body-then-timeout",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/target-200-body-then-timeout.jsonl",
+          "expected": "MISSING",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "two-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/two-shell-layers.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "three-shell-layers",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-fixtures/three-shell-layers.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "direct",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/direct.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "userinfo-correct-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/userinfo-correct-host.jsonl",
+          "expected": "OK",
+          "anchor": "OK",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "proxy-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/proxy-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "resolve-overrides-url-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/resolve-overrides-url-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "target-success-other-failed",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/target-success-other-failed.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "ipv6-loopback",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/ipv6-loopback.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "uppercase-dns-host",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/uppercase-dns-host.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-overflow",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-overflow.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-negative",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-negative.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "port-text",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/port-text.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        },
+        {
+          "id": "host-tab",
+          "fixture": "/tmp/mgs-review7-ADyk4of1/curl-boundary-fixtures/host-tab.jsonl",
+          "expected": "MISSING",
+          "anchor": "MISSING",
+          "exit": 0,
+          "stderr": ""
+        }
+      ]
+    }
+  ]
+}

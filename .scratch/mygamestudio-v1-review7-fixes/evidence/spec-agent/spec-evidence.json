@@ -1,0 +1,531 @@
+{
+  "axis": "Spec",
+  "diff": "git diff a3c43ce..3e6ae30",
+  "product_target": "3e6ae30",
+  "head_supplied_by_main": "02fc73bbd9969216830be0f1de87733afadcf73e",
+  "findings": [
+    {
+      "id": "SP-20",
+      "priority": "P2",
+      "title": "短代理与配置旗标仍可改变实际目标",
+      "code_lines": [
+        225
+      ],
+      "case_ids": [
+        "short-proxy",
+        "short-config"
+      ],
+      "contract": ".scratch/mygamestudio-v1-review6-fixes/issues/02-curl-anchor-connection-params-and-single-url.md:13",
+      "quote": "保守拒绝改变连接语义的参数",
+      "file": "acceptance/18-complete-package-acceptance/run.sh",
+      "source": "main reviewer actual loopback results independently read; no agent re-execution",
+      "evidence": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-7.json",
+      "causal_controls": "/tmp/mgs-review7-ADyk4of1/curl-causal-controls-7.json",
+      "before_batch_present": true,
+      "newly_introduced_by_batch": false
+    },
+    {
+      "id": "SP-21",
+      "priority": "P2",
+      "title": "重定向后失败误归属初始目标",
+      "code_lines": [
+        226,
+        234
+      ],
+      "case_ids": [
+        "redirect-short",
+        "redirect-long"
+      ],
+      "contract": ".scratch/mygamestudio-v1-review4-fixes/issues/02-anchor-context-and-execution-binding.md:16",
+      "quote": "保守拒绝不能证明执行的形态",
+      "file": "acceptance/18-complete-package-acceptance/run.sh",
+      "source": "main reviewer actual loopback results independently read; no agent re-execution",
+      "evidence": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-7.json",
+      "causal_controls": "/tmp/mgs-review7-ADyk4of1/curl-causal-controls-7.json",
+      "before_batch_present": true,
+      "newly_introduced_by_batch": false
+    },
+    {
+      "id": "SP-22",
+      "priority": "P2",
+      "title": "粘连短值导致首URL漏计",
+      "code_lines": [
+        286,
+        287,
+        288
+      ],
+      "case_ids": [
+        "attached-short-value-hides-first-url"
+      ],
+      "contract": ".scratch/mygamestudio-v1-review6-fixes/issues/02-curl-anchor-connection-params-and-single-url.md:14",
+      "quote": "只接受单一 URL 形态位置参数",
+      "file": "acceptance/18-complete-package-acceptance/run.sh",
+      "source": "main reviewer actual loopback results independently read; no agent re-execution",
+      "evidence": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-7.json",
+      "causal_controls": "/tmp/mgs-review7-ADyk4of1/curl-causal-controls-7.json",
+      "before_batch_present": true,
+      "newly_introduced_by_batch": false
+    },
+    {
+      "id": "SP-23",
+      "priority": "P2",
+      "title": "已收到HTTP响应的超时仍当沙箱拒绝",
+      "code_lines": [
+        329,
+        330,
+        331,
+        332,
+        1037
+      ],
+      "case_ids": [
+        "target-200-body-then-timeout"
+      ],
+      "contract": "acceptance/18-complete-package-acceptance/run.sh:1037",
+      "quote": "G1 直连探针被会话沙箱拒绝",
+      "limitation": "15/25 bytes received; response incomplete, connection established. Generic-timeout-word control is not a proposed complete fix.",
+      "file": "acceptance/18-complete-package-acceptance/run.sh",
+      "source": "main reviewer actual loopback results independently read; no agent re-execution",
+      "evidence": "/tmp/mgs-review7-ADyk4of1/curl-adversarial-7.json",
+      "causal_controls": "/tmp/mgs-review7-ADyk4of1/curl-causal-controls-7.json",
+      "before_batch_present": true,
+      "newly_introduced_by_batch": false
+    }
+  ],
+  "counts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 4,
+    "P3": 0,
+    "scope_creep": 0
+  },
+  "original_findings": {
+    "SP-17": {
+      "fixed": true,
+      "independently_executed": true
+    },
+    "SP-18": {
+      "fixed": true,
+      "evidence_read": "/tmp/mgs-review7-ADyk4of1/curl-boundaries-6.json"
+    },
+    "SP-19": {
+      "fixed": true,
+      "evidence_read": "/tmp/mgs-review7-ADyk4of1/curl-boundaries-6.json"
+    }
+  },
+  "curl_original_observed_bug": [
+    {
+      "id": "direct",
+      "observed_bug": false
+    },
+    {
+      "id": "userinfo-correct-host",
+      "observed_bug": false
+    },
+    {
+      "id": "proxy-overrides-url-host",
+      "observed_bug": false
+    },
+    {
+      "id": "resolve-overrides-url-host",
+      "observed_bug": false
+    },
+    {
+      "id": "target-success-other-failed",
+      "observed_bug": false
+    },
+    {
+      "id": "ipv6-loopback",
+      "observed_bug": false
+    },
+    {
+      "id": "uppercase-dns-host",
+      "observed_bug": false
+    },
+    {
+      "id": "port-overflow",
+      "observed_bug": false
+    },
+    {
+      "id": "port-negative",
+      "observed_bug": false
+    },
+    {
+      "id": "port-text",
+      "observed_bug": false
+    },
+    {
+      "id": "host-tab",
+      "observed_bug": false
+    }
+  ],
+  "independent_results": [
+    {
+      "path": "/tmp/mgs-review7-ADyk4of1/spec-agent/mixed-layout-independent/result.json",
+      "id": "mixed-layout-clear-deletes-foreign-legacy",
+      "posts": 2,
+      "b_comment_count": 1,
+      "observed_bug": false,
+      "sha256": "2a3d2abb65b3ab38273c77f48a2c7ba2c67f637edb20f592308d518109745ffa"
+    },
+    {
+      "path": "/tmp/mgs-review7-ADyk4of1/spec-agent/mixed-layout-independent-guard/result.json",
+      "id": "mixed-layout-clear-deletes-foreign-legacy",
+      "posts": 2,
+      "b_comment_count": 1,
+      "observed_bug": false,
+      "sha256": "efb14e113cfe199822ccbc9c3009e905ae7686ff9ec79433bb3e8f0bfa4be2f5"
+    },
+    {
+      "path": "/tmp/mgs-review7-ADyk4of1/spec-agent/interleave-current-plain/result.json",
+      "id": "interleave-current-plain",
+      "posts": 3,
+      "b_comment_count": 2,
+      "observed_bug": true,
+      "sha256": "275599a0cad1b02d1e768d5382c4ac2153052046d1fafd1c230ffd8d587e6ff3"
+    },
+    {
+      "path": "/tmp/mgs-review7-ADyk4of1/spec-agent/interleave-current-guard/result.json",
+      "id": "interleave-current-guard",
+      "posts": 2,
+      "b_comment_count": 1,
+      "observed_bug": false,
+      "sha256": "5327202d0ab976377fc7ac3641b1d992b606cb4e12ad94eaf0785eff8365609d"
+    },
+    {
+      "path": "/tmp/mgs-review7-ADyk4of1/spec-agent/interleave-a3c43ce-plain/result.json",
+      "id": "interleave-a3c43ce-plain",
+      "posts": 3,
+      "b_comment_count": 2,
+      "observed_bug": true,
+      "sha256": "b16659efebbf4f2f5c29b5703c98e1553265cf54f34b89626256ec72c721490d"
+    }
+  ],
+  "boundaries": {
+    "rows": [
+      {
+        "id": "invalid-json-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "invalid-json-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "invalid-utf8-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "invalid-utf8-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "json-null-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "json-null-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "json-list-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "json-list-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "missing-args-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "missing-args-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "foreign-unicode-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "foreign-unicode-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-comment_id-6-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-comment_id-6-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-ref-7-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-ref-7-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-ref-8-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-ref-8-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-ref-9-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-ref-9-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-op-10-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-op-10-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-repo-11-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-repo-11-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-args-12-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "field-args-12-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "top-level-extra-current",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "top-level-extra-legacy",
+        "checks": {
+          "tested_side_expected": true,
+          "healthy_other_side_cleared": true,
+          "preserved_bytes": true
+        },
+        "pass": true
+      },
+      {
+        "id": "exact-identity-0",
+        "pass": true
+      },
+      {
+        "id": "exact-identity-1",
+        "pass": true
+      },
+      {
+        "id": "exact-identity-2",
+        "pass": true
+      },
+      {
+        "id": "exact-identity-3",
+        "pass": true
+      },
+      {
+        "id": "exact-identity-4",
+        "pass": true
+      },
+      {
+        "id": "exact-identity-5",
+        "pass": true
+      }
+    ],
+    "case_count": 34,
+    "assertions": 90,
+    "failed": 0,
+    "real_remote_calls": 0
+  },
+  "observations": [
+    {
+      "name": "concurrent mixed-version legacy writer",
+      "reportable": false,
+      "reason": "No explicit contract supporting concurrent old writer; keep as observed recovery limitation, does not refute fixed sequential SP-17.",
+      "current_location": {
+        "file": "plugin/records/mgs_github.py",
+        "read_line": 818,
+        "unlink_line": 825,
+        "method": "_clear_pending_index"
+      },
+      "baseline_location": "_clear_pending_index -> _load_pending_index -> legacy migration unlink",
+      "location_evidence": "Code control flow plus stored a_complete.attempts read-first exists; no runtime stack captured.",
+      "posts_current": 3,
+      "b_comments_current": 2,
+      "posts_guard": 2,
+      "b_comments_guard": 1,
+      "posts_a3c43ce": 3,
+      "b_comments_a3c43ce": 2,
+      "all_receipts_produced_by_product": true,
+      "manual_receipt_edits": false
+    },
+    {
+      "name": "ambient configuration / proxy",
+      "reportable": false,
+      "reason": "Additional connection provenance observation under SP-20; no duplicate finding."
+    }
+  ],
+  "v1_closure_ready": false,
+  "execution_boundaries": {
+    "all_agent_writes": "/tmp/mgs-review7-ADyk4of1/spec-agent",
+    "real_remote_calls": 0,
+    "model_rounds": 0,
+    "acceptance_run_started": false,
+    "daily_client_install": false,
+    "after_parent_stop": "Only read existing code/results and write report artifacts; no new product/network/curl process."
+  },
+  "memory_used_for_scope_only": {
+    "path": "MEMORY.md",
+    "lines": [
+      104,
+      106
+    ]
+  }
+}

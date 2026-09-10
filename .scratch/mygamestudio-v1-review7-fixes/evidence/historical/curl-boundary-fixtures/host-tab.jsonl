@@ -1,0 +1,1 @@
+{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 --max-time 2 'http://127.0.0.\t1:57451/'", "status": "failed", "exitCode": 3, "aggregatedOutput": "curl: (3) URL rejected: Malformed input to a URL function\n"}}}

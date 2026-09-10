@@ -1,0 +1,62 @@
+[
+  {
+    "id": "real-bare-curl",
+    "command": "/usr/bin/curl --noproxy '*' --connect-timeout 1 http://127.0.0.1:57490/_test/ping",
+    "actual_exit": 28,
+    "actual_output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 57490 after 1000 ms: Timeout was reached\n",
+    "direct_curl_to_127_0_0_1": true,
+    "expected_anchor": "OK",
+    "actual_anchor": "OK",
+    "anchor_stderr": "",
+    "observed_bug": false,
+    "fixture": "/tmp/mgs-review7-ADyk4of1/curl-new-fixtures/real-bare-curl.jsonl"
+  },
+  {
+    "id": "real-zsh-curl",
+    "command": "/bin/zsh -lc '/usr/bin/curl --noproxy '\"'\"'*'\"'\"' --connect-timeout 1 http://127.0.0.1:57490/_test/ping'",
+    "actual_exit": 28,
+    "actual_output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.1 port 57490 after 1005 ms: Timeout was reached\n",
+    "direct_curl_to_127_0_0_1": true,
+    "expected_anchor": "OK",
+    "actual_anchor": "OK",
+    "anchor_stderr": "",
+    "observed_bug": false,
+    "fixture": "/tmp/mgs-review7-ADyk4of1/curl-new-fixtures/real-zsh-curl.jsonl"
+  },
+  {
+    "id": "shell-script-before-c",
+    "command": "/bin/sh /tmp/mgs-review7-ADyk4of1/curl-new-fixtures/script-before-c.sh -c '/usr/bin/curl http://127.0.0.1:57490/_test/ping'",
+    "actual_exit": 7,
+    "actual_output": "Failed to connect (printed by script; no curl execution)\n",
+    "direct_curl_to_127_0_0_1": false,
+    "expected_anchor": "MISSING",
+    "actual_anchor": "MISSING",
+    "anchor_stderr": "",
+    "observed_bug": false,
+    "fixture": "/tmp/mgs-review7-ADyk4of1/curl-new-fixtures/shell-script-before-c.jsonl"
+  },
+  {
+    "id": "wrong-host-only-header-has-target",
+    "command": "/usr/bin/curl --noproxy '*' --connect-timeout 1 -H 'X-Example: http://127.0.0.1:57490/_test/ping' http://127.0.0.2:57490/_test/ping",
+    "actual_exit": 28,
+    "actual_output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.2 port 57490 after 1005 ms: Timeout was reached\n",
+    "direct_curl_to_127_0_0_1": false,
+    "expected_anchor": "MISSING",
+    "actual_anchor": "MISSING",
+    "anchor_stderr": "",
+    "observed_bug": false,
+    "fixture": "/tmp/mgs-review7-ADyk4of1/curl-new-fixtures/wrong-host-only-header-has-target.jsonl"
+  },
+  {
+    "id": "curl-version-then-failure",
+    "command": "/bin/zsh -lc '/usr/bin/curl --version; printf '\"'\"'%s\\n'\"'\"' '\"'\"'Failed to connect'\"'\"'; exit 7 # http://127.0.0.1:57490/_test/ping'",
+    "actual_exit": 7,
+    "actual_output": "curl 8.7.1 (x86_64-apple-darwin25.0) libcurl/8.7.1 (SecureTransport) LibreSSL/3.3.6 zlib/1.2.12 nghttp2/1.68.1\nRelease-Date: 2024-03-27\nProtocols: dict file ftp ftps gopher gophers http https imap imaps ipfs ipns ldap ldaps mqtt pop3 pop3s rtsp smb smbs smtp smtps telnet tftp\nFeatures: alt-svc AsynchDNS GSS-API HSTS HTTP2 HTTPS-proxy IPv6 Kerberos Largefile libz MultiSSL NTLM SPNEGO SSL threadsafe UnixSockets\nFailed to connect\n",
+    "direct_curl_to_127_0_0_1": false,
+    "expected_anchor": "MISSING",
+    "actual_anchor": "MISSING",
+    "anchor_stderr": "",
+    "observed_bug": false,
+    "fixture": "/tmp/mgs-review7-ADyk4of1/curl-new-fixtures/curl-version-then-failure.jsonl"
+  }
+]

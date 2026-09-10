@@ -1,0 +1,113 @@
+{
+  "runs": [
+    {
+      "label": "sp17-green",
+      "exit": 0,
+      "failure_count": 0,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp17-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ]
+    },
+    {
+      "label": "sp17-revert-red",
+      "exit": 1,
+      "failure_count": 14,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp17-revert-red.log",
+      "command": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ]
+    },
+    {
+      "label": "sp17-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp17-restored-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ]
+    },
+    {
+      "label": "sp18-green",
+      "exit": 0,
+      "failure_count": 0,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp18-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp18-revert-red",
+      "exit": 1,
+      "failure_count": 2,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp18-revert-red.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp18-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp18-restored-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp19-green",
+      "exit": 0,
+      "failure_count": 0,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp19-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp19-revert-red",
+      "exit": 1,
+      "failure_count": 1,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp19-revert-red.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp19-restored-green",
+      "exit": 0,
+      "failure_count": 0,
+      "log": "/tmp/mgs-review7-ADyk4of1/logs/mutation-sp19-restored-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    }
+  ],
+  "byte_restored": {
+    "plugin/records/mgs_github.py": true,
+    "acceptance/18-complete-package-acceptance/run.sh": true
+  }
+}

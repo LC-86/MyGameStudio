@@ -1,0 +1,12 @@
+{
+  "repository": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+  "head": "02fc73bbd9969216830be0f1de87733afadcf73e",
+  "status": "",
+  "product_target": "3e6ae308f34cc1f4547211e253842a3dcddb37ae",
+  "base": "a3c43cef0e5c76bd0c2c18fde16c48c99beeaf2a",
+  "commit_count": 5,
+  "head_extra_files": [
+    ".scratch/mygamestudio-v1-review6-fixes/evidence/review-7-handoff.md"
+  ],
+  "06_verify_product_diff": ""
+}
