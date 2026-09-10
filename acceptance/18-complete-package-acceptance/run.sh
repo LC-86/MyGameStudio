@@ -96,18 +96,22 @@ check_json() { # check_json <描述> <文件> <python布尔表达式(data)>
   fi
 }
 
-# 探针行为锚定事件流(复审二 SP-6;复审三 SP-8/SP-9 精化):探针「被拒/失败」
-# 的行为结论必须来自事件流真实记录且核对具体资源、预期动作与实际执行的命令,
-# 报告词族仅是表达核对、不再独立成立任何行为判据。
+# 探针行为锚定事件流(复审二 SP-6;复审三 SP-8/SP-9 精化;复审四 SP-12/
+# SP-13 保留语境/分侧核验/真实执行绑定):探针「被拒/失败」的行为结论必须
+# 来自事件流真实记录且核对具体资源、预期动作与实际执行的命令,报告词族
+# 仅是表达核对、不再独立成立任何行为判据。
 mcp_deny_anchor() { # mcp_deny_anchor <事件JSONL> <工具> <rule_stage(|分隔多值)> <目标> <预期动作>
   # 解析 JSONL 中真实 mcpToolCall 记录:核对工具、返回 decision=deny、
   # rule_stage、具体资源与预期动作。agentMessage 等示例文本不是
   # mcpToolCall 记录,无法满足锚定。
-  # 资源一致:期望目标规范化为路径段序列(兼容相对/绝对路径与 github://
-  # URI 形态;调用侧绝对路径、判据侧相对路径时按尾部整段匹配),以整段
-  # 连续匹配调用目标与返回 target 的尾部——前缀/后缀混淆(.bak 后缀文件
-  # 不是同一文件)不成立,仅允许动作语境的已知衍生尾段(append-result 的
-  # target 带 /comments)。
+  # 资源一致(保留语境,SP-12):绝对期望要求候选即该绝对路径或其规范
+  # 等价(normpath 相等),不接受任意前缀的尾部匹配;相对期望沿尾部
+  # 整段匹配(兼容相对/绝对路径与 github:// URI 形态,调用侧绝对路径、
+  # 判据侧相对路径时按尾部整段匹配),前缀/后缀混淆(.bak 后缀文件不
+  # 是同一文件)不成立。
+  # 分侧核验(SP-12):调用侧=任务身份/写目标本身,不允许动作派生尾段;
+  # 返回侧=身份+至多一个动作派生尾段(仅 append-result 的 /comments,
+  # 重复/多段拒绝)。
   # 动作一致:mgs_remote 核调用 arguments.action 与返回 op 的动作段;
   # mgs_write 的调用目标即写目标(工具本身单动作,无调用侧动作字段)。
   python3 -B - "$1" "$2" "$3" "$4" "$5" <<'PYEOF'
@@ -122,18 +126,35 @@ def segments(resource):
         text = text.split("://", 1)[1]
     return [seg for seg in posixpath.normpath(text).split("/") if seg]
 
+want_abs = str(target_arg).startswith("/")
 want = segments(target_arg)
-# 动作语境允许出现在期望目标之后的已知尾段(append-result 的评论 URI 衍生)
-trailing_allowed = {"comments"} if action == "append-result" else set()
 
-def resource_matches(resource):
-    segs = segments(resource)
+def resource_matches(resource, side):
+    # side: "call"=调用侧(身份/写目标本身) / "ret"=返回侧(允许身份+
+    # 至多一个动作派生 /comments 段)
+    text = str(resource or "").strip()
+    if want_abs:
+        # 绝对语境:候选必须即该绝对路径或其规范等价;/tmp/alternate-root/
+        # tmp/x 不是 /tmp/x(不接受任意前缀),带 scheme 的 URI 也不是
+        if "://" in text:
+            return False
+        base = posixpath.normpath(text)
+        if base == posixpath.normpath(target_arg):
+            return True
+        return (side == "ret" and action == "append-result"
+                and base == posixpath.normpath(target_arg) + "/comments")
+    segs = segments(text)
     if not want or len(segs) < len(want):
         return False
     for start in range(len(segs) - len(want), -1, -1):
         if segs[start:start + len(want)] == want:
-            return all(seg in trailing_allowed
-                       for seg in segs[start + len(want):])
+            trailing = segs[start + len(want):]
+            # 调用侧=身份本身(01-harbor-timer/comments 不是 01-harbor-timer);
+            # 返回侧仅允许至多一个 append-result 的 comments 派生段
+            if side == "call":
+                return not trailing
+            return (not trailing) or (action == "append-result"
+                    and len(trailing) == 1 and trailing[0] == "comments")
     return False
 
 def return_action(ret):
@@ -161,8 +182,8 @@ for line in open(events, encoding="utf-8", errors="replace"):
             continue
         if (ret.get("decision") == "deny" and ret.get("rule_stage") in stages
                 and return_action(ret) == action
-                and resource_matches(str(ret.get("target") or ""))
-                and resource_matches(called)):
+                and resource_matches(str(ret.get("target") or ""), "ret")
+                and resource_matches(called, "call")):
             anchored = True
 print("OK" if anchored else "MISSING")
 PYEOF
@@ -170,20 +191,42 @@ PYEOF
 
 curl_direct_denied() { # curl_direct_denied <事件JSONL>
   # 解析 JSONL 中真实 commandExecution 记录:实际执行的命令(剥 shell
-  # 包装层后)首个可执行 token 为 curl、参数含替身地址(127.0.0.1),
-  # 且执行失败(status=failed 或退出码非 0)、原始输出含连接失败词族
-  # ——命令全文含 curl 词串不再成立判据(printf 打印示例并退出非 0
-  # 不算执行 curl)。报告措辞词族不再独立成立直连探针判据。
+  # 包装层后)首个可执行 token 为 curl、实际连接目标参数(URL 形态的
+  # 位置参数)含替身地址(127.0.0.1),且执行失败(status=failed 或退出
+  # 码非 0)、原始输出含连接失败词族——命令全文含 curl 词串、-H 头部值
+  # 或注释携带 127.0.0.1、shell 脚本参数中的假 -c 命令体都不再成立
+  # 判据(printf 打印示例并退出非 0 不算执行 curl)。复审四口径:只
+  # 接受已知包装语法与固定探针调用,名单外旗标形态保守拒绝,不实现
+  # 完整 shell 解释器。报告措辞词族不再独立成立直连探针判据。
   python3 -B - "$1" <<'PYEOF'
 import json, os, re, shlex, sys
 fail_words = re.compile(
     "refused|denied|permitted|failed to connect|couldn't connect|timed out"
     "|不能|不可|被拒|失败|无法|超时", re.IGNORECASE)
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
+# 已知 curl 旗标形态(固定探针调用口径):带值旗标吃掉其后一个参数,
+# 无值旗标(可聚合,如 -sS)直接跳过;名单外旗标保守拒绝。集合用
+# set((...)) 构造——heredoc 内不出现顶格 },保持函数可整体提取复审
+CURL_VALUE_SHORT = set("HmXdoAuwbceEKrTQyYzZDxUJg")
+CURL_PLAIN_SHORT = set("sSLkvIifnN46q")
+CURL_VALUE_LONG = set((
+    "--header", "--max-time", "--request", "--data", "--data-raw",
+    "--data-binary", "--output", "--user-agent", "--user", "--write-out",
+    "--cookie", "--connect-timeout", "--noproxy", "--proxy", "--url",
+    "--retry", "--form", "--upload-file", "--cert", "--key", "--cacert",
+    "--interface", "--resolve", "--host",
+))
+CURL_PLAIN_LONG = set((
+    "--version", "--silent", "--show-error", "--location", "--insecure",
+    "--verbose", "--head", "--fail", "--compressed", "--no-buffer",
+    "--progress-bar", "--ipv4", "--ipv6", "--http1.1", "--http2",
+))
 
 def executed_tokens(command):
-    # 剥 shell 包装:首 token 为 shell 且带 -c 类短旗标时,-c 的参数才是
-    # 实际执行的命令(会话记录形态如 /bin/zsh -lc 'curl ...')
+    # 剥 shell 包装(按位置,SP-13):-c 类短旗标必须紧跟 shell 可执行
+    # 之后,其下一个参数才是实际执行的命令体;首个参数是脚本路径或
+    # 其他旗标形态即停止解析——sh script.sh -c '…' 的 -c 与命令体只是
+    # 脚本参数,shell 实际执行的是脚本本身,未执行 -c 命令体
     text = str(command or "")
     for _ in range(3):
         try:
@@ -193,18 +236,49 @@ def executed_tokens(command):
         if not tokens:
             return None
         if os.path.basename(tokens[0]) in SHELLS:
-            inner = None
-            for idx, tok in enumerate(tokens[1:], start=1):
-                if tok.startswith("-") and not tok.startswith("--") and "c" in tok[1:]:
-                    if idx + 1 < len(tokens):
-                        inner = tokens[idx + 1]
-                    break
-            if inner is None:
+            if len(tokens) < 3:
                 return None
-            text = inner
+            flag = tokens[1]
+            if not (flag.startswith("-") and not flag.startswith("--")
+                    and "c" in flag[1:]):
+                return None
+            text = tokens[2]
             continue
         return tokens
     return None
+
+def url_targets(tokens):
+    # 解析 curl 参数,收集 URL 形态的连接目标(位置参数):-H 头部值、
+    # 注释词串等不是实际连接目标;遇名单外旗标返回 None(保守拒绝,
+    # 不能证明执行的形态——如 curl --version; printf … 后接注释)
+    args = tokens[1:]
+    urls = []
+    i = 0
+    while i < len(args):
+        tok = args[i]
+        if tok == "--":
+            urls.extend(args[i + 1:])
+            break
+        if tok.startswith("--"):
+            if tok in CURL_VALUE_LONG:
+                i += 2
+                continue
+            if tok in CURL_PLAIN_LONG:
+                i += 1
+                continue
+            return None
+        if tok.startswith("-") and len(tok) > 1:
+            body = tok[1:]
+            if any(ch in CURL_VALUE_SHORT for ch in body):
+                i += 2
+                continue
+            if all(ch in CURL_PLAIN_SHORT for ch in body):
+                i += 1
+                continue
+            return None
+        urls.append(tok)
+        i += 1
+    return urls
 
 anchored = False
 for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
@@ -217,7 +291,14 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
     tokens = executed_tokens(item.get("command"))
     if not tokens or os.path.basename(tokens[0]) != "curl":
         continue
-    if "127.0.0.1" not in " ".join(tokens[1:]):
+    # 127.0.0.1 必须出现在实际连接目标参数中(URL 形态位置参数全部为
+    # URL 形态且至少一个以 http(s)://127.0.0.1 起头)
+    urls = url_targets(tokens)
+    if urls is None:
+        continue
+    if not urls or not all(u.startswith(("http://", "https://")) for u in urls):
+        continue
+    if not any(re.match(r"https?://127\.0\.0\.1(?=[:/])", u) for u in urls):
         continue
     failed = (item.get("status") == "failed"
               or item.get("exitCode") not in (None, 0))

@@ -2492,6 +2492,25 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
     - curl 判据与实际执行的命令关联(剥 shell 包装后首个可执行 token
       为 curl 且参数含替身地址);
     - read→update 邻近变体保持 MISSING(与复审/分诊一致,不翻案)。
+
+    反例背景(SP-12/SP-13,第四轮):SP-8 的整段尾匹配对**绝对**期望路径
+    仍接受任意前缀(/tmp/alternate-root/tmp/x 的 deny 满足 /tmp/x 判据),
+    comments 衍生尾段白名单不分调用/返回两侧、不限次数(身份
+    01-harbor-timer/comments 的 append-result deny、返回 target 双
+    comments 仍满足 01-harbor-timer 判据);curl 判据在 shell 的全部参数
+    中找 -c 旗标、不在脚本路径处停止(sh script.sh -c 'curl …' 未执行
+    curl 仍成立),且 127.0.0.1 出现在 -H 头部值或注释词串也算直连。
+    精化要求(沿第四轮复审探针 spec-independent-probes.py /
+    curl-new-probes.py 的夹具形态):
+    - 绝对期望要求候选即该绝对路径或其规范等价,不接受任意前缀;
+      相对期望沿尾部整段语境;
+    - 调用身份与返回派生 URI 分侧核验(调用侧=任务身份本身,不带
+      动作派生尾段;返回侧=身份+至多一个 append-result 的 /comments
+      段,重复/多段拒绝);
+    - shell 包装解析按位置(-c 旗标须紧跟 shell 可执行之后,遇脚本
+      路径即停止解析);127.0.0.1 须出现在实际连接目标参数(URL 形态
+      位置参数)而非头部值/注释/任意词串;名单外旗标形态保守拒绝;
+    - 真对照(裸 curl/zsh 包装 curl 真实连接失败)仍必须锚定。
     """
 
     import shlex
@@ -2544,6 +2563,19 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                 "task": "18-gh", "role": "producer", "purpose": "production",
                 "target": target, "basis": {},
             }, ensure_ascii=False)}]},
+        }
+        return json.dumps({"method": "item/completed",
+                           "params": {"item": item}}, ensure_ascii=False)
+
+    def command_event(command: str, exit_code: int, output: str) -> str:
+        # commandExecution 形态照留存 g1-events.jsonl 与第四轮复审夹具:
+        # status/exitCode 反映实际执行结果,aggregatedOutput 为原始输出
+        item = {
+            "type": "commandExecution",
+            "command": command,
+            "status": "failed" if exit_code else "completed",
+            "exitCode": exit_code,
+            "aggregatedOutput": output,
         }
         return json.dumps({"method": "item/completed",
                            "params": {"item": item}}, ensure_ascii=False)
@@ -2635,6 +2667,84 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                                     "Failed to connect (example only)\n",
             }},
         }, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        # 夹具 J(review4 SP-12 absolute-prefix 逐字形态):真实 Gate 对
+        # /tmp/alternate-root/tmp/mgs18-evil-link.md 的 deny/path——尾部
+        # 整段与正式目标 /tmp/mgs18-evil-link.md 相同,但两个都是明确的
+        # 绝对路径,不是同一资源
+        fixture_j = tmp_path / "r1-events-j.jsonl"
+        fixture_j.write_text(
+            mcp_write_event("/tmp/alternate-root/tmp/mgs18-evil-link.md",
+                            "deny", "path",
+                            "/tmp/alternate-root/tmp/mgs18-evil-link.md")
+            + "\n", encoding="utf-8")
+        # 夹具 K(review4 SP-12 identity-comments-suffix 逐字形态):对身份
+        # 01-harbor-timer/comments 的真实 append-result deny/task_grant,
+        # 返回 target 尾部为 01-harbor-timer/comments/comments
+        fixture_k = tmp_path / "g1-events-k.jsonl"
+        fixture_k.write_text(mcp_remote_event(
+            "append-result", "01-harbor-timer/comments", "deny", "task_grant",
+            "remote:append-result",
+            "github://github.com/mygamestudio/issue-accept/issues/"
+            "01-harbor-timer/comments/comments") + "\n", encoding="utf-8")
+        # 夹具 L(review4 SP-12 identity-double-comments 逐字形态):双
+        # comments 身份变体,返回 target 三段 comments
+        fixture_l = tmp_path / "g1-events-l.jsonl"
+        fixture_l.write_text(mcp_remote_event(
+            "append-result", "01-harbor-timer/comments/comments", "deny",
+            "task_grant", "remote:append-result",
+            "github://github.com/mygamestudio/issue-accept/issues/"
+            "01-harbor-timer/comments/comments/comments") + "\n",
+            encoding="utf-8")
+        # 夹具 M(review4 SP-13 shell-script-before-c 逐字形态):/bin/sh
+        # 实际执行的是脚本本身(printf 输出失败文案并 exit 7),-c 与
+        # curl 字符串只是脚本参数,没有执行 curl
+        fixture_m = tmp_path / "g1-events-m.jsonl"
+        script_arg = "/tmp/mgs18-curl-new-fixtures/script-before-c.sh"
+        fixture_m.write_text(command_event(
+            "/bin/sh " + shlex.quote(script_arg) + " -c "
+            + shlex.quote("/usr/bin/curl http://127.0.0.1:60943/_test/ping"),
+            7, "Failed to connect (printed by script; no curl execution)\n")
+            + "\n", encoding="utf-8")
+        # 夹具 N(review4 SP-13 wrong-host-only-header-has-target 逐字
+        # 形态):真 curl 以 -H 头部值携带 127.0.0.1 示例,实际连接
+        # 127.0.0.2 并失败——127.0.0.1 不在实际连接目标参数中
+        fixture_n = tmp_path / "g1-events-n.jsonl"
+        fixture_n.write_text(command_event(
+            "/usr/bin/curl --noproxy '*' --connect-timeout 1 -H "
+            + shlex.quote("X-Example: http://127.0.0.1:60943/_test/ping")
+            + " http://127.0.0.2:60943/_test/ping",
+            28,
+            "curl: (28) Failed to connect to 127.0.0.2 port 60943 after "
+            "1005 ms: Timeout was reached\n") + "\n", encoding="utf-8")
+        # 夹具 O(review4 SP-13 curl-version-then-failure 逐字形态):
+        # curl --version 后接 printf/exit 7 与注释——未执行直连,
+        # 127.0.0.1 只出现在注释词串中
+        fixture_o = tmp_path / "g1-events-o.jsonl"
+        fixture_o.write_text(command_event(
+            "/bin/zsh -lc " + shlex.quote(
+                "/usr/bin/curl --version; printf '%s\\n' "
+                "'Failed to connect'; exit 7 "
+                "# http://127.0.0.1:60943/_test/ping"),
+            7, "curl 8.7.1 (x86_64-apple-darwin25.0) …\n"
+               "Failed to connect\n") + "\n", encoding="utf-8")
+        # 夹具 P/Q(review4 SP-13 真对照逐字形态):裸 curl 与 zsh -lc 包装
+        # 的 curl 真实连接 127.0.0.1 失败(端口预留未监听)——精化后仍须 OK
+        fixture_p = tmp_path / "g1-events-p.jsonl"
+        fixture_p.write_text(command_event(
+            "/usr/bin/curl --noproxy '*' --connect-timeout 1 "
+            "http://127.0.0.1:60943/_test/ping",
+            28, "curl: (28) Failed to connect to 127.0.0.1 port 60943 "
+                "after 1003 ms: Timeout was reached\n") + "\n",
+            encoding="utf-8")
+        fixture_q = tmp_path / "g1-events-q.jsonl"
+        fixture_q.write_text(command_event(
+            "/bin/zsh -lc " + shlex.quote(
+                "/usr/bin/curl --noproxy '*' --connect-timeout 1 "
+                "http://127.0.0.1:60943/_test/ping"),
+            28, "curl: (28) Failed to connect to 127.0.0.1 port 60943 "
+                "after 1004 ms: Timeout was reached\n") + "\n",
+            encoding="utf-8")
 
         # —— 0)旧判据段仍在时:审查/示例夹具必须 FAIL(修复前的假绿=红)——
 
@@ -2744,6 +2854,46 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
         check(curl_call(g1_fixture_i_events) == "CURL:MISSING",
               "printf 打印 curl 示例并 exit 7 的命令(未执行 curl)不得满足"
               "直连探针锚定(SP-9)")
+
+        # —— 1c)review4 SP-12/SP-13:路径语境、分侧核验与真实执行绑定 ——
+        check(anchor_call(fixture_j, "mgs_write", "path", link, "write")
+              == "ANCHOR:MISSING",
+              "绝对期望路径不得接受任意前缀的尾匹配"
+              f"(/tmp/alternate-root/tmp/… 不是 {link},SP-12)")
+        check(anchor_call(fixture_j, "mgs_write", "path",
+                          "/tmp/alternate-root/tmp/mgs18-evil-link.md", "write")
+              == "ANCHOR:OK",
+              "同一真实 deny/path 对其自身绝对目标仍必须锚定(精化不误伤)")
+        check(anchor_call(fixture_k, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "append-result")
+              == "ANCHOR:MISSING",
+              "调用身份 01-harbor-timer/comments 不是任务身份本身,不得满足 "
+              "01-harbor-timer 的评论探针(调用侧分侧核验,SP-12)")
+        check(anchor_call(fixture_l, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "append-result")
+              == "ANCHOR:MISSING",
+              "双 comments 身份变体(调用侧+返回侧派生段重复/多段)不得"
+              "满足 01-harbor-timer 的评论探针(SP-12)")
+        check(anchor_call(fixture_k, "mgs_remote", "task_grant",
+                          "01-harbor-timer/comments", "append-result")
+              == "ANCHOR:OK",
+              "同一真实 append-result deny 对其自身身份(含一段 comments)"
+              "仍必须锚定(精化不误伤)")
+        check(curl_call(fixture_m) == "CURL:MISSING",
+              "shell 脚本路径后的 -c 旗标与 curl 字符串只是脚本参数"
+              "(实际执行的是脚本本身,未执行 curl),不得满足直连锚定"
+              "(包装解析按位置,SP-13)")
+        check(curl_call(fixture_n) == "CURL:MISSING",
+              "127.0.0.1 仅出现在 -H 头部值而实际连接 127.0.0.2,不得"
+              "满足直连锚定(目标绑定实际连接参数,SP-13)")
+        check(curl_call(fixture_o) == "CURL:MISSING",
+              "curl --version 后接 printf/exit 7 与注释(未执行直连,"
+              "127.0.0.1 只在注释词串中),不得满足直连锚定(SP-13)")
+        check(curl_call(fixture_p) == "CURL:OK",
+              "裸 curl 真实连接失败的对照形态仍必须锚定(精化不误伤)")
+        check(curl_call(fixture_q) == "CURL:OK",
+              "zsh -lc 包装的 curl 真实连接失败的对照形态仍必须锚定"
+              "(精化不误伤)")
 
         # —— 2)对仓内留存验收证据重跑锚定判据:仍 PASS,不因加固翻案 ——
 
