@@ -2435,6 +2435,9 @@ def test_accept18_leak_checks_mechanized() -> None:
             'check() { local d="$1"; shift; '
             'if "$@" >/dev/null 2>&1; then echo "leakcheck-PASS"; '
             'else echo "leakcheck-FAIL"; fi; }',
+            # 泄漏段在 run.sh 里由脚本头部的 say(){ printf; } 兜底,提取段
+            # 不含该定义,裸 say 会落到系统真语音,此处补定义保持纯打印
+            "say() { printf '%s\\n' \"$*\"; }",
             leak_match.group(0),
         ])
         res = subprocess.run(["bash", "-c", leak_runner],
