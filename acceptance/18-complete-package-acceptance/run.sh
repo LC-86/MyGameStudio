@@ -197,33 +197,52 @@ curl_direct_denied() { # curl_direct_denied <事件JSONL>
   # 解析 JSONL 中真实 commandExecution 记录:实际执行的命令(剥 shell
   # 包装层后)首个可执行 token 为 curl、实际连接目标参数(URL 形态的
   # 位置参数,恰一个)解析后的主机为替身地址(127.0.0.1),且执行失败
-  # (status=failed 或退出码非 0)、原始输出含连接失败词族——命令全文
-  # 含 curl 词串、-H 头部值或注释携带 127.0.0.1、shell 脚本参数中的
-  # 假 -c 命令体、URL userinfo 段冒充(http://127.0.0.1:端口@127.0.0.2:
-  # 端口/ 实际连接 127.0.0.2)、--proxy/--resolve/--host/--interface 等
-  # 改变连接语义的参数(URL 仍是 .1 而实连他址)、多 URL 命令用整次
-  # 进程失败冒充目标失败(目标已返回 200、另一 URL 超时)都不再成立
-  # 判据(printf 打印示例并退出非 0 不算执行 curl)。复审四口径:只接受
-  # 已知包装语法与固定探针调用,名单外旗标形态保守拒绝,不实现完整
-  # shell 解释器。复审五口径:核验 urlparse 解析后的实际 hostname,
-  # 前缀匹配不看解析结构。复审六口径:改变连接语义的参数保守拒绝,
-  # 失败须归属于唯一目标 URL。报告措辞词族不再独立成立直连探针判据。
+  # (status=failed 或退出码非 0)、原始输出含连接阶段失败词族并绑定实际
+  # 尝试主机(同一行含替身地址)——命令全文含 curl 词串、-H 头部值或注
+  # 释携带 127.0.0.1、shell 脚本参数中的假 -c 命令体、URL userinfo 段
+  # 冒充(http://127.0.0.1:端口@127.0.0.2:端口/ 实际连接 127.0.0.2)、
+  # --proxy/--resolve/--host/--interface 等改变连接语义的参数、其短旗标
+  # 同义形态(-x/-K/-U,SP-20)、重定向旗标 -L/--location 只核初始 URL
+  # (SP-21)、粘连短值(-m2,SP-22)、连接已成功后的响应阶段超时冒充
+  # 连接被拒(SP-23)、隐式 ambient 配置(CURL_HOME/.curlrc、http_proxy)
+  # 使实连他址(失败输出点名他址,SP-23 主机绑定一并闭合)、多 URL
+  # 命令用整次进程失败冒充目标失败(目标已返回 200、另一 URL 超时)都
+  # 不再成立判据(printf 打印示例并退出非 0 不算执行 curl)。复审四
+  # 口径:只接受已知包装语法与固定探针调用,名单外旗标形态保守拒绝,
+  # 不实现完整 shell 解释器。复审五口径:核验 urlparse 解析后的实际
+  # hostname,前缀匹配不看解析结构。复审六口径:改变连接语义的参数
+  # 保守拒绝,失败须归属于唯一目标 URL。复审七口径:短旗标/配置来源/
+  # 重定向形态同口径保守拒绝,短旗标值按 curl 语义消费(粘连值即 token
+  # 余部、只消费当前 token),失败证据须能证明对替身的连接未被允许
+  # (连接阶段词族+实际尝试主机绑定,通用超时/响应阶段词不再单独成立)。
+  # 报告措辞词族不再独立成立直连探针判据。
   python3 -B - "$1" <<'PYEOF'
 import json, os, re, shlex, sys
 from urllib.parse import urlparse
-fail_words = re.compile(
-    "refused|denied|permitted|failed to connect|couldn't connect|timed out"
-    "|不能|不可|被拒|失败|无法|超时", re.IGNORECASE)
+# 失败证据须能证明「对替身的连接未被允许」(SP-23):连接阶段失败
+# 词族并绑定实际尝试主机——原始输出须有一行同时含连接失败短语与
+# 替身地址;通用 operation timed out / 响应阶段超时(连接已成功、
+# 部分字节已到达)不再单独成立,隐式 ambient 配置(CURL_HOME/.curlrc、
+# http_proxy 使实连他址)的失败输出点名他址,同样不能成立(观察项
+# 随本口径一并闭合);报告措辞中文词族不再独立成立
+connect_fail_words = re.compile(
+    "failed to connect|couldn't connect|connection refused", re.IGNORECASE)
+STANDBY_HOST = "127.0.0.1"
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
 # 已知 curl 旗标形态(固定探针调用口径):带值旗标吃掉其后一个参数,
 # 无值旗标(可聚合,如 -sS)直接跳过;名单外旗标保守拒绝。改变连接
-# 语义的旗标不在名单内(SP-18):--proxy/--resolve/--host/--interface
-# 会使实际连接目标/绑定偏离 URL(代理远端、地址重映射、主机头、本地
-# 绑定侧),固定探针不核验其效果,出现即整个命令不成立(返回 None);
-# --noproxy 是禁止代理、保持直连语义,固定探针自身在用,保留。集合用
-# set((...)) 构造——heredoc 内不出现顶格 },保持函数可整体提取复审
-CURL_VALUE_SHORT = set("HmXdoAuwbceEKrTQyYzZDxUJg")
-CURL_PLAIN_SHORT = set("sSLkvIifnN46q")
+# 语义的旗标不在名单内:长参数 --proxy/--resolve/--host/--interface
+# (SP-18)与短旗标同义形态 -x(代理)/-K(配置文件,文件内可再设
+# proxy/resolve/connect-to 等改变连接语义项)/-U(代理凭据,代理域
+# 旗标、固定探针从不用,宁严勿宽一并移除,SP-20)都会使实际连接
+# 目标/绑定偏离 URL,固定探针不核验其效果,出现即整个命令不成立
+# (返回 None);--noproxy 是禁止代理、保持直连语义,固定探针自身
+# 在用,保留。重定向旗标 -L/--location 同口径保守拒绝(SP-21):
+# curl 跟随 302 后判据无法确认最终目标归属——.1 被直连访问、转向
+# .2 连接失败也会冒充初始目标被拒。集合用 set((...)) 构造——
+# heredoc 内不出现顶格 },保持函数可整体提取复审
+CURL_VALUE_SHORT = set("HmXdoAuwbceErTQyYzZDJg")
+CURL_PLAIN_SHORT = set("sSkvIifnN46q")
 CURL_VALUE_LONG = set((
     "--header", "--max-time", "--request", "--data", "--data-raw",
     "--data-binary", "--output", "--user-agent", "--user", "--write-out",
@@ -231,7 +250,7 @@ CURL_VALUE_LONG = set((
     "--retry", "--form", "--upload-file", "--cert", "--key", "--cacert",
 ))
 CURL_PLAIN_LONG = set((
-    "--version", "--silent", "--show-error", "--location", "--insecure",
+    "--version", "--silent", "--show-error", "--insecure",
     "--verbose", "--head", "--fail", "--compressed", "--no-buffer",
     "--progress-bar", "--ipv4", "--ipv6", "--http1.1", "--http2",
 ))
@@ -283,8 +302,16 @@ def url_targets(tokens):
             return None
         if tok.startswith("-") and len(tok) > 1:
             body = tok[1:]
-            if any(ch in CURL_VALUE_SHORT for ch in body):
-                i += 2
+            # 短旗标值按 curl 语义消费(SP-22):首个带值字符位于 token
+            # 末尾(如 -m、-sSm)取下一参数为值;位于中间即粘连形式
+            # (-m2、-sSm2)值即 token 余部、只消费当前 token——URL 计数
+            # 须反映真实参数语义(旧实现凡含带值字符即 i+=2,-m2 把下一
+            # 参数·首 URL·当值吞掉,单 URL 限制被绕过;值字符不在末尾
+            # 的歧义形态如 -ms2 按 curl 真实行为取余部为值,留档票面)
+            value_at = next((j for j, ch in enumerate(body)
+                             if ch in CURL_VALUE_SHORT), None)
+            if value_at is not None:
+                i += 2 if value_at == len(body) - 1 else 1
                 continue
             if all(ch in CURL_PLAIN_SHORT for ch in body):
                 i += 1
@@ -328,7 +355,13 @@ for line in open(sys.argv[1], encoding="utf-8", errors="replace"):
         continue
     failed = (item.get("status") == "failed"
               or item.get("exitCode") not in (None, 0))
-    if failed and fail_words.search(str(item.get("aggregatedOutput") or "")):
+    # 失败证据绑定实际尝试主机(SP-23):连接阶段失败词族与替身地址须
+    # 出现在同一行——证明对替身的连接未被允许,而非仅请求最终非零
+    # 退出(连接已成功、响应阶段超时的输出无连接失败短语;实连他址的
+    # 输出点名他址,均不成立)
+    output = str(item.get("aggregatedOutput") or "")
+    if failed and any(connect_fail_words.search(line) and STANDBY_HOST in line
+                      for line in output.splitlines()):
         anchored = True
 print("OK" if anchored else "MISSING")
 PYEOF
