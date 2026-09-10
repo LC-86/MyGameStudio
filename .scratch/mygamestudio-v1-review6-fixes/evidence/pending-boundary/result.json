@@ -1,0 +1,209 @@
+[
+  {
+    "id": "concurrent-distinct-full-hashes-0",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-1",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-2",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-3",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-4",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-5",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-6",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-7",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-8",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-9",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-10",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-11",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-12",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-13",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-14",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-15",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-16",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-17",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-18",
+    "pass": true
+  },
+  {
+    "id": "concurrent-distinct-full-hashes-19",
+    "pass": true
+  },
+  {
+    "id": "migration-before-write",
+    "first_comment": 5100,
+    "first_load_comment": 5100,
+    "second_load_comment": 5100,
+    "second_load_corrupt": false,
+    "retry": {
+      "published": true,
+      "partial": true,
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "pending-index",
+          "outcome": "kept"
+        }
+      ],
+      "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记:#issuecomment-5100),本次读前收养查询失败(timeout: one read-first timeout)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引"
+    },
+    "posts": 1,
+    "remaining_after_clear": [],
+    "observation": "Retry remains safe, matching receipts clear from both layouts."
+  },
+  {
+    "id": "migration-after-partial-write",
+    "first_comment": 5100,
+    "first_load_comment": 5100,
+    "second_load_comment": null,
+    "second_load_corrupt": true,
+    "retry": {
+      "published": true,
+      "partial": true,
+      "comment_id": null,
+      "ref": null,
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "pending-index",
+          "outcome": "kept"
+        }
+      ],
+      "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记存在),本次读前收养查询失败(timeout: one read-first timeout)且登记不可读(JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1);登记文件 /tmp/mgs-review6-zonhimd1/spec-agent/pending-boundary-run/migration-after-partial-write/cache/pending-index/append-result-01-task-346df0e9/346df0e9f3c1a37fabe0a6d5d973c52a53c6dd35e3b3f6bc2672a1154b092467.json);已保留待恢复状态、不当作全新发布;请人工核对远端评论与登记文件后重试(远端可读时重试同一请求即经读前收养补齐索引)"
+    },
+    "posts": 1,
+    "remaining_after_clear": [
+      "cache/pending-index/append-result-01-task-346df0e9.json",
+      "cache/pending-index/append-result-01-task-346df0e9/346df0e9f3c1a37fabe0a6d5d973c52a53c6dd35e3b3f6bc2672a1154b092467.json"
+    ],
+    "observation": "Truncated current shadows healthy legacy; conservative corrupt disclosure, no re-POST; automatic migration is not retried."
+  },
+  {
+    "id": "migration-before-unlink",
+    "first_comment": 5100,
+    "first_load_comment": 5100,
+    "second_load_comment": 5100,
+    "second_load_corrupt": false,
+    "retry": {
+      "published": true,
+      "partial": true,
+      "comment_id": 5100,
+      "ref": "#issuecomment-5100",
+      "issue_number": 1,
+      "index_updated": false,
+      "attempts": [
+        {
+          "step": "read-first",
+          "outcome": "timeout",
+          "detail": "timeout: one read-first timeout"
+        },
+        {
+          "step": "pending-index",
+          "outcome": "kept"
+        }
+      ],
+      "note": "待恢复:前次调用已确认发布该结果评论(本地待补索引登记:#issuecomment-5100),本次读前收养查询失败(timeout: one read-first timeout)无法核对远端;已保留已发布操作身份、不当作全新发布(本次不发布也不动索引);彻底恢复后重试同一请求只收养既有评论并补齐索引"
+    },
+    "posts": 1,
+    "remaining_after_clear": [],
+    "observation": "Retry remains safe, matching receipts clear from both layouts."
+  },
+  {
+    "id": "identity-0",
+    "identity_repr": "'任务-é'",
+    "body_length": 3,
+    "pass": true
+  },
+  {
+    "id": "identity-1",
+    "identity_repr": "'任务-é'",
+    "body_length": 3,
+    "pass": true
+  },
+  {
+    "id": "identity-2",
+    "identity_repr": "'任务-\\t'",
+    "body_length": 3,
+    "pass": true
+  },
+  {
+    "id": "identity-3",
+    "identity_repr": "'任务-\\n'",
+    "body_length": 7,
+    "pass": true
+  },
+  {
+    "id": "identity-4",
+    "identity_repr": "'任务-long'",
+    "body_length": 100000,
+    "pass": true
+  },
+  {
+    "id": "unicode-control-path-distinctness",
+    "pass": true
+  }
+]

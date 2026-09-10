@@ -1,0 +1,61 @@
+# 第六轮复审发现 triage 再现核验（2026-09-10）
+
+主审会话在收到 review-6.md 后、开票前，独立复跑三项新发现的原审探针。
+环境：真实仓库 HEAD=e68ef7d（相对产品目标 a3c43ce 仅多 review-6-handoff.md，
+git status 除本批次新目录外干净）；复跑全部在本任务 /tmp/mgs-triage6-rerun/，
+真实仓库零改动、零远端写入。
+
+## 依赖身份核实（复跑前）
+
+- 审方 spec-agent/repo-tracked 的 plugin/records/mgs_github.py
+  SHA-256=0b55adf008583c25bd44f093e52e13565b16ff6937ad762eb4ab866b715727bb
+  == git show a3c43ce:plugin/records/mgs_github.py（目标版本）。
+- 审方 spec-agent/mgs_github_old.py
+  SHA-256=7b4fbc13c1191b2a78bac2838f15ebb16ac7e6ad20989dcad55e44e3766c1e18
+  == git show 1eef7d8:plugin/records/mgs_github.py（批次前旧实现）。
+- 审方 repo/acceptance/18-complete-package-acceptance/run.sh
+  SHA-256=ec296f6615f83d95a2a600174d34064056290ea9e13b952fce1b096a83d95a76
+  == git show a3c43ce 同路径（目标版本）。
+- 复跑用克隆：git clone --no-hardlinks --no-checkout 真实仓库 →
+  checkout --detach a3c43ce。
+
+## SP-17 复跑（mixed-layout-probe.py，原样执行，仅 --out 指向本任务目录）
+
+1. 原样运行：posts=3、B 正文评论 2 条、observed_bug=true、
+   manual_receipt_edits=false —— 与审方 run-1/主审复跑一致，再现成立。
+2. --guard-each-path 因果守卫（内存中改为逐路径独立身份核验）：
+   posts=2、B 正文评论 1 条、observed_bug=false —— 与审方守卫对照一致，
+   根因（单次核验授权删除两个路径）确认。
+
+## SP-18/19 复跑（curl-boundaries-6.py）
+
+适配仅一处：工作区常量 W 由 /tmp/mgs-review6-zonhimd1 改为
+/tmp/mgs-triage6-rerun/cb；repo/ 内放置 a3c43ce 的 run.sh，repro/ 为上述
+本地克隆（供 git show 1eef7d8）。探针逻辑、用例、判据零改动。
+
+结果 11 例（current=a3c43ce 函数、before_batch=1eef7d8 函数）：
+
+| 用例 | 期望 | current | before_batch | observed_bug | 服务器命中 |
+| --- | --- | --- | --- | --- | --- |
+| direct（真对照） | OK | OK | OK | false | - |
+| userinfo-correct-host（真对照） | OK | OK | MISSING | false | - |
+| proxy-overrides-url-host | MISSING | OK | OK | **true** | - |
+| resolve-overrides-url-host | MISSING | OK | OK | **true** | - |
+| target-success-other-failed | MISSING | OK | OK | **true** | [/_test/ping] |
+| ipv6/uppercase-dns/port-*/host-tab（6 例） | MISSING | MISSING | MISSING | false | - |
+
+SP-18 两例与 SP-19 一例均再现假绿；SP-19 的目标请求确已命中本机替身
+（TARGET_SUCCESS），失败归属错误确认。before_batch 同样 OK，
+与审方「批次前已存在的既有边界」校准一致。
+
+## 结论
+
+三项 P2 全部再现成立，观察值与复审报告逐项一致：
+- SP-17：清理新布局登记时无条件 unlink 旧平铺路径，误删碰撞请求 B 的
+  旧登记 → B 重试重复发布（3 POST / B 2 评论；守卫对照 2/1）。
+- SP-18：--proxy/--resolve 改变实际连接目标，判据仍只看 URL hostname。
+- SP-19：多 URL 命令用整次进程失败，目标请求已成功仍判「被拒」。
+无降级、无误报；按流程开票修复。
+
+复跑产物：mixed-layout/（本任务 out1/out-guard 的 result.json 已并入
+同名目录）、curl-boundaries-6-triage/（适配脚本、结果 JSON、stdout 日志）。

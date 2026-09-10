@@ -1,0 +1,539 @@
+{
+  "schema_version": 1,
+  "review_round": 6,
+  "date": "2026-09-10",
+  "timezone": "Asia/Shanghai",
+  "report": "/tmp/mgs-review6-zonhimd1/review-6.md",
+  "workspace": "/tmp/mgs-review6-zonhimd1",
+  "source_repository": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+  "baseline": {
+    "source": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+    "workspace": "/tmp/mgs-review6-zonhimd1",
+    "start_head": "e68ef7d0c8ee212d39419827fd0a46f66ad9c0ec",
+    "start_status": "",
+    "batch_base": "1eef7d8",
+    "batch_head": "a3c43ce"
+  },
+  "final_boundary": {
+    "end_head": "e68ef7d0c8ee212d39419827fd0a46f66ad9c0ec",
+    "end_status": "",
+    "head_unchanged": true,
+    "worktree_clean": true,
+    "batch_commits": [
+      "a3c43ce",
+      "3e876e2"
+    ],
+    "head_extra_paths": [
+      ".scratch/mygamestudio-v1-review5-fixes/evidence/review-6-handoff.md"
+    ],
+    "product_files_equal_reviewed_copy": {
+      "plugin/records/mgs_github.py": true,
+      "acceptance/18-complete-package-acceptance/run.sh": true,
+      "tests/test_github_backend.py": true,
+      "tests/test_plugin_package.py": true
+    },
+    "checked_at": "2026-09-10T15:03:51.880375+08:00"
+  },
+  "scope": {
+    "diff": "git diff 1eef7d8..a3c43ce",
+    "commits": [
+      "3e876e2",
+      "a3c43ce"
+    ],
+    "actual_head_extra": "review-6-handoff.md only"
+  },
+  "axes": {
+    "Standards": {
+      "hard_violations": 0,
+      "reportable_smells": 0,
+      "report": "/tmp/mgs-review6-zonhimd1/standards-review.md"
+    },
+    "Spec": {
+      "finding_count": 3,
+      "highest_priority": "P2",
+      "scope_creep_findings": 0,
+      "report": "/tmp/mgs-review6-zonhimd1/spec-review.md"
+    }
+  },
+  "findings": [
+    {
+      "priority": "P2",
+      "title": "Mixed-layout clear removes foreign legacy receipt and causes duplicate comment",
+      "code": "plugin/records/mgs_github.py:784-789",
+      "spec": [
+        ".scratch/mygamestudio-v1-review5-fixes/issues/01-ledger-coexistence.md:21-22,47",
+        ".scratch/mygamestudio-v1-review4-fixes/issues/01-pending-index-identity-and-disclosure.md:15,22"
+      ],
+      "kind": [
+        "incorrect-implementation",
+        "partial-requirement"
+      ],
+      "evidence": [
+        "/tmp/mgs-review6-zonhimd1/spec-agent/mixed-layout-run-1/result.json",
+        "/tmp/mgs-review6-zonhimd1/spec-agent/mixed-layout-guard-control/result.json",
+        "/tmp/mgs-review6-zonhimd1/spec-agent/mixed-layout-run-2/result.json",
+        "/tmp/mgs-review6-zonhimd1/main-mixed-layout-rerun/result.json"
+      ],
+      "natural_upgrade": true,
+      "manual_receipt_edits": false,
+      "red_green_red": {
+        "baseline": [
+          3,
+          2
+        ],
+        "guarded_control": [
+          2,
+          1
+        ],
+        "baseline_repeat": [
+          3,
+          2
+        ]
+      },
+      "id": "SP-17",
+      "axis": "Spec",
+      "source_path": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/plugin/records/mgs_github.py",
+      "source_lines": "784-789",
+      "origin": "new mixed-layout compatibility cleanup path"
+    },
+    {
+      "priority": "P2",
+      "title": "Connection-changing curl arguments bypass actual endpoint binding",
+      "code": "acceptance/18-complete-package-acceptance/run.sh:271-273",
+      "spec": [
+        ".scratch/mygamestudio-v1-review4-fixes/issues/02-anchor-context-and-execution-binding.md:16",
+        ".scratch/mygamestudio-v1-review5-fixes/issues/02-url-host-and-path-identity.md:47"
+      ],
+      "kind": [
+        "incorrect-implementation",
+        "partial-requirement"
+      ],
+      "subcases": [
+        "proxy-overrides-url-host",
+        "resolve-overrides-url-host"
+      ],
+      "evidence": [
+        "/tmp/mgs-review6-zonhimd1/spec-agent/curl-boundaries-6.json",
+        "/tmp/mgs-review6-zonhimd1/spec-agent/curl-causal-controls.json",
+        "/tmp/mgs-review6-zonhimd1/curl-boundaries-6.json"
+      ],
+      "before_batch_reproduced": true,
+      "introduced_this_batch": false,
+      "id": "SP-18",
+      "axis": "Spec",
+      "source_path": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/18-complete-package-acceptance/run.sh",
+      "source_lines": "271-273"
+    },
+    {
+      "priority": "P2",
+      "title": "Whole-process failure is incorrectly attributed to a successful matching URL",
+      "code": "acceptance/18-complete-package-acceptance/run.sh:316-320",
+      "spec": [
+        ".scratch/mygamestudio-v1-review2-fixes/issues/04-anchor-checks-to-real-tool-returns.md:17",
+        ".scratch/mygamestudio-v1-review4-fixes/issues/02-anchor-context-and-execution-binding.md:16"
+      ],
+      "kind": [
+        "incorrect-implementation",
+        "partial-requirement"
+      ],
+      "subcases": [
+        "target-success-other-failed"
+      ],
+      "evidence": [
+        "/tmp/mgs-review6-zonhimd1/spec-agent/curl-boundaries-6.json",
+        "/tmp/mgs-review6-zonhimd1/spec-agent/curl-causal-controls.json",
+        "/tmp/mgs-review6-zonhimd1/curl-boundaries-6.json"
+      ],
+      "before_batch_reproduced": true,
+      "introduced_this_batch": false,
+      "id": "SP-19",
+      "axis": "Spec",
+      "source_path": "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/18-complete-package-acceptance/run.sh",
+      "source_lines": "316-320"
+    }
+  ],
+  "ticket_verification": [
+    {
+      "ticket": "01",
+      "ids": [
+        "SP-14"
+      ],
+      "original_counterexample_fixed": true,
+      "observed_posts": 2,
+      "a_comments": 1,
+      "receipts_coexist": true,
+      "missing_receipt_variants_pass": 3,
+      "healthy_legacy_migration_pass": true,
+      "same_identity_dual_layout_clear_pass": true,
+      "corrupt_legacy_stays_untouched_pass": 3,
+      "complete_requirement_closed": false,
+      "blockers": [
+        "SP-17"
+      ]
+    },
+    {
+      "ticket": "02",
+      "ids": [
+        "SP-15",
+        "SP-16"
+      ],
+      "original_counterexamples_fixed": true,
+      "userinfo_bare_and_zsh": "MISSING",
+      "direct_control": "OK",
+      "space_suffix": "MISSING",
+      "normpath_controls_pass": true,
+      "leading_space_gate_stage": "task_grant",
+      "leading_space_explanation_verified": true,
+      "sp16_verified_scope_closed": true,
+      "full_curl_binding_closed": false,
+      "blockers": [
+        "SP-18",
+        "SP-19"
+      ]
+    }
+  ],
+  "checks": {
+    "suite_runs": [
+      {
+        "name": "plugin_package",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_plugin_package.py"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+        "exit": 0,
+        "seconds": 5.69,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/plugin_package.log"
+      },
+      {
+        "name": "runtime_gate",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_runtime_gate.py"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+        "exit": 0,
+        "seconds": 1.72,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/runtime_gate.log"
+      },
+      {
+        "name": "runtime_boundaries",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_runtime_boundaries.py"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+        "exit": 0,
+        "seconds": 0.72,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/runtime_boundaries.log"
+      },
+      {
+        "name": "records_backend",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_records_backend.py"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+        "exit": 0,
+        "seconds": 1.36,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/records_backend.log"
+      },
+      {
+        "name": "github_backend",
+        "command": [
+          "python3",
+          "-B",
+          "tests/test_github_backend.py"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+        "exit": 0,
+        "seconds": 2.47,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/github_backend.log"
+      },
+      {
+        "name": "driver-probes",
+        "command": [
+          "bash",
+          "acceptance/18-complete-package-acceptance/driver-probes.sh",
+          "/tmp/mgs-review6-zonhimd1/driver-env"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+        "exit": 0,
+        "seconds": 3.35,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/driver-probes.log"
+      },
+      {
+        "name": "bash-syntax",
+        "command": [
+          "bash",
+          "-n",
+          "acceptance/18-complete-package-acceptance/run.sh"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+        "exit": 0,
+        "seconds": 0.0,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/bash-syntax.log"
+      },
+      {
+        "name": "clone-repro",
+        "command": [
+          "git",
+          "clone",
+          "--no-hardlinks",
+          "--no-checkout",
+          "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+          "/tmp/mgs-review6-zonhimd1/repro"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1",
+        "exit": 0,
+        "seconds": 0.14,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/clone-repro.log"
+      },
+      {
+        "name": "checkout-repro",
+        "command": [
+          "git",
+          "checkout",
+          "--detach",
+          "e68ef7d0c8ee212d39419827fd0a46f66ad9c0ec"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repro",
+        "exit": 0,
+        "seconds": 0.15,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/checkout-repro.log"
+      },
+      {
+        "name": "reproducible",
+        "command": [
+          "bash",
+          "dist/verify-reproducible.sh"
+        ],
+        "cwd": "/tmp/mgs-review6-zonhimd1/repro",
+        "exit": 0,
+        "seconds": 2.29,
+        "log": "/tmp/mgs-review6-zonhimd1/logs/reproducible.log"
+      }
+    ],
+    "five_suites_pass": true,
+    "driver": {
+      "pass": 33,
+      "fail": 0,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/driver-probes.log"
+    },
+    "retained_anchors": {
+      "pass": 10,
+      "total": 10,
+      "evidence": "/tmp/mgs-review6-zonhimd1/acceptance-probes-6.json"
+    },
+    "reproducible": {
+      "pass": true,
+      "sha256": "71a07318af3705fb49840b1ff2abcd6d2dddbc9d705285c5b37a80ca28414fdb",
+      "artifacts_byte_equal": 3,
+      "pax_headers_absent": true
+    },
+    "mutations": {
+      "runs": [
+        {
+          "label": "ticket01-green",
+          "exit": 0,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-ticket01-green.log",
+          "command": [
+            "python3",
+            "-B",
+            "tests/test_github_backend.py"
+          ]
+        },
+        {
+          "label": "ticket01-revert-red",
+          "exit": 1,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-ticket01-revert-red.log",
+          "command": [
+            "python3",
+            "-B",
+            "tests/test_github_backend.py"
+          ]
+        },
+        {
+          "label": "ticket01-restored-green",
+          "exit": 0,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-ticket01-restored-green.log",
+          "command": [
+            "python3",
+            "-B",
+            "tests/test_github_backend.py"
+          ]
+        },
+        {
+          "label": "sp16-green",
+          "exit": 0,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp16-green.log",
+          "command": [
+            "python3",
+            "-B",
+            "-c",
+            "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+          ]
+        },
+        {
+          "label": "sp16-revert-red",
+          "exit": 1,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp16-revert-red.log",
+          "command": [
+            "python3",
+            "-B",
+            "-c",
+            "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+          ]
+        },
+        {
+          "label": "sp16-restored-green",
+          "exit": 0,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp16-restored-green.log",
+          "command": [
+            "python3",
+            "-B",
+            "-c",
+            "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+          ]
+        },
+        {
+          "label": "sp15-green",
+          "exit": 0,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp15-green.log",
+          "command": [
+            "python3",
+            "-B",
+            "-c",
+            "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+          ]
+        },
+        {
+          "label": "sp15-revert-red",
+          "exit": 1,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp15-revert-red.log",
+          "command": [
+            "python3",
+            "-B",
+            "-c",
+            "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+          ]
+        },
+        {
+          "label": "sp15-restored-green",
+          "exit": 0,
+          "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp15-restored-green.log",
+          "command": [
+            "python3",
+            "-B",
+            "-c",
+            "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+          ]
+        }
+      ],
+      "byte_restored": {
+        "plugin/records/mgs_github.py": true,
+        "acceptance/18-complete-package-acceptance/run.sh": true
+      }
+    },
+    "mutation_failure_counts": {
+      "ticket01": 18,
+      "SP-15": 2,
+      "SP-16": 3
+    }
+  },
+  "historical_regressions": {
+    "requested_original_counterexamples_pass": true,
+    "complete_historical_contracts_zero_regression": false,
+    "counterexample": [
+      "SP-17"
+    ],
+    "probe_evidence": [
+      "/tmp/mgs-review6-zonhimd1/spec-probes.json",
+      "/tmp/mgs-review6-zonhimd1/spec-independent-probes.json",
+      "/tmp/mgs-review6-zonhimd1/curl-new-probes.json",
+      "/tmp/mgs-review6-zonhimd1/spec-extra-pending.json",
+      "/tmp/mgs-review6-zonhimd1/curl-extra-probes-5.json",
+      "/tmp/mgs-review6-zonhimd1/path-extra-probes-5.json"
+    ],
+    "adaptation_diff": "/tmp/mgs-review6-zonhimd1/probe-adaptation.diff",
+    "initial_harness_failures": [
+      "review3/review4 COPY still pointed to old spec subdirectory: ModuleNotFoundError; corrected and rerun exit 0"
+    ],
+    "initial_harness_failures_counted_as_product_failures": false
+  },
+  "extra_boundaries": {
+    "pending_explicit_assertions": {
+      "pass": 26,
+      "fail": 0
+    },
+    "migration_injections": 3,
+    "path_cases": 8,
+    "curl_cases": 11,
+    "curl_false_green_examples": 3,
+    "curl_distinct_findings": 2,
+    "pending_half_write": {
+      "automatic_retry": false,
+      "corrupt_disclosed": true,
+      "posts": 1,
+      "blocking_finding": false
+    }
+  },
+  "known_limitations": [
+    {
+      "id": "curl--url",
+      "observed": "MISSING",
+      "raw_original_probe_observed_bug": true,
+      "accepted_nonblocking_by_ticket": true,
+      "reopened": false
+    }
+  ],
+  "authorization_boundary": {
+    "source_worktree_writes": 0,
+    "source_commits": 0,
+    "pushes": 0,
+    "real_remote_writes": 0,
+    "product_model_calls": 0,
+    "independent_review_agents": 2,
+    "full_acceptance_run_invocations": 0,
+    "remote_head_checked": false,
+    "daily_client_install": false,
+    "test_network": "loopback only",
+    "mutations_location": "/tmp only"
+  },
+  "unverified": [
+    "same-request concurrent publishing",
+    "concurrent cleanup interleavings",
+    "real process crash or power loss",
+    "all I/O failures",
+    "ultralong task identity",
+    "all repository or receipt shapes",
+    "comment pagination",
+    "all shell/URL syntax",
+    "actual remote HEAD and remote write replay",
+    "new model acceptance run",
+    "daily-client installation and publication",
+    "human art/audio/seagull checks and two design decisions"
+  ],
+  "command_categories": [
+    "read-only Git and source inspection",
+    "local git archive/clone/detached checkout under /tmp",
+    "Python suites and MCP/Gate/FakeTransport probes",
+    "isolated driver CLI plugin installation and localhost standin",
+    "bash syntax and extracted functions/check segments",
+    "loopback curl and local HTTP server",
+    "temporary concurrency/fault injection and reversible mutations",
+    "reproducible packaging/hash/tar comparison",
+    "temporary Markdown/JSON report generation"
+  ],
+  "delivery_verdict": {
+    "sp14_sp15_sp16_original_bugs_really_fixed": true,
+    "new_confirmed_defects": 3,
+    "v1_closeout_ready": false,
+    "reason": "SP-17 mixed-layout receipt deletion causes duplicate publication; SP-18/19 can falsely establish curl direct denial."
+  },
+  "report_sha256": "90009414caf3285863ebc0e458957e19523aadd406409961bffe89907164fede"
+}

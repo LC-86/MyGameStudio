@@ -1,0 +1,12 @@
+[
+  {
+    "name": "spec-custom-probes.py",
+    "exit": 0,
+    "reason": "COPY hardcoded spec subdirectory adapted to current copy"
+  },
+  {
+    "name": "spec-independent-probes.py",
+    "exit": 0,
+    "reason": "COPY hardcoded spec subdirectory adapted to current copy"
+  }
+]

@@ -1,0 +1,104 @@
+{
+  "runs": [
+    {
+      "label": "ticket01-green",
+      "exit": 0,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-ticket01-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ]
+    },
+    {
+      "label": "ticket01-revert-red",
+      "exit": 1,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-ticket01-revert-red.log",
+      "command": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ]
+    },
+    {
+      "label": "ticket01-restored-green",
+      "exit": 0,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-ticket01-restored-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "tests/test_github_backend.py"
+      ]
+    },
+    {
+      "label": "sp16-green",
+      "exit": 0,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp16-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp16-revert-red",
+      "exit": 1,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp16-revert-red.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp16-restored-green",
+      "exit": 0,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp16-restored-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp15-green",
+      "exit": 0,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp15-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp15-revert-red",
+      "exit": 1,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp15-revert-red.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    },
+    {
+      "label": "sp15-restored-green",
+      "exit": 0,
+      "log": "/tmp/mgs-review6-zonhimd1/logs/mutation-sp15-restored-green.log",
+      "command": [
+        "python3",
+        "-B",
+        "-c",
+        "import sys;sys.path.insert(0,'tests');import test_plugin_package as t;t.test_accept18_probe_checks_anchored_to_events();print('FAILURES:',len(t.FAILURES));print('\\n'.join(t.FAILURES));sys.exit(bool(t.FAILURES))"
+      ]
+    }
+  ],
+  "byte_restored": {
+    "plugin/records/mgs_github.py": true,
+    "acceptance/18-complete-package-acceptance/run.sh": true
+  }
+}

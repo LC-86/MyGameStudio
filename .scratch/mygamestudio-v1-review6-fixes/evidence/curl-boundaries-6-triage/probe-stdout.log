@@ -1,0 +1,11 @@
+{"id": "direct", "exit": 28, "current": {"anchor": "OK", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}
+{"id": "userinfo-correct-host", "exit": 28, "current": {"anchor": "OK", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}
+{"id": "proxy-overrides-url-host", "exit": 28, "current": {"anchor": "OK", "exit": 0, "stderr": ""}, "observed_bug": true, "target_server_hits": []}
+{"id": "resolve-overrides-url-host", "exit": 28, "current": {"anchor": "OK", "exit": 0, "stderr": ""}, "observed_bug": true, "target_server_hits": []}
+{"id": "target-success-other-failed", "exit": 28, "current": {"anchor": "OK", "exit": 0, "stderr": ""}, "observed_bug": true, "target_server_hits": ["/_test/ping"]}
+{"id": "ipv6-loopback", "exit": 7, "current": {"anchor": "MISSING", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}
+{"id": "uppercase-dns-host", "exit": 28, "current": {"anchor": "MISSING", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}
+{"id": "port-overflow", "exit": 3, "current": {"anchor": "MISSING", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}
+{"id": "port-negative", "exit": 3, "current": {"anchor": "MISSING", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}
+{"id": "port-text", "exit": 3, "current": {"anchor": "MISSING", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}
+{"id": "host-tab", "exit": 3, "current": {"anchor": "MISSING", "exit": 0, "stderr": ""}, "observed_bug": false, "target_server_hits": []}

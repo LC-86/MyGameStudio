@@ -1,0 +1,125 @@
+[
+  {
+    "name": "plugin_package",
+    "command": [
+      "python3",
+      "-B",
+      "tests/test_plugin_package.py"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+    "exit": 0,
+    "seconds": 5.69,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/plugin_package.log"
+  },
+  {
+    "name": "runtime_gate",
+    "command": [
+      "python3",
+      "-B",
+      "tests/test_runtime_gate.py"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+    "exit": 0,
+    "seconds": 1.72,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/runtime_gate.log"
+  },
+  {
+    "name": "runtime_boundaries",
+    "command": [
+      "python3",
+      "-B",
+      "tests/test_runtime_boundaries.py"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+    "exit": 0,
+    "seconds": 0.72,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/runtime_boundaries.log"
+  },
+  {
+    "name": "records_backend",
+    "command": [
+      "python3",
+      "-B",
+      "tests/test_records_backend.py"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+    "exit": 0,
+    "seconds": 1.36,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/records_backend.log"
+  },
+  {
+    "name": "github_backend",
+    "command": [
+      "python3",
+      "-B",
+      "tests/test_github_backend.py"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+    "exit": 0,
+    "seconds": 2.47,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/github_backend.log"
+  },
+  {
+    "name": "driver-probes",
+    "command": [
+      "bash",
+      "acceptance/18-complete-package-acceptance/driver-probes.sh",
+      "/tmp/mgs-review6-zonhimd1/driver-env"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+    "exit": 0,
+    "seconds": 3.35,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/driver-probes.log"
+  },
+  {
+    "name": "bash-syntax",
+    "command": [
+      "bash",
+      "-n",
+      "acceptance/18-complete-package-acceptance/run.sh"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repo",
+    "exit": 0,
+    "seconds": 0.0,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/bash-syntax.log"
+  },
+  {
+    "name": "clone-repro",
+    "command": [
+      "git",
+      "clone",
+      "--no-hardlinks",
+      "--no-checkout",
+      "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio",
+      "/tmp/mgs-review6-zonhimd1/repro"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1",
+    "exit": 0,
+    "seconds": 0.14,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/clone-repro.log"
+  },
+  {
+    "name": "checkout-repro",
+    "command": [
+      "git",
+      "checkout",
+      "--detach",
+      "e68ef7d0c8ee212d39419827fd0a46f66ad9c0ec"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repro",
+    "exit": 0,
+    "seconds": 0.15,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/checkout-repro.log"
+  },
+  {
+    "name": "reproducible",
+    "command": [
+      "bash",
+      "dist/verify-reproducible.sh"
+    ],
+    "cwd": "/tmp/mgs-review6-zonhimd1/repro",
+    "exit": 0,
+    "seconds": 2.29,
+    "log": "/tmp/mgs-review6-zonhimd1/logs/reproducible.log"
+  }
+]
