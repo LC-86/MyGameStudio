@@ -1478,6 +1478,107 @@ def test_draft_identity_includes_repo_cross_repo() -> None:
               "旧仓库草稿应原样保留待其自己的后端发布")
 
 
+# ---------- 第三轮审查修复票 review3-01:反例固化(修复前红、修复后绿) ----------
+
+def test_append_result_partial_retry_read_first_timeout_no_duplicate() -> None:
+    """SP-7:首轮部分成功(partial+comment_id,评论已确认发布)后,重试的
+    读前收养查询超时不得当作全新发布——按本地「待补索引登记」保留已发布
+    操作身份、保持待恢复状态(partial 语义);彻底恢复后重试收养既有评论
+    只补索引,替身评论恰 1。partial(已发布未完索引)与 uncertain(结果
+    未知)语义互不混同。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        cache = base / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        fake.fail("PATCH", "/issues/1", "timeout")  # 评论 POST 成功+索引 PATCH 超时
+        try:
+            first = backend.append_result("01-alpha", "交付证据")  # 修复前:直接抛出
+        except (mgs_github.TransportError, mgs_github.GithubRecordsError) as exc:
+            first = {"raised": str(exc)}
+        check(first.get("published") is True and first.get("partial") is True,
+              f"首轮应如实回报部分成功,实际 {first}")
+        check(first.get("comment_id") is not None
+              and first.get("index_updated") is False,
+              f"首轮结果应携带已发布评论身份与索引未完成状态,实际 {first}")
+        check(len(fake.comments[1]) == 1,
+              f"首轮替身应已有 1 条评论,实际 {len(fake.comments[1])} 条")
+        check(len(list((cache / "pending-index").glob("*.json"))) == 1,
+              "部分成功应在本地登记已发布评论身份(待补索引登记)")
+        # 恢复索引 PATCH,但重试的读前收养查询超时(SP-7 反例:
+        # 当前实现把它当作全新发布再 POST 一条)
+        fake._fail = []
+        fake.fail("GET", "/comments", "timeout")
+        try:
+            second = backend.append_result("01-alpha", "交付证据")
+        except (mgs_github.TransportError, mgs_github.GithubRecordsError) as exc:
+            second = {"raised": str(exc)}
+        check(second.get("published") is True and second.get("partial") is True,
+              f"读前查询失败时应保持待恢复状态(不当作全新发布),实际 {second}")
+        check(second.get("comment_id") == first.get("comment_id"),
+              f"待恢复状态应保留前次已确认发布的评论身份,实际 "
+              f"{second.get('comment_id')} vs {first.get('comment_id')}")
+        check(second.get("index_updated") is False,
+              f"待恢复状态应如实表达索引仍未完成,实际 {second}")
+        check(second.get("uncertain") is not True,
+              f"已确认发布(partial)与结果未知(uncertain)是两种事实,"
+              f"不得混同,实际 {second}")
+        check(len(fake.comments[1]) == 1,
+              f"读前查询失败不得重复发布(替身评论仍恰 1),"
+              f"实际 {len(fake.comments[1])} 条")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 1,
+              f"全程应只发出 1 次评论 POST,实际 {len(posts)} 次")
+        check(len(list((cache / "pending-index").glob("*.json"))) == 1,
+              "待恢复期间登记应保留(索引未补齐)")
+        # 彻底恢复后重试:读前收养既有评论,只补索引
+        fake._fail = []
+        third = backend.append_result("01-alpha", "交付证据")
+        check(third.get("published") is True
+              and third.get("index_updated") is True
+              and third.get("comment_id") == first.get("comment_id"),
+              f"彻底恢复后重试应收养既有评论并补齐索引,实际 {third}")
+        check(len(fake.comments[1]) == 1,
+              f"补齐索引不得重复发布评论,实际 {len(fake.comments[1])} 条")
+        check(f"#issuecomment-{first.get('comment_id')}"
+              in (fake.issues[0].get("body") or ""),
+              "彻底恢复后结果索引应补齐该评论引用")
+        check(not list((cache / "pending-index").glob("*.json")),
+              "索引补齐后应清除待补索引登记")
+
+
+def test_append_result_read_first_failure_without_pending_keeps_first_try() -> None:
+    """SP-7 邻近语义:无待补索引登记(本次调用前未确认发布过)时,读前
+    查询失败仍按首试语义继续尝试发布——S2「发布超时后回读失败不重发、
+    保持 uncertain」的既有取舍不因本票回退(有缓存目录场景同样成立)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        cache = base / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        fake.fail("GET", "/comments", "timeout")  # 读前收养查询超时(无登记)
+        fake.drop("POST", "/comments")            # 评论已落地但响应超时
+        outcome = backend.append_result("01-alpha", "交付证据")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 1,
+              f"首试语义:读前查询失败(无登记)仍应尝试发布恰 1 次,"
+              f"实际 {len(posts)} 次")
+        check(outcome.get("uncertain") is True
+              and outcome.get("published") is not True,
+              f"发布超时且回读失败应保持 uncertain(不虚报成功、不重发),"
+              f"实际 {outcome}")
+        check(len(fake.comments[1]) == 1,
+              f"替身应只有 1 条评论,实际 {len(fake.comments[1])} 条")
+        check(not list((cache / "pending-index").glob("*.json")),
+              "uncertain(结果未知)不应写待补索引登记——登记只表达已确认发布")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

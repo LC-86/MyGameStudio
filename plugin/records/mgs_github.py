@@ -599,6 +599,118 @@ class GithubBackend:
                 return parsed
         return None
 
+    # ----- 待补索引登记(已确认发布、结果索引未完成的操作身份) -----
+
+    def _pending_index_file(self, identity: str,
+                            result_markdown: str) -> Path | None:
+        """待补索引登记文件路径(操作+参数+**目标仓库**的内容哈希,与草稿
+        身份同形态——review2-02/SP-3 的仓库身份纪律在此同用:同一缓存目录
+        服务多个仓库时各仓各的登记,互不顶替)。未配置缓存目录时不可用
+        (能力边界,由调用侧如实说明)。"""
+
+        if self.cache_dir is None:
+            return None
+        args = {"identity": identity, "result_markdown": result_markdown}
+        digest = hashlib.sha256(json.dumps(
+            {"op": "append_result", "args": args, "repo": _repo_str(self.repo)},
+            ensure_ascii=False, sort_keys=True)
+            .encode("utf-8")).hexdigest()[:8]
+        safe = re.sub(r"[^A-Za-z0-9._-]", "-", identity)
+        return (self.cache_dir / "pending-index"
+                / f"append-result-{safe}-{digest}.json")
+
+    def _record_pending_index(self, identity: str, result_markdown: str,
+                              comment: dict, ref: str, cause: object) -> str | None:
+        """登记已发布评论身份(审查修复票 review3-01/SP-7):部分成功发生时
+        把「已确认发布、索引未完成」的操作身份留在本地——重试的读前收养
+        查询失败(无法看远端)时,凭登记保留待恢复状态,不当作全新发布。
+        索引补齐后由 _clear_pending_index 清除。写入失败返回错误说明
+        (调用侧如实附注,不把已发生的远端结果包装成异常)。"""
+
+        path = self._pending_index_file(identity, result_markdown)
+        if path is None:
+            return None
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({
+                "op": "append_result",
+                "args": {"identity": identity,
+                         "result_markdown": result_markdown},
+                "repo": _repo_str(self.repo),
+                "status": "已发布未补索引",
+                "comment_id": comment.get("id"), "ref": ref,
+                "created_at": _dt.datetime.now().astimezone().isoformat(
+                    timespec="seconds"),
+                "cause": str(cause),
+                "note": ("部分成功的本地身份登记:读前收养查询失败时保留"
+                         "待恢复状态(不当作全新发布);远端恢复后重试同一"
+                         "请求只收养既有评论并补齐索引"),
+            }, ensure_ascii=False, indent=2), encoding="utf-8")
+        except OSError as exc:
+            return f"{type(exc).__name__}: {exc}"
+        return None
+
+    def _load_pending_index(self, identity: str,
+                            result_markdown: str) -> dict | None:
+        """读取待补索引登记。文件存在但不可读/损坏时返回带 "corrupt" 键的
+        哨兵——「登记存在」本身就是前次已确认发布的证据,身份可读与否不
+        改变「不当作全新发布」的判定(结果未知 ≠ 确认不存在,S2 语义
+        家族);无登记返回 None(首试语义)。"""
+
+        path = self._pending_index_file(identity, result_markdown)
+        if path is None or not path.exists():
+            return None
+        try:
+            pending = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            return {"corrupt": f"{type(exc).__name__}: {exc}", "path": str(path)}
+        if not isinstance(pending, dict):
+            return {"corrupt": "登记内容不是对象", "path": str(path)}
+        return pending
+
+    def _clear_pending_index(self, identity: str, result_markdown: str) -> None:
+        """结果索引补齐后清除登记。清除失败(极端 I/O 故障)保持沉默:
+        残留登记只会让后续读前查询失败的重试多保持一次待恢复(保守方向,
+        不会重复发布),远端可读时按远端权威修正。"""
+
+        path = self._pending_index_file(identity, result_markdown)
+        if path is None:
+            return
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    def _pending_recovery_result(self, number: int, pending: dict,
+                                 failure: str, attempts: list) -> dict:
+        """读前收养查询失败时的待恢复返回(review3-01/SP-7):凭本地登记
+        保留前次已确认发布的操作身份,保持部分成功(partial)语义——
+        「已发布未完索引」与「结果未知」(uncertain)是两种事实,分别表达;
+        本次不发布也不动索引(远端不可读时不做任何写),彻底恢复后重试
+        经读前收养只补索引。"""
+
+        attempts = attempts + [{"step": "pending-index", "outcome": "kept"}]
+        if pending.get("corrupt"):
+            return {"published": True, "partial": True, "comment_id": None,
+                    "ref": None, "issue_number": number, "index_updated": False,
+                    "attempts": attempts,
+                    "note": ("待恢复:前次调用已确认发布该结果评论(本地"
+                             "待补索引登记存在),本次读前收养查询失败"
+                             f"({failure})且登记不可读({pending['corrupt']};"
+                             f"登记文件 {pending.get('path')});已保留待恢复"
+                             "状态、不当作全新发布;请人工核对远端评论与登记"
+                             "文件后重试(远端可读时重试同一请求即经读前"
+                             "收养补齐索引)")}
+        return {"published": True, "partial": True,
+                "comment_id": pending.get("comment_id"),
+                "ref": pending.get("ref"), "issue_number": number,
+                "index_updated": False, "attempts": attempts,
+                "note": ("待恢复:前次调用已确认发布该结果评论(本地待补索引"
+                         f"登记:{pending.get('ref')}),本次读前收养查询失败"
+                         f"({failure})无法核对远端;已保留已发布操作身份、"
+                         "不当作全新发布(本次不发布也不动索引);彻底恢复后"
+                         "重试同一请求只收养既有评论并补齐索引")}
+
     def create_task(self, identity: str, title: str, request: dict, *,
                     triage: str = "needs-triage", progress: str = "待执行") -> dict:
         """创建任务。防重复:先按身份回读,已存在即收养;超时先回读再重试一次。
@@ -772,6 +884,12 @@ class GithubBackend:
         - 发布前先按评论正文回读,已存在同文评论即**收养**(不发第二条);
           「评论已发布而索引未完成」的请求重试时因此只补索引,不重复发布
           (与 create_task 的读前收养同一纪律);
+        - 读前回读失败时先核对本地**待补索引登记**(审查修复票
+          review3-01/SP-7):前次调用已确认发布的操作身份在部分成功时登记
+          于本地缓存目录,读前查询失败(无法看远端)时凭登记保留**待恢复
+          状态**,不当作全新发布;无登记则本次尚未发布任何内容,按首试
+          语义继续尝试发布(未配置缓存目录时登记不可用,属能力边界,结果
+          中如实附注);
         - 评论请求超时先回读,区分「回读确认不存在」(才允许重试一次)与
           「回读失败」——后者保留不确定状态并停止重发,不存草稿(审查修复
           票 01/S2);
@@ -798,8 +916,11 @@ class GithubBackend:
         comment = None
         attempts: list[dict] = []
         # 读前回读:同文评论已存在即收养(重试只补索引,不重复发布)。
-        # 读前回读本身失败时本次尚未发布任何内容,按首试语义继续尝试发布;
-        # 「回读失败停止重发」(S2)针对的是发布超时之后的结果不确定。
+        # 读前回读本身失败时先核对本地待补索引登记(SP-7):有登记说明
+        # 前次调用已确认发布——保留待恢复状态,不当作全新发布;无登记则
+        # 本次尚未发布任何内容,按首试语义继续尝试发布。「回读失败停止
+        # 重发」(S2)针对的是发布超时之后的结果不确定,两者不混同。
+        read_first_failed: str | None = None
         try:
             status, comments = self.transport.request(
                 "GET", f"{_repo_path(self.repo)}/issues/{number}"
@@ -807,6 +928,7 @@ class GithubBackend:
         except TransportError as exc:
             attempts.append({"step": "read-first", "outcome": exc.kind,
                              "detail": str(exc)})
+            read_first_failed = str(exc)
         else:
             if status == 200 and isinstance(comments, list):
                 hit = next((c for c in comments
@@ -817,6 +939,12 @@ class GithubBackend:
             else:
                 attempts.append({"step": "read-first", "outcome": "bad_response",
                                  "detail": f"list comments HTTP {status}"})
+                read_first_failed = f"list comments HTTP {status}"
+        if read_first_failed is not None:
+            pending = self._load_pending_index(identity, result_markdown)
+            if pending is not None:
+                return self._pending_recovery_result(
+                    number, pending, read_first_failed, attempts)
         for index in range(2):
             if comment is not None:
                 break
@@ -900,14 +1028,25 @@ class GithubBackend:
             # 请求经「读前收养」只补索引,不再重复发布评论。
             attempts.append({"step": "index-patch", "outcome": exc.kind,
                              "detail": str(exc)})
+            note = ("部分成功:结果评论已发布("
+                    f"{ref}),但正文结果索引更新未完成({exc});"
+                    "重试同一请求只会收养既有评论并补齐索引,"
+                    "不会重复发布")
+            # SP-7:同时把已发布身份登记到本地——重试的读前收养查询失败
+            # (无法看远端)时凭登记保留待恢复状态,不当作全新发布。登记
+            # 不可用(未配置缓存目录)或写入失败时如实附注,不把已发生的
+            # 远端结果包装成异常(R4 同一纪律)。
+            record_error = self._record_pending_index(
+                identity, result_markdown, comment, ref, exc)
+            if record_error is not None:
+                note += (f";警告:本地待补索引登记不可用({record_error}),"
+                         "读前收养查询失败时的身份保留不生效")
             return {"published": True, "partial": True,
                     "comment_id": comment.get("id"), "ref": ref,
                     "issue_number": number, "index_updated": False,
-                    "attempts": attempts,
-                    "note": ("部分成功:结果评论已发布("
-                             f"{ref}),但正文结果索引更新未完成({exc});"
-                             "重试同一请求只会收养既有评论并补齐索引,"
-                             "不会重复发布")}
+                    "attempts": attempts, "note": note}
+        # 索引已补齐:清除待补索引登记(若前次部分成功留下;SP-7)
+        self._clear_pending_index(identity, result_markdown)
         readback = self.read_task(identity)
         return {"published": True, "comment_id": comment.get("id"),
                 "ref": ref, "issue_number": number, "readback": readback,

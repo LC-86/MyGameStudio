@@ -811,6 +811,96 @@ def review2_sp2_section(root: Path) -> None:
           "SP-2:远端写入意图仍先于执行持久记录")
 
 
+def review3_sp7_section(root: Path) -> None:
+    """第三轮审查修复批(票 review3-01):SP-7 通道级反例固化,先红后绿。
+
+    反例底稿:.scratch/mygamestudio-v1-review3-fixes/evidence/
+    spec-custom-probes.py 的 partial-retry-read-first-timeout(2026-09-10
+    独立复审在 8cdc4c4 复现,observed_bug=True、替身累计 2 条评论):
+    首轮 POST 成功+索引 PATCH 超时 → partial(published+comment_id+
+    index_updated=false);恢复 PATCH 后重试,仅让读前收养查询 GET 超时,
+    当前实现当作全新发布再 POST 一条。期望:已确认发布的操作身份保留/
+    传递——读前查询失败时保持待恢复状态,不当作全新发布;彻底恢复后重试
+    只收养既有评论并补索引(records 合同第 39 行:用返回身份或请求关联
+    回读实际状态,避免重复创建)。
+    """
+
+    sys.path.insert(0, str(REPO_ROOT / "tests"))
+    import test_github_backend as gh_fixtures  # noqa: PLC0415
+
+    base = root / "review3-sp7"
+    project = gh_fixtures.make_github_project(base / "project")
+    svc = GateService(base / "runtime")
+    resources = ["github://github.com/mygamestudio/issue-accept/issues/**"]
+    svc.init_policy(project, {"producer": resources}, {"production": None})
+    inst = svc.create_instance("producer", "T-sp7", "production", resources)
+    svc._write_json("remote.json", {"github": {
+        "api_base": "http://unused.invalid", "token_env": "MGS_TEST_UNUSED",
+        "cache_dir": str(base / "cache")}})
+    fake = gh_fixtures.FakeTransport()
+    fake.seed_issue("01-task", "Existing")
+    fake.fail("PATCH", "/issues/1", "timeout")  # 评论 POST 成功后索引 PATCH 超时
+
+    class Facade:
+        def remote_record(self, token, action, payload):
+            return svc.remote_record(token, action, payload, transport=fake)
+
+    def call() -> dict:
+        response = mcp_gate.handle_tools_call(
+            Facade(), "mgs_remote",
+            {"token": inst.token, "action": "append-result",
+             "payload": {"identity": "01-task", "result_markdown": "same result"}})
+        return json.loads(response["content"][0]["text"])
+
+    first = call()
+    check(first.get("decision") == "allow",
+          f"SP-7 前置:首轮部分成功应 allow 如实转发,实际 {first}")
+    first_result = first.get("result") or {}
+    check(first_result.get("partial") is True
+          and first_result.get("comment_id") is not None
+          and first_result.get("index_updated") is False,
+          f"SP-7 前置:首轮应携带已发布评论身份与未完成索引,实际 {first_result}")
+    check(len(fake.comments[1]) == 1,
+          f"SP-7 前置:首轮替身应已有 1 条评论,实际 {len(fake.comments[1])} 条")
+
+    # 恢复索引 PATCH,但让重试的读前收养查询超时(反例靶点)
+    fake._fail = []
+    fake.fail("GET", "/comments", "timeout")
+    second = call()
+    second_result = second.get("result") or {}
+    check(second.get("decision") != "deny",
+          f"SP-7:待恢复状态不得包装成 deny,实际 {second}")
+    check(second_result.get("comment_id") == first_result.get("comment_id"),
+          f"SP-7:读前查询失败时应保留已发布评论身份(不当作全新发布),"
+          f"实际 {second_result.get('comment_id')} vs "
+          f"{first_result.get('comment_id')}")
+    check(second_result.get("index_updated") is False
+          and second_result.get("uncertain") is not True,
+          f"SP-7:应保持 partial 待恢复语义(与 uncertain 区分),"
+          f"实际 {second_result}")
+    check(len(fake.comments[1]) == 1,
+          f"SP-7:读前查询失败不得重复发布(替身评论仍恰 1),"
+          f"实际 {len(fake.comments[1])} 条")
+    posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+    check(len(posts) == 1,
+          f"SP-7:全程应只发出 1 次评论 POST,实际 {len(posts)} 次")
+
+    # 彻底恢复后重试:收养既有评论,只补索引
+    fake._fail = []
+    third = call()
+    third_result = third.get("result") or {}
+    check(third.get("decision") == "allow",
+          f"SP-7:彻底恢复后重试应 allow,实际 {third}")
+    check(third_result.get("index_updated") is True
+          and third_result.get("comment_id") == first_result.get("comment_id"),
+          f"SP-7:彻底恢复后应收养既有评论并补齐索引,实际 {third_result}")
+    check(len(fake.comments[1]) == 1,
+          f"SP-7:补齐索引不得重复发布评论,实际 {len(fake.comments[1])} 条")
+    check(f"#issuecomment-{first_result.get('comment_id')}"
+          in (fake.issues[0].get("body") or ""),
+          "SP-7:彻底恢复后结果索引应补齐该评论引用")
+
+
 def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="mgs02-gate-test-"))
     try:
@@ -1430,6 +1520,10 @@ def main() -> int:
         # 37+. 第二轮审查修复批(票 review2-02):SP-2 评论已发布而索引
         #      更新超时的部分成功误报,通道级反例固化
         review2_sp2_section(root)
+
+        # 38+. 第三轮审查修复批(票 review3-01):SP-7 已确认部分成功后
+        #      读前收养查询超时的重复发布,通道级反例固化
+        review3_sp7_section(root)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
