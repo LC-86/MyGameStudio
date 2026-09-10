@@ -601,18 +601,29 @@ class GithubBackend:
 
     # ----- 待补索引登记(已确认发布、结果索引未完成的操作身份) -----
 
+    def _pending_identity(self, identity: str, result_markdown: str) -> dict:
+        """待补索引登记的**完整内容身份**:操作+参数+**目标仓库**(审查
+        修复票 review4-01/SP-11,与草稿身份及登记文件名的摘要构造同一
+        形态)。登记文件内容即保留该全量身份;文件名的 8 hex 只是短摘要
+        (确定性可碰撞),登记归属以文件内的完整身份核对为准。"""
+
+        return {"op": "append_result",
+                "args": {"identity": identity,
+                         "result_markdown": result_markdown},
+                "repo": _repo_str(self.repo)}
+
     def _pending_index_file(self, identity: str,
                             result_markdown: str) -> Path | None:
-        """待补索引登记文件路径(操作+参数+**目标仓库**的内容哈希,与草稿
-        身份同形态——review2-02/SP-3 的仓库身份纪律在此同用:同一缓存目录
-        服务多个仓库时各仓各的登记,互不顶替)。未配置缓存目录时不可用
-        (能力边界,由调用侧如实说明)。"""
+        """待补索引登记文件路径(完整内容身份哈希的**短摘要** 8 hex 作
+        文件名,与草稿身份同形态——review2-02/SP-3 的仓库身份纪律在此
+        同用:同一缓存目录服务多个仓库时各仓各的登记,互不顶替)。短
+        摘要可碰撞,读入/清除时以登记内的完整身份核对归属(SP-11)。
+        未配置缓存目录时不可用(能力边界,由调用侧如实说明)。"""
 
         if self.cache_dir is None:
             return None
-        args = {"identity": identity, "result_markdown": result_markdown}
         digest = hashlib.sha256(json.dumps(
-            {"op": "append_result", "args": args, "repo": _repo_str(self.repo)},
+            self._pending_identity(identity, result_markdown),
             ensure_ascii=False, sort_keys=True)
             .encode("utf-8")).hexdigest()[:8]
         safe = re.sub(r"[^A-Za-z0-9._-]", "-", identity)
@@ -620,23 +631,23 @@ class GithubBackend:
                 / f"append-result-{safe}-{digest}.json")
 
     def _record_pending_index(self, identity: str, result_markdown: str,
-                              comment: dict, ref: str, cause: object) -> str | None:
+                              comment: dict, ref: str,
+                              cause: object) -> str | None:
         """登记已发布评论身份(审查修复票 review3-01/SP-7):部分成功发生时
-        把「已确认发布、索引未完成」的操作身份留在本地——重试的读前收养
-        查询失败(无法看远端)时,凭登记保留待恢复状态,不当作全新发布。
-        索引补齐后由 _clear_pending_index 清除。写入失败返回错误说明
-        (调用侧如实附注,不把已发生的远端结果包装成异常)。"""
+        把「已确认发布、索引未完成」的操作身份(含完整内容身份,SP-11)
+        留在本地——重试的读前收养查询失败(无法看远端)时,凭登记保留
+        待恢复状态,不当作全新发布。索引补齐后由 _clear_pending_index
+        清除。返回错误说明即登记**未生效**(未配置缓存目录,或写入失败
+        /SP-10)——调用侧据此如实披露退化模式,不把已发生的远端结果
+        包装成异常(R4 同一纪律)。"""
 
         path = self._pending_index_file(identity, result_markdown)
         if path is None:
-            return None
+            return "未配置缓存目录(--cache-dir),本地待补索引登记不可用"
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps({
-                "op": "append_result",
-                "args": {"identity": identity,
-                         "result_markdown": result_markdown},
-                "repo": _repo_str(self.repo),
+                **self._pending_identity(identity, result_markdown),
                 "status": "已发布未补索引",
                 "comment_id": comment.get("id"), "ref": ref,
                 "created_at": _dt.datetime.now().astimezone().isoformat(
@@ -655,7 +666,14 @@ class GithubBackend:
         """读取待补索引登记。文件存在但不可读/损坏时返回带 "corrupt" 键的
         哨兵——「登记存在」本身就是前次已确认发布的证据,身份可读与否不
         改变「不当作全新发布」的判定(结果未知 ≠ 确认不存在,S2 语义
-        家族);无登记返回 None(首试语义)。"""
+        家族);无登记返回 None(首试语义)。
+
+        身份核验(审查修复票 review4-01/SP-11):文件名 8 hex 短摘要可
+        碰撞,登记归属以文件内的完整身份为准——①形态不完整(缺
+        op/args/repo 任一身份字段或空身份)无法归属任何请求,按登记
+        损坏披露(corrupt 语义沿既有非法 JSON 行为);②身份完整但与
+        当前请求不一致,说明这份登记属于**另一请求**(碰撞共用文件),
+        按无登记处理:不冒认他人已发布身份,也不动他人登记。"""
 
         path = self._pending_index_file(identity, result_markdown)
         if path is None or not path.exists():
@@ -666,15 +684,37 @@ class GithubBackend:
             return {"corrupt": f"{type(exc).__name__}: {exc}", "path": str(path)}
         if not isinstance(pending, dict):
             return {"corrupt": "登记内容不是对象", "path": str(path)}
+        op, args, repo = (pending.get("op"), pending.get("args"),
+                          pending.get("repo"))
+        args = args if isinstance(args, dict) else {}
+        complete = (isinstance(op, str) and bool(op)
+                    and isinstance(args.get("identity"), str)
+                    and bool(args.get("identity"))
+                    and isinstance(args.get("result_markdown"), str)
+                    and isinstance(repo, str) and bool(repo))
+        if not complete:
+            return {"corrupt": ("登记身份不完整(缺 op/args(identity,"
+                                "result_markdown)/repo 之一或为空,无法"
+                                "归属任何请求)"),
+                    "path": str(path)}
+        if {"op": op, "args": args, "repo": repo} != \
+                self._pending_identity(identity, result_markdown):
+            return None
         return pending
 
     def _clear_pending_index(self, identity: str, result_markdown: str) -> None:
-        """结果索引补齐后清除登记。清除失败(极端 I/O 故障)保持沉默:
-        残留登记只会让后续读前查询失败的重试多保持一次待恢复(保守方向,
-        不会重复发布),远端可读时按远端权威修正。"""
+        """结果索引补齐后清除登记。只清除**经身份核验属于当前请求**的
+        登记(SP-11):短摘要碰撞共用文件时可能是另一请求的登记,不误删;
+        不可读/形态不完整的登记无法归属,同样保守保留。残留与清除失败
+        (极端 I/O 故障)都保持沉默:只会让后续读前查询失败的重试多保持
+        一次待恢复或一次损坏披露(保守方向,不会重复发布),远端可读时
+        按远端权威修正。"""
 
         path = self._pending_index_file(identity, result_markdown)
         if path is None:
+            return
+        pending = self._load_pending_index(identity, result_markdown)
+        if pending is None or pending.get("corrupt"):
             return
         try:
             path.unlink(missing_ok=True)
@@ -887,9 +927,11 @@ class GithubBackend:
         - 读前回读失败时先核对本地**待补索引登记**(审查修复票
           review3-01/SP-7):前次调用已确认发布的操作身份在部分成功时登记
           于本地缓存目录,读前查询失败(无法看远端)时凭登记保留**待恢复
-          状态**,不当作全新发布;无登记则本次尚未发布任何内容,按首试
-          语义继续尝试发布(未配置缓存目录时登记不可用,属能力边界,结果
-          中如实附注);
+          状态**,不当作全新发布;登记以文件内的完整内容身份核验归属
+          (review4-01/SP-11),身份不一致(短摘要文件名碰撞)按无登记
+          处理,不冒认他人已发布身份;无登记则本次尚未发布任何内容,按
+          首试语义继续尝试发布(未配置缓存目录时登记不可用,属能力边界,
+          部分成功结果中如实披露退化,SP-10);
         - 评论请求超时先回读,区分「回读确认不存在」(才允许重试一次)与
           「回读失败」——后者保留不确定状态并停止重发,不存草稿(审查修复
           票 01/S2);
@@ -1028,19 +1070,28 @@ class GithubBackend:
             # 请求经「读前收养」只补索引,不再重复发布评论。
             attempts.append({"step": "index-patch", "outcome": exc.kind,
                              "detail": str(exc)})
-            note = ("部分成功:结果评论已发布("
-                    f"{ref}),但正文结果索引更新未完成({exc});"
-                    "重试同一请求只会收养既有评论并补齐索引,"
-                    "不会重复发布")
             # SP-7:同时把已发布身份登记到本地——重试的读前收养查询失败
             # (无法看远端)时凭登记保留待恢复状态,不当作全新发布。登记
-            # 不可用(未配置缓存目录)或写入失败时如实附注,不把已发生的
-            # 远端结果包装成异常(R4 同一纪律)。
+            # 写入失败不把已发生的远端结果包装成异常(R4 同一纪律)。
+            # SP-10:登记**实际落盘**才支撑「不会重复发布」承诺;未配置
+            # 缓存目录或写入失败(登记未生效)时如实披露退化——本结果无
+            # 跨调用身份保留,读前收养查询失败的重试会当作全新发布而
+            # 可能重复发布,不把该模式表述为拥有不重复发布保证。
             record_error = self._record_pending_index(
                 identity, result_markdown, comment, ref, exc)
-            if record_error is not None:
-                note += (f";警告:本地待补索引登记不可用({record_error}),"
-                         "读前收养查询失败时的身份保留不生效")
+            if record_error is None:
+                note = ("部分成功:结果评论已发布("
+                        f"{ref}),但正文结果索引更新未完成({exc});"
+                        "重试同一请求只会收养既有评论并补齐索引,"
+                        "不会重复发布")
+            else:
+                note = ("部分成功:结果评论已发布("
+                        f"{ref}),但正文结果索引更新未完成({exc});"
+                        f"警告:本地待补索引登记未生效({record_error})"
+                        "——本结果无跨调用身份保留,远端可读时重试同一"
+                        "请求经读前收养只补索引,但若重试时读前收养查询"
+                        "失败,会当作全新发布而可能重复发布同文评论;"
+                        "建议配置缓存目录(--cache-dir)启用登记")
             return {"published": True, "partial": True,
                     "comment_id": comment.get("id"), "ref": ref,
                     "issue_number": number, "index_updated": False,

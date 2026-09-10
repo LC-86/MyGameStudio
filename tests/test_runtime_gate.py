@@ -901,6 +901,68 @@ def review3_sp7_section(root: Path) -> None:
           "SP-7:彻底恢复后结果索引应补齐该评论引用")
 
 
+def review4_sp10_section(root: Path) -> None:
+    """第四轮审查修复批(票 review4-01):SP-10 通道级反例固化,先红后绿。
+
+    反例底稿:.scratch/mygamestudio-v1-review4-fixes/evidence/
+    spec-independent-probes.py 的 no-cache-partial-retry(2026-09-10
+    独立复审在 05a2776 复现:不配置 cache_dir,首次 POST 成功+索引
+    PATCH 超时返回 partial;恢复后重试仅读前 GET 超时,累计 2 POST
+    2 评论)。复审取舍判断:无缓存模式不具备跨调用身份保留,不得表述
+    为拥有不重复发布保证——partial 的**运行结果 note**必须实际携带
+    退化警告(无跨调用身份保留、读前查询失败的重试可能重复发布、建议
+    配置 cache_dir),不再输出「不会重复发布」承诺;票面披露不等于
+    运行结果披露,故本段经真实 MCP 处理入口(mgs_remote→remote_record)
+    核对最终返回给调用方的 note。
+    """
+
+    sys.path.insert(0, str(REPO_ROOT / "tests"))
+    import test_github_backend as gh_fixtures  # noqa: PLC0415
+
+    base = root / "review4-sp10"
+    project = gh_fixtures.make_github_project(base / "project")
+    svc = GateService(base / "runtime")
+    resources = ["github://github.com/mygamestudio/issue-accept/issues/**"]
+    svc.init_policy(project, {"producer": resources}, {"production": None})
+    inst = svc.create_instance("producer", "T-sp10", "production", resources)
+    # 反例配置:远端通道不配置 cache_dir(登记不可用的退化模式)
+    svc._write_json("remote.json", {"github": {
+        "api_base": "http://unused.invalid", "token_env": "MGS_TEST_UNUSED"}})
+    fake = gh_fixtures.FakeTransport()
+    fake.seed_issue("01-task", "Existing")
+    fake.fail("PATCH", "/issues/1", "timeout")  # 评论 POST 成功后索引 PATCH 超时
+
+    class Facade:
+        def remote_record(self, token, action, payload):
+            return svc.remote_record(token, action, payload, transport=fake)
+
+    def call() -> dict:
+        response = mcp_gate.handle_tools_call(
+            Facade(), "mgs_remote",
+            {"token": inst.token, "action": "append-result",
+             "payload": {"identity": "01-task", "result_markdown": "same result"}})
+        return json.loads(response["content"][0]["text"])
+
+    first = call()
+    check(first.get("decision") == "allow",
+          f"SP-10 前置:首轮部分成功应 allow 如实转发,实际 {first}")
+    result = first.get("result") or {}
+    check(result.get("partial") is True
+          and result.get("comment_id") is not None
+          and result.get("index_updated") is False,
+          f"SP-10 前置:首轮应携带已发布评论身份与未完成索引,实际 {result}")
+    note = result.get("note") or ""
+    check("警告" in note,
+          f"SP-10:无 cache_dir 的 partial 运行结果 note 应实际携带警告,"
+          f"实际 {note!r}")
+    check("可能重复发布" in note or "可能重复" in note,
+          f"SP-10:警告应说明本模式重试可能重复发布,实际 {note!r}")
+    check("缓存目录" in note or "cache_dir" in note or "--cache-dir" in note,
+          f"SP-10:警告应建议配置缓存目录,实际 {note!r}")
+    check("不会重复发布" not in note,
+          f"SP-10:无缓存模式不得表述为拥有不重复发布保证,实际 {note!r}")
+
+
 def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="mgs02-gate-test-"))
     try:
@@ -1524,6 +1586,10 @@ def main() -> int:
         # 38+. 第三轮审查修复批(票 review3-01):SP-7 已确认部分成功后
         #      读前收养查询超时的重复发布,通道级反例固化
         review3_sp7_section(root)
+
+        # 39+. 第四轮审查修复批(票 review4-01):SP-10 无缓存目录时部分
+        #      成功的运行结果 note 未携带退化警告(通道级反例固化)
+        review4_sp10_section(root)
     finally:
         shutil.rmtree(root, ignore_errors=True)
 
