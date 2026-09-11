@@ -55,3 +55,12 @@
 - 主控验收：五套 rc=0；verify-reproducible PASS；Status=resolved；探针抽查 ready 计数保持 1/1；entry_probe 11 案例与冻结基线一致（JSON 结构与退出码）
 - 复审：跳过（非核心）
 - 遗留：entry_probe 覆盖口径沿用票 01（local-markdown 入口）；真实远端一贯未执行
+
+## 票 06 — 让基线与核验复用读取且保留证据含义（阶段 1）
+
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`1a3176225c7ca2d80745ed910240454ad01e5da9`
+- 交付提交：`b5ae10d`（mgs_records.py 851→897：baseline/verify 走同次配置与任务集合、核心文档同源版本/指纹、离线 skipped 表达保持；tests +205；dist 重建）
+- 主控验收：五套 rc=0；verify-reproducible PASS；Status=resolved；读取计数 baseline/verify CONFIG 2→1、核心文档各 2→1；entry_probe 11 案例与冻结基线一致
+- 复审：跳过（非核心）
+- 遗留：_doc_baseline_versions 作为公开测试接缝保留（行为等价组合）；真实远端一贯未执行
