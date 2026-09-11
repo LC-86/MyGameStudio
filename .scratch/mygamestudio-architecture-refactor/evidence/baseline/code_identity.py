@@ -14,8 +14,8 @@ import json
 import sys
 from pathlib import Path
 
-from baseline_common import (FIVE_LABELS, NON_PRODUCT_MARKERS, REPO_ROOT,
-                             emit, git, parse_out_args)
+from baseline_common import (FIVE_LABELS, REPO_ROOT, emit, git, parse_out_args,
+                             worktree_state)
 
 PRODUCTION_FILES = (
     "plugin/records/mgs_github.py",
@@ -78,30 +78,6 @@ def sha256(path: Path) -> str:
 
 def physical_lines(path: Path) -> int:
     return len(path.read_text(encoding="utf-8", errors="replace").splitlines())
-
-
-def worktree_state() -> dict:
-    """工作区披露:原始口径与排除基线产物后的口径分别如实记录。
-
-    原始 `worktree_clean` 直接来自 `git status --porcelain`。基线产物目录
-    (`evidence/baseline/`)与本票无关的主控进度文件(`execution-log.md`,非本票
-    文件)在原始口径下是未跟踪项,故原始口径通常为 false;排除这两类非产品
-    项后的 `worktree_clean_excluding_baseline` 才等价于「零产品改动」。
-    """
-
-    porcelain = [line for line in git("status", "--porcelain").splitlines()
-                 if line.strip()]
-    remaining = [line for line in porcelain
-                 if not any(marker in line for marker in NON_PRODUCT_MARKERS)]
-    return {
-        "worktree_clean": not porcelain,
-        "worktree_clean_excluding_baseline": not remaining,
-        "worktree_clean_excluding_scope": (
-            "排除 .scratch/ 下的票产物、工单与主控进度记录后的判断"
-            "(即本票零产品行为变更口径;与红线 "
-            "`git diff --numstat -- plugin tests acceptance dist` 为 0 一致)"),
-        "worktree_porcelain": porcelain,
-    }
 
 
 def collect() -> dict:

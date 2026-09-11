@@ -1,8 +1,8 @@
 # 票 01 行为与效率基线报告
 
-- 生成时间:2026-09-11T23:48:40+08:00
+- 生成时间:2026-09-12T00:02:47+08:00
 - 平台/解释器:macOS-26.5.1-arm64-arm-64bit-Mach-O / Python 3.14.4
-- HEAD:c31613a061568657842c106c25c0b8bfc6defc27(分支 codex/architecture-optimization)
+- HEAD:2f31a50425da6aba94097ecf3ea61c26345a8893(分支 codex/architecture-optimization)
 - 插件版本:mygamestudio 0.18.0
 - 工作区是否干净(原始 `git status --porcelain`):否(基线产物与主控进度文件在生成时尚未提交,故原始口径为否)
 - 工作区是否干净(排除 `.scratch/` 下的票产物、工单与主控进度记录后,= 本票零产品行为变更口径):是
@@ -11,11 +11,11 @@
 
 | 套件 | 结果 | 退出码 | 耗时(s) | 原始输出 |
 | --- | --- | --- | --- | --- |
-| test_plugin_package | PASS | 0 | 6.56 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_plugin_package.txt` |
-| test_runtime_gate | PASS | 0 | 1.715 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_runtime_gate.txt` |
-| test_runtime_boundaries | PASS | 0 | 0.739 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_runtime_boundaries.txt` |
-| test_records_backend | PASS | 0 | 1.172 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_records_backend.txt` |
-| test_github_backend | PASS | 0 | 2.48 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_github_backend.txt` |
+| test_plugin_package | PASS | 0 | 7.479 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_plugin_package.txt` |
+| test_runtime_gate | PASS | 0 | 1.722 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_runtime_gate.txt` |
+| test_runtime_boundaries | PASS | 0 | 0.723 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_runtime_boundaries.txt` |
+| test_records_backend | PASS | 0 | 1.147 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_records_backend.txt` |
+| test_github_backend | PASS | 0 | 2.507 | `.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_github_backend.txt` |
 
 五套合计:全部通过。
 
@@ -78,12 +78,12 @@
 
 本票**新增基线产物**的行数(分列,`scratch` 下,不是生产或测试代码):
 
-- 脚本(探针与入口 `.py`/`.sh`,8 个):1432 行
+- 脚本(探针与入口 `.py`/`.sh`,8 个):1475 行
 - 文档(`README.md`/`evidence-map.md`,2 个):158 行
 - 文档(本报告 `BASELINE-REPORT.md`):118 行
-- results 产物 JSON(5 个探针报告):1140 行
-- results 产物 JSON(汇总自身 `results/baseline.json`):1289 行
-- results 产物 JSON 合计(含汇总自身):2429 行
+- results 产物 JSON(5 个探针报告):1123 行
+- results 产物 JSON(汇总自身 `results/baseline.json`):1255 行
+- results 产物 JSON 合计(含汇总自身):2378 行
 - results 检查原始日志(`checks/*.txt`,另计,非本票新写):15 行
 
 ## 6. 现有命令行入口输出结构与退出码(实跑)

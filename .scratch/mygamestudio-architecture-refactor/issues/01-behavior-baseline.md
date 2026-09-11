@@ -126,3 +126,50 @@
 - 复跑稳定性抽查：连续两次运行，`baseline.json` 稳定字段（排除 `generated_at` 与各套
   `duration_seconds`）、`records_probe.json`、`entry_probe.json` 逐字节一致。
 - 红线：`git diff --numstat -- plugin tests acceptance dist` 为 0 行。
+
+### 2026-09-11 第二轮修复记录（第二轮复审发现 R1–R5）
+
+逐条处理第二轮独立复审的 R1–R5；范围内只改 `.scratch/mygamestudio-architecture-refactor/`
+下的基线产物与工单文件，未触及 `plugin/ tests/ acceptance/ dist/`。
+
+- **R1（同形重复，已收敛）。** 删除 `run_baseline.py` 内联的 `git status --porcelain`
+  与本地 `non_product=(".scratch/",)` 判断；工作区披露的唯一实现上收为
+  `baseline_common.worktree_state()`（复用 `git()` 与 `NON_PRODUCT_MARKERS`），
+  `code_identity.py` 与 `run_baseline.py` 均改为调用它。行为语义不变：仍同时给出
+  原始口径与排除 `.scratch/` 后的口径，字段名与报告措辞保持一致。
+- **R2（死返回值，已删除）。** `write_report` 的返回类型由 `int` 改为 `None`，删除
+  末尾 `return len(text.splitlines())`；报告自身行数实由内部 `SELF_REPORT_MARKER`
+  在写盘前回填，调用处不再有被丢弃的「回填」返回值，注释/文档串同步说明。
+- **R3（陈旧注释，已修正）。** `baseline_common.py` 模块 docstring 与
+  `parse_out_args`/`emit` 文档串中的「四个探针」改为「五个探针」；同时把共享范围
+  描述补上 `git()` 与工作区状态披露，不再留可陈旧计数值。
+- **R4（行数稳定性，已修复）。** 新增 `json_line_count()`：results 产物 JSON 在计数
+  前按与写盘一致的缩进重排为规范 JSON，并置空不稳定字段
+  （`worktree_porcelain`/`worktree_porcelain_at_start` 列表，`generated_at`、
+  `duration_seconds` 标量），再计算行数；解析失败回退物理行数。`collect_lines`
+  的 `results_json` 分项与报告中「汇总自身」均改用该口径；汇总自身不再随工作区
+  状态漂移。验收（见下）连续三次各分项完全一致，且新增无关未跟踪文件后仍不变。
+  修复后 `results_json_total`=1,123（探针 5 个：code_identity 118 / records 105 /
+  client 288 / code_volume 93 / entry 519），`scripts_total`=1,475，
+  `docs_total`=158，检查日志另计 15 行。
+- **R5（措辞与机制不符，已统一）。** `collect_lines` 的 `note` 原称「文档=
+  README/evidence-map/报告 .md」，但 `ARTIFACT_DOCS` 只含 README/evidence-map、
+  本报告经 `SELF_REPORT_MARKER` 单独回填。改为「文档=README/evidence-map .md
+  （本报告 BASELINE-REPORT.md 行数在报告中单独回填,不并入 docs）」，并注明 JSON
+  行数为剥离不稳定字段后的确定性口径；常量上方注释同步。
+
+**验证命令与真实结果（第二轮修复后）。**
+
+- `sh .scratch/mygamestudio-architecture-refactor/evidence/baseline/run_baseline.sh`
+  退出码 0，五套检查全绿（`all_existing_checks_green=True`；本次 7.163s / 1.736s /
+  0.746s / 0.94s / 2.489s）。
+- 连续三次运行：`baseline.json` 稳定字段（排除 `generated_at`、`duration_seconds`）
+  规范化后 SHA-256 三次均为
+  `e45087b0ab6f99ba262316e8d6763d09f75ca5db3e83afb746961b07555b0280`，逐字节一致；
+  `artifact_lines` 各分项三次一致。
+- 新增无关未跟踪文件（`/tmp` 生成后复制到仓库根 `mgs_unrelated_probe.txt`，验证后
+  删除）后第三次运行：`artifact_lines` 各分项与新增前完全一致（`results_json` 与
+  汇总自身走剥离口径，不再随 porcelain 清单漂移）。验证后已清理该临时文件并复跑
+  一次生成干净产物。
+- 红线：`git diff --numstat -- plugin tests acceptance dist` 为 0 行（0 行输出）。
+

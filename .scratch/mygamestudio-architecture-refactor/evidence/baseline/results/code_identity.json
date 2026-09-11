@@ -1,26 +1,18 @@
 {
   "evidence_kind": "static_fact",
-  "head_sha": "c31613a061568657842c106c25c0b8bfc6defc27",
+  "head_sha": "2f31a50425da6aba94097ecf3ea61c26345a8893",
   "branch": "codex/architecture-optimization",
   "worktree_clean": false,
   "worktree_clean_excluding_baseline": true,
   "worktree_clean_excluding_scope": "排除 .scratch/ 下的票产物、工单与主控进度记录后的判断(即本票零产品行为变更口径;与红线 `git diff --numstat -- plugin tests acceptance dist` 为 0 一致)",
   "worktree_porcelain": [
     "M .scratch/mygamestudio-architecture-refactor/evidence/baseline/BASELINE-REPORT.md",
-    " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/README.md",
-    " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/client_probe.py",
+    " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/baseline_common.py",
     " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/code_identity.py",
-    " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/code_volume.py",
-    " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/evidence-map.md",
-    " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/records_probe.py",
     " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/results/baseline.json",
     " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/results/code_identity.json",
-    " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/results/records_probe.json",
     " M .scratch/mygamestudio-architecture-refactor/evidence/baseline/run_baseline.py",
     " M .scratch/mygamestudio-architecture-refactor/issues/01-behavior-baseline.md",
-    "?? .scratch/mygamestudio-architecture-refactor/evidence/baseline/baseline_common.py",
-    "?? .scratch/mygamestudio-architecture-refactor/evidence/baseline/entry_probe.py",
-    "?? .scratch/mygamestudio-architecture-refactor/evidence/baseline/results/entry_probe.json",
     "?? .scratch/mygamestudio-architecture-refactor/execution-log.md"
   ],
   "plugin": {

@@ -2,8 +2,8 @@
 """票 01 基线探针共享 helper(同目录,低风险去重;不引入抽象框架)。
 
 只收拢各探针中字形相同的重复实现:
-- 四个探针一致的 argparse(`--out`)与 JSON 输出尾段;
-- code_identity.py 与 code_volume.py 的 `git()` 助手;
+- 五个探针一致的 argparse(`--out`)与 JSON 输出尾段;
+- `git()` 助手与工作区状态披露(供各探针与总入口 run_baseline.py 共用);
 - client_probe.py 与 code_volume.py 的客户端源码归一化;
 - records_probe.py 与 entry_probe.py 共用的临时项目夹具。
 
@@ -95,6 +95,30 @@ def git(*args: str) -> str:
     return out.stdout.strip()
 
 
+def worktree_state() -> dict:
+    """工作区状态披露(唯一实现在此收拢;各探针与总入口共用)。
+
+    原始 `worktree_clean` 直接来自 `git status --porcelain`。基线产物目录
+    (`evidence/baseline/`)与本票无关的主控进度文件在原始口径下是未跟踪项,故
+    原始口径通常为 false;排除 NON_PRODUCT_MARKERS 列出的非产品项后的
+    `worktree_clean_excluding_baseline` 才等价于「零产品改动」。
+    """
+
+    porcelain = [line for line in git("status", "--porcelain").splitlines()
+                 if line.strip()]
+    remaining = [line for line in porcelain
+                 if not any(marker in line for marker in NON_PRODUCT_MARKERS)]
+    return {
+        "worktree_clean": not porcelain,
+        "worktree_clean_excluding_baseline": not remaining,
+        "worktree_clean_excluding_scope": (
+            "排除 .scratch/ 下的票产物、工单与主控进度记录后的判断"
+            "(即本票零产品行为变更口径;与红线 "
+            "`git diff --numstat -- plugin tests acceptance dist` 为 0 一致)"),
+        "worktree_porcelain": porcelain,
+    }
+
+
 def normalize_source(text: str) -> str:
     """忽略注释/文档串,只规范化编号身份常量,保留全部结构(客户端归一化)。"""
 
@@ -108,7 +132,7 @@ def normalize_source(text: str) -> str:
 
 
 def parse_out_args(description: str = "") -> argparse.Namespace:
-    """四个探针一致的参数解析:`--out <report.json>`(省略则打印 stdout)。"""
+    """五个探针一致的参数解析:`--out <report.json>`(省略则打印 stdout)。"""
 
     parser = argparse.ArgumentParser(description=description or None)
     parser.add_argument("--out")
@@ -116,7 +140,7 @@ def parse_out_args(description: str = "") -> argparse.Namespace:
 
 
 def emit(report: dict, out: str | None) -> None:
-    """四个探针一致的输出尾段:写文件或打印,JSON 缩进 2。"""
+    """五个探针一致的输出尾段:写文件或打印,JSON 缩进 2。"""
 
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if out:

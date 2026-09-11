@@ -21,8 +21,9 @@ import sys
 import time
 from pathlib import Path
 
+from baseline_common import REPO_ROOT, worktree_state
+
 EVIDENCE_DIR = Path(__file__).resolve().parent
-REPO_ROOT = EVIDENCE_DIR.parents[3]
 SUITES = (
     "test_plugin_package",
     "test_runtime_gate",
@@ -38,8 +39,9 @@ PROBES = {
     "entry_probe": EVIDENCE_DIR / "entry_probe.py",
 }
 # 本票新增产物的行数口径:脚本(探针+入口)、文档(md)、results 下 JSON 产物。
-# 注意:baseline.json 与 BASELINE-REPORT.md 在收集后才重写,这里只统计本次
-# 运行前已存在的产物行数;汇总时以最终写盘的文件为准(见 collect_lines)。
+# 脚本/文档按本次工作区实际文件计数;results 产物 JSON 经 collect_lines 的
+# json_line_count 做确定性规范化后再计数(见 R4)。汇总自身 baseline.json 与
+# 本报告 BASELINE-REPORT.md 在收集后重写,故不并入上述分项、在报告中单独披露。
 ARTIFACT_SCRIPTS = ("run_baseline.py", "run_baseline.sh", "baseline_common.py",
                     "code_identity.py", "records_probe.py", "client_probe.py",
                     "code_volume.py", "entry_probe.py")
@@ -82,6 +84,30 @@ def run_suite(name: str, out_path: Path) -> dict:
     return result
 
 
+# 计数前规范化的不稳定字段:取值随运行时刻或工作区状态变化,会破坏「可复跑
+# 基线」承诺。列表型字段(工作区 porcelain 清单)长度随未跟踪/改动文件数漂移,
+# 统一置空;标量字段(generated_at/duration_seconds)只影响取值不影响行数,一并
+# 规范化以明示口径。
+VOLATILE_LIST_KEYS = ("worktree_porcelain", "worktree_porcelain_at_start")
+VOLATILE_SCALAR_KEYS = {"generated_at": "<normalized>", "duration_seconds": 0}
+
+
+def _normalize_volatile(value):
+    if isinstance(value, dict):
+        normalized = {}
+        for key, item in value.items():
+            if key in VOLATILE_LIST_KEYS:
+                normalized[key] = []
+            elif key in VOLATILE_SCALAR_KEYS:
+                normalized[key] = VOLATILE_SCALAR_KEYS[key]
+            else:
+                normalized[key] = _normalize_volatile(item)
+        return normalized
+    if isinstance(value, list):
+        return [_normalize_volatile(item) for item in value]
+    return value
+
+
 def line_count(rel: str) -> int:
     path = EVIDENCE_DIR / rel
     if not path.is_file():
@@ -89,16 +115,37 @@ def line_count(rel: str) -> int:
     return len(path.read_text(encoding="utf-8", errors="replace").splitlines())
 
 
+def json_line_count(rel: str) -> int:
+    """results JSON 的确定性行数口径:计数前剥离/规范化不稳定字段。
+
+    物理行数会随工作区 porcelain 清单长度漂移(如新增未跟踪无关文件),故先按
+    与写盘一致的缩进重排为规范 JSON、置空不稳定字段,再计数;解析失败回退物理
+    行数。稳定 JSON 重排后与写盘格式一致,计数即物理行数。
+    """
+
+    path = EVIDENCE_DIR / rel
+    if not path.is_file():
+        return 0
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return line_count(rel)
+    text = json.dumps(_normalize_volatile(data), ensure_ascii=False,
+                      indent=2) + "\n"
+    return len(text.splitlines())
+
+
 def collect_lines(results_dir: Path) -> dict:
     """本票新增产物的行数:脚本 / 文档 / results 产物 JSON(不含汇总自身)分列。
 
-    `results/baseline.json`(汇总自身)随本字段变化,单独在报告里按实际文件
-    行数披露,避免自引用导致的口径不一致。
+    results 产物 JSON 按 `json_line_count` 的确定性口径计数(剥离不稳定字段),
+    使各分项在连续运行与未跟踪无关文件增减下保持完全一致;汇总自身
+    `results/baseline.json` 在报告里按同一口径单独披露。
     """
 
     scripts = {rel: line_count(rel) for rel in ARTIFACT_SCRIPTS}
     docs = {rel: line_count(rel) for rel in ARTIFACT_DOCS}
-    result_jsons = {rel: line_count(rel) for rel in ARTIFACT_RESULT_JSON}
+    result_jsons = {rel: json_line_count(rel) for rel in ARTIFACT_RESULT_JSON}
     checks = sorted((results_dir / "checks").glob("*.txt"))
     check_lines = {f"results/checks/{p.name}":
                    len(p.read_text(encoding="utf-8", errors="replace").splitlines())
@@ -111,9 +158,11 @@ def collect_lines(results_dir: Path) -> dict:
         "results_json": result_jsons,
         "results_json_total": sum(result_jsons.values()),
         "results_check_logs_total": sum(check_lines.values()),
-        "note": ("脚本=探针与入口 .py/.sh;文档=README/evidence-map/报告 .md;"
+        "note": ("脚本=探针与入口 .py/.sh;文档=README/evidence-map .md"
+                 "(本报告 BASELINE-REPORT.md 行数在报告中单独回填,不并入 docs);"
                  "results 产物 JSON=results/*.json(不含汇总自身 baseline.json 与 "
-                 "checks/*.txt 检查原始日志)"),
+                 "checks/*.txt 检查原始日志);JSON 行数按剥离不稳定字段"
+                 "(工作区 porcelain 清单等)后的确定性口径计数"),
     }
 
 
@@ -126,14 +175,10 @@ def main() -> int:
     checks_dir = results_dir / "checks"
     checks_dir.mkdir(parents=True, exist_ok=True)
 
-    # 工作区披露(审查修复票 01/F5):原始口径与排除本票基线产物后的口径分列。
-    porcelain = [line for line in subprocess.run(
-        ["git", "-C", str(REPO_ROOT), "status", "--porcelain"],
-        capture_output=True, text=True, check=False).stdout.splitlines()
-        if line.strip()]
-    non_product = (".scratch/",)
-    production_changes = [line for line in porcelain
-                          if not any(marker in line for marker in non_product)]
+    # 工作区披露(审查修复票 01/F5;与 code_identity.py 共用
+    # baseline_common.worktree_state 的单一实现):原始口径与排除本票基线产物
+    # 后的口径分列。
+    worktree = worktree_state()
 
     suites = [run_suite(name, checks_dir / f"{name}.txt") for name in SUITES]
     probes = {name: run_probe(name, results_dir / f"{name}.json")
@@ -145,13 +190,12 @@ def main() -> int:
         "environment": {
             "platform": platform.platform(),
             "python": sys.version.split()[0],
-            "worktree_clean": not porcelain,
-            "worktree_clean_excluding_baseline_artifacts": not production_changes,
-            "worktree_clean_excluding_scope": (
-                "排除 .scratch/ 下的票产物、工单与主控进度记录后的判断"
-                "(即本票零产品行为变更口径;与红线 "
-                "`git diff --numstat -- plugin tests acceptance dist` 为 0 一致)"),
-            "worktree_porcelain_at_start": porcelain,
+            "worktree_clean": worktree["worktree_clean"],
+            "worktree_clean_excluding_baseline_artifacts":
+                worktree["worktree_clean_excluding_baseline"],
+            "worktree_clean_excluding_scope":
+                worktree["worktree_clean_excluding_scope"],
+            "worktree_porcelain_at_start": worktree["worktree_porcelain"],
         },
         "evidence_classes": {
             "static_fact": ["code_identity", "code_volume", "client_family_inventory",
@@ -195,8 +239,8 @@ def main() -> int:
     return 0
 
 
-def write_report(baseline: dict, out_path: Path) -> int:
-    """写人可读报告,返回写盘后的实际行数(用于回填自身行数口径)。"""
+def write_report(baseline: dict, out_path: Path) -> None:
+    """写人可读报告;自身行数由内部 SELF_REPORT_MARKER 机制在写盘前回填。"""
     checks = baseline["check_suites"]
     observations = baseline["probes"]["records_probe"]["report"]["observations"]
     local_ready = next(o for o in observations if o["probe"] == "ready"
@@ -319,7 +363,7 @@ def write_report(baseline: dict, out_path: Path) -> int:
     lines.append(f"- 文档(本报告 `BASELINE-REPORT.md`):{SELF_REPORT_MARKER} 行")
     lines.append(f"- results 产物 JSON({len(artifact['results_json'])} 个探针报告):"
                  f"{artifact['results_json_total']} 行")
-    baseline_self = line_count("results/baseline.json")
+    baseline_self = json_line_count("results/baseline.json")
     lines.append(f"- results 产物 JSON(汇总自身 `results/baseline.json`):"
                  f"{baseline_self} 行")
     lines.append(f"- results 产物 JSON 合计(含汇总自身):"
@@ -369,10 +413,9 @@ def write_report(baseline: dict, out_path: Path) -> int:
     lines.append(f"- 后续比较方法:{volume['comparison_method']}")
     lines.append("")
     text = "\n".join(lines)
-    # 占位符在单独一行内替换,不改变行数;故可按替换后的实际行数回填。
+    # 占位符在单独一行内替换,不改变行数;故可按替换后的实际行数回填自身行数。
     text = text.replace(SELF_REPORT_MARKER, str(len(text.splitlines())))
     out_path.write_text(text, encoding="utf-8")
-    return len(text.splitlines())
 
 
 if __name__ == "__main__":
