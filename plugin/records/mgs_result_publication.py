@@ -7,9 +7,10 @@
 module,不再各自维护一份恢复分支。
 
 发布事实(与第一、三、四阶段设计一致,保持既有语义):
-- **未发布**:离线或读前核对失败时保存未发布草稿(草稿身份与重放归
-  属仍由适配器的草稿职责承担;本 module 在需要时经注入的 ``save_draft``
-  调用它),绝不报告为已发布;
+- **未发布**:离线或读前核对失败时保存未发布草稿(草稿身份、幂等与跨仓
+  归属的存储语义自票 20 起收敛在本模块的 ``save_unpublished_draft``/
+  ``publish_drafts``,适配器只在自己的公开写接缝上注入目标仓库、缓存目录
+  与草稿说明并委派),绝不报告为已发布;
 - **结果未知**(uncertain):结果评论请求超时且回读失败——可能已落地,
   停止重发、不存草稿,如实回报不确定;
 - **部分成功**(partial):评论已真实发布而结果索引更新失败——携带已
@@ -33,6 +34,10 @@ module,不再各自维护一份恢复分支。
 
 from __future__ import annotations
 
+import datetime as _dt
+import hashlib
+import json
+import re
 import sys
 from pathlib import Path
 
@@ -318,3 +323,139 @@ class ResultPublication:
     def _patch_body(self, number: int, body: str) -> tuple[int, object]:
         return self.transport.request(
             "PATCH", f"{repo_path(self.repo)}/issues/{number}", {"body": body})
+
+
+# ---------- 未发布草稿:存储、身份与重放(公开接缝,票 20) ----------
+# 草稿是「在线失败时保存、远端恢复后重放」的同一恢复事实的另一端:与发布
+# 生命周期同处一个 module,在线调用、草稿保存与重放共享同一份事实。文件
+# 语义(身份含目标仓库、同秒不覆盖、幂等、跨仓拒绝)与重放动作参数分发
+# 逐条保持既有行为;适配器只注入目标仓库、缓存目录与草稿说明,并委派
+# execute_op 执行原参数。
+
+def _draft_digest(op: str, args: dict, repo: str) -> str:
+    """待发布操作的稳定唯一身份摘要(操作+参数+目标仓库的内容哈希前 8
+    hex;审查修复票 01/S6、review2-02/SP-3):同秒两次不同操作互不覆盖;
+    同一操作重复保存幂等;目标仓库纳入身份——同一缓存目录服务多个各有
+    授权的仓库时,跨仓库同参数请求各存各的草稿,不得误判为幂等重放。"""
+
+    return hashlib.sha256(json.dumps(
+        {"op": op, "args": args, "repo": repo},
+        ensure_ascii=False, sort_keys=True)
+        .encode("utf-8")).hexdigest()[:8]
+
+
+def save_unpublished_draft(*, cache_dir: Path | str | None, repo: str,
+                           op: str, args: dict, cause: str, note: str) -> dict:
+    """远端不可用时保存**未发布**草稿(标明来源与状态;不视为已发布)。
+
+    每个待发布操作带稳定且唯一的身份(见 ``_draft_digest``);同一待发布
+    操作重复保存返回既有草稿并标记 ``idempotent``,不产生第二份;同名但
+    内容不同(理论上仅哈希碰撞)按序号退避,绝不覆盖既有草稿。未配置缓存
+    目录或写入失败时报错,不丢弃请求、不静默切换本地后端。
+    """
+
+    if cache_dir is None:
+        raise GithubRecordsError(
+            f"远端不可用({cause})且未配置缓存/草稿目录(--cache-dir);"
+            "不丢弃请求,不静默切换本地后端")
+    drafts = Path(cache_dir) / "drafts"
+    drafts.mkdir(parents=True, exist_ok=True)
+    stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    identity = re.sub(r"[^A-Za-z0-9._-]", "-", str(args.get("identity", "na")))
+    digest = _draft_digest(op, args, repo)
+
+    def candidate(index: int | None = None) -> Path:
+        name = f"{stamp}-{op}-{identity}-{digest}"
+        return drafts / (f"{name}-{index}.json" if index else f"{name}.json")
+
+    path = candidate()
+    if path.exists():
+        prior = None
+        try:
+            prior = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            prior = None
+        if prior and prior.get("op") == op and prior.get("args") == args \
+                and prior.get("repo") == repo:
+            return {"published": False, "status": "未发布草稿",
+                    "draft": str(path), "cause": cause, "note": note,
+                    "idempotent": True}
+        index = 1
+        while candidate(index).exists():
+            index += 1
+        path = candidate(index)
+    path.write_text(json.dumps({
+        "op": op, "args": args, "status": "未发布草稿",
+        "repo": repo,
+        "created_at": _dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "cause": cause, "note": note,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"published": False, "status": "未发布草稿", "draft": str(path),
+            "cause": cause, "note": note}
+
+
+def publish_drafts(*, cache_dir: Path | str | None, repo: str, execute,
+                   note: str) -> dict:
+    """重放未发布草稿(远端恢复后):逐条按原参数执行,成功即标记已发布;
+    仍失败保留草稿。草稿在发布前始终标明「未发布」。
+
+    发布前逐份核对草稿记录的目标仓库与当前后端仓库(审查修复票 01/S1):
+    不一致即拒绝发布该草稿(不发请求、不移动、不标记)——选择/切换到
+    新后端不构成旧草稿的迁移授权,跨仓库移动需经明确的迁移流程。
+    ``execute(op, args)`` 由调用方注入(与在线执行共用同一动作参数分发)。
+    """
+
+    if cache_dir is None:
+        raise GithubRecordsError("未配置缓存/草稿目录(--cache-dir),无草稿可发布")
+    drafts_dir = Path(cache_dir) / "drafts"
+    published_dir = drafts_dir / "published"
+    results = []
+    if not drafts_dir.is_dir():
+        return {"published_count": 0, "results": []}
+    for path in sorted(drafts_dir.glob("*.json")):
+        try:
+            draft = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            results.append({"draft": str(path), "outcome": "unreadable",
+                            "detail": str(exc)})
+            continue
+        draft_repo = draft.get("repo")
+        if draft_repo != repo:
+            results.append({
+                "draft": str(path), "published": False,
+                "outcome": (
+                    f"拒绝发布:草稿记录的目标仓库 {draft_repo!r} 与当前后端"
+                    f"仓库 {repo!r} 不一致"
+                    + ("" if draft_repo else "(草稿未记录目标仓库)")
+                    + ";选择/切换新后端不构成旧草稿的迁移授权,"
+                    "跨仓库移动需经明确的迁移流程另行确认"),
+            })
+            continue
+        outcome = replay_draft(draft, execute=execute)
+        results.append({"draft": str(path), **outcome})
+        if outcome.get("published"):
+            published_dir.mkdir(parents=True, exist_ok=True)
+            (published_dir / path.name).write_text(
+                json.dumps(draft, ensure_ascii=False, indent=2), encoding="utf-8")
+            path.unlink()
+    return {"published_count": sum(1 for r in results if r.get("published")),
+            "results": results}
+
+
+def replay_draft(draft: dict, *, execute) -> dict:
+    """按原操作与参数重放一份草稿,返回是否完成与结果。
+
+    部分成功(如评论已发布而结果索引未完成,SP-2)不算完成:保留草稿,
+    下次重放经「读前收养」只补未完成部分,不重复发布。``execute(op, args)``
+    与在线执行共用同一动作参数分发(第二轮复审 ST-1)。
+    """
+
+    op, args = draft["op"], draft.get("args", {})
+    try:
+        outcome = execute(op, args)
+    except (GithubRecordsError, TransportError) as exc:
+        return {"published": False, "outcome": f"仍失败:{exc}"}
+    return {"published": bool(outcome.get("published", outcome.get("created"))
+                             and not outcome.get("partial")),
+            "outcome": outcome}
+

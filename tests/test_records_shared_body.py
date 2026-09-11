@@ -13,8 +13,8 @@ import tempfile
 from pathlib import Path
 
 from records_backend_support import (
-    RECORDS_DIR, SAMPLE, _imported_modules, make_checker, make_project,
-    run_theme,
+    RECORDS_DIR, REPO_ROOT, SAMPLE, _imported_modules, make_checker,
+    make_project, run_theme,
 )
 
 import mgs_records  # noqa: E402
@@ -95,10 +95,11 @@ def test_dependency_direction_static() -> None:
 
     用 AST 扫描全部 import(含函数内),证明方向靠职责归属实现,而不是
     延迟导入。分层(model/source 中性共同语义 → transport 最底层接缝 →
-    pending-index 登记存储与归属 → publication 发布恢复 → github 业务
-    适配器)固定为对称的负向断言:传输不得导入发布恢复/登记存储/适配器/
-    查询组织,登记存储不得导入发布恢复/适配器/查询组织,发布恢复不得
-    导入适配器/查询组织。
+    pending-index 登记存储与归属 → publication 发布恢复 → github-issue
+    Issue 形态 → github 业务适配器)固定为对称的负向断言:传输不得导入
+    发布恢复/登记存储/适配器/查询组织,登记存储不得导入发布恢复/适配器/
+    查询组织,发布恢复不得导入 Issue 形态/适配器/查询组织,Issue 形态不得
+    导入发布恢复/适配器/查询组织。
     """
 
     model = _imported_modules(RECORDS_DIR / "mgs_record_model.py")
@@ -108,6 +109,9 @@ def test_dependency_direction_static() -> None:
     transport = _imported_modules(RECORDS_DIR / "mgs_github_transport.py")
     pending_index = _imported_modules(RECORDS_DIR / "mgs_pending_index.py")
     publication = _imported_modules(RECORDS_DIR / "mgs_result_publication.py")
+    issue = _imported_modules(RECORDS_DIR / "mgs_github_issue.py")
+    read = _imported_modules(RECORDS_DIR / "mgs_github_read.py")
+    migration = _imported_modules(RECORDS_DIR / "mgs_github_migration.py")
 
     for banned in ("mgs_records", "mgs_github", "mgs_record_source"):
         check(banned not in model,
@@ -120,35 +124,91 @@ def test_dependency_direction_static() -> None:
     # 票 18:传输/错误接缝是最底层,发布恢复建在其上,适配器在最上;任一层
     # 不得回指其上各层(对称负向断言)。adapter 实际依赖发布恢复 module。
     for banned in ("mgs_result_publication", "mgs_pending_index",
-                   "mgs_github", "mgs_records"):
+                   "mgs_github_issue", "mgs_github", "mgs_records"):
         check(banned not in transport,
               f"mgs_github_transport(最底层接缝)不得依赖 {banned},"
               f"实际 {sorted(transport)}")
     # 票 19:登记存储与归属是独立恢复职责,建在传输接缝之上、发布恢复之下;
     # 不反向依赖发布恢复/适配器/查询组织。
-    for banned in ("mgs_result_publication", "mgs_github", "mgs_records"):
+    for banned in ("mgs_result_publication", "mgs_github_issue",
+                   "mgs_github_read", "mgs_github_migration",
+                   "mgs_github", "mgs_records"):
         check(banned not in pending_index,
               f"mgs_pending_index(登记存储与归属)不得依赖 {banned},"
               f"实际 {sorted(pending_index)}")
-    for banned in ("mgs_github", "mgs_records"):
+    for banned in ("mgs_github_issue", "mgs_github_read",
+                   "mgs_github_migration", "mgs_github", "mgs_records"):
         check(banned not in publication,
               f"mgs_result_publication 不得依赖 {banned},实际 {sorted(publication)}")
+    # 票 20:Issue 形态(正文序列化/解析与仓库级授权核对)是适配器之下的
+    # 职责,不反向依赖发布恢复、登记存储、读取/迁移职责、适配器与查询组织。
+    for banned in ("mgs_result_publication", "mgs_pending_index",
+                   "mgs_github_read", "mgs_github_migration",
+                   "mgs_github", "mgs_records"):
+        check(banned not in issue,
+              f"mgs_github_issue(Issue 形态职责)不得依赖 {banned},"
+              f"实际 {sorted(issue)}")
+    # 票 20:读取/缓存与回读核验职责建在传输接缝与 Issue 形态之上,不反向
+    # 依赖发布恢复、登记存储、迁移、适配器与查询组织。
+    for banned in ("mgs_result_publication", "mgs_pending_index",
+                   "mgs_github_migration", "mgs_github", "mgs_records"):
+        check(banned not in read,
+              f"mgs_github_read(读取与回读核验职责)不得依赖 {banned},"
+              f"实际 {sorted(read)}")
+    # 票 20:迁移/交接职责是编排层,正向经适配器完成目标侧创建(函数内
+    # 延迟导入,避免与适配器的兼容再导出在加载期互相导入);不依赖发布
+    # 恢复、登记存储与查询组织。此处显式固定「仅此一处延迟依赖适配器」,
+    # 不把延迟导入当作掩盖其他反向调用的手段。
+    for banned in ("mgs_result_publication", "mgs_pending_index", "mgs_records"):
+        check(banned not in migration,
+              f"mgs_github_migration(迁移/交接职责)不得依赖 {banned},"
+              f"实际 {sorted(migration)}")
+    check("mgs_github" in migration,
+          "mgs_github_migration 应经适配器完成目标侧创建(延迟导入例外),"
+          f"实际 {sorted(migration)}")
     check("mgs_result_publication" in github,
           f"mgs_github 应依赖发布恢复 module(真实接入),实际 {sorted(github)}")
+    check("mgs_github_issue" in github,
+          f"mgs_github 应依赖 Issue 形态 module(真实接入),实际 {sorted(github)}")
+    check("mgs_github_read" in github,
+          f"mgs_github 应依赖读取职责 module(真实接入),实际 {sorted(github)}")
     check("mgs_pending_index" in publication,
           "发布恢复应在真实追加路径上使用登记存储与归属 module"
           f"(单一恢复职责,非另建助手),实际 {sorted(publication)}")
     check("mgs_github_transport" in github
           and "mgs_github_transport" in publication
-          and "mgs_github_transport" in pending_index,
-          "发布恢复、登记存储与 adapter 应共用传输/错误接缝 mgs_github_transport,"
+          and "mgs_github_transport" in pending_index
+          and "mgs_github_transport" in issue,
+          "发布恢复、登记存储、Issue 形态与 adapter 应共用传输/错误接缝 "
+          "mgs_github_transport,"
           f"实际 github={sorted(github)} publication={sorted(publication)} "
-          f"pending_index={sorted(pending_index)}")
+          f"pending_index={sorted(pending_index)} issue={sorted(issue)}")
     # 正向:查询组织与 adapter 都依赖来源 module 与共同语义
     check("mgs_record_source" in records,
           f"mgs_records 应依赖来源 module,实际 {sorted(records)}")
     check("mgs_record_source" in github,
           f"mgs_github 应直接依赖来源 module,实际 {sorted(github)}")
+
+
+def test_runtime_entrypoint_uses_public_draft_seam() -> None:
+    """票 20:受控运行入口不直接依赖后端私有草稿保存细节。
+
+    静态证明 ``plugin/runtime/mgs_runtime.py`` 不再出现私有草稿名
+    ``_save_draft``(含带 noqa 的调用),并实际经后端**公开**草稿接缝
+    ``record_unpublished_draft`` 兜底离线草稿;同时确认该公开接缝在后端
+    存在。行为侧由 test_runtime_gate_remote 的离线草稿回报检查固定。
+    """
+
+    runtime_path = REPO_ROOT / "plugin" / "runtime" / "mgs_runtime.py"
+    source = runtime_path.read_text(encoding="utf-8")
+    check("_save_draft" not in source,
+          "mgs_runtime 不得直接调用后端私有草稿保存细节 _save_draft")
+    check("record_unpublished_draft" in source,
+          "mgs_runtime 应经公开草稿接缝 record_unpublished_draft 兜底离线草稿")
+    import mgs_github
+    check(callable(getattr(mgs_github.GithubBackend,
+                           "record_unpublished_draft", None)),
+          "GithubBackend 应提供公开草稿接缝 record_unpublished_draft")
 
 
 def test_source_shared_with_query_and_import_orders() -> None:
@@ -220,6 +280,7 @@ def test_loaded_config_local_read_is_same_source() -> None:
 TESTS = (
     test_record_model_shared_body_and_error_identity,
     test_dependency_direction_static,
+    test_runtime_entrypoint_uses_public_draft_seam,
     test_source_shared_with_query_and_import_orders,
     test_loaded_config_local_read_is_same_source,
 )

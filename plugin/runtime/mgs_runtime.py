@@ -1030,10 +1030,11 @@ class GateService:
                     result = self._run_remote_action(backend, action, payload)
                 except mgs_github.TransportError as exc:
                     # 上游故障:失效闭合;适配器已在可用缓存目录保存未发布
-                    # 草稿的操作由各动作内部处理,这里兜底离线草稿
+                    # 草稿的操作由各动作内部处理,这里经后端**公开**草稿接缝
+                    # 兜底离线草稿(不直接依赖后端私有草稿保存细节,票 20)
                     draft = None
                     if exc.kind == "offline" and channel.get("cache_dir"):
-                        draft = backend._save_draft(  # noqa: SLF001 - 通道内聚
+                        draft = backend.record_unpublished_draft(
                             self._op_for_action(action), dict(payload), str(exc))
                     denial = ("remote_upstream",
                               f"remote upstream unavailable (fail closed): {exc}",

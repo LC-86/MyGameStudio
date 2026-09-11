@@ -319,6 +319,85 @@ def test_append_result_online_and_execute_op_share_recovery_fact() -> None:
         check(not list((cache / "pending-index").rglob("*.json")),
               "补齐后待补索引登记应清除")
 
+def test_append_result_three_paths_share_recovery_fact() -> None:
+    """票 20 三路一致性:同一结果追加请求依次经过「在线失败(离线草稿)」、
+    「草稿重放(部分成功)」与「再次调用(补齐)」,三条路径共享同一恢复
+    事实——远端评论发布次数、回执(comment_id/ref)与最终索引状态一致;
+    未发布草稿、已确认发布的部分成功与完成是不同事实,互不替代。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        cache = base / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        backend.fetch_tasks()  # 在线建立缓存(离线草稿路径需要)
+
+        # 路径 1:在线失败(离线) → 保存未发布草稿,零远端发布,不报告已发布
+        fake.offline()
+        draft = backend.append_result("01-alpha", "三路证据")
+        check(draft.get("published") is False
+              and draft.get("status") == "未发布草稿" and draft.get("draft"),
+              f"在线失败应保存未发布草稿,实际 {draft}")
+        check(draft.get("uncertain") is not True
+              and draft.get("partial") is not True,
+              f"未发布草稿与结果未知/部分成功是不同事实,实际 {draft}")
+        comment_posts = [c for c in fake.calls if c[0] == "POST"
+                         and "/comments" in c[1]]
+        check(len(comment_posts) == 0,
+              f"离线未发布不得发出评论 POST,实际 {len(comment_posts)} 次")
+        check(len(list((cache / "drafts").glob("*.json"))) == 1,
+              "在线失败应落盘一份未发布草稿")
+
+        # 路径 2:草稿重放(评论已发布、索引 PATCH 超时) → 部分成功保留草稿
+        fake._offline = False
+        fake.fail("PATCH", "/issues/1", "timeout")
+        first = backend.publish_drafts()
+        check(first["published_count"] == 0,
+              f"部分成功不算完成,草稿应保留,实际 {first}")
+        outcome = first["results"][0].get("outcome")
+        check(isinstance(outcome, dict) and outcome.get("published") is True
+              and outcome.get("partial") is True
+              and outcome.get("comment_id") is not None
+              and outcome.get("index_updated") is False,
+              f"重放应如实回报部分成功并携带回执与未完成索引,实际 {outcome}")
+        check(outcome.get("uncertain") is not True,
+              "部分成功(已确认发布)与结果未知(uncertain)不得互相替代")
+        receipt = outcome.get("comment_id")
+        ref = outcome.get("ref")
+        check(len(fake.comments[1]) == 1,
+              f"重放应恰发布 1 条评论,实际 {len(fake.comments[1])}")
+
+        # 路径 3:再次调用(读前收养既有评论,只补索引) → 完成,最终状态一致
+        fake._fail = []
+        final = backend.append_result("01-alpha", "三路证据")
+        check(final.get("published") is True
+              and final.get("index_updated") is True
+              and final.get("comment_id") == receipt,
+              f"再次调用应收养同一回执并补齐索引,实际 {final}")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 1,
+              f"三路合计远端评论发布次数应恰 1,实际 {len(posts)} 次")
+        check(len(fake.comments[1]) == 1,
+              f"最终远端评论数应恰 1,实际 {len(fake.comments[1])}")
+        check(ref and f"#issuecomment-{receipt}" in (fake.issues[0].get("body") or ""),
+              "最终结果索引应含同一回执引用")
+        # 草稿重放路径与直接调用路径收敛到同一最终状态:残留草稿再次重放
+        # 收养同一回执、恰完成索引、不再发布评论,并把草稿移出待发布目录
+        fake._fail = []
+        replay = backend.publish_drafts()
+        check(replay["published_count"] == 1,
+              f"残留草稿重放应收敛为完成(不新增发布),实际 {replay}")
+        check(len([c for c in fake.calls if c[0] == "POST"
+                   and "/comments" in c[1]]) == 1,
+              "草稿再次重放不得新增评论 POST(三路合计仍恰 1 次)")
+        check(len(fake.comments[1]) == 1,
+              f"草稿再次重放后远端评论数仍应恰 1,实际 {len(fake.comments[1])}")
+        check(not list((cache / "drafts").glob("*.json")),
+              "完成后草稿应移出待发布目录")
+
+
 TESTS = (
     test_append_result_readback_failure_keeps_uncertain,
     test_append_result_partial_success_and_retry_completion,
@@ -327,6 +406,7 @@ TESTS = (
     test_append_result_read_first_failure_without_pending_keeps_first_try,
     test_append_result_partial_without_cache_dir_carries_degraded_warning,
     test_append_result_online_and_execute_op_share_recovery_fact,
+    test_append_result_three_paths_share_recovery_fact,
 )
 
 if __name__ == "__main__":
