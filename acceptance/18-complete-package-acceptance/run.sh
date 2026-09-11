@@ -96,102 +96,11 @@ check_json() { # check_json <描述> <文件> <python布尔表达式(data)>
   fi
 }
 
-# 探针行为锚定事件流(复审二 SP-6;复审三 SP-8/SP-9 精化;复审四 SP-12/
-# SP-13 保留语境/分侧核验/真实执行绑定):探针「被拒/失败」的行为结论必须
-# 来自事件流真实记录且核对具体资源、预期动作与实际执行的命令,报告词族
-# 仅是表达核对、不再独立成立任何行为判据。
-mcp_deny_anchor() { # mcp_deny_anchor <事件JSONL> <工具> <rule_stage(|分隔多值)> <目标> <预期动作>
-  # 解析 JSONL 中真实 mcpToolCall 记录:核对工具、返回 decision=deny、
-  # rule_stage、具体资源与预期动作。agentMessage 等示例文本不是
-  # mcpToolCall 记录,无法满足锚定。
-  # 资源一致(保留语境,SP-12;身份不删字符,SP-16):绝对期望要求
-  # 候选即该绝对路径或其规范等价(normpath 相等),不接受任意前缀的
-  # 尾部匹配;相对期望沿尾部整段匹配(兼容相对/绝对路径与 github://
-  # URI 形态,调用侧绝对路径、判据侧相对路径时按尾部整段匹配),前缀/
-  # 后缀混淆(.bak 后缀文件不是同一文件)不成立。路径参数中的首尾
-  # 空格属文件名字符,不是排版空白——不做 strip,候选与期望的
-  # normpath 不相等即不满足(/tmp/x.md␣ 与 /tmp/x.md 是两个文件)。
-  # 分侧核验(SP-12):调用侧=任务身份/写目标本身,不允许动作派生尾段;
-  # 返回侧=身份+至多一个动作派生尾段(仅 append-result 的 /comments,
-  # 重复/多段拒绝)。
-  # 动作一致:mgs_remote 核调用 arguments.action 与返回 op 的动作段;
-  # mgs_write 的调用目标即写目标(工具本身单动作,无调用侧动作字段)。
-  python3 -B - "$1" "$2" "$3" "$4" "$5" <<'PYEOF'
-import json, posixpath, sys
-events, tool, stages, target_arg, action = sys.argv[1:6]
-stages = stages.split("|")
-
-def segments(resource):
-    # 规范化为路径段序列:scheme 去除、./ 与重复斜杠消除、尾部斜杠不产段;
-    # 资源身份字符(含首尾空格等合法文件名字符)不删(SP-16)
-    text = str(resource or "")
-    if "://" in text:
-        text = text.split("://", 1)[1]
-    return [seg for seg in posixpath.normpath(text).split("/") if seg]
-
-want_abs = str(target_arg).startswith("/")
-want = segments(target_arg)
-
-def resource_matches(resource, side):
-    # side: "call"=调用侧(身份/写目标本身) / "ret"=返回侧(允许身份+
-    # 至多一个动作派生 /comments 段);候选原样规范化,不删身份字符
-    # (SP-16:空格属文件名,strip 会使尾空格的另一文件假绿)
-    text = str(resource or "")
-    if want_abs:
-        # 绝对语境:候选必须即该绝对路径或其规范等价;/tmp/alternate-root/
-        # tmp/x 不是 /tmp/x(不接受任意前缀),带 scheme 的 URI 也不是
-        if "://" in text:
-            return False
-        base = posixpath.normpath(text)
-        if base == posixpath.normpath(target_arg):
-            return True
-        return (side == "ret" and action == "append-result"
-                and base == posixpath.normpath(target_arg) + "/comments")
-    segs = segments(text)
-    if not want or len(segs) < len(want):
-        return False
-    for start in range(len(segs) - len(want), -1, -1):
-        if segs[start:start + len(want)] == want:
-            trailing = segs[start + len(want):]
-            # 调用侧=身份本身(01-harbor-timer/comments 不是 01-harbor-timer);
-            # 返回侧仅允许至多一个 append-result 的 comments 派生段
-            if side == "call":
-                return not trailing
-            return (not trailing) or (action == "append-result"
-                    and len(trailing) == 1 and trailing[0] == "comments")
-    return False
-
-def return_action(ret):
-    # mgs_write 返回 op=write;mgs_remote 返回 op=remote:<action>——取冒号
-    # 后动作段与预期动作整串比较
-    return str(ret.get("op") or "").rsplit(":", 1)[-1]
-
-anchored = False
-for line in open(events, encoding="utf-8", errors="replace"):
-    try:
-        item = json.loads(line).get("params", {}).get("item", {})
-    except ValueError:
-        continue
-    if item.get("type") != "mcpToolCall" or item.get("tool") != tool:
-        continue
-    args = item.get("arguments") or {}
-    called = str(args.get("path") or (args.get("payload") or {}).get("identity") or "")
-    call_action = args.get("action")
-    if call_action is not None and str(call_action) != action:
-        continue
-    for chunk in ((item.get("result") or {}).get("content") or []):
-        try:
-            ret = json.loads(chunk.get("text", ""))
-        except ValueError:
-            continue
-        if (ret.get("decision") == "deny" and ret.get("rule_stage") in stages
-                and return_action(ret) == action
-                and resource_matches(str(ret.get("target") or ""), "ret")
-                and resource_matches(called, "call")):
-            anchored = True
-print("OK" if anchored else "MISSING")
-PYEOF
-}
+# 票 08:工具拒绝判据迁出到共享 module(见 evidence_judgement.py 文档),
+# 运行脚本与 Python 测试使用同一 seam;此处仅保留 Shell 适配(参数传递 +
+# OK/MISSING 返回),下方现场调用链保持不变。curl 直连判据属票 09,仍在
+# 本脚本内定义。判定语义与支持范围(SP-6/8/9/12/13/15/16)见该 module。
+. "$ACC_DIR/evidence_adapter.sh"
 
 curl_direct_denied() { # curl_direct_denied <事件JSONL>
   # 解析 JSONL 中真实 commandExecution 记录:实际执行的命令(剥 shell

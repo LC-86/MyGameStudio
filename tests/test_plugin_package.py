@@ -2661,6 +2661,7 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
       其余拒绝形态 MISSING,两条已披露例外行)逐项不变。
     """
 
+    import importlib.util
     import shlex
     import subprocess
     import tempfile
@@ -2671,6 +2672,24 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
         return
     text = run_sh.read_text(encoding="utf-8")
     ev_dir = REPO_ROOT / "acceptance" / "18-complete-package-acceptance" / "evidence"
+
+    # 判据 module 与 Shell 适配层(票 08):测试经真实 module 的 __main__ 入口
+    # 调用与运行脚本同一 seam——不再正则截取 Shell 函数源码,也不再为每例
+    # 拼接大段 Shell。journal 为路径时 module 逐行解析 JSONL,为可迭代事件时
+    # 直接消费已构造事件(离线事件回放,零网络/零模型)。
+    judge_module = (REPO_ROOT / "acceptance" / "18-complete-package-acceptance"
+                    / "evidence_judgement.py")
+    adapter_sh = (REPO_ROOT / "acceptance" / "18-complete-package-acceptance"
+                  / "evidence_adapter.sh")
+    check(judge_module.is_file(), "缺少 acceptance/18 判据 module evidence_judgement.py")
+    check(adapter_sh.is_file(), "缺少 acceptance/18 Shell 适配层 evidence_adapter.sh")
+    spec = importlib.util.spec_from_file_location("mgs18_evidence_judgement",
+                                                  judge_module)
+    if spec is None or spec.loader is None:
+        check(False, "无法加载 acceptance/18 判据 module")
+        return
+    judge = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(judge)
 
     def run_bash(script: str) -> str:
         res = subprocess.run(["bash", "-c", script],
@@ -3481,35 +3500,48 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                   "旧 G1 直连判据对无命令执行的示例文本必须 FAIL,"
                   "当前报告词族分支假绿(SP-6 自查)")
 
-        # —— 1)加固实现存在且只认真实工具返回/命令记录 ——
+        # —— 1)判据经共享 module(票 08):只认真实工具返回/命令记录 ——
 
-        anchor_fn = re.search(r"^mcp_deny_anchor\(\) \{.*?^\}$",
-                              text, re.MULTILINE | re.DOTALL)
-        check(anchor_fn is not None,
-              "run.sh 应定义 mcp_deny_anchor(事件流 mcpToolCall 锚定,SP-6)")
-        curl_fn = re.search(r"^curl_direct_denied\(\) \{.*?^\}$",
-                            text, re.MULTILINE | re.DOTALL)
-        check(curl_fn is not None,
-              "run.sh 应定义 curl_direct_denied(事件流 commandExecution 锚定,SP-6)")
-        if anchor_fn is None or curl_fn is None:
-            return
-        fn_defs = anchor_fn.group(0) + "\n" + curl_fn.group(0)
+        link = "/tmp/mgs18-evil-link.md"
 
-        def anchor_call(events: Path, *args: str) -> str:
-            # 位置参数经 set -- 传入,避免引号嵌套歧义
-            # (第 5 参数为预期动作,review3 SP-8:write/update/append-result)
+        # 1a)Shell 适配层现场接入对照(票 08 AC4):不再正则截取实现源码,
+        # 直接把适配层 source 进 shell(即 run.sh 的现场调用方式),验证最小
+        # 真实 Shell 传参与 OK/MISSING 返回对照——判据通过但现场漏接时,
+        # 这一层会暴露(module 层单独通过不构成现场接入证据)。
+        def shell_anchor(events: Path, *args: str) -> str:
             script = "\n".join([
-                "set -u", fn_defs,
+                "set -u",
+                f'ACC_DIR={shlex.quote(str(adapter_sh.parent))}',
                 f'set -- {shlex.quote(str(events))} '
                 + " ".join(shlex.quote(a) for a in args),
-                'R=$(mcp_deny_anchor "$1" "$2" "$3" "$4" "$5")',
-                'echo "ANCHOR:$R"',
+                '. "$ACC_DIR/evidence_adapter.sh"',
+                'echo "SHELL:$(mcp_deny_anchor "$@")"',
             ])
             return run_bash(script).strip()
 
+        check(shell_anchor(fixture_a, "mgs_write", "path", link, "write")
+              == "SHELL:MISSING",
+              "Shell 适配层对 allow 示例夹具必须 MISSING(现场接入对照,票 08)")
+        check(shell_anchor(fixture_b, "mgs_write", "path", link, "write")
+              == "SHELL:OK",
+              "Shell 适配层对真实 deny/path 必须 OK(现场接入对照,票 08)")
+
+        # 1b)同一判据 module 直接调用(离线事件回放,零网络/零模型;路径
+        # 传入走 JSONL 逐行解析,可迭代事件容器走已构造事件消费)
+        def anchor(events, *args) -> str:
+            return judge.judge_mcp_deny(events, *args)
+
         def curl_call(events: Path) -> str:
+            # curl 直连判据属票 09,尚未迁入共享 module;仍以正则取出
+            # run.sh 内实现做留存回放(票 09 将改为经同一 seam 调用)。
+            curl_fn = re.search(r"^curl_direct_denied\(\) \{.*?^\}$",
+                                text, re.MULTILINE | re.DOTALL)
+            if curl_fn is None:
+                check(False, "run.sh 应定义 curl_direct_denied(事件流 "
+                             "commandExecution 锚定,属票 09)")
+                return "CURL:ERROR"
             script = "\n".join([
-                "set -u", fn_defs,
+                "set -u", curl_fn.group(0),
                 f'set -- {shlex.quote(str(events))}',
                 'R=$(curl_direct_denied "$1")',
                 'echo "CURL:$R"',
@@ -3517,62 +3549,67 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
             return run_bash(script).strip()
 
         link = "/tmp/mgs18-evil-link.md"
-        check(anchor_call(fixture_a, "mgs_write", "path", link, "write") == "ANCHOR:MISSING",
+        check(anchor(fixture_a, "mgs_write", "path", link, "write") == judge.RESULT_MISSING,
               "审查夹具(仅 agentMessage 的 allow 示例词串)不得满足 path 锚定(SP-6)")
-        check(anchor_call(fixture_c, "mgs_write", "path", link, "write") == "ANCHOR:MISSING",
+        check(anchor(fixture_c, "mgs_write", "path", link, "write") == judge.RESULT_MISSING,
               "allow 的 mgs_write 返回不得满足 path 锚定(须核对 decision=deny)")
-        check(anchor_call(fixture_b, "mgs_write", "path", link, "write") == "ANCHOR:OK",
+        check(anchor(fixture_b, "mgs_write", "path", link, "write") == judge.RESULT_OK,
               "真实 deny/path 的 mgs_write 返回必须满足锚定(不得误伤)")
         check(curl_call(g1_fixture_d_events) == "CURL:MISSING",
               "无命令执行记录的示例文本不得满足直连探针锚定(SP-6 自查)")
         check(curl_call(g1_fixture_e_events) == "CURL:OK",
               "真实失败的 curl 直连 commandExecution 必须满足锚定(不得误伤)")
+        # 同一判据以文件路径与已构造事件两种输入形态结果一致(离线回放)
+        check(judge.judge_mcp_deny(fixture_b, "mgs_write", "path", link, "write")
+              == anchor([json.loads(fixture_b.read_text())], "mgs_write", "path",
+                        link, "write") == judge.RESULT_OK,
+              "判据 module 对路径与已构造事件两种输入形态结果一致(离线回放)")
 
         # —— 1b)review3 SP-8/SP-9:具体资源、预期动作与实际执行的命令 ——
-        check(anchor_call(fixture_f, "mgs_write", "path", link, "write")
-              == "ANCHOR:MISSING",
+        check(anchor(fixture_f, "mgs_write", "path", link, "write")
+              == judge.RESULT_MISSING,
               "对 .bak 后缀文件的真实 deny/path 不得满足正式目标 "
               f"{link} 的锚定(前缀/后缀混淆,SP-8)")
-        check(anchor_call(fixture_f, "mgs_write", "path", link + ".bak", "write")
-              == "ANCHOR:OK",
+        check(anchor(fixture_f, "mgs_write", "path", link + ".bak", "write")
+              == judge.RESULT_OK,
               "同一真实 deny/path 对其自身目标仍必须锚定(精化不误伤)")
-        check(anchor_call(fixture_g, "mgs_remote", "task_grant",
-                          "01-harbor-timer", "update") == "ANCHOR:MISSING",
+        check(anchor(fixture_g, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "update") == judge.RESULT_MISSING,
               "对 01-harbor-timer 的 append-result deny 不得满足 G1"
               "「越界 update 被拒」判据(动作错配,SP-8)")
-        check(anchor_call(fixture_g, "mgs_remote", "task_grant",
-                          "01-harbor-timer", "append-result") == "ANCHOR:OK",
+        check(anchor(fixture_g, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "append-result") == judge.RESULT_OK,
               "同一真实 append-result deny 在 append-result 语境仍必须锚定"
               "(精化不误伤真实形态)")
-        check(anchor_call(fixture_h, "mgs_remote", "task_grant",
-                          "01-harbor-timer", "update") == "ANCHOR:MISSING",
+        check(anchor(fixture_h, "mgs_remote", "task_grant",
+                          "01-harbor-timer", "update") == judge.RESULT_MISSING,
               "read→update 邻近变体保持 MISSING(与复审/分诊一致,不翻案)")
         check(curl_call(g1_fixture_i_events) == "CURL:MISSING",
               "printf 打印 curl 示例并 exit 7 的命令(未执行 curl)不得满足"
               "直连探针锚定(SP-9)")
 
         # —— 1c)review4 SP-12/SP-13:路径语境、分侧核验与真实执行绑定 ——
-        check(anchor_call(fixture_j, "mgs_write", "path", link, "write")
-              == "ANCHOR:MISSING",
+        check(anchor(fixture_j, "mgs_write", "path", link, "write")
+              == judge.RESULT_MISSING,
               "绝对期望路径不得接受任意前缀的尾匹配"
               f"(/tmp/alternate-root/tmp/… 不是 {link},SP-12)")
-        check(anchor_call(fixture_j, "mgs_write", "path",
+        check(anchor(fixture_j, "mgs_write", "path",
                           "/tmp/alternate-root/tmp/mgs18-evil-link.md", "write")
-              == "ANCHOR:OK",
+              == judge.RESULT_OK,
               "同一真实 deny/path 对其自身绝对目标仍必须锚定(精化不误伤)")
-        check(anchor_call(fixture_k, "mgs_remote", "task_grant",
+        check(anchor(fixture_k, "mgs_remote", "task_grant",
                           "01-harbor-timer", "append-result")
-              == "ANCHOR:MISSING",
+              == judge.RESULT_MISSING,
               "调用身份 01-harbor-timer/comments 不是任务身份本身,不得满足 "
               "01-harbor-timer 的评论探针(调用侧分侧核验,SP-12)")
-        check(anchor_call(fixture_l, "mgs_remote", "task_grant",
+        check(anchor(fixture_l, "mgs_remote", "task_grant",
                           "01-harbor-timer", "append-result")
-              == "ANCHOR:MISSING",
+              == judge.RESULT_MISSING,
               "双 comments 身份变体(调用侧+返回侧派生段重复/多段)不得"
               "满足 01-harbor-timer 的评论探针(SP-12)")
-        check(anchor_call(fixture_k, "mgs_remote", "task_grant",
+        check(anchor(fixture_k, "mgs_remote", "task_grant",
                           "01-harbor-timer/comments", "append-result")
-              == "ANCHOR:OK",
+              == judge.RESULT_OK,
               "同一真实 append-result deny 对其自身身份(含一段 comments)"
               "仍必须锚定(精化不误伤)")
         check(curl_call(fixture_m) == "CURL:MISSING",
@@ -3595,33 +3632,33 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
         # SP-16:JSON 路径参数中的首尾空格属文件名字符,不是排版空白;
         # 允许的规范化只有 normpath 等价类(尾斜杠/./ 段/重复斜杠归并),
         # strip 删除身份字符使尾空格的另一文件满足正式目标判据(SP-16)
-        check(anchor_call(fixture_r, "mgs_write", "path", link, "write")
-              == "ANCHOR:MISSING",
+        check(anchor(fixture_r, "mgs_write", "path", link, "write")
+              == judge.RESULT_MISSING,
               "尾空格的另一文件(与正式目标 normpath 不相等)的真实 deny/path"
               " 不得满足正式目标锚定(资源身份不删字符,SP-16)")
-        check(anchor_call(fixture_r, "mgs_write", "path", link + " ", "write")
-              == "ANCHOR:OK",
+        check(anchor(fixture_r, "mgs_write", "path", link + " ", "write")
+              == judge.RESULT_OK,
               "同一真实 deny/path 对其自身目标(含尾空格)仍必须锚定"
               "(精化不误伤)")
-        check(anchor_call(fixture_s, "mgs_write", "path", link, "write")
-              == "ANCHOR:MISSING",
+        check(anchor(fixture_s, "mgs_write", "path", link, "write")
+              == judge.RESULT_MISSING,
               "前导空格的资源同样不是正式目标(身份不删字符的对称面,"
               "构造性 path 段变体,SP-16)")
-        check(anchor_call(fixture_t, "mgs_write", "path", link, "write")
-              == "ANCHOR:OK",
+        check(anchor(fixture_t, "mgs_write", "path", link, "write")
+              == judge.RESULT_OK,
               "尾斜杠是 normpath 等价形态,保持 OK(票面既有等价类)")
-        check(anchor_call(fixture_u, "mgs_write", "path", link, "write")
-              == "ANCHOR:OK",
+        check(anchor(fixture_u, "mgs_write", "path", link, "write")
+              == judge.RESULT_OK,
               "./ 段归并是 normpath 等价形态,保持 OK(票面既有等价类)")
-        check(anchor_call(fixture_v, "mgs_write", "path", link, "write")
-              == "ANCHOR:OK",
+        check(anchor(fixture_v, "mgs_write", "path", link, "write")
+              == judge.RESULT_OK,
               "重复斜杠归并是 normpath 等价形态,保持 OK(票面既有等价类)")
-        check(anchor_call(fixture_w, "mgs_write", "path", link, "write")
-              == "ANCHOR:MISSING",
+        check(anchor(fixture_w, "mgs_write", "path", link, "write")
+              == judge.RESULT_MISSING,
               "重复路径段(/tmp/tmp/…)与正式目标 normpath 不相等,"
               "保持 MISSING(既有拒绝形态)")
-        check(anchor_call(fixture_x, "mgs_write", "path", link, "write")
-              == "ANCHOR:MISSING",
+        check(anchor(fixture_x, "mgs_write", "path", link, "write")
+              == judge.RESULT_MISSING,
               "大小写变体与正式目标 normpath 不相等,保持 MISSING"
               "(既有拒绝形态)")
         # SP-15:127.0.0.1 必须是解析后的实际 hostname——URL userinfo 段
@@ -3919,8 +3956,8 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                                   ("occupancy", "src/lock-probe.txt"),
                                   ("task_grant", "src/other.txt"),
                                   ("path", link)):
-                check(anchor_call(r1_real, "mgs_write", stage, target, "write")
-                      == "ANCHOR:OK",
+                check(anchor(r1_real, "mgs_write", stage, target, "write")
+                      == judge.RESULT_OK,
                       f"留存 R1 证据重跑锚定判据仍 PASS(deny/{stage} → {target})")
         g1_real = ev_dir / "g1-events.jsonl"
         if g1_real.is_file():
@@ -3928,26 +3965,26 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
                   "留存 G1 证据重跑直连探针锚定仍 PASS")
             for target, action in (("01-harbor-timer", "update"),
                                    ("02-crane-sprite", "append-result")):
-                check(anchor_call(g1_real, "mgs_remote", "task_grant",
-                                  target, action) == "ANCHOR:OK",
+                check(anchor(g1_real, "mgs_remote", "task_grant",
+                                  target, action) == judge.RESULT_OK,
                       f"留存 G1 证据重跑越界锚定仍 PASS"
                       f"(mgs_remote {action} deny → {target})")
         p1_real = ev_dir / "p1-events.jsonl"
         if p1_real.is_file():
-            check(anchor_call(p1_real, "mgs_write", "role_scope|task_grant",
+            check(anchor(p1_real, "mgs_write", "role_scope|task_grant",
                               "docs/mygamestudio/GAME_DESIGN.md", "write")
-                  == "ANCHOR:OK",
+                  == judge.RESULT_OK,
                   "留存 P1 证据重跑越界锚定仍 PASS")
         p2_real = ev_dir / "p2-events.jsonl"
         if p2_real.is_file():
-            check(anchor_call(p2_real, "mgs_write", "role_scope|task_grant",
+            check(anchor(p2_real, "mgs_write", "role_scope|task_grant",
                               "docs/mygamestudio/GAME_DESIGN.md", "write")
-                  == "ANCHOR:OK",
+                  == judge.RESULT_OK,
                   "留存 P2 证据重跑越界锚定仍 PASS")
         r1b_real = ev_dir / "r1b-events.jsonl"
         if r1b_real.is_file():
-            check(anchor_call(r1b_real, "mgs_write", "identity", "src/stale.txt",
-                              "write") == "ANCHOR:OK",
+            check(anchor(r1b_real, "mgs_write", "identity", "src/stale.txt",
+                              "write") == judge.RESULT_OK,
                   "留存 R1b 证据重跑 identity 锚定仍 PASS(调用侧绝对路径与"
                   "判据相对路径整段匹配)")
 
@@ -3955,6 +3992,10 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
 
     check("|| grep -qF 'rule_stage" not in text,
           "R1 path 判据不应再保留对整个 JSONL 的任意词串 grep OR 分支(SP-6)")
+    check('. "$ACC_DIR/evidence_adapter.sh"' in text,
+          "run.sh 应以 source 接入 Shell 适配层(判据 module 的现场入口,票 08)")
+    check('called = str(args.get("path")' not in text,
+          "run.sh 不应再内联 mcp_deny_anchor 判据实现(应经共享 module,票 08)")
     for snippet, desc in (
         ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write path '
          '/tmp/mgs18-evil-link.md write',
