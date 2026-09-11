@@ -164,3 +164,13 @@
 - 复审循环：第 1 轮（Spec 零实质发现、删除无引用证明成立、净行数可复算 2815/2941；Standards 零硬违规 + 2 个一行 smell）→ `3d5c25a` → 主控核验收口
 - 效益记录：**客户端共享化收口：18 入口 4605→1664 行（净 −2941，对比票 01 基线）；重复实现范围 5141→2326（净 −2815，扣除共享成本后实测）；解码 21000→1000；五族行为、18 场景零丢失**
 - 留档：2815 的收口前口径取票 01 全量副本而非直接父提交（工单已披露）；全局 STATE dict + 单锁串行化替身（正确但保守，继承设计）
+
+## 票 18 — 让结果追加通过完整发布恢复职责执行（阶段 4，核心票）
+
+- 状态：**done（2026-09-12，核心票，复审两轮修复后主控核验收口）**
+- 前基点 SHA：`3deb6d7ec037ec384e7e16c86969691b12ad6330`
+- 交付提交：`1f997a6`（新增 mgs_result_publication.py 568 行完整生命周期 + mgs_github_transport.py 149 行接缝；mgs_github.py 1809→1220 append_result 委派新 module；写面规则移入 mgs_record_model；dist 重建）→ `b988a78`（第一轮修复：_find_comment 去重、写面名公开化 edit_body/section_lines/today、AST 方向守卫对称补全、docstring 增补；publication 568→596）→ `b397ce6`（第二轮修复：transport 测试支撑 docstring 对齐、category 裸字符串留档）
+- 复审循环：第 1 轮（Spec 验收全真、语义未弱、测试未放宽；Standards 去重/私有名跨界/守卫缺口/文档滞后）→ `b988a78` → 第 2 轮（四项全解决；残留陈旧 docstring + 可接受 smell）→ `b397ce6` → 主控核验收口
+- 效益记录：**发布恢复生命周期集中于一个 module 并被现有调用真实使用；四态/收养/不重复发布/碰撞/损坏/旧布局全保留；两入口（CLI + execute_op 草稿重放）共享恢复事实有接线证明**
+- 留档：publication 596 行（>500 记录内聚理由）；mgs_github.py 1220 行（>600，票 20 收口）；四元组 Data Clumps（票 19/20 评估）；_find_comment category 裸字符串
+- 净行数：plugin 4793→5025（+232，含 transport/model 拆出）；tests +73；dist 包 SHA 8806a675…
