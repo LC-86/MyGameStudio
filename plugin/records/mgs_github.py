@@ -44,9 +44,9 @@ from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import mgs_record_model  # noqa: E402
 import mgs_records  # noqa: E402
-from mgs_records import (CANONICAL_LABELS, RecordsError,  # noqa: E402
-                         _field, _sections)
+from mgs_record_model import CANONICAL_LABELS, RecordsError  # noqa: E402
 
 GITHUB_BACKEND = "github-issues"
 WRITE_OP = "issues-write"
@@ -271,31 +271,27 @@ def parse_issue_body(number: int, body: str, labels: list[str],
                      label_map: dict[str, str], issue_id: int | None = None) -> dict:
     """Issue → 与本地后端同形的任务记录(身份/分流/进度语义一致)。
 
-    标签承载分流(经 CONFIG 映射回五类语义);正文头部是规范化记录,
-    两者不一致时以标签为准并把差异列入 triage_source 说明。
+    共同正文字段(身份/标题/进度/工作请求/小节/结果索引)由中性记录
+    module 的 parse_task_body 解析——与本地 work/task.md 同一套规则;
+    本 adapter 只补齐 GitHub 存储专有字段(Issue 号/标签/triage 来源与
+    冲突/关闭状态/原始正文)。标签承载分流(经 CONFIG 映射回五类语义),
+    与正文头部不一致时以标签为准并把差异列入 triage_source 说明。
     """
 
-    header_lines: list[str] = []
-    title = ""
-    for line in (body or "").splitlines():
-        if line.startswith("## "):
-            break
-        if line.startswith("# ") and not title:
-            title = line.lstrip("# ").strip()
-        header_lines.append(line)
-    header = "\n".join(header_lines)
-    sections = _sections(body or "")
+    record = mgs_record_model.parse_task_body(body or "")
     # 标签 → 五类语义(反向映射)
     reverse = {proj: canon for canon, proj in label_map.items()}
     from_labels = [reverse.get(l, l) for l in labels]
     triage_label = next((t for t in from_labels if t in CANONICAL_LABELS), None)
-    triage_body = _field(header, "当前分流")
-    triage = triage_label or triage_body or ""
+    triage_body = mgs_record_model._field(
+        "\n".join(mgs_record_model._header_lines(body or "")[0]), "当前分流")
+    # 键序沿用既有公开返回顺序(JSON 结构兼容):共同字段来自共享解析,
+    # GitHub 专有字段在对应位置插入。
     return {
-        "identity": _field(header, "任务身份"),
-        "title": title,
-        "triage": triage,
-        "progress": _field(header, "进度"),
+        "identity": record["identity"],
+        "title": record["title"],
+        "triage": triage_label or triage_body or "",
+        "progress": record["progress"],
         "issue_number": number,
         "issue_id": issue_id,
         "state": state,
@@ -305,11 +301,10 @@ def parse_issue_body(number: int, body: str, labels: list[str],
                           "body" if triage_body else "missing"),
         "triage_conflict": bool(triage_label and triage_body
                                 and triage_label != triage_body),
-        "request": mgs_records._bullets(sections.get("工作请求", [])),
-        "sections": {name: bool(lines and any(l.strip() for l in lines))
-                     for name, lines in sections.items()},
+        "request": record["request"],
+        "sections": record["sections"],
         "results": [],  # 列表层不拉评论;read_task 单独补齐
-        "result_index_text": "\n".join(sections.get("结果索引", [])),
+        "result_index_text": record["result_index_text"],
         "body": body or "",
     }
 
@@ -328,7 +323,7 @@ def _repo_str(repo: dict) -> str:
 # ---------- Issue 正文编辑(保持与 task.md 同一记录格式) ----------
 
 def _section_lines(body: str, name: str) -> list[str]:
-    return list(_sections(body).get(name, []))
+    return list(mgs_record_model._sections(body).get(name, []))
 
 
 def _edit_body(body: str, *, header: dict | None = None,
@@ -340,7 +335,7 @@ def _edit_body(body: str, *, header: dict | None = None,
     index_lines 整体替换结果索引;append_change 向状态变化追加一行。
     """
 
-    sections = _sections(body)
+    sections = mgs_record_model._sections(body)
     header_lines: list[str] = []
     title = ""
     for line in body.splitlines():
@@ -866,7 +861,7 @@ class GithubBackend:
         """
 
         self._authorize_write()
-        if not identity or not mgs_records.IDENTITY_RE.fullmatch(identity):
+        if not identity or not mgs_record_model.IDENTITY_RE.fullmatch(identity):
             raise GithubRecordsError(
                 f"任务身份必须形如 NN-<slug>,当前 {identity!r}(身份跨后端保持稳定)")
         if triage not in CANONICAL_LABELS:
@@ -1447,19 +1442,19 @@ class GithubBackend:
         checks: list[dict] = []
         skipped: list[str] = []
 
-        checks.append(mgs_records.check_item(
+        checks.append(mgs_record_model.check_item(
             "config-present", True, str(root / self.config["config_path"])))
         repo = self.repo
-        checks.append(mgs_records.check_item(
+        checks.append(mgs_record_model.check_item(
             "backend-github-coordinates", True,
             f"{repo['host']}/{repo['owner']}/{repo['repo']}"))
-        checks += mgs_records.label_mapping_checks(self.config["labels"])
-        checks += mgs_records.docmap_checks(root, self.config["docmap"])
+        checks += mgs_record_model.label_mapping_checks(self.config["labels"])
+        checks += mgs_record_model.docmap_checks(root, self.config["docmap"])
 
         try:
             payload = self.fetch_tasks()
         except GithubRecordsError as exc:
-            checks.append(mgs_records.check_item("tasks-valid", False, str(exc)))
+            checks.append(mgs_record_model.check_item("tasks-valid", False, str(exc)))
             return {"ok": False, "checks": checks, "offline": True,
                     "skipped": ["tasks-valid", "deps-consistent",
                                 "labels-remote-present", "results-consistent"]}
@@ -1473,7 +1468,7 @@ class GithubBackend:
         for task in tasks:
             identity = task["identity"]
             # 任务核心字段:与本地后端共享的单一实现(where 用 #Issue号 定位)
-            task_problems += mgs_records.task_core_problems(
+            task_problems += mgs_record_model.task_core_problems(
                 task, f"#{task['issue_number']}")
             if identity and identity in seen:
                 task_problems.append(f"{identity}:身份重复(#{task['issue_number']})")
@@ -1484,21 +1479,21 @@ class GithubBackend:
                     "completed", "not_planned"):
                 task_problems.append(f"{identity}:已关闭但缺少关闭原因"
                                       f"(state_reason={task.get('state_reason')!r})")
-        checks.append(mgs_records.check_item(
+        checks.append(mgs_record_model.check_item(
             "tasks-valid", not task_problems,
             ";".join(task_problems) if task_problems
             else f"{len(tasks)} 个远端任务结构有效"))
 
-        dep_problems = mgs_records.dependency_problems(tasks)
-        checks.append(mgs_records.check_item(
+        dep_problems = mgs_record_model.dependency_problems(tasks)
+        checks.append(mgs_record_model.check_item(
             "deps-consistent", not dep_problems,
             ";".join(dep_problems) if dep_problems else "依赖关系可解析且无循环"))
 
         labels = self.config["labels"]
         if offline:
-            checks.append(mgs_records.check_item(
+            checks.append(mgs_record_model.check_item(
                 "labels-remote-present", True, "未核对(离线缓存,不下结论)"))
-            checks.append(mgs_records.check_item(
+            checks.append(mgs_record_model.check_item(
                 "results-consistent", True, "未核对(离线缓存,不下结论)"))
         else:
             status, remote = self.transport.request(
@@ -1507,12 +1502,12 @@ class GithubBackend:
                             if status == 200 and isinstance(remote, list) else None)
             if remote_names is None:
                 skipped.append("labels-remote-present")
-                checks.append(mgs_records.check_item(
+                checks.append(mgs_record_model.check_item(
                     "labels-remote-present", True, "未核对(远端标签接口不可用)"))
             else:
                 absent = [labels[name] for name in CANONICAL_LABELS
                           if labels.get(name) and labels[name] not in remote_names]
-                checks.append(mgs_records.check_item(
+                checks.append(mgs_record_model.check_item(
                     "labels-remote-present", not absent,
                     f"仓库缺少映射标签:{absent}" if absent
                     else "五类映射标签在仓库实际存在"))
@@ -1537,7 +1532,7 @@ class GithubBackend:
                     if ref not in valid_refs:
                         result_problems.append(
                             f"{task['identity']}:结果索引引用不存在的评论 {ref}")
-            checks.append(mgs_records.check_item(
+            checks.append(mgs_record_model.check_item(
                 "results-consistent", not result_problems,
                 ";".join(result_problems) if result_problems
                 else "评论结果与所属任务、结果索引互相一致"))
@@ -1592,7 +1587,7 @@ def handover_baseline_check(project_root: Path | str,
     root = Path(project_root)
     config = mgs_records.load_config(root, config_rel)
     refs = _published_refs((root / config_rel).read_text(encoding="utf-8"))
-    grouped = mgs_records._core_rows(config["docmap"])
+    grouped = mgs_record_model._core_rows(config["docmap"])
     docs: list[dict] = []
     for key in ("goal", "design", "tech"):
         for row in grouped[key]:

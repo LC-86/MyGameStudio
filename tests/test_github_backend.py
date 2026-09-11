@@ -2219,6 +2219,156 @@ def test_clear_pending_index_unreadable_path_kept_quietly() -> None:
                   f"SP-17 保守({label}):另一路径同身份健康登记应照常清除")
 
 
+# ---------- 票 02:双后端共用正文与错误语义(READ-08/READ-09/READ-10) ----------
+
+# 同一份任务正文:空身份、空字段、未知小节、全角冒号与分号分隔、畸形任务。
+SHARED_BODY = (
+    "# 畸形任务\n\n"
+    "任务身份:。当前分流:ready-for-agent。进度:待执行;负责人:张三。\n\n"
+    "## 工作请求\n\n"
+    "- 当前目标:演示目标\n"
+    "- 输入与基线:GAME_DESIGN v1\n"
+    "- 本次交付:示例交付\n"
+    "- 允许修改范围:src/**\n"
+    "- 所需能力:文件读写\n"
+    "- 完成标准:\n"
+    "- 执行责任:Agent（制作实现）\n"
+    "- 验收方式:代码级检查\n"
+    "- 依赖:无\n\n"
+    "## 未知小节\n\n"
+    "未知内容仍需保留\n\n"
+    "## 结果索引\n\n"
+    "(暂无)\n"
+)
+
+
+def _seed_raw_issue(fake: FakeTransport, body: str, *,
+                    label: str = "agent-ready", number: int = 1) -> dict:
+    issue = {"number": number, "id": 1000 + number, "title": "畸形任务",
+             "body": body, "labels": [{"name": label}] if label else [],
+             "state": "open", "state_reason": None,
+             "html_url": f"https://example.invalid/i/{number}"}
+    fake.issues.append(issue)
+    fake.comments[number] = []
+    return issue
+
+
+def test_record_model_cross_backend_body_semantics() -> None:
+    """READ-08:同正文经本地与 GitHub 读取,共通字段与核心核验一致;
+    空字段、未知小节、字段分隔及畸形任务的可见性保持;后端专有字段保留。
+    """
+
+    import mgs_record_model
+
+    parsed = mgs_record_model.parse_task_body(SHARED_BODY)
+    check(parsed["identity"] == "", "共享解析应保留空身份字段")
+    check(parsed["progress"] == "待执行", "共享解析应在分号处截断字段值")
+    check(parsed["request"].get("完成标准") == "", "共享解析应保留空值字段")
+    check(parsed["request"].get("执行责任") == "Agent（制作实现）",
+          "共享解析应以全角冒号分隔字段")
+    check(parsed["sections"].get("未知小节") is True, "共享解析应保留未知小节")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        local = make_local_project(Path(tmp) / "local")
+        task_dir = local / "docs" / "mygamestudio" / "work" / "05-malformed"
+        task_dir.mkdir(parents=True)
+        (task_dir / "task.md").write_text(SHARED_BODY, encoding="utf-8")
+        local_task = mgs_records.read_task(local, "05-malformed")
+        local_report = mgs_records.verify_project(local)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        gh = make_github_project(Path(tmp) / "gh")
+        fake = FakeTransport()
+        _seed_raw_issue(fake, SHARED_BODY)
+        # 畸形任务缺身份:Github read_task 按身份定位无法命中(既有语义),
+        # 但列表与核验必须仍能看到它,不被提前过滤。
+        gh_tasks = mgs_records.list_tasks(gh, transport=fake)
+        check(len(gh_tasks) == 1, f"畸形任务应仍被列出,实际 {gh_tasks}")
+        gh_task = gh_tasks[0]
+        gh_report = mgs_records.verify_project(gh, transport=fake)
+
+    common = ("identity", "title", "triage", "progress", "request", "sections",
+              "result_index_text")
+    for key in common:
+        check(local_task.get(key) == gh_task.get(key),
+              f"共通字段 {key} 应一致:本地 {local_task.get(key)!r} vs "
+              f"GitHub {gh_task.get(key)!r}")
+    check(local_task["identity"] == "" and gh_task["identity"] == "",
+          "畸形身份应两端可见,不被提前过滤")
+    check(local_task["sections"].get("未知小节") is True
+          and gh_task["sections"].get("未知小节") is True,
+          "未知小节应两端保留")
+    # 后端专有字段留在各自 adapter,不以统一为由删减
+    for key in ("directory", "path", "results"):
+        check(key in local_task, f"本地 adapter 应保留专有字段 {key}")
+    check("directory" not in gh_task and "path" not in gh_task,
+          "GitHub 结果不应含本地目录/路径字段")
+    for key in ("issue_number", "state", "labels", "triage_source",
+                "triage_conflict", "body"):
+        check(key in gh_task, f"GitHub adapter 应保留专有字段 {key}")
+    check("issue_number" not in local_task, "本地结果不应含 Issue 字段")
+
+    local_check = next(c for c in local_report["checks"]
+                       if c["name"] == "tasks-valid")
+    gh_check = next(c for c in gh_report["checks"] if c["name"] == "tasks-valid")
+    check(local_check["ok"] is False and gh_check["ok"] is False,
+          "同一畸形任务两端核心核验结论应一致(均为不通过)")
+    for detail in (local_check["detail"], gh_check["detail"]):
+        check("正文身份缺失或不合规" in detail,
+              f"核心核验应报告身份问题:{detail}")
+
+
+def test_error_identity_across_import_orders_and_script() -> None:
+    """READ-10:records 先导入、GitHub 先导入与直接脚本调用下错误身份单一、
+    现有捕获分支有效、无未捕获 traceback;READ-09:后端记录错误退出码 2 保持。
+    """
+
+    records_dir = REPO_ROOT / "plugin" / "records"
+    probe = (
+        "import sys\n"
+        f"sys.path.insert(0, {str(records_dir)!r})\n"
+        "{first}\n"
+        "{second}\n"
+        "import mgs_record_model\n"
+        "assert mgs_records.RecordsError is mgs_record_model.RecordsError\n"
+        "assert mgs_github.RecordsError is mgs_record_model.RecordsError\n"
+        "assert issubclass(mgs_github.GithubRecordsError, "
+        "mgs_records.RecordsError)\n"
+        "assert issubclass(mgs_github.GithubRecordsError, "
+        "mgs_record_model.RecordsError)\n"
+        "print('OK')\n"
+    )
+    for label, first, second in (("records-first", "import mgs_records",
+                                  "import mgs_github"),
+                                 ("github-first", "import mgs_github",
+                                  "import mgs_records")):
+        result = subprocess.run(
+            [sys.executable, "-B", "-c",
+             probe.format(first=first, second=second)],
+            capture_output=True, text=True)
+        check(result.returncode == 0 and "OK" in result.stdout,
+              f"{label} 导入顺序下错误身份应单一:{result.stderr[-300:]}")
+
+    # 直接脚本调用触发 GithubRecordsError:现有 except RecordsError 分支有效,
+    # 输出 JSON 错误、退出码 2、无未捕获 traceback(零网络:授权检查先于请求)。
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp), external="无(未授权远端写入)")
+        result = run_cli("create", "--project", str(root),
+                         "--identity", "09-x", "--title", "x")
+        check(result.returncode == 2,
+              f"后端记录错误应保留退出码 2,实际 {result.returncode}:"
+              f"{result.stdout[:200]}{result.stderr[:200]}")
+        try:
+            payload = json.loads(result.stdout)
+        except ValueError:
+            check(False, f"应输出 JSON 错误对象,实际 {result.stdout[:200]}")
+        else:
+            check(isinstance(payload, dict) and "error" in payload,
+                  f"错误对象应含 error 字段,实际 {payload}")
+        check("Traceback" not in result.stderr,
+              f"不应泄露未捕获 traceback:{result.stderr[-300:]}")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

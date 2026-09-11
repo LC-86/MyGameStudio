@@ -48,68 +48,32 @@ import re
 import sys
 from pathlib import Path
 
-# 以脚本运行时(__main__)把自身注册为 mgs_records,使 mgs_github 的
-# `import mgs_records` 取到同一模块——否则异常类会出现两份类层级,
-# CLI 的 except RecordsError 捕不到 GithubRecordsError(任务票 17)。
-if __name__ == "__main__" and "mgs_records" not in sys.modules:  # pragma: no cover
-    sys.modules["mgs_records"] = sys.modules[__name__]
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+# 共同记录语义(错误身份、正文规则与纯记录核验)的唯一定义在
+# mgs_record_model;本模块按现有公开名字重新导出,调用方定位不变。
+from mgs_record_model import (  # noqa: E402  (路径调整后导入)
+    CANONICAL_LABELS, CORE_DOC_KEYS, IDENTITY_RE, PLAN_REQUEST_KEYS,
+    RecordsError, TASK_REQUEST_KEYS, _bullets, _core_rows, _field,
+    _find_cycles, _parse_dep_ids, _sections, check_item, dependency_problems,
+    docmap_checks, label_mapping_checks, parse_task_body, task_core_problems)
+
+# 错误身份唯一性由 mgs_record_model 的 RecordsError 单一定义保证(脚本与
+# 模块导入同一类),不再需要把 __main__ 注册进 sys.modules 的临时身份补偿。
 
 DEFAULT_CONFIG_REL = "docs/mygamestudio/CONFIG.md"
 # 本地 Markdown 任务根(《项目目录模板》默认布局;github→local 迁移的
 # 目标任务根,与 CONFIG 任务根、文件落点、返回路径共用同一常量;
 # 与解析后的 task_root 同为无尾斜杠形态)
 DEFAULT_TASK_ROOT = "docs/mygamestudio/work"
-CANONICAL_LABELS = ("needs-triage", "needs-info", "ready-for-agent",
-                    "ready-for-human", "wontfix")
-CORE_DOC_KEYS = {
-    "goal": ("项目目标",),
-    "design": ("游戏需求", "游戏设计", "产品设计"),
-    "tech": ("技术设计",),
-}
-TASK_REQUEST_KEYS = ("当前目标", "完成标准", "执行责任")
-# 拆单轮(任务票 08)任务记录应具备的完整字段;旧记录缺项不判 verify 失败,
-# 由 startable_tasks 逐任务给出可开工原因。
-PLAN_REQUEST_KEYS = ("当前目标", "输入与基线", "本次交付", "允许修改范围",
-                     "所需能力", "完成标准", "执行责任", "验收方式", "依赖")
 READY_NOTE = ("可开工=分流 ready 且记录字段完整且未完成依赖为空;这是开工条件核对,"
               "不等于依赖已全部完成或已获全部写入授权——开工前按任务「允许修改范围」"
               "与运行保障核对授权;能力与授权以实际执行环境为准。")
-# 身份 token 前面不能是数字或连字符:避免把「2026-09-08」这类日期从中间
-# 截断成假身份(026-09-08/09-08),制造假的未解析依赖。
-IDENTITY_RE = re.compile(r"(?<![\d-])\d{1,3}-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")
 
 
-class RecordsError(Exception):
-    """配置缺失、后端不支持或任务记录无法解析。"""
-
-
-# ---------- 通用 Markdown 解析 ----------
-
-def _sections(text: str) -> dict[str, list[str]]:
-    """按 ## 二级标题切分,返回 {标题: 行列表}。"""
-
-    result: dict[str, list[str]] = {}
-    current = ""
-    for line in text.splitlines():
-        match = re.match(r"^##\s+(.*?)\s*$", line)
-        if match:
-            current = match.group(1)
-            result.setdefault(current, [])
-        elif current:
-            result[current].append(line)
-    return result
-
-
-def _bullets(lines: list[str]) -> dict[str, str]:
-    """解析 `- 键:值` 列表为有序字典。"""
-
-    result: dict[str, str] = {}
-    for line in lines:
-        match = re.match(r"^-\s+([^:：]+)[:：]\s*(.*)$", line)
-        if match:
-            result[match.group(1).strip()] = match.group(2).strip()
-    return result
-
+# ---------- 通用 Markdown 解析(CONFIG 表格) ----------
+# 任务正文的共同解析(_sections/_bullets/_field)在 mgs_record_model;
+# 这里只保留 CONFIG.md 表格解析,属于本地配置读取职责。
 
 def _table_rows(lines: list[str]) -> list[list[str]]:
     """解析 Markdown 表格(跳过表头与分隔行)。"""
@@ -133,13 +97,6 @@ def _strip_annotation(value: str) -> str:
         if index >= 0:
             value = value[:index]
     return value.strip().rstrip("/").strip()
-
-
-def _field(text: str, key: str) -> str:
-    """从任务头部行提取字段值(以空白或中英文句号/分号为界)。"""
-
-    match = re.search(rf"{key}\s*[:：]\s*([^\s。;；]+)", text)
-    return match.group(1) if match else ""
 
 
 # ---------- 逻辑操作(公开接缝) ----------
@@ -273,17 +230,10 @@ def _parse_task_file(project_root: Path, task_dir: Path) -> dict | None:
     if not task_path.is_file():
         return None
     text = task_path.read_text(encoding="utf-8")
-    header_lines: list[str] = []
-    title = ""
-    for line in text.splitlines():
-        if line.startswith("## "):
-            break
-        if line.startswith("# ") and not title:
-            title = line.lstrip("# ").strip()
-        header_lines.append(line)
-    header = "\n".join(header_lines)
-    sections = _sections(text)
-    request = _bullets(sections.get("工作请求", []))
+    # 共同正文规则来自中性记录 module(与 GitHub 后端同一实现);本地
+    # adapter 只补齐目录、结果文件与相对路径等存储专有字段。键序沿用
+    # 既有公开返回顺序,不改变 JSON 输出结构。
+    record = parse_task_body(text)
     results_dir = task_dir / "results"
     results = []
     if results_dir.is_dir():
@@ -291,16 +241,15 @@ def _parse_task_file(project_root: Path, task_dir: Path) -> dict | None:
             f"results/{path.name}"
             for path in results_dir.iterdir() if path.is_file())
     return {
-        "identity": _field(header, "任务身份"),
-        "title": title,
-        "triage": _field(header, "当前分流"),
-        "progress": _field(header, "进度"),
+        "identity": record["identity"],
+        "title": record["title"],
+        "triage": record["triage"],
+        "progress": record["progress"],
         "directory": task_dir.name,
-        "request": request,
-        "sections": {name: bool(lines and any(l.strip() for l in lines))
-                     for name, lines in sections.items()},
+        "request": record["request"],
+        "sections": record["sections"],
         "results": results,
-        "result_index_text": "\n".join(sections.get("结果索引", [])),
+        "result_index_text": record["result_index_text"],
         "path": str(task_path.relative_to(project_root)),
     }
 
@@ -365,42 +314,8 @@ def read_task(project_root: Path | str, task_id: str,
 
 
 # ---------- 关系解析与开工集合(任务票 08) ----------
-
-def _parse_dep_ids(value: str) -> list[str]:
-    """从「依赖」字段提取任务身份 token(逗号/顿号/分号分隔,含「无」等说明文字)。
-
-    身份形态沿用本地后端约定:NN-<slug>(如 04-gull-swoop);其余文字忽略。
-    """
-
-    if not value:
-        return []
-    return IDENTITY_RE.findall(value)
-
-
-def _find_cycles(edges: dict[str, list[str]]) -> list[list[str]]:
-    """DFS 检测有向图循环,返回循环路径(每个循环报一次)。"""
-
-    WHITE, GRAY, BLACK = 0, 1, 2
-    color = {node: WHITE for node in edges}
-    cycles: list[list[str]] = []
-
-    def visit(node: str, path: list[str]) -> None:
-        color[node] = GRAY
-        for dep in edges.get(node, []):
-            if dep not in color:
-                continue  # 未解析依赖由 unresolved 报告
-            if color[dep] == GRAY:
-                index = path.index(dep)
-                cycles.append(path[index:] + [dep])
-            elif color[dep] == WHITE:
-                visit(dep, path + [dep])
-        color[node] = BLACK
-
-    for node in sorted(edges):
-        if color[node] == WHITE:
-            visit(node, [node])
-    return cycles
-
+# _parse_dep_ids / _find_cycles 的唯一定义在 mgs_record_model(共同记录语义),
+# 本模块与 GitHub adapter 共用;此处不再重复定义。
 
 def task_dependencies(project_root: Path | str,
                       config_rel: str = DEFAULT_CONFIG_REL, *,
@@ -695,103 +610,15 @@ def baseline_report(project_root: Path | str,
             "docs": docs, "affected_tasks": affected, "note": BASELINE_NOTE}
 
 
-def check_item(name: str, ok: bool, detail: str) -> dict:
-    return {"name": name, "ok": bool(ok), "detail": detail}
-
-
-
-
-
-def _core_rows(docmap: list[dict]) -> dict[str, list[dict]]:
-    """把文档映射行归到三类核心内容。"""
-
-    grouped: dict[str, list[dict]] = {"goal": [], "design": [], "tech": []}
-    for row in docmap:
-        for key, keywords in CORE_DOC_KEYS.items():
-            if any(word in row["content"] for word in keywords):
-                grouped[key].append(row)
-    return grouped
-
-
-# ---------- 两后端共享的核心校验(审查修复票 01/核验建议 1) ----------
+# ---------- 两后端共享的核心校验(定义在 mgs_record_model) ----------
 # 同一份规范化任务(本地 work/task.md 与 GitHub Issue 正文是同一记录格式)
-# 在两个后端必须得到相同核验结论:标签映射、核心文档映射、任务核心字段
-# (身份形态、五类分流、进度、工作请求必填字段)与依赖关系在此单一实现;
-# 各后端只保留存储特有检查(本地:目录一致性、结果文件与索引;GitHub:
-# 远端标签实际存在、评论一致性、标签与正文冲突、关闭原因、身份重复)。
-
-def label_mapping_checks(labels: dict) -> list[dict]:
-    """五类标签映射:语义齐全且不冲突。"""
-
-    missing = [name for name in CANONICAL_LABELS if name not in labels]
-    project_labels = [labels.get(name, "") for name in CANONICAL_LABELS]
-    conflicts = sorted({label for label in project_labels
-                        if project_labels.count(label) > 1})
-    return [
-        check_item("labels-complete", not missing,
-               f"缺失语义:{missing}" if missing else "五类语义齐全"),
-        check_item("labels-no-conflict", not conflicts,
-               f"多语义映射到同一标签:{conflicts}" if conflicts else "映射无冲突"),
-    ]
+# 在两后端必须得到相同核验结论:标签映射、核心文档映射、任务核心字段
+# (身份形态、五类分流、进度、工作请求必填字段)与依赖关系在 mgs_record_model
+# 单一实现;各后端只保留存储特有检查(本地:目录一致性、结果文件与索引;
+# GitHub:远端标签实际存在、评论一致性、标签与正文冲突、关闭原因、身份重复)。
 
 
-def docmap_checks(root: Path, docmap: list[dict]) -> list[dict]:
-    """核心文档映射:三类齐全、每类唯一当前维护位置且实际存在。"""
 
-    grouped = _core_rows(docmap)
-    core_missing = [key for key, rows in grouped.items() if not rows]
-    duplicate_types = [key for key, rows in grouped.items() if len(rows) > 1]
-    core_paths = [row["path"] for rows in grouped.values() for row in rows]
-    duplicate_paths = sorted({p for p in core_paths if core_paths.count(p) > 1})
-    unique_ok = not duplicate_types and not duplicate_paths
-    missing_paths = [row["path"] for row in
-                     (grouped["goal"] + grouped["design"] + grouped["tech"])
-                     if not (root / row["path"]).is_file()]
-    return [
-        check_item("docmap-core-rows", not core_missing,
-               f"缺少核心文档行:{core_missing}" if core_missing
-               else "目标/设计/技术三类齐全(核心设计保留本地 Markdown 位置)"),
-        check_item("docmap-unique-authority", unique_ok,
-               f"重复类型:{duplicate_types} 重复位置:{duplicate_paths}"
-               if not unique_ok else "每类核心内容唯一当前维护位置"),
-        check_item("docmap-paths-exist", not missing_paths,
-               f"权威位置不存在:{missing_paths}" if missing_paths
-               else "核心文档实际存在"),
-    ]
-
-
-def task_core_problems(task: dict, where: str) -> list[str]:
-    """规范化任务的核心校验:身份形态、五类分流、进度、工作请求必填字段。
-
-    where 是问题条目的定位前缀(本地为任务目录名,远端为 #Issue号)。
-    """
-
-    problems: list[str] = []
-    identity = task["identity"]
-    if not identity or not IDENTITY_RE.fullmatch(identity):
-        problems.append(f"{where}:正文身份缺失或不合规({identity!r})")
-    if task["triage"] not in CANONICAL_LABELS:
-        problems.append(f"{where}:分流 {task['triage']!r} 不在五类之内")
-    if not task["progress"]:
-        problems.append(f"{where}:缺少进度")
-    for key in TASK_REQUEST_KEYS:
-        if not task["request"].get(key):
-            problems.append(f"{where}:工作请求缺少 {key}")
-    return problems
-
-
-def dependency_problems(tasks: list[dict]) -> list[str]:
-    """依赖关系可解析且无循环(入参为规范化任务列表,双后端同语义)。"""
-
-    edges = {task["identity"]: _parse_dep_ids(
-                 task["request"].get("依赖", "")) for task in tasks}
-    seen = {task["identity"] for task in tasks}
-    problems = [f"{identity} 依赖不存在任务 {dep}"
-                for identity, deps in edges.items() for dep in deps
-                if dep not in seen]
-    problems += ["循环依赖:" + "->".join(cycle)
-                 for cycle in _find_cycles(edges)]
-    return problems
 
 
 def verify_project(project_root: Path | str,

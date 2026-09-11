@@ -770,6 +770,76 @@ def test_baseline_cli() -> None:
         check(result.returncode == 1, "CLI baseline 存在实质变更未同步应以退出码 1 表达")
 
 
+# ---------- 票 02:共同正文与错误语义(READ-08/READ-10) ----------
+
+def test_record_model_shared_body_and_error_identity() -> None:
+    """票 02:共同正文规则与错误类型由中性记录 module 提供、不反向依赖查询。
+
+    覆盖:本地读取直接使用共享正文解析;空字段、未知小节与字段分隔保持可见;
+    畸形任务不被提前过滤,仍进入核验;RecordsError 与共享 module 同一身份。
+    """
+
+    import mgs_record_model
+
+    check(mgs_records.RecordsError is mgs_record_model.RecordsError,
+          "mgs_records.RecordsError 应与共享记录 module 同一身份")
+    for name in ("parse_task_body", "_sections", "_bullets", "_field",
+                 "task_core_problems", "dependency_problems",
+                 "label_mapping_checks", "docmap_checks", "check_item"):
+        check(hasattr(mgs_record_model, name),
+              f"共享记录 module 应提供 {name}")
+    # 共同记录语义不反向依赖查询/命令行:model 不导入 mgs_records / mgs_github
+    model_source = Path(mgs_record_model.__file__).read_text(encoding="utf-8")
+    check("import mgs_records" not in model_source
+          and "import mgs_github" not in model_source,
+          "共享记录 module 不得反向依赖查询或 GitHub adapter")
+
+    body = (
+        "# 畸形任务\n\n"
+        "任务身份:。当前分流:ready-for-agent。进度:待执行;负责人:张三。\n\n"
+        "## 工作请求\n\n"
+        "- 当前目标:演示目标\n"
+        "- 完成标准:\n"
+        "- 执行责任:Agent（制作实现）\n\n"
+        "## 未知小节\n\n"
+        "未知内容仍需保留\n\n"
+        "## 结果索引\n\n"
+        "(暂无)\n"
+    )
+    parsed = mgs_record_model.parse_task_body(body)
+    check(parsed["identity"] == "", f"空身份字段应保持为空,实际 {parsed['identity']!r}")
+    check(parsed["progress"] == "待执行",
+          f"字段分隔(分号)应正确截断,实际 {parsed['progress']!r}")
+    check(parsed["request"].get("完成标准") == "",
+          "空值字段应保留键且值为空")
+    check(parsed["request"].get("执行责任") == "Agent（制作实现）",
+          "全角冒号应作为字段分隔")
+    check(parsed["sections"].get("未知小节") is True,
+          "未知小节应保留在 sections 中")
+    check(parsed["result_index_text"].strip() == "(暂无)",
+          "结果索引原文应保留")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp), extra_task=False)
+        task_dir = root / "docs" / "mygamestudio" / "work" / "05-malformed"
+        task_dir.mkdir(parents=True)
+        (task_dir / "task.md").write_text(body, encoding="utf-8")
+        tasks = mgs_records.list_tasks(root)
+        check([t["directory"] for t in tasks] == ["05-malformed"],
+              f"畸形任务应仍被列出而非提前过滤,实际 {tasks}")
+        local = mgs_records.read_task(root, "05-malformed")
+        check(local["identity"] == "" and local["directory"] == "05-malformed",
+              "本地读取应同时保留空身份与目录专有字段")
+        check(local["request"].get("完成标准") == ""
+              and local["sections"].get("未知小节") is True,
+              "本地读取应保持空字段与未知小节可见")
+        report = mgs_records.verify_project(root)
+        tasks_check = next(c for c in report["checks"] if c["name"] == "tasks-valid")
+        check(tasks_check["ok"] is False
+              and "正文身份缺失或不合规" in tasks_check["detail"],
+              f"畸形任务应进入核验并报告身份问题:{tasks_check['detail']}")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):
