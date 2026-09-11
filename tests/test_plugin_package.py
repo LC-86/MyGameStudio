@@ -11,7 +11,8 @@
 具名案例数据(tests/plugin_package_fixtures.json)。
 
 覆盖:包完整性(清单/入口/模板/引用)、来源与许可、交付物一致性与可复现
-构建、业务 Skill 说明、样例与验收注入夹具、凭据脱敏与泄漏扫描、事件判据。
+构建、业务 Skill 说明、样例与验收注入夹具、凭据脱敏与泄漏扫描、事件判据、
+验收客户端共享实现(标准事件场景,受控替身进程与合成回放)。
 
 接缝说明:本脚本只覆盖可静态核实的包内约定与离线事件回放。真实安装、显式
 调用与结果回读由 acceptance/<票号>/ 的隔离验收流程覆盖,本脚本不替代。
@@ -76,6 +77,16 @@ THEMES = (
       "test_event_judgement_retained_evidence",
       "test_event_judgement_legacy_branches_red",
       "test_event_judgement_runsh_wiring")),
+    ("test_acceptance_client.py",
+     "验收客户端共享实现(标准事件场景)",
+     ("test_migrated_clients_share_implementation",
+      "test_controlled_process_turn_report_events_and_identity",
+      "test_controlled_process_skills_output",
+      "test_failure_paths_and_argument_contract",
+      "test_decode_once_over_ten_polls",
+      "test_timeout_returns_partial_without_new_decodes",
+      "test_old_new_replay_parity",
+      "test_unmigrated_scenario_still_passes")),
 )
 
 
