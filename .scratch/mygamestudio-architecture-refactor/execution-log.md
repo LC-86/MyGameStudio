@@ -81,3 +81,12 @@
 - 主控验收：五套 rc=0；verify-reproducible PASS；Status=resolved；seam 存在且 run.sh/测试的正则截取清零；A/B 留存回放对照 9/9+21/21 一致（子代理实测）
 - 复审：跳过（非核心）
 - 遗留：curl 判据迁移属票 09；test_plugin_package.py 仍 4090 行（票 10 拆分）；最小接入对照不含真实 turn
+
+## 票 09 — 让直连失败判据通过同一事件入口验证（阶段 2）
+
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`c1711fe931fbf93755abd8c43822f500740ea2c5`
+- 交付提交：`d8c127a`（evidence_judgement.py 171→371：judge_curl_direct_denied 迁入 + curl-direct-deny 子命令；adapter +5 行；run.sh 1232→1007 去 heredoc −225 行；tests +10 去正则截取；生产零改动）
+- 主控验收：五套 rc=0；verify-reproducible PASS；Status=resolved；两判据函数同文件共存、正则截取清零；A/B 差分 79/79（子代理实测）
+- 复审：跳过（非核心）
+- 遗留：url_targets 64 行/judge_curl 50 行为逐字搬运（未借机重写）；残余边界与原实现一致；test_plugin_package.py 仍 4100 行（票 10 拆分）
