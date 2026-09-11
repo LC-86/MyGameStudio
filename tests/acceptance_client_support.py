@@ -36,12 +36,36 @@ EXTENDED_EVENT_SCENARIOS = (
     "03-indirect-write-failure",
     "04-initialize-local-project",
 )
-MIGRATED_SCENARIOS = STANDARD_SCENARIOS + BASIC_SCENARIOS + EXTENDED_EVENT_SCENARIOS
+# 票 15 迁入的族 4:十个绝对阈值中断场景。每份客户端迁移前逐字节同类
+# (除场景身份/编号),沿用「--watch-audit/--kill-after-allows 累计 allow 绝对阈值
+# + 独立进程组」语义;本批入口共享核心,身份与选项分别保留。
+FAMILY4_SCENARIOS = (
+    "05-adopt-existing-project",
+    "06-idea-to-current-spec",
+    "07-isolated-design-prototype",
+    "08-spec-to-local-tasks",
+    "09-code-task-delivery",
+    "10-visual-asset-delivery",
+    "11-audio-asset-delivery",
+    "12-build-and-run-delivery",
+    "13-independent-deliverable-review",
+    "14-playtest-and-human-feedback",
+)
+# 尚未迁入的族 5:相对中断阈值(--kill-relative);本票 expand 红线要求其继续可用。
+RELATIVE_SCENARIOS = (
+    "15-goal-change-concurrency-recovery",
+    "16-producer-complete-loop",
+)
+MIGRATED_SCENARIOS = (STANDARD_SCENARIOS + BASIC_SCENARIOS + EXTENDED_EVENT_SCENARIOS
+                      + FAMILY4_SCENARIOS)
 # 票 13 基点提交:仍保有族 1/2/3 旧实现的最后基点,供旧新对照(A/B)读取;
 # 工作区已无这些旧文件(按 expand 红线,旧客户端删除留待票 17 收口)。
 LEGACY_BASE_COMMIT = "e42d17b4659db09550575d3f29fb32d8074d7829"
 BASIC_OLD_CLIENT = "acceptance/01-explicit-project-status/appserver_client.py"
 EXTENDED_OLD_CLIENT = "acceptance/03-indirect-write-failure/appserver_client.py"
+# 票 15 前基点:族 4(05-14)旧实现的最后基点,供绝对中断旧新对照读取。
+FAMILY4_BASE_COMMIT = "8f8407f6e30646e16367c52fce538fea202b8327"
+FAMILY4_OLD_CLIENT = "acceptance/05-adopt-existing-project/appserver_client.py"
 
 
 def client_path(scenario: str) -> Path:
@@ -82,9 +106,10 @@ def load_shared_and_shells(scenarios: tuple, prefix: str = "mgs13_shell_"):
 class SpyServer:
     """替代共享核心的 AppServer,记录入口触发的调用序列(不启动子进程)。"""
 
-    def __init__(self, sink: list) -> None:
+    def __init__(self, sink: list, **kwargs) -> None:
         self.calls: list[str] = []
         self.params: list = []
+        self.init_kwargs = kwargs
         sink.append(self)
 
     def request(self, method, params=None, timeout=0):
@@ -102,6 +127,13 @@ class SpyServer:
             events.append({"method": "turn/completed", "params": {}})
         return ["spy reply"]
 
+    def wait_turn_interruptible(self, timeout, events=None, watch_audit=None,
+                                kill_after_allows=0):
+        self.calls.append(f"wait_interruptible:{watch_audit}:{kill_after_allows}")
+        if events is not None:
+            events.append({"method": "turn/completed", "params": {}})
+        return ["spy reply"], False
+
     def close(self) -> None:
         self.calls.append("close")
 
@@ -109,16 +141,22 @@ class SpyServer:
 def spy_calls(core, shell, command: str, namespace) -> tuple[int, list, list]:
     """替换共享核心 AppServer 后调用一份薄壳入口,返回(退出码, 调用序列, 参数)。"""
 
+    rc, server = spy_calls_full(core, shell, command, namespace)
+    return rc, server.calls, server.params
+
+
+def spy_calls_full(core, shell, command: str, namespace) -> tuple[int, SpyServer]:
+    """同 ``spy_calls``,但返回 SpyServer 以便核对构造参数(如 new_session)。"""
+
     original = core.AppServer
     created: list[SpyServer] = []
-    core.AppServer = lambda: SpyServer(created)
+    core.AppServer = lambda **kwargs: SpyServer(created, **kwargs)
     try:
         with contextlib.redirect_stdout(io.StringIO()):
             rc = getattr(shell, command)(namespace)
     finally:
         core.AppServer = original
-    server = created[-1]
-    return rc, server.calls, server.params
+    return rc, created[-1]
 
 
 def pid_alive(pid: int) -> bool:
@@ -152,9 +190,11 @@ def make_fake_codex(tmpdir: Path) -> Path:
     return wrapper
 
 
-def run_client(client: Path, args: list[str], tmpdir: Path, *,
-               mode: str = "default", identity_log: Path | None = None,
-               exit_log: Path | None = None) -> subprocess.CompletedProcess:
+def client_env(tmpdir: Path, *, mode: str = "default",
+               identity_log: Path | None = None,
+               exit_log: Path | None = None) -> dict:
+    """构造受控替身进程的运行环境(CODEX_BIN 指向离线替身;零模型/网络)。"""
+
     env = os.environ.copy()
     env["CODEX_BIN"] = str(make_fake_codex(tmpdir))
     env["MGS_FAKE_MODE"] = mode
@@ -162,9 +202,38 @@ def run_client(client: Path, args: list[str], tmpdir: Path, *,
         env["MGS_FAKE_CLIENTINFO_LOG"] = str(identity_log)
     if exit_log is not None:
         env["MGS_FAKE_EXIT_LOG"] = str(exit_log)
+    return env
+
+
+def run_client(client: Path, args: list[str], tmpdir: Path, *,
+               mode: str = "default", identity_log: Path | None = None,
+               exit_log: Path | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(client), *args],
-        capture_output=True, text=True, timeout=120, env=env)
+        capture_output=True, text=True, timeout=120,
+        env=client_env(tmpdir, mode=mode, identity_log=identity_log,
+                       exit_log=exit_log))
+
+
+def start_client(client: Path, args: list[str], tmpdir: Path, *,
+                 mode: str = "default", identity_log: Path | None = None,
+                 exit_log: Path | None = None) -> subprocess.Popen:
+    """异步启动客户端,供中断测试在运行中推进审计文件(仍为受控替身进程)。"""
+
+    return subprocess.Popen(
+        [sys.executable, str(client), *args], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, text=True,
+        env=client_env(tmpdir, mode=mode, identity_log=identity_log,
+                       exit_log=exit_log))
+
+
+def append_audit_allow(path: Path, count: int = 1) -> None:
+    """向审计文件追加 count 条受控写入 allow 记录(绝对阈值观察目标)。"""
+
+    with open(path, "a", encoding="utf-8") as fh:
+        for index in range(count):
+            fh.write(json.dumps({"op": "write", "decision": "allow",
+                                 "index": index}, ensure_ascii=False) + "\n")
 
 
 class FakeTime:

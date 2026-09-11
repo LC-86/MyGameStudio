@@ -94,6 +94,15 @@ THEMES = (
       "test_extended_event_evidence_and_identity",
       "test_old_new_replay_parity",
       "test_basic_and_extended_timeout_replay")),
+    ("test_acceptance_client_absolute.py",
+     "验收客户端共享实现(绝对阈值中断场景)",
+     ("test_family4_clients_share_implementation_and_keep_identity",
+      "test_family4_option_contract_absolute_only",
+      "test_absolute_threshold_interrupt_controlled_process",
+      "test_no_interrupt_when_threshold_unmet_or_audit_missing",
+      "test_absolute_threshold_parity_old_new",
+      "test_shared_core_has_no_relative_counting_path",
+      "test_relative_clients_still_available")),
 )
 
 

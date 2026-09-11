@@ -9,11 +9,18 @@
 /``drain_events`` / ``wait_turn_completed`` 都经同一条 ``_message`` 惰性解码并按
 行号缓存,因此每条输入只解码一次,轮询不会重复解码旧事件。
 
-expand 迁移(票 13、票 14):标准事件场景(原 02/17/18,票 13)与最小场景
-(原 01)、扩展事件场景(原 03/04,票 14)改用本 module,尚未迁移的场景继续
-使用各自的旧实现;本 module 不改变普通完成、失败、超时、事件筛选、退出码与
-子进程结束语义。场景差异(固定只读沙箱、事件筛选范围与 turn 生命周期通知)
-经 ``run_turn`` 的显式参数保留,不强制统一。
+expand 迁移(票 13、票 14、票 15):标准事件场景(原 02/17/18,票 13)、最小场景
+(原 01)与扩展事件场景(原 03/04,票 14)、绝对阈值中断场景(原 05-14,票 15)
+改用本 module,尚未迁移的场景(原 15/16 的相对阈值中断)继续使用各自的旧实现;
+本 module 不改变普通完成、失败、超时、事件筛选、退出码与子进程结束语义。场景差异
+(固定只读沙箱、事件筛选范围与 turn 生命周期通知、绝对中断阈值与进程组)经
+``run_turn`` 的显式参数保留,不强制统一。
+
+绝对阈值中断(票 15):``run_turn`` 传 ``watch_audit``/``kill_after_allows`` 时,
+等待 turn 完成的同时轮询审计文件,累计 allow 条目达到阈值即对本次子进程组发 SIGKILL
+并以退出码 3 结束;事件流中没有 turn/completed,已取得的事件证据照常落盘。阈值为
+**累计绝对次数**(含 turn 开始前已有的 allow),不引入相对新增计数路径(相对阈值属
+票 16 的独立实现)。审计文件缺失或不可读时旧实现按 0 处理,继续等待至超时。
 
 用法(由场景入口经 sys.path 注入后导入):
   from appserver_core import AppServer, run_skills, run_turn
@@ -21,6 +28,7 @@ expand 迁移(票 13、票 14):标准事件场景(原 02/17/18,票 13)与最小�
 
 import json
 import os
+import signal
 import subprocess
 import threading
 import time
@@ -29,10 +37,40 @@ from typing import Any
 # 请求响应等待上限(与旧实现一致,不在票 13 改为可配)。
 REQUEST_TIMEOUT_SECONDS = 60.0
 REQUEST_POLL_SECONDS = 0.2
+# 中断场景的轮询间隔(与旧 05-14 实现一致,保证中断时点响应性)。
+INTERRUPT_POLL_SECONDS = 0.3
 
 # 事件证据默认保留的通知方法(标准事件场景);扩展事件场景经 event_methods 追加
 # turn 生命周期通知,不改变标准场景的落盘结果。
 DEFAULT_EVENT_METHODS = ("turn/completed",)
+
+# 受控中断模拟的退出码(旧 05-14 实现在审计 allow 达阈值 kill 进程组后返回此码)。
+INTERRUPTED_EXIT_CODE = 3
+
+
+def count_audit_allows(path: str) -> int:
+    """累计审计文件中 ``op=write`` 且 ``decision=allow`` 的条目数(绝对次数)。
+
+    文件缺失或不可读按 0 处理、坏行跳过(与旧 05-14 实现逐行同义),因此阈值
+    未达到或审计异常都不会误触发中断。
+    """
+
+    try:
+        with open(path, encoding="utf-8") as fh:
+            count = 0
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if entry.get("op") == "write" and entry.get("decision") == "allow":
+                    count += 1
+            return count
+    except OSError:
+        return 0
 
 
 class AppServer:
@@ -41,9 +79,13 @@ class AppServer:
     ``lines`` / ``_lock`` / ``_drained`` 与旧实现同名同义,便于既有基线探针按
     模块属性替换计时器与解码计数器后直接构造实例;解码缓存 ``_decoded`` 按
     行号惰性建立,同一行最多解码一次。
+
+    ``new_session`` 只在绝对中断场景(原 05-14)传 True:codex 进程以独立进程组
+    启动,使受控中断的 kill 能覆盖其子进程;默认 False 保持已迁移普通场景的
+    子进程生命周期不变。
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, new_session: bool = False) -> None:
         bin_path = os.environ.get("CODEX_BIN", "codex")
         self.proc = subprocess.Popen(
             [bin_path, "app-server"],
@@ -51,6 +93,7 @@ class AppServer:
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             env=dict(os.environ),
+            start_new_session=new_session,
         )
         self.lines: list[str] = []
         self._lock = threading.Lock()
@@ -120,6 +163,24 @@ class AppServer:
             if msg is not None and "method" in msg:
                 events.append(msg)
 
+    def _collect_agent_messages(self, seen: set[str],
+                                agent_messages: list[str]) -> None:
+        """扫描已读行,按 item 去重追加 agentMessage 文本(普通与中断等待共用)。"""
+
+        for index in range(self._line_count()):
+            msg = self._message(index)
+            if msg is None or msg.get("method") != "item/completed":
+                continue
+            item = msg.get("params", {}).get("item", {})
+            key = f"{item.get('id')}:{item.get('type')}"
+            if key in seen:
+                continue
+            seen.add(key)
+            if item.get("type") == "agentMessage":
+                text = item.get("text", "")
+                if text and text not in agent_messages:
+                    agent_messages.append(text)
+
     def wait_turn_completed(self, timeout: float,
                             events: list[dict[str, Any]] | None = None
                             ) -> list[dict[str, Any]]:
@@ -129,23 +190,49 @@ class AppServer:
         while time.time() < deadline:
             if events is not None:
                 self.drain_events(events)
-            for index in range(self._line_count()):
-                msg = self._message(index)
-                if msg is None or msg.get("method") != "item/completed":
-                    continue
-                item = msg.get("params", {}).get("item", {})
-                key = f"{item.get('id')}:{item.get('type')}"
-                if key in seen:
-                    continue
-                seen.add(key)
-                if item.get("type") == "agentMessage":
-                    text = item.get("text", "")
-                    if text and text not in agent_messages:
-                        agent_messages.append(text)
+            self._collect_agent_messages(seen, agent_messages)
             if self.turn_completed():
                 return agent_messages
             time.sleep(1)
         return agent_messages
+
+    def kill_process_group(self) -> None:
+        """对本次 codex 子进程所在的独立进程组发 SIGKILL(受控中断)。
+
+        仅由绝对中断场景经 ``new_session=True`` 启动的子进程调用,作用范围限于
+        本客户端自己创建的进程组;进程组不存在或无权限时退回单进程 kill。
+        """
+
+        try:
+            os.killpg(os.getpgid(self.proc.pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            self.proc.kill()
+
+    def wait_turn_interruptible(self, timeout: float,
+                                events: list[dict[str, Any]] | None = None,
+                                watch_audit: str | None = None,
+                                kill_after_allows: int = 0
+                                ) -> tuple[list[str], bool]:
+        """等待 turn/completed;审计 allow 累计达阈值即 kill 进程组并返回 killed=True。
+
+        阈值为绝对累计次数(不减去进入等待时的已有值);未配置 watch_audit、阈值
+        未达到或审计文件不可读时按普通等待处理,到超时返回已取得的 agent 消息。
+        """
+
+        deadline = time.time() + timeout
+        agent_messages: list[str] = []
+        seen: set[str] = set()
+        while time.time() < deadline:
+            if events is not None:
+                self.drain_events(events)
+            if watch_audit and count_audit_allows(watch_audit) >= kill_after_allows:
+                self.kill_process_group()
+                return agent_messages, True
+            self._collect_agent_messages(seen, agent_messages)
+            if self.turn_completed():
+                return agent_messages, False
+            time.sleep(INTERRUPT_POLL_SECONDS)
+        return agent_messages, False
 
     def turn_completed(self) -> bool:
         for index in range(self._line_count()):
@@ -195,8 +282,9 @@ def write_event_stream(events: list[dict[str, Any]], path: str,
                 fh.write(json.dumps(msg, ensure_ascii=False) + "\n")
 
 
-def run_skills(client_info: dict[str, Any], cwd: str) -> int:
-    server = AppServer()
+def run_skills(client_info: dict[str, Any], cwd: str, *,
+               new_session: bool = False) -> int:
+    server = AppServer(new_session=new_session)
     try:
         initialize(server, client_info)
         result = server.request("skills/list", {"cwd": cwd})
@@ -218,8 +306,19 @@ def run_skills(client_info: dict[str, Any], cwd: str) -> int:
 def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str,
              timeout: int, out: str | None, events_out: str | None,
              keep_types: set[str] | None,
-             event_methods: tuple[str, ...] = DEFAULT_EVENT_METHODS) -> int:
-    server = AppServer()
+             event_methods: tuple[str, ...] = DEFAULT_EVENT_METHODS,
+             watch_audit: str | None = None, kill_after_allows: int = 0,
+             new_session: bool = False) -> int:
+    """跑一个 turn 并落盘报告/事件证据;配置 watch_audit 时支持绝对阈值中断。
+
+    绝对中断(原 05-14,票 15):``watch_audit`` + ``kill_after_allows`` 成对传入、
+    ``new_session=True`` 时,审计 allow 累计达阈值即 kill 本子进程组,事件流不含
+    turn/completed,已取得证据照常落盘,并以退出码 3 结束(不再 close)。其余场景
+    沿用普通等待与退出码 0,行为不变。
+    """
+
+    server = AppServer(new_session=new_session)
+    killed = False
     try:
         initialize(server, client_info)
         thread = server.request(
@@ -236,7 +335,12 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
             {"threadId": thread_id, "input": [{"type": "text", "text": prompt}]},
         )
         events: list[dict[str, Any]] = []
-        messages = server.wait_turn_completed(timeout, events)
+        if watch_audit:
+            messages, killed = server.wait_turn_interruptible(
+                timeout, events, watch_audit=watch_audit,
+                kill_after_allows=kill_after_allows)
+        else:
+            messages = server.wait_turn_completed(timeout, events)
         if events_out:
             write_event_stream(events, events_out, keep_types, event_methods)
         report = "\n\n".join(messages)
@@ -246,6 +350,10 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
             print(f"wrote {len(report)} chars to {out}")
         else:
             print(report)
+        if killed:
+            print(f"INTERRUPTED: killed after >= {kill_after_allows} audit allow(s)")
+            return INTERRUPTED_EXIT_CODE
         return 0
     finally:
-        server.close()
+        if not killed:
+            server.close()

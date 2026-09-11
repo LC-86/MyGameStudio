@@ -11,6 +11,8 @@
   的证据筛选含 turn 生命周期通知)。
 - ``no_thread_id``:thread/start 返回空对象(驱动客户端的线程 id 失败分支)。
 - ``error_init``:initialize 返回 JSON-RPC error(驱动失败分支)。
+- ``hold``:turn/start 后只发出 turn/started 与一条 agentMessage 事件,然后保持
+  运行(永不发 turn/completed),供受控中断测试用审计阈值触发 kill 进程组。
 
 副作用(可选,用于核对身份与生命周期):
 - ``MGS_FAKE_CLIENTINFO_LOG``:initialize 时把收到的 clientInfo 追加写一行。
@@ -20,6 +22,7 @@
 import json
 import os
 import signal
+import subprocess
 import sys
 
 LOG_ENV = "MGS_FAKE_EXIT_LOG"
@@ -82,6 +85,16 @@ def handle(msg: dict, mode: str) -> None:
         send({"jsonrpc": "2.0", "id": req_id, "result": thread})
     elif method == "turn/start":
         send({"jsonrpc": "2.0", "id": req_id, "result": {}})
+        if mode == "hold":
+            send({"method": "turn/started", "params": {"turn": {"id": "t-fake"}}})
+            send({"method": "item/completed",
+                  "params": {"item": {"id": "a1", "type": "agentMessage",
+                                      "text": "partial agent reply"}}})
+            child = subprocess.Popen([sys.executable, "-c",
+                                      "import time; time.sleep(120)"])
+            log_exit(f"child pid={child.pid}")  # 同一进程组:核对中断覆盖子进程
+            log_exit("turn-started")  # 供中断测试同步:部分事件已发出、turn 未完成
+            return  # 保持运行:不发 turn/completed,等待审计阈值触发中断
         if mode == "lifecycle":
             send({"method": "turn/started", "params": {"turn": {"id": "t-fake"}}})
         for event in default_events():
