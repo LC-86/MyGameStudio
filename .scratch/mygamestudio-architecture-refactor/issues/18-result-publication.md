@@ -104,3 +104,9 @@
 - 静态检查：`ruff check` 改动后的四文件仍为改动前既有 5 条（`mgs_github` E741×3 + F841×1、`mgs_record_model` E741×1，均在未触碰行），无新增；`compileall` 通过。
 
 **复审修复净行数（物理行，基准 1f997a6 工作树 vs 本次）：** `mgs_record_model.py` 321→325（+4）；`mgs_github.py` 1220→1220（0）；`mgs_result_publication.py` 568→596（+28）；`tests/test_records_shared_body.py` 209→212（+3）；合计 **+35**（+86/−51）。
+
+### 复审修复记录（第二轮）
+
+**【（1）留档，可接受】** `_find_comment` 返回的 `category` 裸字符串（`exists`/`absent`/`bad_response`/`error`）是本 module 内的新词汇表，未共享枚举定义。判定为**可接受**：两处调用各自把类别映射回原语义（`_read_first` → `read-first` attempts，`_readback_comment` → `readback` attempts），映射点集中且语义清晰；四态去重的收益真实，引入枚举的收益暂不抵其新增的跨文件耦合。本轮留档不改；票 19（登记归属/兼容集中）与票 20（在线与重放恢复事实统一）收敛此区域时再评估是否统一到共享枚举。
+
+**【（2）文档滞后，已改】** `tests/github_backend_transport.py::_pending_registration_content` 的 docstring 原称其构造形态「与 `_record_pending_index` 落盘形态一致」，而该方法已在票 18 由 `mgs_github.py` 私有方法迁出并改为 `mgs_result_publication.py` 的公开函数 `record_pending_index`（去下划线公开化）。docstring 已改为指向当前真实实现（`mgs_result_publication` 的 `record_pending_index`），只改注释、未改代码，替身构造内容与在盘状态语义不变。

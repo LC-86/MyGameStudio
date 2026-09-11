@@ -191,8 +191,9 @@ def _pending_full_digest(identity: str, result_markdown: str) -> str:
 
 def _pending_registration_content(identity: str, result_markdown: str,
                                   comment_id: int, ref: str) -> dict:
-    """构造一份形态健康的待补索引登记内容(与 _record_pending_index 落盘
-    形态一致),供逐路径分侧语义测试手工布置两布局的在盘状态。"""
+    """构造一份形态健康的待补索引登记内容(与 mgs_result_publication 的
+    record_pending_index 落盘形态一致),供逐路径分侧语义测试手工布置两布局
+    的在盘状态。"""
 
     return {"op": "append_result",
             "args": {"identity": identity,
