@@ -33,7 +33,7 @@
 `b8cda58ea2ff3b0fb18ae7d888cbd5d01eaca586`）新增可复跑基线产物，位置
 `.scratch/mygamestudio-architecture-refactor/evidence/baseline/`：
 
-- `run_baseline.py` / `run_baseline.sh`：总入口，跑现有五套检查 + 四个探针 + 汇总。
+- `run_baseline.py` / `run_baseline.sh`：总入口，跑现有五套检查 + 五个探针 + 汇总。
 - `code_identity.py`：静态事实（HEAD SHA、五份生产文件 SHA-256/行数、26 票覆盖清单）。
 - `records_probe.py`：合成回放（用 `sys.addaudithook` 对底层读取型 `open` 计数；
   GitHub 用本地替身 transport，零网络）；含受控写入 runtime 读取计数复算。
@@ -61,12 +61,13 @@
 
 **净行数。** 生产代码 `plugin/ tests/ acceptance/ dist/` 净变化 **0 行**（`git diff --numstat`
 为空）；本票新增基线产物行数分列如下（均为 `.scratch/evidence/` 下产物，不是生产或测试
-代码），与 `results/baseline.json` 的 `artifact_lines` 一致：
+代码），数值以已提交 `results/baseline.json` 的 `artifact_lines`（脚本/文档/探针 JSON）
+与 `BASELINE-REPORT.md` 第 5 节（汇总自身与合计）为最终口径：
 
-- 脚本（探针与入口 `.py`/`.sh`，8 个）：1,432 行。
+- 脚本（探针与入口 `.py`/`.sh`，8 个）：1475 行。
 - 文档（`README.md`/`evidence-map.md`，2 个）：158 行；本报告 `BASELINE-REPORT.md`：118 行。
-- results 产物 JSON（探针报告 5 个）：1,140 行；汇总自身 `results/baseline.json`：1,289 行
-  （JSON 合计 2,429 行）。
+- results 产物 JSON（探针报告 5 个）：1123 行；汇总自身 `results/baseline.json`：1255 行
+  （JSON 合计 2378 行）。
 - results 检查原始日志 `checks/*.txt`（另计，非本票新写）：15 行。
 
 **未验证限制。** 本票未执行真实模型轮、真实远端写入、安装或发布；历史
@@ -95,8 +96,9 @@
   不再把 7/8 行表述成「六个重构方向」。报告第 2 节同步。
 - **F4（行数口径，已修正）。** 原「脚本与记录合计 1,141 行」不实；改为分列脚本 /
   文档 / results 产物 JSON，并由 `run_baseline.py` 的 `artifact_lines` 按实际文件
-  计算（脚本 8 个 1,432 行、文档 158 行 + 本报告 118 行、探针 JSON 1,140 行、汇总自身
-  1,289 行、JSON 合计 2,429 行、检查日志另计 15 行）。报告与工单执行记录同步。
+  计算（脚本 8 个、文档 158 行 + 本报告 118 行、探针 JSON 5 个、汇总自身，检查日志
+  另计 15 行）。最终数值经第二轮 R4 稳定化后固定，见第二轮修复记录与已提交报告第 5 节。
+  报告与工单执行记录同步。
 - **F5（工作区口径，已统一）。** `code_identity.json` 与 `baseline.json` 同时给出
   `worktree_clean`（原始 `git status --porcelain`，生成时为 false，因基线产物未提交）
   与 `worktree_clean_excluding_baseline`（排除 `.scratch/` 下票产物与主控进度记录后，
@@ -141,7 +143,7 @@
   末尾 `return len(text.splitlines())`；报告自身行数实由内部 `SELF_REPORT_MARKER`
   在写盘前回填，调用处不再有被丢弃的「回填」返回值，注释/文档串同步说明。
 - **R3（陈旧注释，已修正）。** `baseline_common.py` 模块 docstring 与
-  `parse_out_args`/`emit` 文档串中的「四个探针」改为「五个探针」；同时把共享范围
+  `parse_out_args`/`emit` 文档串中的过时探针计数改为「五个探针」；同时把共享范围
   描述补上 `git()` 与工作区状态披露，不再留可陈旧计数值。
 - **R4（行数稳定性，已修复）。** 新增 `json_line_count()`：results 产物 JSON 在计数
   前按与写盘一致的缩进重排为规范 JSON，并置空不稳定字段
@@ -163,13 +165,27 @@
 - `sh .scratch/mygamestudio-architecture-refactor/evidence/baseline/run_baseline.sh`
   退出码 0，五套检查全绿（`all_existing_checks_green=True`；本次 7.163s / 1.736s /
   0.746s / 0.94s / 2.489s）。
-- 连续三次运行：`baseline.json` 稳定字段（排除 `generated_at`、`duration_seconds`）
-  规范化后 SHA-256 三次均为
-  `e45087b0ab6f99ba262316e8d6763d09f75ca5db3e83afb746961b07555b0280`，逐字节一致；
-  `artifact_lines` 各分项三次一致。
+- 连续多次运行：`baseline.json` 稳定字段（排除 `generated_at`、`duration_seconds`）
+  规范化后逐字节一致；`artifact_lines` 各分项每次一致。此处不再记录一次性哈希值
+  （早期记录的哈希由修复前代码算出、用交付代码无法复现）。
 - 新增无关未跟踪文件（`/tmp` 生成后复制到仓库根 `mgs_unrelated_probe.txt`，验证后
   删除）后第三次运行：`artifact_lines` 各分项与新增前完全一致（`results_json` 与
   汇总自身走剥离口径，不再随 porcelain 清单漂移）。验证后已清理该临时文件并复跑
   一次生成干净产物。
 - 红线：`git diff --numstat -- plugin tests acceptance dist` 为 0 行（0 行输出）。
+
+### 第三轮复审记录（主控裁定，2026-09-12）
+
+- **行数口径裁定。** 基线产物对自身 JSON 的行数统计采用剥离不稳定字段
+  （`worktree_porcelain`、`generated_at`、`duration_seconds`）后的确定性规范化计数，
+  已在报告 note 披露；spec「行数以物理行统计」约束的是重构收益统计（`plugin/tests/acceptance/dist`
+  四个生产范围，本票为 0 行，未受影响）。经用户批准裁定，该口径不构成违规，留档备查。
+- **已接受的判断性 smell（留档为已知限制，不修）。** worktree 状态字段在 `code_identity`
+  （`worktree_clean_excluding_baseline`）与 `run_baseline`（`worktree_clean_excluding_baseline_artifacts`）
+  两处消费键名不一致；`run_baseline.line_count` / `code_identity.physical_lines` /
+  `code_volume.line_count` 三处同形物理行计数未收敛；`_normalize_volatile` 的通用递归
+  略超当前所需。
+- **结论。** 六条验收条件维持满足，`Status` 维持 `resolved`；第三轮修复仅涉及本工单
+  markdown 的一致性对齐（工单记录与产物数值对齐、不可复现哈希断言改写、探针计数更正、
+  主控裁定留档），未触及任何代码或已提交产物。
 
