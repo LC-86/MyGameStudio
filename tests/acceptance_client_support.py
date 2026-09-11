@@ -23,9 +23,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 ACCEPTANCE = REPO_ROOT / "acceptance"
 CORE_MODULE = ACCEPTANCE / "_shared" / "appserver_core.py"
 FAKE_APPSERVER = REPO_ROOT / "tests" / "fixtures" / "fake_appserver.py"
-# 已迁移到共享核心的场景,按旧实现的行为族分组(票 13 迁入族 1;票 14 迁入
-# 族 2 最小场景与族 3 扩展事件场景)。各族的身份、参数与事件筛选差异保留,
-# 不做强制统一。
+# 全共享(票 13–17):十八个场景入口全部委托 acceptance/_shared/appserver_core.py;
+# 票 17 已删除被替代的旧物理副本(仅受版本控制、git 历史可回溯)。各族「旧实现」
+# 只作为不可变基点提交读取,供旧新对照(A/B)使用,不代表工作区仍有未迁移场景。
 STANDARD_SCENARIOS = (
     "02-role-scoped-write",
     "17-github-issue-workflow",
@@ -60,8 +60,8 @@ RELATIVE_SCENARIOS = (
 )
 MIGRATED_SCENARIOS = (STANDARD_SCENARIOS + BASIC_SCENARIOS + EXTENDED_EVENT_SCENARIOS
                       + FAMILY4_SCENARIOS + RELATIVE_SCENARIOS)
-# 票 13 基点提交:仍保有族 1/2/3 旧实现的最后基点,供旧新对照(A/B)读取;
-# 工作区已无这些旧文件(按 expand 红线,旧客户端删除留待票 17 收口)。
+# 票 13 基点提交:保有族 1/2/3 旧实现的最后基点,供旧新对照(A/B)读取;
+# 工作区已无这些旧文件(票 17 收口删除;旧实现按基点提交读取,不还原工作区)。
 LEGACY_BASE_COMMIT = "e42d17b4659db09550575d3f29fb32d8074d7829"
 BASIC_OLD_CLIENT = "acceptance/01-explicit-project-status/appserver_client.py"
 EXTENDED_OLD_CLIENT = "acceptance/03-indirect-write-failure/appserver_client.py"
@@ -355,14 +355,26 @@ def synthetic_events(count: int) -> list[str]:
     ]
 
 
-def find_legacy_client() -> Path | None:
-    """定位一份仍使用旧实现的客户端(自身定义 wait_turn_completed)。"""
+def all_client_scenarios() -> list[str]:
+    """全部验收场景目录名(18 份 entrance;场景身份与参数差异保留)。"""
 
+    return sorted(p.parent.name for p in ACCEPTANCE.glob("*/appserver_client.py"))
+
+
+def local_client_implementations() -> list[Path]:
+    """列出仍自带客户端实现(自定 AppServer / request / 等待与事件消费)的入口。
+
+    全共享时代(票 17 收口后)应当为空:十八个入口只保留场景身份、命令参数与
+    事件筛选,经 ``run_turn``/``run_skills`` 委托共享核心。任何一份回归为自带实现
+    都会被本函数点名——取代 expand 过渡期「查找未迁移场景」的 ``find_legacy_client``,
+    避免其在全共享后恒为 None 而静默通过。
+    """
+
+    markers = ("class AppServer", "def request(self", "def wait_turn_completed",
+               "def drain_events", "self.lines")
+    offenders = []
     for path in sorted(ACCEPTANCE.glob("*/appserver_client.py")):
-        if path.parent.name in MIGRATED_SCENARIOS:
-            continue
         source = path.read_text(encoding="utf-8")
-        if ("def wait_turn_completed" in source and "def drain_events" in source
-                and "self.lines" in source):
-            return path
-    return None
+        if any(marker in source for marker in markers):
+            offenders.append(path)
+    return offenders

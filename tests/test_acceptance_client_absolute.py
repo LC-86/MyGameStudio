@@ -299,7 +299,7 @@ def test_shared_core_modes_stay_distinct() -> None:
 
 
 def test_family4_shells_default_to_absolute_mode() -> None:
-    """expand 红线:族 4 十入口默认绝对模式,经共享核心转发 relative=False。"""
+    """全共享守卫:族 4 十入口默认绝对模式,经共享核心转发 relative=False。"""
 
     core, shells = load_shared_and_shells(FAMILY4_SCENARIOS, prefix="mgs15_abs_")
     for scenario, shell in shells.items():

@@ -86,7 +86,7 @@ THEMES = (
       "test_decode_once_over_ten_polls",
       "test_timeout_returns_partial_without_new_decodes",
       "test_old_new_replay_parity",
-      "test_all_scenarios_migrated_no_legacy_copy")),
+      "test_all_scenarios_use_shared_core_no_local_implementation")),
     ("test_acceptance_client_families.py",
      "验收客户端共享实现(最小+扩展事件场景)",
      ("test_basic_and_extended_clients_share_implementation",
@@ -110,6 +110,13 @@ THEMES = (
       "test_relative_mode_ignores_prior_round_history_multiround",
       "test_modes_absolute_relative_non_interrupt",
       "test_relative_threshold_parity_old_new")),
+    ("test_acceptance_github_standin.py",
+     "验收 GitHub 替身共用实现",
+     ("test_business_readback_and_state_dump",
+      "test_control_offline_and_restore",
+      "test_drop_next_create_keeps_remote_fact",
+      "test_sub_issues_toggle_and_token_check",
+      "test_shared_standin_is_sole_copy")),
 )
 
 

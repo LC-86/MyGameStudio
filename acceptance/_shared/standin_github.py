@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""任务票 17 验收用本地 GitHub 替身服务器(不是真实 GitHub)。
+"""验收用本地 GitHub 替身服务器(不是真实 GitHub),票 17/18 共用。
+
+本 module 是**唯一**替身实现(票 17 收口:原 ``acceptance/17-github-issue-workflow/``
+与 ``acceptance/18-complete-package-acceptance/`` 各一份逐字节相同的副本已删除)。
+验收脚本经 ``acceptance/_shared/standin_github.py`` 路径启动本机 HTTP 服务器,
+不增加任何真实远端访问;控制端点与状态回读行为与原副本逐项一致。
 
 实现统一接口所需的 GitHub REST 最小子集,并带故障注入与状态转储:
 

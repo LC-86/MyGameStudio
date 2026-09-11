@@ -9,12 +9,13 @@
 /``drain_events`` / ``wait_turn_completed`` 都经同一条 ``_message`` 惰性解码并按
 行号缓存,因此每条输入只解码一次,轮询不会重复解码旧事件。
 
-expand 迁移(票 13、票 14、票 15、票 16):标准事件场景(原 02/17/18,票 13)、
+全共享(票 13–17,阶段 3 收口):十八个验收场景的标准事件族(原 02/17/18,票 13)、
 最小场景(原 01)与扩展事件场景(原 03/04,票 14)、绝对阈值中断场景(原 05-14,
-票 15)、相对阈值与完整闭环场景(原 15/16,票 16)全部改用本 module;本 module
-不改变普通完成、失败、超时、事件筛选、退出码与子进程结束语义。场景差异(固定只读
-沙箱、事件筛选范围与 turn 生命周期通知、绝对/相对中断阈值与进程组)经 ``run_turn``
-的显式参数保留,不强制统一。
+票 15)、相对阈值与完整闭环场景(原 15/16,票 16)全部改用本 module;票 17 已删除
+工作区中被替代的旧客户端物理副本,本 module 是唯一的请求/等待/生命周期实现。
+本 module 不改变普通完成、失败、超时、事件筛选、退出码与子进程结束语义。场景差异
+(固定只读沙箱、事件筛选范围与 turn 生命周期通知、绝对/相对中断阈值与进程组)经
+``run_turn`` 的显式参数保留,不强制统一。
 
 中断阈值(票 15 绝对、票 16 相对):``run_turn`` 传 ``watch_audit``/``kill_after_allows``
 时,等待 turn 完成的同时轮询审计文件,累计 allow 条目达到阈值即对本次子进程组发
@@ -36,6 +37,22 @@ import subprocess
 import threading
 import time
 from typing import Any
+
+# 公开合同(票 17 收口):场景入口与测试经这些名字使用共享实现。
+__all__ = (
+    "AppServer",
+    "count_audit_allows",
+    "initialize",
+    "iter_skills",
+    "run_skills",
+    "run_turn",
+    "write_event_stream",
+    "REQUEST_TIMEOUT_SECONDS",
+    "REQUEST_POLL_SECONDS",
+    "INTERRUPT_POLL_SECONDS",
+    "DEFAULT_EVENT_METHODS",
+    "INTERRUPTED_EXIT_CODE",
+)
 
 # 请求响应等待上限(与旧实现一致,不在票 13 改为可配)。
 REQUEST_TIMEOUT_SECONDS = 60.0

@@ -1,0 +1,52 @@
+{
+  "ticket": "17-client-contract",
+  "method": "同范围物理行统计(tracked .py/.sh,排除 evidence/fixtures);解码计数用票 01 client_probe 同法(1000 事件 × 10 轮询,计数器替换 json.loads);全部离线,不启动子进程/网络/模型",
+  "scenarios": {
+    "client_count": 18,
+    "family_count": 5,
+    "run_sh_count": 18
+  },
+  "decode": {
+    "input_lines": 1000,
+    "poll_iterations": 10,
+    "shared_json_loads": 1000,
+    "ticket01_baseline_json_loads": 21000
+  },
+  "github_standin_consolidation": {
+    "before_copies": 2,
+    "before_copy_lines": 536,
+    "after_copies": 1,
+    "shared_path": "acceptance/_shared/standin_github.py",
+    "shared_lines": 273
+  },
+  "line_counts": {
+    "spec_baseline_client_lines": 4605,
+    "now_client_shell_lines": 1664,
+    "shared_core_lines": 389,
+    "shared_standin_lines": 273,
+    "spec_baseline_standin_lines": 536
+  },
+  "net_reduction": {
+    "duplicated_scope_before": 5141,
+    "duplicated_scope_after": 2326,
+    "shared_implementation_added": 662,
+    "net_reduction_lines": 2815,
+    "planning_estimate_range": [
+      3000,
+      3500
+    ],
+    "note": "重复实现范围 = 18 入口 + GitHub 替身副本;收口后 = 18 入口薄壳 + 共享核心 + 共用替身(已扣除公共实现与适配新增量)。"
+  },
+  "zero_loss": {
+    "scenarios_before": 18,
+    "scenarios_after": 18,
+    "theme_count_before": 14,
+    "theme_count_after": 15,
+    "theme_function_total_before": 84,
+    "theme_function_total_after": 89
+  },
+  "evidence_kind": "static_fact + synthetic_replay",
+  "subprocesses_started": 0,
+  "network_requests": 0,
+  "model_calls": 0
+}

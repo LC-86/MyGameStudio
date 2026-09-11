@@ -11,6 +11,7 @@
     python3 -B tests/test_acceptance_client.py
 """
 
+import inspect
 import json
 import sys
 import tempfile
@@ -18,10 +19,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from acceptance_client_support import (
-    ACCEPTANCE, CORE_MODULE, LEGACY_BASE_COMMIT, MIGRATED_SCENARIOS,
-    STANDARD_SCENARIOS, client_path, find_legacy_client, load_git_module,
-    load_module, load_shared_and_shells, pid_alive, read_jsonl, replay_wait,
-    run_client, spy_calls, synthetic_events,
+    CORE_MODULE, LEGACY_BASE_COMMIT, MIGRATED_SCENARIOS,
+    STANDARD_SCENARIOS, all_client_scenarios, client_path, load_git_module,
+    load_module, load_shared_and_shells, local_client_implementations,
+    pid_alive, read_jsonl, replay_wait, run_client, spy_calls, synthetic_events,
 )
 from plugin_package_support import make_checker, run_theme
 
@@ -201,10 +202,11 @@ def test_timeout_returns_partial_without_new_decodes() -> None:
 
 
 def test_old_new_replay_parity() -> None:
-    """expand 过渡期守卫:标准族旧实现与共享客户端同输入可观察结果一致(A/B)。
+    """旧实现对照(固定基点提交):标准族旧实现与共享客户端同输入结果一致(A/B)。
 
-    标准族旧文件(02)在工作区已不存在,旧实现按票 13 基点提交读取;读取失败时
-    本守卫响亮失败,不静默跳过。
+    标准族旧文件(02)在工作区已因票 17 收口删除;旧实现按不可变基点提交读取,
+    不还原工作区。读取失败时本守卫响亮失败,不静默跳过——这是全共享时代仍保留的
+    兼容性证据,而非 expand 过渡状态。
     """
 
     lines = synthetic_events(50)
@@ -224,20 +226,27 @@ def test_old_new_replay_parity() -> None:
     check(len(new_events) == 51, f"应消费 50 条事件 + turn/completed,实际 {len(new_events)}")
 
 
-def test_all_scenarios_migrated_no_legacy_copy() -> None:
-    """expand 完成守卫:18 场景全部迁入共享核心,工作区已无旧实现副本。
+def test_all_scenarios_use_shared_core_no_local_implementation() -> None:
+    """全共享守卫:18 场景入口全部委托共享核心,工作区无自带客户端实现副本。
 
-    票 13/14/15 的「未迁移场景继续按旧实现独立通过」在票 16 完成后不再适用——原
-    15/16 是最后一批旧实现,迁入后已无自身定义 ``wait_turn_completed`` 的客户端。
-    本守卫改为确认无场景遗漏、无旧实现残留(旧物理副本的收口按票 17)。
+    票 13–16 的 expand 过渡(新旧并存、按 ``find_legacy_client`` 查找未迁移场景)
+    在票 17 收口后结束:旧物理副本已删除。本守卫改为正向确认——每份入口的
+    ``run_turn``/``run_skills`` 都来自共享核心,且没有任何入口自带
+    AppServer/request/等待与事件消费实现;同时确认 18 份入口无遗漏。
     """
 
-    legacy = find_legacy_client()
-    check(legacy is None, f"仍有过期旧实现副本未被迁移:{legacy}")
-    scenarios = sorted(p.parent.name for p in ACCEPTANCE.glob("*/appserver_client.py"))
+    scenarios = all_client_scenarios()
     check(len(scenarios) == 18, f"应恰有 18 份客户端,实际 {len(scenarios)}:{scenarios}")
-    for scenario in scenarios:
-        check(scenario in MIGRATED_SCENARIOS, f"{scenario} 未登记为已迁移场景")
+    core, shells = load_shared_and_shells(tuple(scenarios), prefix="mgs17_shell_")
+    for scenario, shell in shells.items():
+        check(shell.run_turn is core.run_turn and shell.run_skills is core.run_skills,
+              f"{scenario} 未完整委托共享核心的 run_turn/run_skills")
+        check(inspect.getmodule(shell.run_turn) is core,
+              f"{scenario} 的 run_turn 不来自共享核心")
+    offenders = local_client_implementations()
+    check(offenders == [], f"仍有入口自带客户端实现(旧副本未清理):{offenders}")
+    missing = [s for s in scenarios if s not in MIGRATED_SCENARIOS]
+    check(missing == [], f"以下场景未登记为已迁移:{missing}")
 
 
 TESTS = (
@@ -248,7 +257,7 @@ TESTS = (
     test_decode_once_over_ten_polls,
     test_timeout_returns_partial_without_new_decodes,
     test_old_new_replay_parity,
-    test_all_scenarios_migrated_no_legacy_copy,
+    test_all_scenarios_use_shared_core_no_local_implementation,
 )
 
 
