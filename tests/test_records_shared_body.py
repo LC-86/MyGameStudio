@@ -101,6 +101,8 @@ def test_dependency_direction_static() -> None:
     source = _imported_modules(RECORDS_DIR / "mgs_record_source.py")
     github = _imported_modules(RECORDS_DIR / "mgs_github.py")
     records = _imported_modules(RECORDS_DIR / "mgs_records.py")
+    transport = _imported_modules(RECORDS_DIR / "mgs_github_transport.py")
+    publication = _imported_modules(RECORDS_DIR / "mgs_result_publication.py")
 
     for banned in ("mgs_records", "mgs_github", "mgs_record_source"):
         check(banned not in model,
@@ -110,6 +112,19 @@ def test_dependency_direction_static() -> None:
               f"mgs_record_source 不得依赖 {banned}(含延迟导入),实际 {sorted(source)}")
     check("mgs_records" not in github,
           f"mgs_github 不得反向调用查询组织 mgs_records,实际 {sorted(github)}")
+    # 票 18:传输/错误接缝与发布恢复 module 是 adapter 的下游职责,不得回指
+    # 业务适配器;adapter 实际依赖发布恢复 module(新 module 被现有调用使用)。
+    for banned in ("mgs_records", "mgs_github"):
+        check(banned not in transport,
+              f"mgs_github_transport 不得依赖 {banned},实际 {sorted(transport)}")
+    for banned in ("mgs_records", "mgs_github"):
+        check(banned not in publication,
+              f"mgs_result_publication 不得依赖 {banned},实际 {sorted(publication)}")
+    check("mgs_result_publication" in github,
+          f"mgs_github 应依赖发布恢复 module(真实接入),实际 {sorted(github)}")
+    check("mgs_github_transport" in github and "mgs_github_transport" in publication,
+          "发布恢复与 adapter 应共用传输/错误接缝 mgs_github_transport,"
+          f"实际 github={sorted(github)} publication={sorted(publication)}")
     # 正向:查询组织与 adapter 都依赖来源 module 与共同语义
     check("mgs_record_source" in records,
           f"mgs_records 应依赖来源 module,实际 {sorted(records)}")

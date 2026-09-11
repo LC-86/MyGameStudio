@@ -20,7 +20,27 @@ from github_backend_fixtures import (
     REPO, make_checker, make_github_project, run_theme,
 )
 
+import mgs_result_publication as publication  # noqa: E402
+
 FAILURES, check = make_checker()
+
+
+def _current_file(backend, identity: str, body: str):
+    """当前布局登记路径(接缝调整:路径构造归发布恢复 module,不再经
+    适配器私有方法;断言语义不变)。"""
+
+    return publication.pending_index_file(backend.repo, backend.cache_dir,
+                                          identity, body)
+
+
+def _legacy_file(backend, identity: str, body: str):
+    return publication.legacy_pending_index_file(backend.repo, backend.cache_dir,
+                                                 identity, body)
+
+
+def _clear(backend, identity: str, body: str) -> None:
+    publication.clear_pending_index(backend.repo, backend.cache_dir,
+                                    identity, body)
 
 
 def test_append_result_pending_clear_keeps_foreign_legacy_registration() -> None:
@@ -178,8 +198,8 @@ def test_clear_pending_index_verifies_each_path_independently() -> None:
             root = make_github_project(base / "project")
             cache = base / "cache"
             backend = backend_for(root, FakeTransport(), cache)
-            current = backend._pending_index_file(*own)
-            legacy = backend._legacy_pending_index_file(*own)
+            current = _current_file(backend, *own)
+            legacy = _legacy_file(backend, *own)
             healthy = _pending_registration_content(
                 own[0], own[1], 5101, "#issuecomment-5101")
             kept_path, cleared_path = ((legacy, current) if kept_on_legacy
@@ -192,7 +212,7 @@ def test_clear_pending_index_verifies_each_path_independently() -> None:
             cleared_path.parent.mkdir(parents=True, exist_ok=True)
             cleared_path.write_text(json.dumps(healthy, ensure_ascii=False),
                                     encoding="utf-8")
-            backend._clear_pending_index(*own)
+            _clear(backend, *own)
             check(kept_path.exists(),
                   f"SP-17 分侧({label}):该路径应保守保留(不得由另一路径"
                   "的核验代劳删除)")
@@ -218,8 +238,8 @@ def test_clear_pending_index_unreadable_path_kept_quietly() -> None:
             root = make_github_project(base / "project")
             cache = base / "cache"
             backend = backend_for(root, FakeTransport(), cache)
-            current = backend._pending_index_file(*own)
-            legacy = backend._legacy_pending_index_file(*own)
+            current = _current_file(backend, *own)
+            legacy = _legacy_file(backend, *own)
             healthy = _pending_registration_content(
                 own[0], own[1], 5101, "#issuecomment-5101")
             current.parent.mkdir(parents=True, exist_ok=True)
@@ -233,7 +253,7 @@ def test_clear_pending_index_unreadable_path_kept_quietly() -> None:
             intact.write_text(json.dumps(healthy, ensure_ascii=False),
                               encoding="utf-8")
             try:
-                backend._clear_pending_index(*own)
+                _clear(backend, *own)
                 raised = None
             except Exception as exc:  # noqa: BLE001 — 红点:清理阶段不得抛异常
                 raised = exc

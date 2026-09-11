@@ -286,6 +286,39 @@ def test_append_result_partial_without_cache_dir_carries_degraded_warning() -> N
         check(len(list((cache / "pending-index").rglob("*.json"))) == 1,
               "SP-10 对照:有缓存目录时登记照常落盘")
 
+
+def test_append_result_online_and_execute_op_share_recovery_fact() -> None:
+    """票 18 接入证明:直接调用 append_result 与经受控分发 execute_op
+    (草稿重放同一入口)走同一发布恢复职责——首轮部分成功后重试,两条
+    入口都收养同一已发布评论并补齐索引,不重复发布、共享同一恢复事实;
+    新 module 由现有调用真实使用,而非另建未接线实现。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = make_github_project(base / "project")
+        cache = base / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        backend = backend_for(root, fake, cache)
+        fake.fail("PATCH", "/issues/1", "timeout")
+        first = backend.append_result("01-alpha", "交付证据")  # 直接接口:部分成功
+        check(first.get("partial") is True and first.get("comment_id") is not None,
+              f"前置:首轮应如实部分成功,实际 {first}")
+        fake._fail = []
+        # 草稿重放与在线受控通道共用 execute_op 的动作分发
+        second = backend.execute_op(
+            "append_result",
+            {"identity": "01-alpha", "result_markdown": "交付证据"})
+        check(second.get("published") is True
+              and second.get("index_updated") is True
+              and second.get("comment_id") == first.get("comment_id"),
+              f"两入口应共享恢复事实(收养同一评论并补齐索引),实际 {second}")
+        posts = [c for c in fake.calls if c[0] == "POST" and "/comments" in c[1]]
+        check(len(posts) == 1,
+              f"两入口共享恢复职责,全程应恰 1 次评论 POST,实际 {len(posts)} 次")
+        check(not list((cache / "pending-index").rglob("*.json")),
+              "补齐后待补索引登记应清除")
+
 TESTS = (
     test_append_result_readback_failure_keeps_uncertain,
     test_append_result_partial_success_and_retry_completion,
@@ -293,6 +326,7 @@ TESTS = (
     test_append_result_partial_retry_read_first_timeout_no_duplicate,
     test_append_result_read_first_failure_without_pending_keeps_first_try,
     test_append_result_partial_without_cache_dir_carries_degraded_warning,
+    test_append_result_online_and_execute_op_share_recovery_fact,
 )
 
 if __name__ == "__main__":

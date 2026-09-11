@@ -19,6 +19,7 @@ from github_backend_fixtures import (
 )
 
 import mgs_github  # noqa: E402
+import mgs_github_transport  # noqa: E402
 import mgs_records  # noqa: E402
 
 FAILURES, check = make_checker()
@@ -226,8 +227,8 @@ def test_reachability_probe_carries_no_credentials() -> None:
         captured["headers"] = dict(req.headers)
         return FakeResponse()
 
-    original = mgs_github.urlopen
-    mgs_github.urlopen = fake_urlopen
+    original = mgs_github_transport.urlopen
+    mgs_github_transport.urlopen = fake_urlopen
     try:
         transport = mgs_github.UrllibTransport("https://api.example", "secret-token")
         status, _ = transport.request("GET", "https://third.example.invalid/doc",
@@ -239,7 +240,7 @@ def test_reachability_probe_carries_no_credentials() -> None:
         check(captured["headers"].get("Authorization") == "Bearer secret-token",
               "正常 API 调用默认仍携带凭据(auth 语义不变)")
     finally:
-        mgs_github.urlopen = original
+        mgs_github_transport.urlopen = original
 
 TESTS = (
     test_switch_local_to_github,

@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import datetime as _dt
 import re
 
 CANONICAL_LABELS = ("needs-triage", "needs-info", "ready-for-agent",
@@ -120,6 +121,74 @@ def parse_task_body(text: str) -> dict:
                      for name, lines in sections.items()},
         "result_index_text": "\n".join(sections.get("结果索引", [])),
     }
+
+
+def _today() -> str:
+    return _dt.date.today().isoformat()
+
+
+def _section_lines(text: str, name: str) -> list[str]:
+    """取某个二级小节的行列表(未知/缺失小节返回空列表)。"""
+
+    return list(_sections(text).get(name, []))
+
+
+def _edit_body(body: str, *, header: dict | None = None,
+               request: dict | None = None, index_lines: list[str] | None = None,
+               append_change: str | None = None) -> str:
+    """按字段编辑任务正文并重新序列化(小节名称与内容保留,格式一致化)。
+
+    与 parse_task_body 是同一份共同正文规则的读/写两面,本地后端与 GitHub
+    适配器的正文更新共用本实现。header 替换头部行中的「键:值」段;request
+    替换/追加工作请求字段行;index_lines 整体替换结果索引;append_change
+    向状态变化追加一行。
+    """
+
+    sections = _sections(body)
+    header_lines: list[str] = []
+    title = ""
+    for line in body.splitlines():
+        if line.startswith("## "):
+            break
+        if line.startswith("# ") and not title:
+            title = line.lstrip("# ").strip()
+        header_lines.append(line)
+    header_text = next((line for line in header_lines if "任务身份" in line), "")
+    for key, value in (header or {}).items():
+        pattern = rf"{key}\s*[:：][^。;；]*"
+        if re.search(pattern, header_text):
+            header_text = re.sub(pattern, f"{key}:{value}", header_text, count=1)
+        else:
+            header_text = header_text.rstrip("。") + f"。{key}:{value}"
+    if request is not None:
+        request_lines = sections.get("工作请求", [])
+        for key, value in request.items():
+            pattern = rf"^-\s+{re.escape(key)}\s*[:：].*$"
+            replacement = f"- {key}:{value}"
+            if any(re.match(pattern, line) for line in request_lines):
+                request_lines = [re.sub(pattern, replacement, line)
+                                 for line in request_lines]
+            else:
+                request_lines.append(replacement)
+        sections["工作请求"] = request_lines
+    if index_lines is not None:
+        sections["结果索引"] = list(index_lines)
+    if append_change:
+        changes = sections.setdefault("状态变化", [])
+        if changes and changes[-1].strip():
+            changes.append("")
+        changes.append(append_change)
+    parts = [f"# {title}", "", header_text, ""]
+    for name, lines in sections.items():
+        lines = list(lines)
+        while lines and not lines[0].strip():
+            lines.pop(0)
+        while lines and not lines[-1].strip():
+            lines.pop()
+        parts += [f"## {name}", ""]
+        if lines:
+            parts += lines + [""]
+    return "\n".join(parts).rstrip() + "\n"
 
 
 # ---------- 依赖关系(纯记录) ----------
