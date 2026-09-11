@@ -8,6 +8,10 @@
 - 共同错误身份:``RecordsError`` 的唯一定义(GitHub 的
   ``GithubRecordsError`` 继承它,现有 ``except RecordsError`` 分支继续有效);
 - 正文头部/小节/字段分隔/空值/未知内容的解析规则(``parse_task_body``);
+- 正文写面规则(``edit_body``/``section_lines``/``today``):按小节与字段
+  整体重排/替换正文、取小节行、给状态变化注明日期——与 ``parse_task_body``
+  同一套规则的另一面,由本地后端与 GitHub 适配器在各自公开接缝上共用
+  (票 18 从 adapter 移入,消除正文序列化的重复实现);
 - 纯记录核验:标签映射、核心文档映射、任务核心字段与依赖关系。
 
 依赖纪律(第一阶段设计):本模块是中性 module——接受文本,不创建网络或
@@ -123,17 +127,17 @@ def parse_task_body(text: str) -> dict:
     }
 
 
-def _today() -> str:
+def today() -> str:
     return _dt.date.today().isoformat()
 
 
-def _section_lines(text: str, name: str) -> list[str]:
+def section_lines(text: str, name: str) -> list[str]:
     """取某个二级小节的行列表(未知/缺失小节返回空列表)。"""
 
     return list(_sections(text).get(name, []))
 
 
-def _edit_body(body: str, *, header: dict | None = None,
+def edit_body(body: str, *, header: dict | None = None,
                request: dict | None = None, index_lines: list[str] | None = None,
                append_change: str | None = None) -> str:
     """按字段编辑任务正文并重新序列化(小节名称与内容保留,格式一致化)。

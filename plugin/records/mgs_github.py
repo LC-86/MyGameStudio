@@ -44,7 +44,7 @@ import mgs_record_model  # noqa: E402
 import mgs_record_source  # noqa: E402
 import mgs_result_publication  # noqa: E402
 from mgs_record_model import (  # noqa: E402
-    CANONICAL_LABELS, RecordsError, _edit_body, _today)
+    CANONICAL_LABELS, RecordsError, edit_body, today)
 from mgs_github_transport import (  # noqa: E402
     GithubRecordsError, TransportError, repo_path, repo_str)
 # 兼容再导出:传输/错误接缝的公开名字仍从 mgs_github 可达(现有调用方与
@@ -113,7 +113,7 @@ def build_task_body(title: str, identity: str, triage: str, progress: str,
     for key, value in request.items():
         lines.append(f"- {key}:{value}")
     lines += ["", "## 结果索引", "", index, "", "## 状态变化", ""]
-    lines += changes or [f"{_today()} 经统一接口建立 GitHub Issues 任务记录。"]
+    lines += changes or [f"{today()} 经统一接口建立 GitHub Issues 任务记录。"]
     return "\n".join(lines) + "\n"
 
 
@@ -174,7 +174,7 @@ def parse_issue_body(number: int, body: str, labels: list[str],
 
 
 # ---------- Issue 正文编辑(保持与 task.md 同一记录格式) ----------
-# _section_lines/_edit_body/_today 的唯一定义在 mgs_record_model(共同正文
+# section_lines/edit_body/today 的唯一定义在 mgs_record_model(共同正文
 # 规则的写面,与 parse_task_body 同一规则);本模块在其公开接缝上复用,
 # 不再各自维护一份正文序列化实现。
 
@@ -507,8 +507,8 @@ class GithubBackend:
                           if key in ("进度",)}
         request_updates = {key: value for key, value in fields.items()
                            if key not in ("进度",)}
-        change_line = f"{_today()} {change_note}:{'、'.join(fields)}"
-        new_body = _edit_body(issue.get("body") or "", header=header_updates,
+        change_line = f"{today()} {change_note}:{'、'.join(fields)}"
+        new_body = edit_body(issue.get("body") or "", header=header_updates,
                               request=request_updates, append_change=change_line)
         try:
             status, updated = self.transport.request(
@@ -546,9 +546,9 @@ class GithubBackend:
         keep = [l["name"] for l in issue.get("labels", [])
                 if l.get("name") not in mapped_values]
         new_labels = sorted(keep + ([mapped[label]] if mapped.get(label) else []))
-        new_body = _edit_body(issue.get("body") or "",
+        new_body = edit_body(issue.get("body") or "",
                               header={"当前分流": label},
-                              append_change=f"{_today()} 分流调整为 {label}")
+                              append_change=f"{today()} 分流调整为 {label}")
         try:
             status, updated = self.transport.request(
                 "PATCH", f"{repo_path(self.repo)}/issues/{parsed['issue_number']}",
@@ -681,9 +681,9 @@ class GithubBackend:
                                     {"identity": identity, "reason": reason,
                                      "note": note}, "离线缓存态无法关闭远端任务")
         number = parsed["issue_number"]
-        new_body = _edit_body(issue.get("body") or "",
+        new_body = edit_body(issue.get("body") or "",
                               header={"进度": progress},
-                              append_change=f"{_today()} 关闭({reason})")
+                              append_change=f"{today()} 关闭({reason})")
         try:
             status, updated = self.transport.request(
                 "PATCH", f"{repo_path(self.repo)}/issues/{number}",

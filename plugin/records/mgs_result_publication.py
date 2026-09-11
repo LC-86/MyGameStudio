@@ -42,7 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_record_model import (  # noqa: E402
-    _edit_body, _section_lines, _today)
+    edit_body, section_lines, today)
 from mgs_github_transport import (  # noqa: E402
     GithubRecordsError, TransportError, repo_path, repo_str)
 
@@ -404,25 +404,51 @@ class ResultPublication:
         return self._finish(issue, number, identity, result_markdown, comment,
                             comment_body, attempts)
 
-    def _read_first(self, number: int, comment_body: str,
-                    attempts: list) -> tuple[dict | None, str | None]:
-        """发布前回读:返回 (收养到的同文评论或 None, 读前失败说明或 None)。"""
+    def _find_comment(self, number: int, comment_body: str,
+                      ) -> tuple[dict | None, str, str | None, str | None]:
+        """列出 Issue 评论并匹配同文评论(读前收养与超时回读共用的核心)。
+
+        返回 (命中评论或 None, 类别, 说明, 传输故障 kind);调用方据此各自
+        决定 attempts 记录与后续动作,本助手不做重试、不写 attempts:
+        - ``exists``:命中同文评论(命中评论在首位,说明与 kind 为 None);
+        - ``absent``:HTTP 200 且评论列表可读但无同文评论;
+        - ``bad_response``:状态非 200 或评论不是列表,说明为 HTTP 状态;
+        - ``error``:传输故障,说明为异常文本,kind 为故障类别(offline/
+          timeout/bad_response)。
+        """
 
         try:
             status, comments = self._list_comments(number)
         except TransportError as exc:
-            attempts.append({"step": "read-first", "outcome": exc.kind,
-                             "detail": str(exc)})
-            return None, str(exc)
+            return None, "error", str(exc), exc.kind
         if status == 200 and isinstance(comments, list):
             hit = next((c for c in comments
                         if c.get("body") == comment_body), None)
-            if hit is not None:
-                attempts.append({"step": "read-first", "outcome": "exists"})
-            return hit, None
-        attempts.append({"step": "read-first", "outcome": "bad_response",
-                         "detail": f"list comments HTTP {status}"})
-        return None, f"list comments HTTP {status}"
+            return hit, ("exists" if hit is not None else "absent"), None, None
+        detail = f"list comments HTTP {status}"
+        return None, "bad_response", detail, None
+
+    def _read_first(self, number: int, comment_body: str,
+                    attempts: list) -> tuple[dict | None, str | None]:
+        """发布前回读:返回 (收养到的同文评论或 None, 读前失败说明或 None)。
+
+        「列评论 + 匹配 body」的核心见 ``_find_comment``;本方法只把结果
+        映射为读前语义:命中即收养(记 exists),读前失败转失败说明,
+        确认不存在不记任何 attempts(与首试语义一致)。
+        """
+
+        hit, category, detail, kind = self._find_comment(number, comment_body)
+        if category == "error":
+            attempts.append({"step": "read-first", "outcome": kind,
+                             "detail": detail})
+            return None, detail
+        if category == "bad_response":
+            attempts.append({"step": "read-first", "outcome": "bad_response",
+                             "detail": detail})
+            return None, detail
+        if category == "exists":
+            attempts.append({"step": "read-first", "outcome": "exists"})
+        return hit, None
 
     def _publish_comment(self, number: int, comment_body: str, draft_args: dict,
                          attempts: list) -> tuple[dict | None, dict | None]:
@@ -465,25 +491,27 @@ class ResultPublication:
 
     def _readback_comment(self, number: int, comment_body: str,
                           attempts: list) -> tuple[dict | None, bool]:
-        """发布超时后的回读:返回 (同文评论或 None, 回读是否失败)。"""
+        """发布超时后的回读:返回 (同文评论或 None, 回读是否失败)。
 
-        try:
-            status, comments = self._list_comments(number)
-            if status == 200 and isinstance(comments, list):
-                hit = next((c for c in comments
-                            if c.get("body") == comment_body), None)
-                if hit is not None:
-                    attempts.append({"step": "readback", "outcome": "exists"})
-                    return hit, False
-                attempts.append({"step": "readback", "outcome": "absent"})
-                return None, False
+        「列评论 + 匹配 body」的核心见 ``_find_comment``;本方法只映射为
+        回读语义:命中即收养,确认不存在判未落地(允许重试),坏应答或
+        传输故障判回读失败(结果不确定,停止重发)。
+        """
+
+        hit, category, detail, _kind = self._find_comment(number, comment_body)
+        if category == "exists":
+            attempts.append({"step": "readback", "outcome": "exists"})
+            return hit, False
+        if category == "absent":
+            attempts.append({"step": "readback", "outcome": "absent"})
+            return None, False
+        if category == "bad_response":
             attempts.append({"step": "readback", "outcome": "bad_response",
-                             "detail": f"list comments HTTP {status}"})
+                             "detail": detail})
             return None, True
-        except TransportError as exc:
-            attempts.append({"step": "readback", "outcome": "uncertain",
-                             "detail": str(exc)})
-            return None, True
+        attempts.append({"step": "readback", "outcome": "uncertain",
+                         "detail": detail})
+        return None, True
 
     def _finish(self, issue: dict, number: int, identity: str,
                 result_markdown: str, comment: dict, comment_body: str,
@@ -494,15 +522,15 @@ class ResultPublication:
         excerpt = (comment_body.strip().splitlines()[2][:60]
                    if len(comment_body.strip().splitlines()) > 2 else "结果")
         body = issue.get("body") or ""
-        index_lines = [line for line in _section_lines(body, "结果索引")
+        index_lines = [line for line in section_lines(body, "结果索引")
                        if line.strip() != "(暂无)"]
         already_indexed = any(ref in line for line in index_lines)
         if not already_indexed:
             index_lines.append(f"- {ref}:{excerpt}")
-        new_body = _edit_body(
+        new_body = edit_body(
             body, index_lines=index_lines,
             append_change=None if already_indexed
-            else f"{_today()} 追加结果评论 {ref}")
+            else f"{today()} 追加结果评论 {ref}")
         try:
             status, _updated = self._patch_body(number, new_body)
             if status != 200:

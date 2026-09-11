@@ -79,3 +79,28 @@
 
 - 真实 GitHub 远端写入按授权范围未执行（本票禁止真实远端写入）；离线替身与回放不替代真实远端验收。
 - 票 19（登记归属/兼容集中）与票 20（在线与重放恢复事实统一）为后续票；本票已把登记与生命周期集中并由真实追加路径使用，但二者的进一步收敛留待后续票。
+
+### 复审修复记录（第一轮，独立复审发现 F1–F5）
+
+**F1【去重，已改】** `mgs_result_publication.py` 中 `_read_first` 与 `_readback_comment` 各自重复「列评论 + 匹配 body」逻辑。抽出共享私有助手 `ResultPublication._find_comment(number, comment_body) -> (命中评论或 None, 类别, 说明, 传输故障 kind)`，类别为 `exists/absent/bad_response/error`；两处调用并各自把结果映射回原语义（`_read_first` 记 `read-first` attempts，`_readback_comment` 记 `readback` attempts）。**行为不变**：命中收养、确认不存在、坏应答、传输故障四条分支的返回值与 attempts 完全相同；助手不写 attempts、不做重试，职责边界与原实现一致。由既有 `test_github_result_recovery.py` 与 `test_github_pending_*.py` 全绿覆盖。
+
+**F2【私有名跨模块，已改】** `_edit_body`/`_section_lines`/`_today` 原带下划线却被 `mgs_github.py` 与 `mgs_result_publication.py` 跨模块导入——事实公开面。在唯一定义处 `mgs_record_model.py` 去下划线改为公开名 `edit_body`/`section_lines`/`today`，同步更新：
+- `mgs_github.py` 导入与 5 处调用（`build_task_body`、`update_task`、`set_triage`、`close_task` 及注释）；
+- `mgs_result_publication.py` 导入与 `_finish` 中 2 处调用；
+- 全仓 grep 确认 `plugin/`、`tests/`、`dist/` 无旧名残留（`.scratch/mygamestudio-v1-review*-fixes/evidence/` 下为冻结的历史版本快照，按证据不可改原则保留，非本票活代码）。
+
+**F3【守卫缺口，已改】** `test_records_shared_body.py::test_dependency_direction_static` 原仅禁 `transport→{mgs_records,mgs_github}`，漏禁 `transport→mgs_result_publication`。按分层（`mgs_record_model`/`mgs_record_source` 中性共同语义 → `mgs_github_transport` 最底层接缝 → `mgs_result_publication` 发布恢复 → `mgs_github` 业务适配器）补全为对称负向断言：**transport 不得依赖 `{mgs_result_publication, mgs_github, mgs_records}`；publication 不得依赖 `{mgs_github, mgs_records}`**。修改后该测试 rc=0；另在 `/tmp` 副本中对 `mgs_github_transport.py` 临时注入 `import mgs_result_publication`，`_imported_modules` AST 扫描确认命中，负向断言会判红——守卫有效（反向验证后已删除副本，未改仓内文件）。
+
+**F4【文档滞后，已改】** `mgs_record_model.py` 头部 docstring 原只述读面/纯核验。补入写面职责条目：`edit_body`/`section_lines`/`today` 与 `parse_task_body` 是同一套共同正文规则的读/写两面，票 18 从 adapter 移入，由本地后端与 GitHub 适配器在各自公开接缝上共用。
+
+**F5【Data Clumps，留档评估】** `(repo, cache_dir, identity, result_markdown)` 四元组在 `pending_identity`/`pending_identity_digest`/`pending_index_file`/`legacy_pending_index_file`/`record_pending_index`/`load_pending_index`/`clear_pending_index` 及 `ResultPublication` 的 store 方法等 8 处函数签名重复出现，属 Data Clumps。**本轮不引入参数对象**：票 19（登记归属/兼容集中）与票 20（在线与重放恢复事实统一）将继续收敛此区域，届时按收敛后的真实调用面统一评估参数对象边界；本轮仅重命名与去重，不改变签名，避免与后续票的接口收敛相互冲突。
+
+**复审修复验证（本机实跑，全部离线、零真实远端写入）：**
+
+- 目标测试：`test_github_result_recovery`、`test_github_pending_index`、`test_github_pending_clear`、`test_records_shared_body`、`test_github_write_ops`、`test_github_drafts`、`test_github_cli` 全部 rc=0。
+- 五套聚合器：`test_plugin_package`/`test_runtime_gate`/`test_runtime_boundaries`/`test_records_backend`/`test_github_backend` 全部 rc=0（`test_plugin_package` 先经 `./dist/build-package.sh` 重建 dist；`plugin/records/__pycache__` 旧字节码缓存含开发机绝对路径会使 provenance 检查误报，已清理由本任务产生的该缓存目录后通过）。
+- 冻结基线：`./.scratch/mygamestudio-architecture-refactor/evidence/baseline/run_baseline.sh` → 五套 `PASS`、`all_existing_checks_green=True`；跑完 `git checkout --` 恢复 `results/` 与 `BASELINE-REPORT.md`。
+- 可复现构建：dist 三件套重建后经 `./dist/verify-reproducible.sh` 与 `git archive HEAD` 干净副本隔离重建逐字节比对 PASS。
+- 静态检查：`ruff check` 改动后的四文件仍为改动前既有 5 条（`mgs_github` E741×3 + F841×1、`mgs_record_model` E741×1，均在未触碰行），无新增；`compileall` 通过。
+
+**复审修复净行数（物理行，基准 1f997a6 工作树 vs 本次）：** `mgs_record_model.py` 321→325（+4）；`mgs_github.py` 1220→1220（0）；`mgs_result_publication.py` 568→596（+28）；`tests/test_records_shared_body.py` 209→212（+3）；合计 **+35**（+86/−51）。

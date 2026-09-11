@@ -91,10 +91,12 @@ def test_record_model_shared_body_and_error_identity() -> None:
 
 
 def test_dependency_direction_static() -> None:
-    """依赖方向:共同语义/来源不反向依赖查询或 GitHub;GitHub 不反向调用查询。
+    """依赖方向:分层自下而上,任一层不反向依赖其上各层。
 
     用 AST 扫描全部 import(含函数内),证明方向靠职责归属实现,而不是
-    延迟导入;查询组织与 adapter 正向依赖来源 module。
+    延迟导入。分层(model/source 中性共同语义 → transport 最底层接缝 →
+    publication 发布恢复 → github 业务适配器)固定为对称的负向断言:
+    传输不得导入发布恢复/适配器/查询组织,发布恢复不得导入适配器/查询组织。
     """
 
     model = _imported_modules(RECORDS_DIR / "mgs_record_model.py")
@@ -112,12 +114,13 @@ def test_dependency_direction_static() -> None:
               f"mgs_record_source 不得依赖 {banned}(含延迟导入),实际 {sorted(source)}")
     check("mgs_records" not in github,
           f"mgs_github 不得反向调用查询组织 mgs_records,实际 {sorted(github)}")
-    # 票 18:传输/错误接缝与发布恢复 module 是 adapter 的下游职责,不得回指
-    # 业务适配器;adapter 实际依赖发布恢复 module(新 module 被现有调用使用)。
-    for banned in ("mgs_records", "mgs_github"):
+    # 票 18:传输/错误接缝是最底层,发布恢复建在其上,适配器在最上;任一层
+    # 不得回指其上各层(对称负向断言)。adapter 实际依赖发布恢复 module。
+    for banned in ("mgs_result_publication", "mgs_github", "mgs_records"):
         check(banned not in transport,
-              f"mgs_github_transport 不得依赖 {banned},实际 {sorted(transport)}")
-    for banned in ("mgs_records", "mgs_github"):
+              f"mgs_github_transport(最底层接缝)不得依赖 {banned},"
+              f"实际 {sorted(transport)}")
+    for banned in ("mgs_github", "mgs_records"):
         check(banned not in publication,
               f"mgs_result_publication 不得依赖 {banned},实际 {sorted(publication)}")
     check("mgs_result_publication" in github,
