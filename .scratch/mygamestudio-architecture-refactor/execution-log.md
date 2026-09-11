@@ -174,3 +174,12 @@
 - 效益记录：**发布恢复生命周期集中于一个 module 并被现有调用真实使用；四态/收养/不重复发布/碰撞/损坏/旧布局全保留；两入口（CLI + execute_op 草稿重放）共享恢复事实有接线证明**
 - 留档：publication 596 行（>500 记录内聚理由）；mgs_github.py 1220 行（>600，票 20 收口）；四元组 Data Clumps（票 19/20 评估）；_find_comment category 裸字符串
 - 净行数：plugin 4793→5025（+232，含 transport/model 拆出）；tests +73；dist 包 SHA 8806a675…
+
+## 票 19 — 集中恢复登记的归属与兼容处理（阶段 4）
+
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`206370ed3866d1ed3e686b7c8705e367f7861cb2`
+- 交付提交：`2b1d504`（新增 mgs_pending_index.py 279 行唯一登记职责；publication 596→320 委托使用；PendingIndex 参数对象落地（18 留档的四元组评估）；碰撞/损坏/旧布局/清除语义逐字保留；seam 断言未放宽）
+- 主控验收：五套+4 个 github/records 主题全 rc=0；Status=resolved；acceptance 零改动；verify-reproducible PASS（包 SHA 6667a623…）
+- 复审：跳过（非核心）
+- 遗留：在线与重放恢复事实统一属票 20
