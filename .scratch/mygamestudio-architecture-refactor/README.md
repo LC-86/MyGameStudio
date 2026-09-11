@@ -118,3 +118,38 @@
 发布时校验：一票一文件、编号与前置顺序、139 条未勾选验收条件、规格链接、60 条用户故事覆盖、14 组读取验收及依赖无环。最终 26 汇合全部任务；规格及此前已确认设计保持不变。
 
 用户在本任务回复“确认”，批准按 26 票候选清单发布。本次仅创建工单与总览，未启动产品实现、真实模型或远端验收，未执行 Git 提交、推送、安装或发布。发布清单与文件指纹见 [ticket-publication.json](evidence/ticket-publication.json)。
+
+## GitHub 对应任务
+
+总 Issue：[#1 MyGameStudio 全插件分阶段架构重构](https://github.com/LC-86/MyGameStudio/issues/1)。26 个子 Issue 均已建立原生父子关系和确认稿中的 31 条阻塞关系，标记为 `ready-for-agent`。正文和关系已回读核对；尚未启动实施。
+
+最初发布内容固定于提交 `a325eeb7bd7fbdbb6e90d3be8d14ba095c20648a`；后续实际执行状态请回读对应 GitHub Issue。完整映射与核验摘要见 [github-publication.json](evidence/github-publication.json)。
+
+| 本地编号 | GitHub Issue | 原生 Blocked by |
+| --- | --- | --- |
+| 01 | [#2 [架构重构 01] 固定可复跑的兼容与效率基线](https://github.com/LC-86/MyGameStudio/issues/2) | 无 |
+| 02 | [#3 [架构重构 02] 让双后端共用正文与错误语义](https://github.com/LC-86/MyGameStudio/issues/3) | [#2](https://github.com/LC-86/MyGameStudio/issues/2) |
+| 03 | [#4 [架构重构 03] 统一配置与本地来源并解除反向依赖](https://github.com/LC-86/MyGameStudio/issues/4) | [#3](https://github.com/LC-86/MyGameStudio/issues/3) |
+| 04 | [#5 [架构重构 04] 修正可开工查询的重复读取与混合结果](https://github.com/LC-86/MyGameStudio/issues/5) | [#4](https://github.com/LC-86/MyGameStudio/issues/4) |
+| 05 | [#6 [架构重构 05] 让列表与单任务读取复用配置并保持兼容](https://github.com/LC-86/MyGameStudio/issues/6) | [#4](https://github.com/LC-86/MyGameStudio/issues/4) |
+| 06 | [#7 [架构重构 06] 让基线与核验复用读取且保留证据含义](https://github.com/LC-86/MyGameStudio/issues/7) | [#5](https://github.com/LC-86/MyGameStudio/issues/5) |
+| 07 | [#8 [架构重构 07] 完成任务读取的入口与交付兼容验收](https://github.com/LC-86/MyGameStudio/issues/8) | [#6](https://github.com/LC-86/MyGameStudio/issues/6)、[#7](https://github.com/LC-86/MyGameStudio/issues/7) |
+| 08 | [#9 [架构重构 08] 让工具拒绝判据直接服务运行与测试](https://github.com/LC-86/MyGameStudio/issues/9) | [#8](https://github.com/LC-86/MyGameStudio/issues/8) |
+| 09 | [#10 [架构重构 09] 让直连失败判据通过同一事件入口验证](https://github.com/LC-86/MyGameStudio/issues/10) | [#9](https://github.com/LC-86/MyGameStudio/issues/9) |
+| 10 | [#11 [架构重构 10] 按行为组织包与场景验收检查](https://github.com/LC-86/MyGameStudio/issues/11) | [#10](https://github.com/LC-86/MyGameStudio/issues/10) |
+| 11 | [#12 [架构重构 11] 按用户行为组织任务后端回归](https://github.com/LC-86/MyGameStudio/issues/12) | [#8](https://github.com/LC-86/MyGameStudio/issues/8) |
+| 12 | [#13 [架构重构 12] 按完整受控操作组织运行保障回归](https://github.com/LC-86/MyGameStudio/issues/13) | [#8](https://github.com/LC-86/MyGameStudio/issues/8) |
+| 13 | [#14 [架构重构 13] 建立共享客户端并接通标准事件场景](https://github.com/LC-86/MyGameStudio/issues/14) | [#11](https://github.com/LC-86/MyGameStudio/issues/11) |
+| 14 | [#15 [架构重构 14] 迁移最小与扩展事件的普通场景](https://github.com/LC-86/MyGameStudio/issues/15) | [#14](https://github.com/LC-86/MyGameStudio/issues/14) |
+| 15 | [#16 [架构重构 15] 接通并迁移绝对阈值中断场景](https://github.com/LC-86/MyGameStudio/issues/16) | [#14](https://github.com/LC-86/MyGameStudio/issues/14) |
+| 16 | [#17 [架构重构 16] 迁移相对阈值与完整闭环场景](https://github.com/LC-86/MyGameStudio/issues/17) | [#16](https://github.com/LC-86/MyGameStudio/issues/16) |
+| 17 | [#18 [架构重构 17] 完成十八场景共享化并移除旧副本](https://github.com/LC-86/MyGameStudio/issues/18) | [#15](https://github.com/LC-86/MyGameStudio/issues/15)、[#17](https://github.com/LC-86/MyGameStudio/issues/17) |
+| 18 | [#19 [架构重构 18] 让结果追加通过完整发布恢复职责执行](https://github.com/LC-86/MyGameStudio/issues/19) | [#10](https://github.com/LC-86/MyGameStudio/issues/10)、[#12](https://github.com/LC-86/MyGameStudio/issues/12) |
+| 19 | [#20 [架构重构 19] 集中恢复登记的归属与兼容处理](https://github.com/LC-86/MyGameStudio/issues/20) | [#19](https://github.com/LC-86/MyGameStudio/issues/19) |
+| 20 | [#21 [架构重构 20] 统一在线执行与草稿重放的恢复事实](https://github.com/LC-86/MyGameStudio/issues/21) | [#20](https://github.com/LC-86/MyGameStudio/issues/20) |
+| 21 | [#22 [架构重构 21] 集中本地受控写入的完整事务](https://github.com/LC-86/MyGameStudio/issues/22) | [#10](https://github.com/LC-86/MyGameStudio/issues/10)、[#13](https://github.com/LC-86/MyGameStudio/issues/13) |
+| 22 | [#23 [架构重构 22] 集中受控远端动作与结果审计](https://github.com/LC-86/MyGameStudio/issues/23) | [#21](https://github.com/LC-86/MyGameStudio/issues/21)、[#22](https://github.com/LC-86/MyGameStudio/issues/22) |
+| 23 | [#24 [架构重构 23] 建立共同约定并迁入制作实现入口](https://github.com/LC-86/MyGameStudio/issues/24) | [#23](https://github.com/LC-86/MyGameStudio/issues/23) |
+| 24 | [#25 [架构重构 24] 迁移管理、设计与独立验证入口](https://github.com/LC-86/MyGameStudio/issues/25) | [#24](https://github.com/LC-86/MyGameStudio/issues/24) |
+| 25 | [#26 [架构重构 25] 清除重复说明并核对十四入口的交付内容](https://github.com/LC-86/MyGameStudio/issues/26) | [#25](https://github.com/LC-86/MyGameStudio/issues/25) |
+| 26 | [#27 [架构重构 26] 完成全插件集成与重构效益核验](https://github.com/LC-86/MyGameStudio/issues/27) | [#18](https://github.com/LC-86/MyGameStudio/issues/18)、[#26](https://github.com/LC-86/MyGameStudio/issues/26) |
