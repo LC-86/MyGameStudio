@@ -9,18 +9,21 @@
 /``drain_events`` / ``wait_turn_completed`` 都经同一条 ``_message`` 惰性解码并按
 行号缓存,因此每条输入只解码一次,轮询不会重复解码旧事件。
 
-expand 迁移(票 13、票 14、票 15):标准事件场景(原 02/17/18,票 13)、最小场景
-(原 01)与扩展事件场景(原 03/04,票 14)、绝对阈值中断场景(原 05-14,票 15)
-改用本 module,尚未迁移的场景(原 15/16 的相对阈值中断)继续使用各自的旧实现;
-本 module 不改变普通完成、失败、超时、事件筛选、退出码与子进程结束语义。场景差异
-(固定只读沙箱、事件筛选范围与 turn 生命周期通知、绝对中断阈值与进程组)经
-``run_turn`` 的显式参数保留,不强制统一。
+expand 迁移(票 13、票 14、票 15、票 16):标准事件场景(原 02/17/18,票 13)、
+最小场景(原 01)与扩展事件场景(原 03/04,票 14)、绝对阈值中断场景(原 05-14,
+票 15)、相对阈值与完整闭环场景(原 15/16,票 16)全部改用本 module;本 module
+不改变普通完成、失败、超时、事件筛选、退出码与子进程结束语义。场景差异(固定只读
+沙箱、事件筛选范围与 turn 生命周期通知、绝对/相对中断阈值与进程组)经 ``run_turn``
+的显式参数保留,不强制统一。
 
-绝对阈值中断(票 15):``run_turn`` 传 ``watch_audit``/``kill_after_allows`` 时,
-等待 turn 完成的同时轮询审计文件,累计 allow 条目达到阈值即对本次子进程组发 SIGKILL
-并以退出码 3 结束;事件流中没有 turn/completed,已取得的事件证据照常落盘。阈值为
-**累计绝对次数**(含 turn 开始前已有的 allow),不引入相对新增计数路径(相对阈值属
-票 16 的独立实现)。审计文件缺失或不可读时旧实现按 0 处理,继续等待至超时。
+中断阈值(票 15 绝对、票 16 相对):``run_turn`` 传 ``watch_audit``/``kill_after_allows``
+时,等待 turn 完成的同时轮询审计文件,累计 allow 条目达到阈值即对本次子进程组发
+SIGKILL 并以退出码 3 结束;事件流中没有 turn/completed,已取得的事件证据照常落盘。
+默认 ``kill_relative=False`` 为**累计绝对次数**(含 turn 开始前已有的 allow,票 15
+语义);``kill_relative=True`` 时以进入等待时的已有 allow 为**基数**,只计本轮新增
+allow(票 16 语义),因此共享运行根中前序轮次的累计 allow 不会让新轮次一开始就误判
+中断。两模式各自独立,不以历史累计混淆相对判断。审计文件缺失或不可读时旧实现按 0
+处理,继续等待至超时。
 
 用法(由场景入口经 sys.path 注入后导入):
   from appserver_core import AppServer, run_skills, run_turn
@@ -211,21 +214,29 @@ class AppServer:
     def wait_turn_interruptible(self, timeout: float,
                                 events: list[dict[str, Any]] | None = None,
                                 watch_audit: str | None = None,
-                                kill_after_allows: int = 0
+                                kill_after_allows: int = 0,
+                                kill_relative: bool = False
                                 ) -> tuple[list[str], bool]:
-        """等待 turn/completed;审计 allow 累计达阈值即 kill 进程组并返回 killed=True。
+        """等待 turn/completed;审计 allow 达阈值即 kill 进程组并返回 killed=True。
 
-        阈值为绝对累计次数(不减去进入等待时的已有值);未配置 watch_audit、阈值
-        未达到或审计文件不可读时按普通等待处理,到超时返回已取得的 agent 消息。
+        默认阈值为**累计绝对次数**(不减进入等待时的已有值,票 15 语义);
+        ``kill_relative=True`` 时先取进入等待时的已有 allow 为基数,只在**本轮新增**
+        allow 达 ``kill_after_allows`` 时中断(票 16 语义),因此共享运行根中前序轮次的
+        累计 allow 不会误触发。未配置 watch_audit、阈值未达到或审计文件不可读时按普通
+        等待处理,到超时返回已取得的 agent 消息。
         """
 
         deadline = time.time() + timeout
         agent_messages: list[str] = []
         seen: set[str] = set()
+        baseline = (count_audit_allows(watch_audit)
+                    if (watch_audit and kill_relative) else 0)
         while time.time() < deadline:
             if events is not None:
                 self.drain_events(events)
-            if watch_audit and count_audit_allows(watch_audit) >= kill_after_allows:
+            if (watch_audit
+                    and count_audit_allows(watch_audit)
+                    >= baseline + kill_after_allows):
                 self.kill_process_group()
                 return agent_messages, True
             self._collect_agent_messages(seen, agent_messages)
@@ -308,13 +319,14 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
              keep_types: set[str] | None,
              event_methods: tuple[str, ...] = DEFAULT_EVENT_METHODS,
              watch_audit: str | None = None, kill_after_allows: int = 0,
-             new_session: bool = False) -> int:
-    """跑一个 turn 并落盘报告/事件证据;配置 watch_audit 时支持绝对阈值中断。
+             kill_relative: bool = False, new_session: bool = False) -> int:
+    """跑一个 turn 并落盘报告/事件证据;配置 watch_audit 时支持中断阈值。
 
-    绝对中断(原 05-14,票 15):``watch_audit`` + ``kill_after_allows`` 成对传入、
-    ``new_session=True`` 时,审计 allow 累计达阈值即 kill 本子进程组,事件流不含
-    turn/completed,已取得证据照常落盘,并以退出码 3 结束(不再 close)。其余场景
-    沿用普通等待与退出码 0,行为不变。
+    中断(原 05-14,票 15 绝对;原 15/16,票 16 相对):``watch_audit`` +
+    ``kill_after_allows`` 成对传入、``new_session=True`` 时,审计 allow 达阈值即 kill
+    本子进程组,事件流不含 turn/completed,已取得证据照常落盘,并以退出码 3 结束
+    (不再 close)。阈值为累计绝对次数;``kill_relative=True`` 时改为进入等待时的基数
+    加本轮新增(共享运行根多轮场景)。其余场景沿用普通等待与退出码 0,行为不变。
     """
 
     server = AppServer(new_session=new_session)
@@ -338,7 +350,8 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
         if watch_audit:
             messages, killed = server.wait_turn_interruptible(
                 timeout, events, watch_audit=watch_audit,
-                kill_after_allows=kill_after_allows)
+                kill_after_allows=kill_after_allows,
+                kill_relative=kill_relative)
         else:
             messages = server.wait_turn_completed(timeout, events)
         if events_out:

@@ -18,9 +18,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from acceptance_client_support import (
-    CORE_MODULE, LEGACY_BASE_COMMIT, STANDARD_SCENARIOS, client_path,
-    find_legacy_client, load_git_module, load_module, load_shared_and_shells,
-    pid_alive, read_jsonl, replay_wait, run_client, spy_calls, synthetic_events,
+    ACCEPTANCE, CORE_MODULE, LEGACY_BASE_COMMIT, MIGRATED_SCENARIOS,
+    STANDARD_SCENARIOS, client_path, find_legacy_client, load_git_module,
+    load_module, load_shared_and_shells, pid_alive, read_jsonl, replay_wait,
+    run_client, spy_calls, synthetic_events,
 )
 from plugin_package_support import make_checker, run_theme
 
@@ -223,29 +224,20 @@ def test_old_new_replay_parity() -> None:
     check(len(new_events) == 51, f"应消费 50 条事件 + turn/completed,实际 {len(new_events)}")
 
 
-def test_unmigrated_scenario_still_passes() -> None:
-    """expand 过渡期守卫:未迁移场景继续按旧实现独立通过(受控替身进程)。
+def test_all_scenarios_migrated_no_legacy_copy() -> None:
+    """expand 完成守卫:18 场景全部迁入共享核心,工作区已无旧实现副本。
 
-    本守卫依赖尚未迁移的旧实现存在;票 17 收口删除旧实现时会显式失败并要求
-    随票 17 更新,而不是静默通过。
+    票 13/14/15 的「未迁移场景继续按旧实现独立通过」在票 16 完成后不再适用——原
+    15/16 是最后一批旧实现,迁入后已无自身定义 ``wait_turn_completed`` 的客户端。
+    本守卫改为确认无场景遗漏、无旧实现残留(旧物理副本的收口按票 17)。
     """
 
     legacy = find_legacy_client()
-    check(legacy is not None,
-          "旧实现已被移除,本守卫需随票 17 更新(expand 过渡期守卫不可静默跳过)")
-    if legacy is None:
-        return
-    with tempfile.TemporaryDirectory(prefix="mgs13-legacy-") as tmp:
-        tmpdir = Path(tmp)
-        out = tmpdir / "report.md"
-        proc = run_client(legacy,
-                          ["turn", "--cwd", str(tmpdir), "--text", "检查",
-                           "--out", str(out), "--timeout", "15"], tmpdir)
-        check(proc.returncode == 0,
-              f"未迁移场景应经旧实现成功退出:{proc.stderr[:300]}")
-        check(out.is_file() and out.read_text(encoding="utf-8") == EXPECTED_REPORT,
-              "未迁移场景的可观察报告应与共享实现一致(同输入)")
-        check(legacy.parent.name not in STANDARD_SCENARIOS, "对照必须取未迁移场景")
+    check(legacy is None, f"仍有过期旧实现副本未被迁移:{legacy}")
+    scenarios = sorted(p.parent.name for p in ACCEPTANCE.glob("*/appserver_client.py"))
+    check(len(scenarios) == 18, f"应恰有 18 份客户端,实际 {len(scenarios)}:{scenarios}")
+    for scenario in scenarios:
+        check(scenario in MIGRATED_SCENARIOS, f"{scenario} 未登记为已迁移场景")
 
 
 TESTS = (
@@ -256,7 +248,7 @@ TESTS = (
     test_decode_once_over_ten_polls,
     test_timeout_returns_partial_without_new_decodes,
     test_old_new_replay_parity,
-    test_unmigrated_scenario_still_passes,
+    test_all_scenarios_migrated_no_legacy_copy,
 )
 
 

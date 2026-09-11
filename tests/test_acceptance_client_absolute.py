@@ -23,35 +23,21 @@ import inspect
 import json
 import sys
 import tempfile
-import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
 
 from acceptance_client_support import (
     FAMILY4_BASE_COMMIT, FAMILY4_OLD_CLIENT, FAMILY4_SCENARIOS,
-    RELATIVE_SCENARIOS, CountingJson, append_audit_allow, client_path,
-    load_git_module, load_module, load_shared_and_shells, pid_alive,
-    read_jsonl, run_client, spy_calls_full, start_client,
+    append_audit_allow, client_path, load_git_module, load_module,
+    load_shared_and_shells, pid_alive, read_jsonl, replay_interrupt, run_client,
+    spy_calls_full, start_client,
 )
 from plugin_package_support import make_checker, run_theme
 
 FAILURES, check = make_checker()
 
 CORE_MODULE = Path(__file__).resolve().parents[1] / "acceptance" / "_shared" / "appserver_core.py"
-
-
-class Clock:
-    """确定性时钟:轮询间隔与超时按虚拟秒推进,不真实等待。"""
-
-    def __init__(self) -> None:
-        self.now = 0.0
-
-    def time(self) -> float:
-        return self.now
-
-    def sleep(self, seconds: float) -> None:
-        self.now += seconds
 
 
 def wait_until(predicate, timeout: float = 30.0, interval: float = 0.05) -> bool:
@@ -83,39 +69,6 @@ def child_pid(lines: list[str]) -> int:
         if line.startswith("child pid="):
             return int(line.split("=")[1])
     return 0
-
-
-def replay_interrupt(module, lines: list[str], audit: Path, threshold: int, *,
-                     timeout: float = 5.0) -> tuple[list, bool, list]:
-    """以合成行驱动中断等待(旧实现 wait_turn_completed / 新实现 wait_turn_interruptible)。
-
-    返回(agent 消息, killed, 事件)。经 object.__new__ 构造(与票 01/13 同法),
-    替换 module 的 time/json 为虚拟时钟与计数代理,kill_process_group 记为计数,
-    不发送任何真实信号、不启动子进程。
-    """
-
-    server = object.__new__(module.AppServer)
-    server.lines = list(lines)
-    server._lock = threading.Lock()
-    server._drained = 0
-    kills: list[int] = []
-    server.kill_process_group = lambda: kills.append(1)
-    counter = {"count": 0}
-    real_json, real_time = module.json, module.time
-    module.json = CountingJson(real_json, counter)
-    module.time = Clock()
-    events: list[dict] = []
-    try:
-        if hasattr(server, "wait_turn_interruptible"):
-            messages, killed = server.wait_turn_interruptible(
-                timeout, events, watch_audit=str(audit), kill_after_allows=threshold)
-        else:
-            messages, killed = server.wait_turn_completed(
-                timeout, events, watch_audit=str(audit), kill_after_allows=threshold)
-    finally:
-        module.json = real_json
-        module.time = real_time
-    return messages, killed, events
 
 
 def test_family4_clients_share_implementation_and_keep_identity() -> None:
@@ -288,16 +241,16 @@ def test_absolute_threshold_parity_old_new() -> None:
         tmpdir = Path(tmp)
         thresholds = tmpdir / "reached.jsonl"
         append_audit_allow(thresholds, 3)
-        old_m, old_k, old_e = replay_interrupt(old, lines, thresholds, 3)
-        new_m, new_k, new_e = replay_interrupt(core, lines, thresholds, 3)
+        old_m, old_k, old_e, _ = replay_interrupt(old, lines, thresholds, 3)
+        new_m, new_k, new_e, _ = replay_interrupt(core, lines, thresholds, 3)
         check(old_k and new_k, "阈值达到时旧新都应判定为中断(killed=True)")
         check(old_m == new_m == [], f"阈值在对首轮即达到时不应有部分消息:{old_m}/{new_m}")
         check(old_e == new_e, f"阈值达到时旧新事件消费应一致:{old_e}/{new_e}")
 
         below = tmpdir / "below.jsonl"
         append_audit_allow(below, 1)
-        old_m, old_k, old_e = replay_interrupt(old, lines, below, 3)
-        new_m, new_k, new_e = replay_interrupt(core, lines, below, 3)
+        old_m, old_k, old_e, _ = replay_interrupt(old, lines, below, 3)
+        new_m, new_k, new_e, _ = replay_interrupt(core, lines, below, 3)
         check(not old_k and not new_k, "阈值未达到时旧新都不应中断")
         check(old_m == new_m == ["first agent reply", "second agent reply"],
               f"阈值未达到时旧新 agent 消息应一致:{old_m}/{new_m}")
@@ -305,41 +258,61 @@ def test_absolute_threshold_parity_old_new() -> None:
               f"阈值未达到时旧新事件消费应一致:{old_e}/{new_e}")
 
 
-def test_shared_core_has_no_relative_counting_path() -> None:
-    """绝对阈值语义保留在共享核心,不引入相对新增计数路径(相对阈值属票 16)。"""
+def test_shared_core_modes_stay_distinct() -> None:
+    """共享核心同时支持绝对与相对阈值,但两模式互不混淆、绝对仍为默认。
+
+    票 15 的守卫从「核心不得含相对路径」演进为「相对路径已加入且与绝对明确区分」:
+    累计计数函数仍只收路径(不带基线偏移);中断等待与 run_turn 的相对开关默认关闭;
+    同一审计文件(已有 3 条 allow)与阈值 3 下,绝对模式立即中断,相对模式因本轮
+    新增为 0 而不中断,证明历史累计不会误触发相对判断。
+    """
 
     core = load_module(CORE_MODULE, "mgs15_core_semantics")
-    check(hasattr(core, "count_audit_allows"), "共享核心应提供累计审计 allow 计数")
+    check(hasattr(core, "count_audit_allows"), "共享核心应提供审计 allow 计数")
     params = inspect.signature(core.count_audit_allows).parameters
     check(list(params) == ["path"],
           f"累计计数不得接收基线/相对偏移,实际参数 {list(params)}")
     wait_params = inspect.signature(
         core.AppServer.wait_turn_interruptible).parameters
-    check("kill_relative" not in wait_params,
-          f"共享中断等待不得含相对阈值参数,实际 {list(wait_params)}")
-    source = CORE_MODULE.read_text(encoding="utf-8")
-    check("baseline" not in source and "kill_relative" not in source,
-          "共享核心不得出现相对阈值(baseline/kill_relative)路径")
+    check(wait_params["kill_relative"].default is False,
+          "中断等待的相对阈值开关应默认关闭(默认为绝对)")
+    turn_params = inspect.signature(core.run_turn).parameters
+    check(turn_params["kill_relative"].default is False,
+          "run_turn 的相对阈值开关应默认关闭(默认为绝对)")
+
+    # 模式区分行为:同一审计文件(已有 3 条)与阈值 3。
+    core_mod = load_module(CORE_MODULE, "mgs15_core_modes")
+    lines = [json.dumps({"method": "item/completed",
+                         "params": {"item": {"id": "a1", "type": "agentMessage",
+                                             "text": "reply"}}})]
+    with tempfile.TemporaryDirectory(prefix="mgs15-modes-") as tmp:
+        audit = Path(tmp) / "audit.jsonl"
+        append_audit_allow(audit, 3)
+        _, abs_killed, _, abs_kills = replay_interrupt(core_mod, lines, audit, 3,
+                                                       kill_relative=False)
+        _, rel_killed, _, rel_kills = replay_interrupt(core_mod, lines, audit, 3,
+                                                       kill_relative=True)
+        check(abs_killed and abs_kills == 1,
+              "绝对模式:历史累计已达阈值应即中断")
+        check(not rel_killed and rel_kills == 0,
+              "相对模式:已有累计不计入本轮,未达新增阈值不得中断")
 
 
-def test_relative_clients_still_available() -> None:
-    """expand 红线:尚未迁入的相对阈值客户端(15/16)继续可用。"""
+def test_family4_shells_default_to_absolute_mode() -> None:
+    """expand 红线:族 4 十入口默认绝对模式,经共享核心转发 relative=False。"""
 
-    for scenario in RELATIVE_SCENARIOS:
-        path = client_path(scenario)
-        check(path.is_file(), f"相对阈值客户端 {scenario} 应继续存在")
-        source = path.read_text(encoding="utf-8")
-        check("kill_relative" in source, f"{scenario} 应保留相对阈值实现")
-        with tempfile.TemporaryDirectory(prefix="mgs15-rel-") as tmp:
-            tmpdir = Path(tmp)
-            out = tmpdir / "r.md"
-            proc = run_client(path, ["turn", "--cwd", str(tmpdir), "--text", "t",
-                                     "--out", str(out), "--timeout", "15"], tmpdir)
-            check(proc.returncode == 0,
-                  f"{scenario} 未迁入的相对客户端应继续通过:{proc.stderr[:200]}")
-            check(out.is_file() and out.read_text(encoding="utf-8") ==
-                  "first agent reply\n\nsecond agent reply",
-                  f"{scenario} 报告应保持一致")
+    core, shells = load_shared_and_shells(FAMILY4_SCENARIOS, prefix="mgs15_abs_")
+    for scenario, shell in shells.items():
+        with tempfile.TemporaryDirectory(prefix="mgs15-abs-") as tmp:
+            audit = Path(tmp) / "audit.jsonl"
+            rc, server = spy_calls_full(core, shell, "cmd_turn", SimpleNamespace(
+                cwd=tmp, sandbox="workspace-write", mention="m:x", text="t",
+                timeout=5, out=None, events_out=None,
+                watch_audit=str(audit), kill_after_allows=2))
+        check(rc == 0, f"{scenario} cmd_turn 应成功,实际 rc={rc}")
+        check(any(str(call) == f"wait_interruptible:{audit}:2:relative=False"
+                  for call in server.calls),
+              f"{scenario} 应默认以绝对模式中断,实际 {server.calls}")
 
 
 TESTS = (
@@ -348,8 +321,8 @@ TESTS = (
     test_absolute_threshold_interrupt_controlled_process,
     test_no_interrupt_when_threshold_unmet_or_audit_missing,
     test_absolute_threshold_parity_old_new,
-    test_shared_core_has_no_relative_counting_path,
-    test_relative_clients_still_available,
+    test_shared_core_modes_stay_distinct,
+    test_family4_shells_default_to_absolute_mode,
 )
 
 

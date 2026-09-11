@@ -51,13 +51,15 @@ FAMILY4_SCENARIOS = (
     "13-independent-deliverable-review",
     "14-playtest-and-human-feedback",
 )
-# 尚未迁入的族 5:相对中断阈值(--kill-relative);本票 expand 红线要求其继续可用。
+# 票 16 迁入的族 5:相对中断阈值与完整闭环场景(原 15/16);迁移前两份逐字节同类
+# (除场景身份/编号),沿用「--watch-audit/--kill-after-allows 绝对累计 + --kill-relative
+# 相对本轮新增 + 独立进程组」语义。本批入口共享核心,身份与选项分别保留。
 RELATIVE_SCENARIOS = (
     "15-goal-change-concurrency-recovery",
     "16-producer-complete-loop",
 )
 MIGRATED_SCENARIOS = (STANDARD_SCENARIOS + BASIC_SCENARIOS + EXTENDED_EVENT_SCENARIOS
-                      + FAMILY4_SCENARIOS)
+                      + FAMILY4_SCENARIOS + RELATIVE_SCENARIOS)
 # 票 13 基点提交:仍保有族 1/2/3 旧实现的最后基点,供旧新对照(A/B)读取;
 # 工作区已无这些旧文件(按 expand 红线,旧客户端删除留待票 17 收口)。
 LEGACY_BASE_COMMIT = "e42d17b4659db09550575d3f29fb32d8074d7829"
@@ -66,6 +68,9 @@ EXTENDED_OLD_CLIENT = "acceptance/03-indirect-write-failure/appserver_client.py"
 # 票 15 前基点:族 4(05-14)旧实现的最后基点,供绝对中断旧新对照读取。
 FAMILY4_BASE_COMMIT = "8f8407f6e30646e16367c52fce538fea202b8327"
 FAMILY4_OLD_CLIENT = "acceptance/05-adopt-existing-project/appserver_client.py"
+# 票 16 前基点:族 5(15/16)旧实现的最后基点,供相对中断与完整闭环旧新对照读取。
+RELATIVE_BASE_COMMIT = "ca431fb44a504bd18f8a180d3501acd02e55d6b3"
+RELATIVE_OLD_CLIENT = "acceptance/15-goal-change-concurrency-recovery/appserver_client.py"
 
 
 def client_path(scenario: str) -> Path:
@@ -128,8 +133,10 @@ class SpyServer:
         return ["spy reply"]
 
     def wait_turn_interruptible(self, timeout, events=None, watch_audit=None,
-                                kill_after_allows=0):
-        self.calls.append(f"wait_interruptible:{watch_audit}:{kill_after_allows}")
+                                kill_after_allows=0, kill_relative=False):
+        self.calls.append(
+            f"wait_interruptible:{watch_audit}:{kill_after_allows}"
+            f":relative={kill_relative}")
         if events is not None:
             events.append({"method": "turn/completed", "params": {}})
         return ["spy reply"], False
@@ -296,6 +303,45 @@ def replay_wait(module, lines: list[str], *, timeout: float = 10.0,
         module.json = real_json
         module.time = real_time
     return messages, events, counter["count"]
+
+
+def replay_interrupt(module, lines: list[str], audit: Path,
+                     threshold: int, *, kill_relative: bool = False,
+                     timeout: float = 5.0) -> tuple[list, bool, list, int]:
+    """合成行 + 合成审计文件驱动中断等待(旧 wait_turn_completed / 新 interruptible)。
+
+    经 ``object.__new__`` 构造实例,替换 module 的 ``time``/``json`` 为虚拟时钟与
+    计数代理,``kill_process_group`` 记为计数(不发真实信号、不启动子进程)。返回
+    (agent 消息, killed, 事件, kill 次数)。``kill_relative=True`` 时使用相对本轮
+    新增的阈值语义;旧实现只有该单一方法(默认绝对累计 + 可选相对)。
+    """
+
+    server = object.__new__(module.AppServer)
+    server.lines = list(lines)
+    server._lock = threading.Lock()
+    server._drained = 0
+    kills: list[int] = []
+    server.kill_process_group = lambda: kills.append(1)
+    counter = {"count": 0}
+    real_json, real_time = module.json, module.time
+    module.json = CountingJson(real_json, counter)
+    module.time = FakeTime()
+    events: list[dict] = []
+    # 旧实现(如票 15 基点族 4)只有绝对语义,未含 kill_relative 参数;仅当目标
+    # 方法接受该参数时才传递,保持对旧源码的内存执行兼容。
+    target = (server.wait_turn_interruptible
+              if hasattr(server, "wait_turn_interruptible")
+              else server.wait_turn_completed)
+    accepts_relative = "kill_relative" in inspect.signature(target).parameters
+    kwargs = {"watch_audit": str(audit), "kill_after_allows": threshold}
+    if accepts_relative:
+        kwargs["kill_relative"] = kill_relative
+    try:
+        messages, killed = target(timeout, events, **kwargs)
+    finally:
+        module.json = real_json
+        module.time = real_time
+    return messages, killed, events, len(kills)
 
 
 def synthetic_events(count: int) -> list[str]:

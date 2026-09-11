@@ -86,7 +86,7 @@ THEMES = (
       "test_decode_once_over_ten_polls",
       "test_timeout_returns_partial_without_new_decodes",
       "test_old_new_replay_parity",
-      "test_unmigrated_scenario_still_passes")),
+      "test_all_scenarios_migrated_no_legacy_copy")),
     ("test_acceptance_client_families.py",
      "验收客户端共享实现(最小+扩展事件场景)",
      ("test_basic_and_extended_clients_share_implementation",
@@ -101,8 +101,15 @@ THEMES = (
       "test_absolute_threshold_interrupt_controlled_process",
       "test_no_interrupt_when_threshold_unmet_or_audit_missing",
       "test_absolute_threshold_parity_old_new",
-      "test_shared_core_has_no_relative_counting_path",
-      "test_relative_clients_still_available")),
+      "test_shared_core_modes_stay_distinct",
+      "test_family4_shells_default_to_absolute_mode")),
+    ("test_acceptance_client_relative.py",
+     "验收客户端共享实现(相对阈值与完整闭环场景)",
+     ("test_relative_clients_share_implementation_and_keep_identity",
+      "test_relative_option_contract_and_pairing",
+      "test_relative_mode_ignores_prior_round_history_multiround",
+      "test_modes_absolute_relative_non_interrupt",
+      "test_relative_threshold_parity_old_new")),
 )
 
 

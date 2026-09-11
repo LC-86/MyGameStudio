@@ -1,0 +1,137 @@
+{
+  "ticket": "16-shared-client-relative",
+  "base_commit": "ca431fb44a504bd18f8a180d3501acd02e55d6b3",
+  "method": "复用票 01/13/14/15 的合成回放方法:虚拟时钟 + 计数器替换 json.loads,合成审计文件驱动阈值;kill_process_group 记计数、不发送真实信号;不启动子进程/网络/模型",
+  "relative_threshold_parity": {
+    "history_present_new_zero": {
+      "prior_allows": 2,
+      "threshold": 2,
+      "relative": true,
+      "old_killed": false,
+      "new_killed": false,
+      "old_messages": [
+        "first agent reply",
+        "second agent reply"
+      ],
+      "new_messages": [
+        "first agent reply",
+        "second agent reply"
+      ],
+      "messages_equal": true,
+      "events_equal": true,
+      "note": "历史累计已等于阈值,但相对模式本轮新增为 0,不得中断"
+    },
+    "immediate_zero": {
+      "prior_allows": 0,
+      "threshold": 0,
+      "relative": true,
+      "old_killed": true,
+      "new_killed": true,
+      "old_kill_calls": 1,
+      "new_kill_calls": 1,
+      "old_messages": [],
+      "new_messages": [],
+      "events_equal": true
+    },
+    "absolute_control": {
+      "prior_allows": 2,
+      "threshold": 2,
+      "relative": false,
+      "old_killed": true,
+      "new_killed": true,
+      "old_messages": [],
+      "new_messages": [],
+      "events_equal": true,
+      "note": "绝对模式仍按累计次数判定(历史计入),与旧实现一致"
+    }
+  },
+  "shared_run_root_multiround": {
+    "initial_prior_allows": 5,
+    "threshold_per_round": 2,
+    "rounds": [
+      {
+        "round": 1,
+        "entry_prior_allows": 5,
+        "relative_killed_without_new_allows": false,
+        "relative_kill_calls": 0,
+        "absolute_killed_without_new_allows": true
+      },
+      {
+        "round": 2,
+        "entry_prior_allows": 7,
+        "relative_killed_without_new_allows": false,
+        "relative_kill_calls": 0,
+        "absolute_killed_without_new_allows": true
+      },
+      {
+        "round": 3,
+        "entry_prior_allows": 9,
+        "relative_killed_without_new_allows": false,
+        "relative_kill_calls": 0,
+        "absolute_killed_without_new_allows": true
+      }
+    ],
+    "note": "共享运行根同一审计文件连续三轮:每轮进入时前序轮次累计均存在,相对模式只计本轮新增,故未追加前不中断、本轮新增达阈值才中断;历史累计不会让新轮次开始即误判"
+  },
+  "decode_count": {
+    "old_json_loads": 69070,
+    "new_json_loads": 1070,
+    "input_lines": 1000,
+    "baseline_ticket01_json_loads": 21000,
+    "note": "中断等待口径:事件行每条只解码一次,另含审计文件轮询的少量 json.loads;旧实现每次轮询重复解码全部事件行"
+  },
+  "family_roster": {
+    "family_count": 5,
+    "families": {
+      "family_0": [
+        "acceptance/01-explicit-project-status/appserver_client.py"
+      ],
+      "family_1": [
+        "acceptance/02-role-scoped-write/appserver_client.py",
+        "acceptance/17-github-issue-workflow/appserver_client.py",
+        "acceptance/18-complete-package-acceptance/appserver_client.py"
+      ],
+      "family_2": [
+        "acceptance/03-indirect-write-failure/appserver_client.py",
+        "acceptance/04-initialize-local-project/appserver_client.py"
+      ],
+      "family_3": [
+        "acceptance/05-adopt-existing-project/appserver_client.py",
+        "acceptance/06-idea-to-current-spec/appserver_client.py",
+        "acceptance/07-isolated-design-prototype/appserver_client.py",
+        "acceptance/08-spec-to-local-tasks/appserver_client.py",
+        "acceptance/09-code-task-delivery/appserver_client.py",
+        "acceptance/10-visual-asset-delivery/appserver_client.py",
+        "acceptance/11-audio-asset-delivery/appserver_client.py",
+        "acceptance/12-build-and-run-delivery/appserver_client.py",
+        "acceptance/13-independent-deliverable-review/appserver_client.py",
+        "acceptance/14-playtest-and-human-feedback/appserver_client.py"
+      ],
+      "family_4": [
+        "acceptance/15-goal-change-concurrency-recovery/appserver_client.py",
+        "acceptance/16-producer-complete-loop/appserver_client.py"
+      ]
+    },
+    "migrated": 18,
+    "family5_members": [
+      "acceptance/15-goal-change-concurrency-recovery/appserver_client.py",
+      "acceptance/16-producer-complete-loop/appserver_client.py"
+    ],
+    "note": "十八份入口归一化后仍归 5 族(族 5=15/16);全部迁入共享实现"
+  },
+  "line_counts": {
+    "shared_core": 372,
+    "migrated_family5": {
+      "acceptance/15-goal-change-concurrency-recovery/appserver_client.py": 104,
+      "acceptance/16-producer-complete-loop/appserver_client.py": 104
+    },
+    "old_family5_at_base": {
+      "acceptance/15-goal-change-concurrency-recovery/appserver_client.py": 282,
+      "acceptance/16-producer-complete-loop/appserver_client.py": 282
+    }
+  },
+  "evidence_kind": "synthetic_replay",
+  "subprocesses_started": 0,
+  "network_requests": 0,
+  "model_calls": 0
+}
