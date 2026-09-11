@@ -183,3 +183,17 @@
 - 主控验收：五套+4 个 github/records 主题全 rc=0；Status=resolved；acceptance 零改动；verify-reproducible PASS（包 SHA 6667a623…）
 - 复审：跳过（非核心）
 - 遗留：在线与重放恢复事实统一属票 20
+
+## 票 20 — 统一在线执行与草稿重放的恢复事实（阶段 4 收口）
+
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`e151f4aa0a826a7aa0f4d6a291b0e32f7dd54a6a`
+- 交付提交：`acad8f3`（草稿存储/重放迁入 result_publication 320→461；runtime 改用公开草稿接缝 record_unpublished_draft + 静态守卫；三路一致性用例：离线失败→重放→再调用全程 POST 恰 1；mgs_github.py 1220→549 拆出 issue/read/migration 三职责，票 18 的 >600 例外消除）
+- 主控验收：五套+github 主题全 rc=0；Status=resolved；verify-reproducible PASS（包 SHA 7b7af39e…）；records 全部文件 <900 行
+- 复审：跳过（非核心）
+- **阶段 4 小结：发布恢复完整生命周期集中（result_publication + pending_index + transport 接缝），在线/重放/再调用三路恢复事实一致；碰撞/损坏/旧布局/可重试条件全保留；核心票 18 经两轮复审收口**
+
+## 票 21 — 集中本地受控写入的完整事务（阶段 5，核心票）
+
+- 状态：in_progress
+- 前基点 SHA：待本日志提交后回填
