@@ -20,27 +20,28 @@ from github_backend_fixtures import (
     REPO, make_checker, make_github_project, run_theme,
 )
 
-import mgs_result_publication as publication  # noqa: E402
+import mgs_pending_index  # noqa: E402
 
 FAILURES, check = make_checker()
 
 
 def _current_file(backend, identity: str, body: str):
-    """当前布局登记路径(接缝调整:路径构造归发布恢复 module,不再经
-    适配器私有方法;断言语义不变)。"""
+    """当前布局登记路径(接缝调整:票 19 把登记存储与归属收敛到
+    mgs_pending_index.PendingIndex,路径构造不再经发布恢复 module 的
+    模块级私有形参;断言语义不变)。"""
 
-    return publication.pending_index_file(backend.repo, backend.cache_dir,
-                                          identity, body)
+    return mgs_pending_index.PendingIndex(
+        backend.repo, backend.cache_dir, identity, body).current_path()
 
 
 def _legacy_file(backend, identity: str, body: str):
-    return publication.legacy_pending_index_file(backend.repo, backend.cache_dir,
-                                                 identity, body)
+    return mgs_pending_index.PendingIndex(
+        backend.repo, backend.cache_dir, identity, body).legacy_path()
 
 
 def _clear(backend, identity: str, body: str) -> None:
-    publication.clear_pending_index(backend.repo, backend.cache_dir,
-                                    identity, body)
+    mgs_pending_index.PendingIndex(
+        backend.repo, backend.cache_dir, identity, body).clear()
 
 
 def test_append_result_pending_clear_keeps_foreign_legacy_registration() -> None:

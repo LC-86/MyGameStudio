@@ -95,8 +95,10 @@ def test_dependency_direction_static() -> None:
 
     用 AST 扫描全部 import(含函数内),证明方向靠职责归属实现,而不是
     延迟导入。分层(model/source 中性共同语义 → transport 最底层接缝 →
-    publication 发布恢复 → github 业务适配器)固定为对称的负向断言:
-    传输不得导入发布恢复/适配器/查询组织,发布恢复不得导入适配器/查询组织。
+    pending-index 登记存储与归属 → publication 发布恢复 → github 业务
+    适配器)固定为对称的负向断言:传输不得导入发布恢复/登记存储/适配器/
+    查询组织,登记存储不得导入发布恢复/适配器/查询组织,发布恢复不得
+    导入适配器/查询组织。
     """
 
     model = _imported_modules(RECORDS_DIR / "mgs_record_model.py")
@@ -104,6 +106,7 @@ def test_dependency_direction_static() -> None:
     github = _imported_modules(RECORDS_DIR / "mgs_github.py")
     records = _imported_modules(RECORDS_DIR / "mgs_records.py")
     transport = _imported_modules(RECORDS_DIR / "mgs_github_transport.py")
+    pending_index = _imported_modules(RECORDS_DIR / "mgs_pending_index.py")
     publication = _imported_modules(RECORDS_DIR / "mgs_result_publication.py")
 
     for banned in ("mgs_records", "mgs_github", "mgs_record_source"):
@@ -116,18 +119,31 @@ def test_dependency_direction_static() -> None:
           f"mgs_github 不得反向调用查询组织 mgs_records,实际 {sorted(github)}")
     # 票 18:传输/错误接缝是最底层,发布恢复建在其上,适配器在最上;任一层
     # 不得回指其上各层(对称负向断言)。adapter 实际依赖发布恢复 module。
-    for banned in ("mgs_result_publication", "mgs_github", "mgs_records"):
+    for banned in ("mgs_result_publication", "mgs_pending_index",
+                   "mgs_github", "mgs_records"):
         check(banned not in transport,
               f"mgs_github_transport(最底层接缝)不得依赖 {banned},"
               f"实际 {sorted(transport)}")
+    # 票 19:登记存储与归属是独立恢复职责,建在传输接缝之上、发布恢复之下;
+    # 不反向依赖发布恢复/适配器/查询组织。
+    for banned in ("mgs_result_publication", "mgs_github", "mgs_records"):
+        check(banned not in pending_index,
+              f"mgs_pending_index(登记存储与归属)不得依赖 {banned},"
+              f"实际 {sorted(pending_index)}")
     for banned in ("mgs_github", "mgs_records"):
         check(banned not in publication,
               f"mgs_result_publication 不得依赖 {banned},实际 {sorted(publication)}")
     check("mgs_result_publication" in github,
           f"mgs_github 应依赖发布恢复 module(真实接入),实际 {sorted(github)}")
-    check("mgs_github_transport" in github and "mgs_github_transport" in publication,
-          "发布恢复与 adapter 应共用传输/错误接缝 mgs_github_transport,"
-          f"实际 github={sorted(github)} publication={sorted(publication)}")
+    check("mgs_pending_index" in publication,
+          "发布恢复应在真实追加路径上使用登记存储与归属 module"
+          f"(单一恢复职责,非另建助手),实际 {sorted(publication)}")
+    check("mgs_github_transport" in github
+          and "mgs_github_transport" in publication
+          and "mgs_github_transport" in pending_index,
+          "发布恢复、登记存储与 adapter 应共用传输/错误接缝 mgs_github_transport,"
+          f"实际 github={sorted(github)} publication={sorted(publication)} "
+          f"pending_index={sorted(pending_index)}")
     # 正向:查询组织与 adapter 都依赖来源 module 与共同语义
     check("mgs_record_source" in records,
           f"mgs_records 应依赖来源 module,实际 {sorted(records)}")
