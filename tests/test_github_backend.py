@@ -2509,6 +2509,145 @@ def test_github_ready_online_to_offline_preserves_source() -> None:
             check(False, "无缓存离线 ready 应报错,不回退本地任务来源")
 
 
+# ---------- 票 05:列表与单任务读取复用配置并保持兼容(READ-05/06/11) ----------
+
+class _ConfigReadCounter:
+    """统计本次上下文中 mgs_records 读取 CONFIG 原文的次数。
+
+    通过替换公开入口 ``load_config`` 计数:一次顶层 list/show 调用应当只
+    解析一份 CONFIG 原文,不再按相对路径二次读取。
+    """
+
+    def __init__(self) -> None:
+        self.count = 0
+
+    def __enter__(self) -> "_ConfigReadCounter":
+        import mgs_records as _records
+
+        self._real = _records.load_config
+        outer = self
+
+        def counting(project_root, config_rel=mgs_records.DEFAULT_CONFIG_REL):
+            outer.count += 1
+            return outer._real(project_root, config_rel)
+
+        _records.load_config = counting
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        import mgs_records as _records
+
+        _records.load_config = self._real
+
+
+def test_github_list_show_read_config_once_and_necessary_reads() -> None:
+    """AC1/AC4/READ-11:GitHub list/show 各自只读一次 CONFIG;
+
+    show 保留集合定位、最新 Issue 详情与评论回读——不为减少请求删掉必要
+    读取;list 按身份排序且在线结果不带离线标记。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        fake = FakeTransport()
+        fake.seed_issue("03-gamma", "丙任务")          # number 1
+        issue = fake.seed_issue("01-alpha", "甲任务")  # number 2
+        fake.seed_issue("02-beta", "乙任务", deps="01-alpha")  # number 3
+        fake.comments[issue["number"]].append({
+            "id": 9001, "body": "01-alpha 已交付证据。",
+            "created_at": "2026-09-09T00:00:00Z"})
+
+        with _ConfigReadCounter() as counter:
+            listed = mgs_records.list_tasks(root, transport=fake)
+        check(counter.count == 1,
+              f"github list 应只读一次 CONFIG,实际 {counter.count} 次")
+        check([t["identity"] for t in listed]
+              == ["01-alpha", "02-beta", "03-gamma"],
+              f"github list 应按身份排序,实际 {[t['identity'] for t in listed]}")
+        check(isinstance(listed, list)
+              and all("cached_read" not in t for t in listed),
+              f"在线 list 不应带离线标记,实际 {listed}")
+
+        fake.calls.clear()
+        with _ConfigReadCounter() as counter:
+            task = mgs_records.read_task(root, "01-alpha", transport=fake)
+        check(counter.count == 1,
+              f"github show 应只读一次 CONFIG,实际 {counter.count} 次")
+        gets = [path.split("?", 1)[0] for method, path, _ in fake.calls
+                if method == "GET"]
+        check(any(path.endswith("/issues") for path in gets),
+              f"github show 应保留集合定位读取,实际 {gets}")
+        check(f"/repos/mygamestudio/issue-accept/issues/{issue['number']}" in gets,
+              f"github show 应读取具体 Issue 详情,实际 {gets}")
+        check(f"/repos/mygamestudio/issue-accept/issues/{issue['number']}/comments"
+              in gets,
+              f"github show 应读取评论,实际 {gets}")
+        check([r["ref"] for r in task["results"]] == ["#issuecomment-9001"],
+              f"github show 应回读评论承载的结果,实际 {task['results']}")
+        check(task.get("body_sha256") and task.get("html_url"),
+              f"github show 应保留正文指纹与链接,实际 {task}")
+
+
+def test_github_offline_list_show_metadata_and_no_marker_leak() -> None:
+    """AC5/READ-05/06:离线 list/show 保留各自缓存标识与来源说明;
+
+    离线标记只出现在 list 的独立投影中,不原地污染来源集合与其他调用结果;
+    无缓存时按现有方式失败,不回退本地。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        cache = Path(tmp) / "cache"
+        fake = FakeTransport()
+        seed = fake.seed_issue("01-alpha", "甲任务")
+        fake.comments[seed["number"]].append({
+            "id": 7, "body": "01-alpha 证据", "created_at": "2026-09-09T00:00:00Z"})
+        online = mgs_records.list_tasks(root, transport=fake, cache_dir=cache)
+        check(len(online) == 1 and "cached_read" not in online[0],
+              "在线 list 不应带缓存标记")
+
+        fake.offline()
+        offline = mgs_records.list_tasks(root, transport=fake, cache_dir=cache)
+        check(offline and all(t.get("cached_read") is True for t in offline),
+              f"离线 list 应逐任务标注 cached_read,实际 {offline}")
+        # 离线标记不污染来源集合:再取一次原始集合 payload,任务字典仍无该键
+        payload = mgs_records.github_backend(
+            root, transport=fake, cache_dir=cache).fetch_tasks()
+        check(all("cached_read" not in t for t in payload["tasks"]),
+              "list 的离线标记是独立投影,不得原地污染来源集合")
+
+        task = mgs_records.read_task(root, "01-alpha", transport=fake,
+                                     cache_dir=cache)
+        check(task.get("cached_read") is True
+              and "缓存" in task.get("cached_note", "")
+              and task.get("body_sha256"),
+              f"离线 show 应保留缓存标识、说明与正文指纹,实际 {task}")
+        check(task["results"] == [],
+              "离线 show 评论未缓存,结果清单应为空(既有离线语义)")
+
+        # 离线标记不污染其他调用结果:ready 条目不应携带该键
+        ready = mgs_records.startable_tasks(root, transport=fake, cache_dir=cache)
+        entries = ready["startable"] + ready["blocked"]
+        check(entries and all("cached_read" not in e for e in entries),
+              f"list 的离线标记不得污染 ready 结果,实际 {entries}")
+
+        # 无缓存 + 离线:list/show 各自明确失败,不回退本地
+        fresh = FakeTransport()
+        fresh.offline()
+        for call in (lambda: mgs_records.list_tasks(root, transport=fresh,
+                                                    cache_dir=Path(tmp) / "empty"),
+                     lambda: mgs_records.read_task(root, "01-alpha",
+                                                   transport=fresh,
+                                                   cache_dir=Path(tmp) / "empty")):
+            try:
+                call()
+            except mgs_records.RecordsError as exc:
+                check("远端不可用" in str(exc) and "无缓存" in str(exc),
+                      f"无缓存离线应明确失败并说明原因:{exc}")
+            else:
+                check(False, "无缓存离线应报错,不回退本地任务来源")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

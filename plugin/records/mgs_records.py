@@ -75,21 +75,6 @@ READY_NOTE = ("可开工=分流 ready 且记录字段完整且未完成依赖为
 
 # ---------- 逻辑操作(公开接缝) ----------
 
-def _local_config(project_root: Path | str, config_rel: str) -> dict:
-    """读取配置并确认本地后端(未实现/非本地后端保持原有错误表达)。"""
-
-    config = load_config(project_root, config_rel)
-    if config["backend"] != "local-markdown":
-        if config["backend"] == "github-issues":
-            raise RecordsError(
-                "github-issues 后端不使用本地任务目录(统一接口经 GitHub 后端"
-                "适配器读取远端;不静默回退本地 work/ 目录)")
-        raise RecordsError(
-            f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 "
-            "github-issues;未实现的后端不声称可用)")
-    return config
-
-
 def _github_backend_for(config: dict, *, transport=None,
                         api_base: str | None = None,
                         cache_dir: Path | str | None = None):
@@ -178,21 +163,22 @@ def list_tasks(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
     """列出任务身份、标题、分流与进度(经 CONFIG 解析任务源,不硬编码)。
 
     github-issues 后端经远端适配器列出(离线时返回任务级 cached_read 标注);
-    本地后端委托 mgs_record_source 的本地 adapter,按目录顺序列举。
+    本地后端委托 mgs_record_source 的本地 adapter,按目录顺序列举。本次调用
+    只读一次 CONFIG,并直接以该配置构造对应后端(不再按相对路径二次读取)。
     """
 
     root = Path(project_root)
     config = load_config(root, config_rel)
     if config["backend"] == "github-issues":
-        payload = github_backend(root, config_rel, transport=transport,
-                                 api_base=api_base,
-                                 cache_dir=cache_dir).fetch_tasks()
-        tasks = payload["tasks"]
-        if payload.get("cached"):
-            for task in tasks:
-                task["cached_read"] = True
-        tasks.sort(key=lambda task: task["identity"])
-        return tasks
+        payload = _github_backend_for(
+            config, transport=transport, api_base=api_base,
+            cache_dir=cache_dir).fetch_tasks()
+        cached = bool(payload.get("cached"))
+        # 排序与离线标记使用独立投影:不原地修改后端返回的任务集合,避免
+        # 调用特有标注影响其他判断(list 按身份排序,来源集合保持原顺序)。
+        return [dict(task, cached_read=True) if cached else dict(task)
+                for task in sorted(payload["tasks"],
+                                   key=lambda task: task["identity"])]
     if config["backend"] != "local-markdown":
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
@@ -203,14 +189,19 @@ def read_task(project_root: Path | str, task_id: str,
               config_rel: str = DEFAULT_CONFIG_REL, *, transport=None,
               api_base: str | None = None,
               cache_dir: Path | str | None = None) -> dict:
-    """读取单个任务:头部字段、请求、小节与结果清单。"""
+    """读取单个任务:头部字段、请求、小节与结果清单。
+
+    本次调用只读一次 CONFIG(本地 show 按目录定位,不扫描无关任务);
+    GitHub show 由已加载配置直接构造后端,内部仍按接口需要读取集合定位、
+    Issue 详情与评论——不为减少请求删掉必要读取。
+    """
 
     root = Path(project_root)
     config = load_config(root, config_rel)
     if config["backend"] == "github-issues":
-        return github_backend(root, config_rel, transport=transport,
-                              api_base=api_base,
-                              cache_dir=cache_dir).read_task(task_id)
+        return _github_backend_for(
+            config, transport=transport, api_base=api_base,
+            cache_dir=cache_dir).read_task(task_id)
     if config["backend"] != "local-markdown":
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")

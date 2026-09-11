@@ -1159,6 +1159,140 @@ def test_ready_and_deps_preserve_directory_order() -> None:
               "list 的排序副本不得原地污染 deps 的来源顺序")
 
 
+# ---------- 票 05:列表与单任务读取复用配置并保持兼容(READ-05/06/07/09) ----------
+
+def test_list_and_show_read_config_once_and_preserve_order() -> None:
+    """AC1/AC2/READ-06:list/show 每次调用只读一次 CONFIG;list 按目录排序。
+
+    本地目录名与正文身份刻意相反:list 仍按目录顺序返回任务列表(非身份
+    排序),且每份 task.md 只读一次;反复调用之间不残留跨调用状态。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp), extra_task=False)
+        docs = root / "docs" / "mygamestudio" / "work"
+        # 目录 05-zzz 的正文身份 02-aaa;目录 02-aaa 的正文身份 05-zzz
+        for directory, identity in (("05-zzz", "02-aaa"), ("02-aaa", "05-zzz")):
+            task_dir = docs / directory
+            task_dir.mkdir(parents=True)
+            (task_dir / "task.md").write_text(
+                PLAN_TASK_TEMPLATE.format(
+                    title=f"目录 {directory}", identity=identity,
+                    triage="ready-for-agent", progress="待执行", goal="目标",
+                    deliver="交付", scope="src/**", capability="文件读写",
+                    executor="Agent(制作实现)", acceptance="检查", deps="无",
+                    coordination="无", missing="无", index="(暂无)"),
+                encoding="utf-8")
+
+        with scoped_read_counter(root) as counter:
+            listed = mgs_records.list_tasks(root)
+        check(counter.config_reads() == 1,
+              f"list 应只读 CONFIG 原文一次,实际 {counter.by_path}")
+        check(isinstance(listed, list)
+              and [t["directory"] for t in listed] == ["02-aaa", "05-zzz"],
+              f"list 应返回任务列表并按目录排序,实际 {listed}")
+        check(all(n == 1 for n in counter.task_reads().values())
+              and len(counter.task_reads()) == 2,
+              f"list 每份 task.md 应恰好读一次,实际 {counter.task_reads()}")
+        with scoped_read_counter(root) as rerun:
+            mgs_records.list_tasks(root)
+        check(rerun.task_reads() == counter.task_reads()
+              and rerun.config_reads() == 1,
+              "list 读取计数在独立重跑下应稳定(无跨调用状态)")
+
+        with scoped_read_counter(root) as counter:
+            task = mgs_records.read_task(root, "02-aaa")
+        check(counter.config_reads() == 1,
+              f"show 应只读 CONFIG 原文一次,实际 {counter.by_path}")
+        check(task["directory"] == "02-aaa" and task["identity"] == "05-zzz",
+              f"show 应按目录定位并保留正文身份(目录/身份可相反),实际 {task}")
+
+
+def test_show_locates_by_directory_without_scanning_unrelated() -> None:
+    """AC3/READ-07:本地 show 按目录定位,不扫描无关任务;缺失时错误保持。
+
+    目录名与正文身份不一致仍能找到原记录;读取一个任务时只有一个
+    task.md 被打开(不列举其余任务)。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio" / "work"
+        # 目录名与正文身份不一致:目录 07-mismatch,正文身份 01-mismatch
+        task_dir = docs / "07-mismatch"
+        task_dir.mkdir(parents=True)
+        (task_dir / "task.md").write_text(
+            PLAN_TASK_TEMPLATE.format(
+                title="错位任务", identity="01-mismatch",
+                triage="ready-for-agent", progress="待执行", goal="目标",
+                deliver="交付", scope="src/**", capability="文件读写",
+                executor="Agent(制作实现)", acceptance="检查", deps="无",
+                coordination="无", missing="无", index="(暂无)"),
+            encoding="utf-8")
+
+        with scoped_read_counter(root) as counter:
+            task = mgs_records.read_task(root, "07-mismatch")
+        check(task["directory"] == "07-mismatch" and task["identity"] == "01-mismatch",
+              f"show 应按目录定位(即使目录与正文身份不一致),实际 {task}")
+        check(list(counter.task_reads()) == ["docs/mygamestudio/work/07-mismatch/task.md"],
+              f"show 只应读取所点任务的 task.md,不扫描无关任务,实际 "
+              f"{counter.task_reads()}")
+        check(counter.config_reads() == 1,
+              f"show 应只读 CONFIG 一次,实际 {counter.by_path}")
+
+        # 缺失任务:同一 RecordsError 错误表达,且不读取任何任务文件
+        with scoped_read_counter(root) as counter:
+            try:
+                mgs_records.read_task(root, "99-missing")
+            except mgs_records.RecordsError as exc:
+                check("任务不存在" in str(exc) or "task.md" in str(exc),
+                      f"缺失任务的错误应说明定位失败:{exc}")
+            else:
+                check(False, "读取不存在的任务应抛 RecordsError")
+        check(counter.task_reads() == {},
+              f"缺失任务不应读取任何 task.md,实际 {counter.task_reads()}")
+
+
+def test_cli_list_show_projection_and_exit_codes() -> None:
+    """AC2/AC5/READ-09:CLI list 仍是原字段投影 JSON 数组,show 保留单任务结构;
+    成功 0、记录/文件错误 2,既有退出码合同保持。
+    """
+
+    result = run_cli("list", "--project", str(SAMPLE))
+    check(result.returncode == 0, f"CLI list 应退出 0:{result.stderr[:200]}")
+    data = json.loads(result.stdout)
+    check(isinstance(data, list), f"CLI list 应为 JSON 数组,实际 {type(data)}")
+    check(all(set(item) == {"identity", "title", "triage", "progress"}
+              for item in data),
+              f"CLI list 应为原字段投影(identity/title/triage/progress),实际 "
+              f"{[sorted(item) for item in data]}")
+    check([item["identity"] for item in data]
+          == [t["identity"] for t in mgs_records.list_tasks(SAMPLE)],
+          "CLI list 顺序应与 Python list 一致(本地按目录顺序)")
+
+    result = run_cli("show", "--project", str(SAMPLE), "--task", "02-coin-magnet")
+    check(result.returncode == 0, f"CLI show 应退出 0:{result.stderr[:200]}")
+    shown = json.loads(result.stdout)
+    check(isinstance(shown, dict) and shown["identity"] == "02-coin-magnet"
+          and set(shown) == set(mgs_records.read_task(SAMPLE, "02-coin-magnet")),
+          "CLI show 应保留单任务结构与字段集合")
+    check(shown == mgs_records.read_task(SAMPLE, "02-coin-magnet"),
+          "CLI show 输出应与 Python read_task 一致")
+
+    result = run_cli("show", "--project", str(SAMPLE), "--task", "99-missing")
+    check(result.returncode == 2 and "error" in json.loads(result.stdout),
+          f"CLI show 缺失任务应以退出码 2 与 error 对象表达,实际 "
+          f"rc={result.returncode} out={result.stdout[:120]}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp), extra_task=False)
+        (root / "docs" / "mygamestudio" / "CONFIG.md").unlink()
+        result = run_cli("list", "--project", str(root))
+        check(result.returncode == 2 and "error" in json.loads(result.stdout),
+              f"CLI list 配置缺失应以退出码 2 表达,实际 "
+              f"rc={result.returncode} out={result.stdout[:120]}")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):
