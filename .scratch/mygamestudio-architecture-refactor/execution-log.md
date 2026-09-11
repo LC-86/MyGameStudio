@@ -46,3 +46,12 @@
 - 复审：跳过（非核心）
 - 效益记录：**R1 已修正；读取计数 6/2→1/1 达成（spec 33 目标）**
 - 遗留：基线探针文案仍描述修复前现象（观察性、冻结产物未改）；baseline_report 同源整理未单列计数断言（已记录）
+
+## 票 05 — 让列表与单任务读取复用配置并保持兼容（阶段 1）
+
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`f9b830f936aacad134e34448b2bca7eac598e461`
+- 交付提交：`b1a9b72`（mgs_records.py 860→851：list/show 同次配置进入后端、排序与离线标记改独立投影、删除死函数 _local_config；tests +273；dist 重建）
+- 主控验收：五套 rc=0；verify-reproducible PASS；Status=resolved；探针抽查 ready 计数保持 1/1；entry_probe 11 案例与冻结基线一致（JSON 结构与退出码）
+- 复审：跳过（非核心）
+- 遗留：entry_probe 覆盖口径沿用票 01（local-markdown 入口）；真实远端一贯未执行
