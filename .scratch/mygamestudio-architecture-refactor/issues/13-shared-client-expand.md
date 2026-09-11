@@ -73,9 +73,9 @@
 - 冻结 `client_probe.py` 原样重跑三份迁移客户端：`json_loads_calls` 21000 → 1000；
   18 份客户端归一化后仍 5 族（`total_client_lines` 4605 → 4170）。
 
-**净行数（`code_volume.py` 同范围物理行口径，相对本票前基点 HEAD）。**
-- acceptance：20810 → 20628（**−182**）；其中新增共享核心 +253，三入口 225×3 → 80×3（**−435**）。
-- tests：10909 → 11303（**+394**；新测试 236 + 支撑 147 + 聚合器 +11；`tests/fixtures/` 按计数口径排除）。
+**净行数（`code_volume.py` 同范围物理行口径，相对本票前基点 HEAD `e42d17b`；第二轮复审修复后于当前 HEAD 实测回填）。**
+- acceptance：20810 → 20615（**−195**）；其中新增共享核心 +240，三入口 225×3 → 80×3（**−435**）。
+- tests：10909 → 11406（**+497**；新测试 339 + 支撑 147 + 聚合器 +11；`tests/fixtures/` 按计数口径排除；测试 339 已含第一轮 F1 行为化改写）。
 - plugin：4793 → 4793（**0**，本票未改产品插件）；dist：146 → 146（0）。
 - 本票只迁 1 族 3 场景，共享化净减随 14–17 票继续迁移累加；不做伪造减量。
 
@@ -128,3 +128,49 @@ docstring 已注明是 expand 过渡期守卫、票 17 需更新。
   4 项失败；模拟旧实现全部消失 → F2 两处守卫各 1 项失败。证明行为绑定与显式守卫有效。
 - `plugin/` 零改动；三份薄壳零改动（F3 未波及）；`./dist/verify-reproducible.sh` PASS
   （交付包 SHA-256 `af91503f…`，与验收记录一致；dist 不打包 acceptance/，无需重建）。
+
+### 复审修复记录（第二轮，2026-09-12）
+
+第二轮独立复审三项处置（F5 复核、F6 行数回填、F7 留档）。本轮不改产品代码；三份薄壳
+保持逐字节一致（SHA-256 `741a2b47…`）。
+
+**F5（薄壳死 import，复核后保留不改）。** 原判「`import json`/`import time` 已无任何使用、
+noqa 理由过时」经实际核实不成立。三份薄壳的 `module.json`/`module.time` 属性仍是冻结探针的
+直接依赖：`.scratch/.../evidence/baseline/client_probe.py`（票 01，`run_baseline.py` 的
+`PROBES` 之一）在 `decode_probe()` 第 69–72 行对被加载的薄壳 module 执行
+`module.json.loads = counting_loads`、`module.time.time = clock.time`、`module.time.sleep = clock.sleep`；
+`.scratch/.../evidence/13-client-evidence.py` 同法但作用于共享核心 module（不受薄壳影响）。
+在 `/tmp` 副本实测删除这两行后，`decode_probe()` 抛
+`AttributeError: module 'baseline_client_02-role-scoped-write' has no attribute 'json'`，
+即 `run_baseline.sh` 由绿转红；而本轮授权不允许修改 `evidence/baseline/` 冻结产物，无法同步
+去掉该依赖。故 noqa 理由（「票 01 基线探针按模块属性替换解码计数器/计时器(冻结产物)」）属实、
+未过时，两行 import 与 noqa 本体均保留；三份薄壳零改动、仍逐字节一致。
+
+**F6（票内行数回填，已改）。** 「净行数」段旧值（acceptance 20628/−182、tests 11303/+394）为
+第一轮修复前口径，已按 `code_volume.py` 同范围物理行口径在当前 HEAD 实测回填：acceptance
+20810 → 20615（−195，共享核心 +240、三入口 225×3 → 80×3 = −435）；tests 10909 → 11406
+（+497，新测试 339 + 支撑 147 + 聚合器 +11，`tests/fixtures/` 按口径排除）；plugin 4793 → 4793（0）；
+dist 146 → 146（0）。`13-client-shared.json` 的 `line_counts`（shared_core 240、三入口各 80、
+基点旧实现各 225）复核无误，无需再动。
+
+**F7（留档不改，三项）。**
+1. `tests/acceptance_client_support.py` 的 `find_legacy_client()` 仍以子串
+   （`def wait_turn_completed`/`def drain_events`/`self.lines`）定位旧客户端——expand 过渡期的
+   定位手段，查找失败已由调用方显式 `check(legacy is not None, …)` 响亮报错；票 17 删除旧实现时
+   随守卫一并更新，不在此轮引入结构化注册表。
+2. `acceptance/_shared/appserver_core.py` 的 `_message` 用 `self.__dict__.get("_decoded")` 回退，
+   是为服务 `object.__new__` 构造的探针实例（`13-client-evidence.py` 及票 01 冻结探针依赖其
+   不调用 `__init__`）；改为正常 `self._decoded` 需连带改冻结证据并重基线，收益仅约 2 行，
+   裁定留档不改。
+3. `tests/test_acceptance_client.py` 的 mock 在 F1 中改用 `lambda: _SpyServer(...)` 替换
+   `core.AppServer`；若未来对 `AppServer` 做 `isinstance`/属性访问会变脆。当前断言失败会响亮
+   报错（`cmd_turn`/`cmd_skills` 调用序列不符即失败），现阶段可接受，留档知悉。
+
+**验证。**
+- 三份薄壳 `python3 -m py_compile` 通过；三份 SHA-256 仍为 `741a2b47…`（逐字节一致、未改）。
+- `tests/test_acceptance_client.py` rc=0；五套聚合器（`test_plugin_package`、`test_runtime_gate`、
+  `test_runtime_boundaries`、`test_records_backend`、`test_github_backend`）全绿 rc=0。
+- 冻结 `client_probe.py` 在保留 import 的当前 HEAD 复跑成功（`json_loads_calls=1000`、
+  5 族、`total_client_lines=4170`），反证 F5 保留的必要性。
+- `./dist/verify-reproducible.sh` PASS（交付包 SHA-256 `af91503f…`）；`plugin/` 零改动，
+  dist 不打包 acceptance/，无需重建。
