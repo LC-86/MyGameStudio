@@ -1,0 +1,652 @@
+{
+  "status": "published",
+  "tracker": "local-markdown",
+  "approval": "用户在当前任务回复“确认”，批准 26 票拆分与依赖。",
+  "head": "49f3b1e7323c02a5fd39f3d9c847df023c4f2459",
+  "branch": "codex/architecture-optimization",
+  "spec_sha256": "0dc049d9ba7dedd9aa23f90e6f49d139054ca86b20d453ec824170233b15ce77",
+  "ticket_count": 26,
+  "acceptance_criteria_count": 139,
+  "initial_triage": "ready-for-agent",
+  "initial_frontier": [
+    1
+  ],
+  "stories_covered": 60,
+  "read_cases_covered": 14,
+  "tickets": [
+    {
+      "id": 1,
+      "title": "固定可复跑的兼容与效率基线",
+      "path": "issues/01-behavior-baseline.md",
+      "blocked_by": [],
+      "criteria_count": 6,
+      "stories": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        32,
+        60
+      ],
+      "read_cases": [],
+      "sha256": "fae2a88729b8906bc95e3fa59d69311bc7216a042ba361b929e393cae0f727aa"
+    },
+    {
+      "id": 2,
+      "title": "让双后端共用正文与错误语义",
+      "path": "issues/02-record-semantics.md",
+      "blocked_by": [
+        1
+      ],
+      "criteria_count": 5,
+      "stories": [
+        1,
+        2,
+        21,
+        22,
+        23,
+        24,
+        25
+      ],
+      "read_cases": [
+        "READ-08",
+        "READ-09",
+        "READ-10"
+      ],
+      "sha256": "d391690c1a49073f9c34fb5c8ca6d99eda19d78c447b772d836e8262e6d40a84"
+    },
+    {
+      "id": 3,
+      "title": "统一配置与本地来源并解除反向依赖",
+      "path": "issues/03-record-source.md",
+      "blocked_by": [
+        2
+      ],
+      "criteria_count": 6,
+      "stories": [
+        2,
+        10,
+        13,
+        15,
+        16,
+        21,
+        22,
+        27,
+        51
+      ],
+      "read_cases": [
+        "READ-07",
+        "READ-09",
+        "READ-10",
+        "READ-12",
+        "READ-13"
+      ],
+      "sha256": "417151e323a86234d4738eeec7b796c41e1d0821f33cd1a97de2e0c6f2e26a75"
+    },
+    {
+      "id": 4,
+      "title": "修正可开工查询的重复读取与混合结果",
+      "path": "issues/04-ready-single-read.md",
+      "blocked_by": [
+        3
+      ],
+      "criteria_count": 6,
+      "stories": [
+        3,
+        9,
+        10,
+        11,
+        12,
+        14,
+        18,
+        19,
+        21
+      ],
+      "read_cases": [
+        "READ-01",
+        "READ-02",
+        "READ-03",
+        "READ-04",
+        "READ-05",
+        "READ-06",
+        "READ-09"
+      ],
+      "sha256": "fe8405cfaacccbb034ad883d38085d43be9111d04d5ac2a5fc7175decf671c0d"
+    },
+    {
+      "id": 5,
+      "title": "让列表与单任务读取复用配置并保持兼容",
+      "path": "issues/05-list-show-compatible.md",
+      "blocked_by": [
+        3
+      ],
+      "criteria_count": 6,
+      "stories": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "read_cases": [
+        "READ-05",
+        "READ-06",
+        "READ-07",
+        "READ-09",
+        "READ-11"
+      ],
+      "sha256": "a6b1e277d98db530813cc076a6f13e3e0b580d98024744cac2638a7abc845c0a"
+    },
+    {
+      "id": 6,
+      "title": "让基线与核验复用读取且保留证据含义",
+      "path": "issues/06-baseline-verify.md",
+      "blocked_by": [
+        4
+      ],
+      "criteria_count": 5,
+      "stories": [
+        3,
+        11,
+        21,
+        25,
+        26
+      ],
+      "read_cases": [
+        "READ-04",
+        "READ-08",
+        "READ-09",
+        "READ-11"
+      ],
+      "sha256": "9b5899c44cf371f8136d70f850ccc602f942edf158b514c3c099476ae52b0d5f"
+    },
+    {
+      "id": 7,
+      "title": "完成任务读取的入口与交付兼容验收",
+      "path": "issues/07-read-stage-closeout.md",
+      "blocked_by": [
+        5,
+        6
+      ],
+      "criteria_count": 6,
+      "stories": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7,
+        8,
+        21,
+        22,
+        27,
+        51,
+        59,
+        60
+      ],
+      "read_cases": [
+        "READ-01",
+        "READ-02",
+        "READ-03",
+        "READ-04",
+        "READ-05",
+        "READ-06",
+        "READ-07",
+        "READ-08",
+        "READ-09",
+        "READ-10",
+        "READ-11",
+        "READ-12",
+        "READ-13",
+        "READ-14"
+      ],
+      "sha256": "a1ae44ca1ff2a0c879a1fb443364aff02de7198607de863b960190ae03583e10"
+    },
+    {
+      "id": 8,
+      "title": "让工具拒绝判据直接服务运行与测试",
+      "path": "issues/08-mcp-evidence.md",
+      "blocked_by": [
+        7
+      ],
+      "criteria_count": 5,
+      "stories": [
+        28,
+        29,
+        30,
+        32,
+        33,
+        34
+      ],
+      "read_cases": [],
+      "sha256": "8d751629a1efa9ce4bd224f72129d046ee849d1a2061f20fc06ff0b4205a59c6"
+    },
+    {
+      "id": 9,
+      "title": "让直连失败判据通过同一事件入口验证",
+      "path": "issues/09-curl-evidence.md",
+      "blocked_by": [
+        8
+      ],
+      "criteria_count": 5,
+      "stories": [
+        28,
+        29,
+        30,
+        32,
+        33,
+        34
+      ],
+      "read_cases": [],
+      "sha256": "a4dbbff2a79b4b481682fadc03c3ed9be2c73388a6b115f1079cada1c4d8b6c5"
+    },
+    {
+      "id": 10,
+      "title": "按行为组织包与场景验收检查",
+      "path": "issues/10-package-tests.md",
+      "blocked_by": [
+        9
+      ],
+      "criteria_count": 5,
+      "stories": [
+        5,
+        6,
+        28,
+        30,
+        31,
+        32,
+        33,
+        34,
+        59
+      ],
+      "read_cases": [],
+      "sha256": "dc0e022e67ec883ec4524aefbad558c1627ce1758114a3ee661c51d88596aa0a"
+    },
+    {
+      "id": 11,
+      "title": "按用户行为组织任务后端回归",
+      "path": "issues/11-backend-tests.md",
+      "blocked_by": [
+        7
+      ],
+      "criteria_count": 5,
+      "stories": [
+        5,
+        6,
+        21,
+        22,
+        23,
+        25,
+        27,
+        31,
+        32,
+        42,
+        45
+      ],
+      "read_cases": [],
+      "sha256": "cf28467f7916bae8d9179066a5742db13a7507c14636ebfa1a6c23cbe46f7870"
+    },
+    {
+      "id": 12,
+      "title": "按完整受控操作组织运行保障回归",
+      "path": "issues/12-runtime-tests.md",
+      "blocked_by": [
+        7
+      ],
+      "criteria_count": 5,
+      "stories": [
+        5,
+        6,
+        31,
+        32,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55
+      ],
+      "read_cases": [],
+      "sha256": "e9875e09ada1710677d1f2655d301090077b2f28e0e7ae38d0c9be27aaa6ff94"
+    },
+    {
+      "id": 13,
+      "title": "建立共享客户端并接通标准事件场景",
+      "path": "issues/13-shared-client-expand.md",
+      "blocked_by": [
+        10
+      ],
+      "criteria_count": 5,
+      "stories": [
+        35,
+        36,
+        37,
+        38,
+        40
+      ],
+      "read_cases": [],
+      "sha256": "3caa0148553a68d42a787343275e0cbd976a30141b999d53886a3ff3aaaa3e6f"
+    },
+    {
+      "id": 14,
+      "title": "迁移最小与扩展事件的普通场景",
+      "path": "issues/14-shared-client-basic-migrate.md",
+      "blocked_by": [
+        13
+      ],
+      "criteria_count": 4,
+      "stories": [
+        35,
+        36,
+        38,
+        40
+      ],
+      "read_cases": [],
+      "sha256": "642262fc94a4f009633fae9ae882290cc43fffdee5f9110a66649d4a7b93b2ae"
+    },
+    {
+      "id": 15,
+      "title": "接通并迁移绝对阈值中断场景",
+      "path": "issues/15-shared-client-absolute.md",
+      "blocked_by": [
+        13
+      ],
+      "criteria_count": 5,
+      "stories": [
+        35,
+        36,
+        38,
+        39,
+        40
+      ],
+      "read_cases": [],
+      "sha256": "dd60c21790cdae63eceae1fb5030a8c80ae3541d008db340f6e22c1833f2c60b"
+    },
+    {
+      "id": 16,
+      "title": "迁移相对阈值与完整闭环场景",
+      "path": "issues/16-shared-client-relative.md",
+      "blocked_by": [
+        15
+      ],
+      "criteria_count": 4,
+      "stories": [
+        35,
+        36,
+        38,
+        39,
+        40
+      ],
+      "read_cases": [],
+      "sha256": "d0bb25d0e4ceed95f215a862cb7127560b0a9dc0f86be41eacde63331ebe0c10"
+    },
+    {
+      "id": 17,
+      "title": "完成十八场景共享化并移除旧副本",
+      "path": "issues/17-client-contract.md",
+      "blocked_by": [
+        14,
+        16
+      ],
+      "criteria_count": 5,
+      "stories": [
+        4,
+        5,
+        6,
+        32,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
+      ],
+      "read_cases": [],
+      "sha256": "c4f411a2f88ead8b89320982a8d262dcc297d213cc81c3e348fd5c3b8febabb8"
+    },
+    {
+      "id": 18,
+      "title": "让结果追加通过完整发布恢复职责执行",
+      "path": "issues/18-result-publication.md",
+      "blocked_by": [
+        9,
+        11
+      ],
+      "criteria_count": 5,
+      "stories": [
+        4,
+        5,
+        7,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48
+      ],
+      "read_cases": [],
+      "sha256": "afcb7abf820b4d51efcb7f3456bf24c20e98f931376bb266ee796c9fb53bda7c"
+    },
+    {
+      "id": 19,
+      "title": "集中恢复登记的归属与兼容处理",
+      "path": "issues/19-recovery-ownership.md",
+      "blocked_by": [
+        18
+      ],
+      "criteria_count": 6,
+      "stories": [
+        42,
+        44,
+        45,
+        46,
+        47,
+        48
+      ],
+      "read_cases": [],
+      "sha256": "e04aaf488af35d1fdf33a1f03e80dd8c93f24377c66c907c71fec340033411f3"
+    },
+    {
+      "id": 20,
+      "title": "统一在线执行与草稿重放的恢复事实",
+      "path": "issues/20-recovery-entrypoints.md",
+      "blocked_by": [
+        19
+      ],
+      "criteria_count": 6,
+      "stories": [
+        5,
+        7,
+        42,
+        43,
+        44,
+        49,
+        54,
+        55
+      ],
+      "read_cases": [],
+      "sha256": "1b9081a8e33f3fb1b6ba1570499d4643bb62da73ee4a4c9f8acc5819eec0679f"
+    },
+    {
+      "id": 21,
+      "title": "集中本地受控写入的完整事务",
+      "path": "issues/21-controlled-local-write.md",
+      "blocked_by": [
+        9,
+        12
+      ],
+      "criteria_count": 6,
+      "stories": [
+        5,
+        50,
+        51,
+        52,
+        53,
+        55
+      ],
+      "read_cases": [],
+      "sha256": "0aede7905efa91c204223dcfafb6751b95f355d9fe3078f4d25e903433c62439"
+    },
+    {
+      "id": 22,
+      "title": "集中受控远端动作与结果审计",
+      "path": "issues/22-controlled-remote-write.md",
+      "blocked_by": [
+        20,
+        21
+      ],
+      "criteria_count": 6,
+      "stories": [
+        50,
+        51,
+        52,
+        53,
+        54,
+        55
+      ],
+      "read_cases": [],
+      "sha256": "ac3c569f6a8a64451a65ee0958f7a3ddd327b812bf466370ccf7f501e652b873"
+    },
+    {
+      "id": 23,
+      "title": "建立共同约定并迁入制作实现入口",
+      "path": "issues/23-skill-common-expand.md",
+      "blocked_by": [
+        22
+      ],
+      "criteria_count": 5,
+      "stories": [
+        1,
+        56,
+        57,
+        58,
+        59
+      ],
+      "read_cases": [],
+      "sha256": "ffebd84f909ba101bf3e0d86ce83480fe3bf3ea0a8f238172be1c898b3f75ff7"
+    },
+    {
+      "id": 24,
+      "title": "迁移管理、设计与独立验证入口",
+      "path": "issues/24-skill-remaining-migrate.md",
+      "blocked_by": [
+        23
+      ],
+      "criteria_count": 5,
+      "stories": [
+        1,
+        3,
+        56,
+        57,
+        58,
+        59
+      ],
+      "read_cases": [],
+      "sha256": "e1aa7e622946bdeeaa37a46cd617051c9859d48bf241ec10d94eaa2bbae530f7"
+    },
+    {
+      "id": 25,
+      "title": "清除重复说明并核对十四入口的交付内容",
+      "path": "issues/25-skill-contract.md",
+      "blocked_by": [
+        24
+      ],
+      "criteria_count": 5,
+      "stories": [
+        1,
+        5,
+        6,
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "read_cases": [],
+      "sha256": "778dbc9a96379860cc07bb708abae8979d5fb33e1fcb8bc7aaca71ac69990914"
+    },
+    {
+      "id": 26,
+      "title": "完成全插件集成与重构效益核验",
+      "path": "issues/26-integrated-verification.md",
+      "blocked_by": [
+        17,
+        25
+      ],
+      "criteria_count": 7,
+      "stories": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "read_cases": [],
+      "sha256": "42e290a277c945b5c18b1ed1d6ae9a013fcb9f89609760418466b07622d5f9e4"
+    }
+  ],
+  "readme_sha256": "daa87cc7a0226aafea1007a64ef6cd5f186948918fb0645514180c6070a0d5f0",
+  "note": "发布时的清单与指纹；后续实施状态以各票当前内容及实际验证结果为准。"
+}
