@@ -55,7 +55,7 @@
 - **READ-12 无回退**:`mgs_runtime.py`/`mcp_gate.py`/`mgsrt_admin.py` 三文件相对票 01
   基线 SHA-256 逐字节未变;实例撤销在途、CONFIG 在途撤销、审计故障反例全部保持。
 - **净行数**:plugin 4526→4793(+267,含两个新 module 的实现成本);
-  tests 9086→10400(本票 +132);acceptance 20739 不变;dist 146 不变。
+  tests 9086→10406(本票 +138);acceptance 20739 不变;dist 146 不变。
   超 600 行的 `mgs_github.py`/`mgs_runtime.py`/`mgs_records.py` 及超 80 行函数按
   spec 30 在收口报告 5.3 记录完整不变量理由与验证方式。
 - **交付与回退**:dist 内容与当前生产一致(生产零变化,无需重建);
@@ -113,3 +113,50 @@ triage/request` 关键字参数;`body` 缺省时用 `build_task_body` 生成),�
   `BASELINE-REPORT.md` 冻结产物。
 - `git diff --numstat 085f02a -- plugin acceptance dist` 为空(生产区零改动);
   工作区相对 `085f02a` 仅改本票文件与 `tests/test_github_backend.py`。
+
+### 复审修复记录(第二轮)
+
+独立复审对票 07 提出两项发现,逐条处理如下(本轮纯文档修正,不改 `tests/` 或 `plugin/`)。
+
+**F1(行数回填,已改)**:报告 5.1 与上文执行记录原写 tests
+`9086→10400`(本票 +132),第一轮 F3 去重净 +6 行未回填。按 `code_volume.py`
+同一物理行口径重算(`plugin/tests/acceptance/dist` 下 tracked 代码文件,含空行注释):
+- tests 五文件实测:`test_github_backend.py` 2758、`test_plugin_package.py` 4049、
+  `test_records_backend.py` 1560、`test_runtime_boundaries.py` 433、
+  `test_runtime_gate.py` 1606,合计 **10406**(票 01 基线 9086)。
+- 本票净变化:自前基点 `ce6c81f`(tests 10268)到 HEAD 为 **+138**
+  (`test_records_backend` +75、`test_github_backend` +63,后者含 F3 复用
+  `_seed_raw_issue`、删除局部 `_issue()` 的净变化)。
+- 已同步修正报告 5.1 表(tests 行 `10400/+1314/+132` → `10406/+1320/+138`)、
+  报告第 8 节两处新增测试行数(records +75、github +63 并注明 F3 净变化)、
+  本工单执行记录「净行数」行。
+- 表中其余行经复算仍准确,未改:plugin 4793(7 文件)、acceptance 20739(44 文件)、
+  dist 146(2 文件)。
+
+**F2(READ-11 子句补引,已改)**:READ-11 spec 原句为「必要的详情、评论、标签或
+结果文件读取实际发生;失败和未核对表达保持」。报告 READ-11 行原只引用读取计数类
+测试,未引直接覆盖「(本地)结果文件读取实际发生;失败表达保持」子句者。核实
+`tests/test_records_backend.py::test_verify_results_consistency`(现第 389 行)测试体:
+- 三处场景均让 verify 真实读取本地结果文件——① 结果文件存在但结果索引仍为
+  「(暂无)」→ `results-consistent` 判失败;② 结果文件身份与所属任务不符 →
+  同一检查判失败;③ 结果索引引用该文件后整体 `ok`。
+- 该测试直接覆盖「结果文件读取实际发生」与「失败表达保持」;「未核对表达保持」
+  由已在列的同文件 `test_verify_offline_keeps_unchecked_and_skipped` 覆盖。
+- 已在报告 READ-11 覆盖测试列补引该测试,结论列同步说明其覆盖结果文件核验与
+  失败表达。该项名称与内容相符,无需改引。
+
+**已接受、留档不改的判断性 smell(两项)**:
+1. 默认 8 键 request 字典(当前目标/输入与基线/本次交付/允许修改范围/所需能力/
+   完成标准/执行责任/验收方式 + 依赖)在 `FakeTransport.seed_issue`
+   (`tests/test_github_backend.py:209`)与 `_seed_raw_issue`(`:2289`)各存一份。
+   二者分属不同调用形态(身份/标题构造 vs 原始正文/标签构造),合并需引入新的
+   共享层;属测试辅助字面量重复,无生产影响,本轮不改。
+2. `_seed_raw_issue` 参数增至 10 个(为 F3 复用而扩的 `body/labels/identity/
+   title/triage/progress/request` 可选构造面)。该函数是测试辅助,仅被本文件测试
+   调用,无生产代码引用,不影响公开接缝与生产行为,本轮不改。
+
+**验证结果**:
+- 五套 `python3 -B tests/test_*.py` 全 rc 0(plugin_package / runtime_gate /
+  runtime_boundaries / records_backend / github_backend)。
+- 本轮改动仅 `.scratch/.../evidence/stage1-closeout.md` 与本工单文件;
+  `plugin/`、`tests/`、`acceptance/`、`dist/` 零改动。

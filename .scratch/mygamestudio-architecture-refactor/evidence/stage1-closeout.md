@@ -28,7 +28,7 @@
 | READ-08 | `test_github_backend::test_record_model_cross_backend_body_semantics`;`::test_verify_shared_core_validation_both_backends`;`::test_label_priority_and_conflict_preserved`(本票新增);`test_records_backend::test_record_model_shared_body_and_error_identity`;`::test_verify_malformed_records_still_discoverable` | PASS | 同正文经双后端读取共通字段一致(空字段/未知小节/全角冒号/分号/畸形任务),核心核验结论一致;后端专有字段保留;标签优先于正文、多标签取首个可识别语义、`triage_conflict` 登记(本票补测) |
 | READ-09 | `test_records_backend::test_cli`;`::test_cli_deps_and_ready`;`::test_cli_list_show_projection_and_exit_codes`;`test_github_backend::test_cli_github_write_ops`;`::test_cli_local_backend_refuses_write_subcommands`;`::test_cli_github_handover_end_to_end` | PASS | 真实脚本入口 list/show/deps/ready/baseline/verify 的成功、阻塞与失败;JSON 类型/字段/原因/退出码(0/1/2)兼容;无新增 envelope |
 | READ-10 | `test_github_backend::test_error_identity_across_import_orders_and_script`;`test_records_backend::test_record_model_shared_body_and_error_identity`;`::test_source_shared_with_query_and_import_orders` | PASS | records-first / github-first 两种导入顺序单一错误身份(`RecordsError` 同一对象,`GithubRecordsError` 继承);直接脚本触发记录错误走既有 except 分支、退出码 2、无未捕获 traceback |
-| READ-11 | `test_github_backend::test_github_list_show_read_config_once_and_necessary_reads`;`::test_verify_offline_keeps_unchecked_and_skipped`;`test_records_backend::test_verify_github_reads_single_task_set_and_keeps_backend_reads`;`test_records_backend::test_verify_reads_config_and_tasks_once_local` | PASS | GitHub show 保留集合定位+Issue 详情+评论读取;verify 任务集合 1 次且标签/评论核验各 1 次;离线标签/评论检查列入 `skipped` 并保持「未核对」表达;本地 verify 支撑「本地结果核验」:CONFIG 原文 1 次、每份 task.md(7 份)各 1 次,检查名称与顺序保持(对应 5.4 表「本地 verify」行) |
+| READ-11 | `test_github_backend::test_github_list_show_read_config_once_and_necessary_reads`;`::test_verify_offline_keeps_unchecked_and_skipped`;`test_records_backend::test_verify_github_reads_single_task_set_and_keeps_backend_reads`;`test_records_backend::test_verify_reads_config_and_tasks_once_local`;`test_records_backend::test_verify_results_consistency`(本票补引,直接覆盖「(本地)结果文件读取实际发生;失败表达保持」子句) | PASS | GitHub show 保留集合定位+Issue 详情+评论读取;verify 任务集合 1 次且标签/评论核验各 1 次;离线标签/评论检查列入 `skipped` 并保持「未核对」表达;本地 verify 支撑「本地结果核验」:CONFIG 原文 1 次、每份 task.md(7 份)各 1 次,检查名称与顺序保持(对应 5.4 表「本地 verify」行);`test_verify_results_consistency` 实测结果文件被真实读取(结果存在而索引未引用→`results-consistent` 失败、身份不符→失败、索引引用后整体通过),直接覆盖结果文件核验与失败表达 |
 | READ-12 | `test_runtime_gate::review_fix_section`(R1 实例撤销在途、R3 审计失败回滚、R4 远端已发生结果);`::review2_sp1_section`(CONFIG 在途撤销);`::records_review_fix_section`;`test_runtime_boundaries` | PASS | 实例撤销后旧请求被拒且目标不变;CONFIG 在途撤销后锁内重读以 `remote_scope` 拒绝、远端零写入;审计不可用时本地回滚/远端不执行、结果审计失败如实回报;读取复用未回退受控写入语义 |
 | READ-13 | `test_github_backend::test_switch_local_to_github`;`::test_handover_baseline_check`;`::test_switch_github_to_local_consistency`;`::test_cli_github_handover_end_to_end`;`::test_cli_reverse_migration_real_entry`;`::test_handover_reachability_requires_executed_check` | PASS | 迁移清单源任务/映射/保留项/确认项(唯一当前来源+授权确认)不变;apply 前置授权闸门、不自我授权;交接可达性只来自实际执行的检查且不携带凭据;替身 transport,零真实远端写入 |
 | READ-14 | `test_plugin_package::test_records_backend_module`;`::test_mcp_gate_config`;`::test_no_dev_machine_paths`;`::test_dist_package_consistent`;`::test_dist_rebuild_byte_reproducible`;`::test_internal_references_resolve`;`::test_internal_material_provenance`;`::test_provenance_version_consistency`;`dist/verify-reproducible.sh` | PASS | 脚本与公开函数真实可导入可调用;`.mcp.json` 引用 `runtime/mcp_gate.py`;包内无 `/Users/` 绝对路径;清单/指纹/引用闭包一致;干净副本隔离重建逐字节一致;来源指纹核对通过 |
@@ -119,7 +119,7 @@
 | 范围 | 票 01 冻结基线 | 当前(本票) | 净变化 |
 | --- | --- | --- | --- |
 | plugin(生产) | 4526(5 文件) | 4793(7 文件) | **+267** |
-| tests | 9086(5 文件) | 10400(5 文件) | **+1314**(本票 +132) |
+| tests | 9086(5 文件) | 10406(5 文件) | **+1320**(本票 +138) |
 | acceptance | 20739(44 文件) | 20739(44 文件) | 0 |
 | dist | 146(2 文件) | 146(2 文件) | 0 |
 
@@ -209,8 +209,8 @@
 
 ## 8. 本票改动内容
 
-- 新增测试(2 处,均为覆盖补齐,不改生产行为):
+- 新增测试(2 处,均为覆盖补齐,不改生产行为,合计本票 tests +138 行):
   - `tests/test_records_backend.py::test_public_interface_surface_and_factory_parameters`(+75 行)
-  - `tests/test_github_backend.py::test_label_priority_and_conflict_preserved`(+57 行)
+  - `tests/test_github_backend.py::test_label_priority_and_conflict_preserved`(+63 行,含第一轮复审 F3 复用 `_seed_raw_issue`、删除局部 `_issue()` 的净变化)
 - 生产区(plugin/)**零改动**;`dist/` 内容与当前生产一致,无需重建(verify-reproducible PASS)。
 - 本报告为新增证据文件(`.scratch/.../evidence/stage1-closeout.md`)。
