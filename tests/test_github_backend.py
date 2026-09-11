@@ -2678,6 +2678,63 @@ def test_github_offline_list_show_metadata_and_no_marker_leak() -> None:
                 check(False, "无缓存离线应报错,不回退本地任务来源")
 
 
+# ---------- 票 07:阶段收口-后端专有规则复验(READ-08) ----------
+
+def test_label_priority_and_conflict_preserved() -> None:
+    """阶段收口 READ-08:标签优先级、分流冲突与关闭事实在共享正文后仍保留。
+
+    同一正文经共享规则解析后,分流仍以标签为准(label 优先于正文),
+    多标签按后端返回顺序取第一个可识别语义,差异登记在 triage_conflict;
+    正文无标签、标签无正文时各自的 triage_source 如实表达。这些是 GitHub
+    存储专有事实,不因共享正文解析被拉平。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        fake = FakeTransport()
+
+        def _issue(identity: str, body_triage: str, labels: list[str],
+                   number: int) -> dict:
+            body = mgs_github.build_task_body(
+                "冲突任务", identity, body_triage, "待执行",
+                {"当前目标": "演示目标", "输入与基线": "GAME_DESIGN v1",
+                 "本次交付": "示例交付", "允许修改范围": "src/**",
+                 "所需能力": "文件读写", "完成标准": "示例标准",
+                 "执行责任": "Agent(制作实现)", "验收方式": "代码级检查",
+                 "依赖": "无"})
+            issue = {"number": number, "id": 1000 + number, "title": "冲突任务",
+                     "body": body, "labels": [{"name": n} for n in labels],
+                     "state": "open", "state_reason": None,
+                     "html_url": f"https://example.invalid/i/{number}"}
+            fake.issues.append(issue)
+            fake.comments[number] = []
+            return issue
+
+        # ① 标签与正文不一致:标签赢,并登记冲突
+        _issue("01-conflict", "ready-for-agent", ["info"], 1)
+        # ② 多标签:按后端返回顺序取第一个可识别语义(wont-do → wontfix 优先)
+        _issue("02-multi", "ready-for-agent", ["wont-do", "agent-ready"], 2)
+        # ③ 仅正文:按正文表达,无冲突
+        _issue("03-body", "ready-for-human", [], 3)
+
+        tasks = {t["identity"]: t for t in
+                 mgs_records.list_tasks(root, transport=fake)}
+        conflict = tasks["01-conflict"]
+        check(conflict["triage"] == "needs-info"
+              and conflict["triage_source"] == "label"
+              and conflict["triage_conflict"] is True,
+              f"标签应覆盖正文分流并登记冲突,实际 {conflict}")
+        multi = tasks["02-multi"]
+        check(multi["triage"] == "wontfix" and multi["triage_source"] == "label"
+              and multi["triage_conflict"] is True,
+              f"多标签应按返回顺序取首个可识别语义,实际 {multi}")
+        from_body = tasks["03-body"]
+        check(from_body["triage"] == "ready-for-human"
+              and from_body["triage_source"] == "body"
+              and from_body["triage_conflict"] is False,
+              f"无标签时应按正文表达且不误报冲突,实际 {from_body}")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):
