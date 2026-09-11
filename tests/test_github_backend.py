@@ -396,6 +396,36 @@ def test_verify_github_backend() -> None:
         check(report["ok"] is False, "存在未解析依赖时整体不应 ok")
 
 
+def test_verify_offline_keeps_unchecked_and_skipped() -> None:
+    """票 06 AC4/READ-11:离线 verify 保留「未核对」与 skipped 表达。
+
+    远端不可用时标签与评论检查不得冒充已核验——保持未核对表达并列入
+    skipped;基于缓存的结构与依赖检查照常给出。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        cache = Path(tmp) / "cache"
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        mgs_records.list_tasks(root, transport=fake, cache_dir=cache)  # 填充缓存
+        fake.offline()
+        report = mgs_records.verify_project(root, transport=fake, cache_dir=cache)
+        check(report.get("offline") is True,
+              f"离线 verify 应标注 offline,实际 {report.get('offline')}")
+        skipped = set(report.get("skipped") or [])
+        check({"labels-remote-present", "results-consistent"} <= skipped,
+              f"离线应把远端存在性检查列入 skipped,实际 {skipped}")
+        by_name = {c["name"]: c for c in report["checks"]}
+        check(by_name["labels-remote-present"]["detail"] == "未核对(离线缓存,不下结论)",
+              f"离线标签检查应保持未核对表达,实际 {by_name['labels-remote-present']}")
+        check(by_name["results-consistent"]["detail"] == "未核对(离线缓存,不下结论)",
+              f"离线评论结果检查应保持未核对表达,实际 {by_name['results-consistent']}")
+        check(by_name["tasks-valid"]["ok"] is True
+              and by_name["deps-consistent"]["ok"] is True,
+              f"离线基于缓存的结构与依赖检查应照常给出,实际 {by_name}")
+
+
 # ---------- Slice C:写操作(授权闸门 / 防重 / 超时回读 / 回读验证) ----------
 
 def test_write_requires_authorization() -> None:

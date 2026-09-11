@@ -1293,6 +1293,181 @@ def test_cli_list_show_projection_and_exit_codes() -> None:
               f"rc={result.returncode} out={result.stdout[:120]}")
 
 
+# ---------- 票 06:基线与核验同次复用读取(READ-04/08/09/11) ----------
+
+class _GithubVerifyTransport:
+    """github verify 的最小只读替身:任务列表 / 仓库标签 / 评论(零网络)。"""
+
+    def __init__(self, issues: list[dict], *, labels: tuple[str, ...] = (),
+                 comments: dict[int, list[dict]] | None = None) -> None:
+        self.issues = issues
+        self.labels = list(labels)
+        self.comments = comments or {}
+        self.calls: list[tuple[str, str]] = []
+
+    def request(self, method: str, path: str, body: dict | None = None,
+                *, auth: bool | None = True):
+        self.calls.append((method, path))
+        plain = path.split("?", 1)[0].rstrip("/")
+        if method == "GET" and plain.endswith("/issues"):
+            return 200, self.issues
+        if method == "GET" and plain.endswith("/labels"):
+            return 200, [{"name": name} for name in self.labels]
+        if method == "GET" and plain.endswith("/comments"):
+            number = int(plain.split("/issues/")[1].split("/")[0])
+            return 200, list(self.comments.get(number, []))
+        return 404, {"message": "minimal stand-in has no such route"}
+
+
+def _github_issue(identity: str, title: str, number: int) -> dict:
+    import mgs_github
+
+    body = mgs_github.build_task_body(
+        title, identity, "ready-for-agent", "待执行",
+        {"当前目标": "演示目标", "输入与基线": "PROJECT.md v1",
+         "本次交付": "示例交付", "允许修改范围": "src/**",
+         "所需能力": "文件读写", "完成标准": "示例标准",
+         "执行责任": "Agent(制作实现)", "验收方式": "代码级检查",
+         "依赖": "无"})
+    return {"number": number, "id": 1000 + number, "title": title, "body": body,
+            "labels": [{"name": "ready-for-agent"}], "state": "open",
+            "state_reason": None, "html_url": f"https://example.invalid/{number}"}
+
+
+def test_baseline_reads_config_and_core_docs_once() -> None:
+    """AC1/AC2/READ-04:baseline 同次复用配置与核心文档原文一次。
+
+    CONFIG 只读一次;每份核心文档只读一次,同一原文同时推导逻辑版本与双
+    指纹;下一次调用重新读取(不跨调用缓存)。双指纹三态与完成事实语义
+    由 test_baseline_report_states/affected_tasks 逐项覆盖,此处只验证口径。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        design = root / "docs" / "mygamestudio" / "GAME_DESIGN.md"
+        design.write_text("# 当前游戏需求与设计\n\n基线版本:v2。\n- 规则\n",
+                          encoding="utf-8")
+        _register_fingerprint(design, "基线版本:v2。")
+
+        with scoped_read_counter(root) as counter:
+            first = mgs_records.baseline_report(root)
+        check(counter.config_reads() == 1,
+              f"baseline 应只读 CONFIG 原文一次,实际 {counter.by_path}")
+        core_reads = {Path(rel).name: n for rel, n in counter.by_path.items()
+                      if Path(rel).name in ("PROJECT.md", "GAME_DESIGN.md",
+                                            "TECH_DESIGN.md")}
+        check(core_reads == {"PROJECT.md": 1, "GAME_DESIGN.md": 1,
+                             "TECH_DESIGN.md": 1},
+              f"baseline 每份核心文档应只读一次(版本与指纹同一原文),实际 "
+              f"{counter.by_path}")
+        by_name = {d["path"].split("/")[-1]: d for d in first["docs"]}
+        check(by_name["GAME_DESIGN.md"]["status"] == "一致"
+              and by_name["GAME_DESIGN.md"]["declared_version"] == "v2",
+              f"同一原文应同时给出逻辑版本与登记指纹结论,实际 "
+              f"{by_name['GAME_DESIGN.md']}")
+
+        # 下一次调用重新读取:仅空白差异应判疑似格式修正(语义保持)
+        design.write_text(design.read_text(encoding="utf-8").replace(
+            "- 规则\n", "- 规则\t\n"), encoding="utf-8")
+        second = mgs_records.baseline_report(root)
+        states = {d["path"].split("/")[-1]: d["status"] for d in second["docs"]}
+        check(states.get("GAME_DESIGN.md") == "内容已变(疑似格式修正)",
+              f"下一次调用应重新读取并看到仅空白差异,实际 {states}")
+        check(second["ok"] is True, "疑似格式修正不应判为需要重审")
+
+
+def test_verify_reads_config_and_tasks_once_local() -> None:
+    """AC1/AC3/READ-04/READ-08:本地 verify 同次复用配置与任务集合一次。
+
+    CONFIG 只读一次、每份 task.md 一次;检查名称与顺序保持;整体结论与既有
+    语义一致(不复用会重复读 CONFIG)。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        with scoped_read_counter(root) as counter:
+            report = mgs_records.verify_project(root)
+        check(counter.config_reads() == 1,
+              f"verify 应只读 CONFIG 原文一次,实际 {counter.by_path}")
+        task_reads = counter.task_reads()
+        check(task_reads and all(n == 1 for n in task_reads.values())
+              and len(task_reads) == 7,
+              f"verify 每份 task.md 应恰好读一次,实际 {task_reads}")
+        names = [c["name"] for c in report["checks"]]
+        expected = ["config-present", "backend-local-markdown", "task-root-exists",
+                    "labels-complete", "labels-no-conflict", "docmap-core-rows",
+                    "docmap-unique-authority", "docmap-paths-exist",
+                    "tasks-valid", "results-consistent", "deps-consistent"]
+        check(names == expected, f"verify 检查名称与顺序应保持,实际 {names}")
+        check(report["ok"],
+              f"健康拆单项目应通过 verify:{[c for c in report['checks'] if not c['ok']]}")
+
+
+def test_verify_malformed_records_still_discoverable() -> None:
+    """AC3/READ-08/READ-25:畸形记录(缺身份)与未知分流仍能被核验发现。
+
+    畸形任务仍处于本次唯一任务集合内,不被读取层提前过滤;后端专有定位
+    (任务目录)保留,便于定位原记录。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        task_path = root / "docs" / "mygamestudio" / "work" / "01-demo" / "task.md"
+        task_path.write_text(
+            task_path.read_text(encoding="utf-8").replace(
+                "任务身份:01-demo", "任务身份:"), encoding="utf-8")
+        report = mgs_records.verify_project(root)
+        failed = {c["name"] for c in report["checks"] if not c["ok"]}
+        check("tasks-valid" in failed,
+              f"缺身份任务应判 tasks-valid 失败,实际 {failed}")
+        detail = next(c["detail"] for c in report["checks"]
+                      if c["name"] == "tasks-valid")
+        check("01-demo" in detail and "身份" in detail,
+              f"缺身份问题应定位到任务目录,实际 {detail}")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        task_path = root / "docs" / "mygamestudio" / "work" / "01-demo" / "task.md"
+        task_path.write_text(task_path.read_text(encoding="utf-8").replace(
+            "当前分流:ready-for-agent", "当前分流:done"), encoding="utf-8")
+        report = mgs_records.verify_project(root)
+        failed = {c["name"] for c in report["checks"] if not c["ok"]}
+        check("tasks-valid" in failed and report["ok"] is False,
+              f"五类之外的分流应判失败,实际 {failed}")
+
+
+def test_verify_github_reads_single_task_set_and_keeps_backend_reads() -> None:
+    """AC1/AC4/READ-11:github verify 同次复用配置;任务集合获取一次,
+    标签与评论核验仍实际发生(不因减少请求删掉必要读取)。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp), backend="github-issues", extra_task=False)
+        fake = _GithubVerifyTransport(
+            [_github_issue("01-alpha", "甲任务", 1)],
+            labels=FIVE_LABELS, comments={1: []})
+        with scoped_read_counter(root) as counter:
+            report = mgs_records.verify_project(root, transport=fake)
+        check(counter.config_reads() == 1,
+              f"github verify 应只读 CONFIG 原文一次,实际 {counter.by_path}")
+        list_calls = [c for c in fake.calls if c[0] == "GET"
+                      and c[1].split("?", 1)[0].rstrip("/").endswith("/issues")]
+        label_calls = [c for c in fake.calls if c[0] == "GET"
+                       and c[1].split("?", 1)[0].rstrip("/").endswith("/labels")]
+        comment_calls = [c for c in fake.calls if c[0] == "GET"
+                         and c[1].split("?", 1)[0].rstrip("/").endswith("/comments")]
+        check(len(list_calls) == 1,
+              f"任务集合应只获取一次,实际 {list_calls}")
+        check(len(label_calls) == 1,
+              f"仓库标签核验仍应实际发生一次,实际 {label_calls}")
+        check(len(comment_calls) == 1,
+              f"每任务评论核验仍应实际发生,实际 {comment_calls}")
+        names = {c["name"] for c in report["checks"]}
+        check({"labels-remote-present", "results-consistent",
+               "tasks-valid", "deps-consistent"} <= names
+              and report["ok"] is True,
+              f"github verify 结论应保持:{[c for c in report['checks'] if not c['ok']]}")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

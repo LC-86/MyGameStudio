@@ -119,20 +119,18 @@ class _Reading:
         self.fetch_meta = fetch_meta
 
 
-def _read_workspace(project_root: Path | str, config_rel: str, *,
-                    transport=None, api_base: str | None = None,
-                    cache_dir: Path | str | None = None) -> _Reading:
-    """顶层读取一次:CONFIG 原文一次;需要任务集合时获取一次。
+def _read_tasks(root: Path, config: dict, *, transport=None,
+                api_base: str | None = None,
+                cache_dir: Path | str | None = None) -> tuple[list[dict], dict]:
+    """由本次已加载配置获取任务集合一次(不重读 CONFIG)。
 
-    本地每份 task.md 读取一次,GitHub 全量任务集合获取一次。任务集合保留
-    来源顺序(本地目录顺序、GitHub list 原后端顺序),依赖与可开工判断都
-    从这一份结果推导,不再回调重新获取任务的公开入口。读取元信息(是否
-    缓存、抓取时间与来源)随载体传递到顶层结果——离线回缓存与在线当前
-    确认由此可区分(审查修复票 01/S5)。
+    本地每份 task.md 读取一次并保持目录顺序;GitHub 全量任务集合获取一次
+    并保留原后端顺序。依赖与可开工判断都从这一份结果推导,调用方在同一
+    份集合上复用,不再回调重新获取任务的公开入口。读取元信息(是否缓存、
+    抓取时间与来源)随结果返回——离线回缓存与在线当前确认由此可区分
+    (审查修复票 01/S5)。
     """
 
-    root = Path(project_root)
-    config, config_text = load_config_document(root, config_rel)
     backend = config["backend"]
     if backend == "local-markdown":
         tasks = local_list_tasks(root, config)
@@ -142,7 +140,7 @@ def _read_workspace(project_root: Path | str, config_rel: str, *,
                 timespec="seconds"),
             "source": {"backend": "local-markdown",
                        "task_root": config["task_root"]}}
-        return _Reading(config, config_text, tasks, fetch_meta)
+        return tasks, fetch_meta
     if backend == "github-issues":
         payload = _github_backend_for(
             config, transport=transport, api_base=api_base,
@@ -152,9 +150,25 @@ def _read_workspace(project_root: Path | str, config_rel: str, *,
                       "source": payload.get("source")}
         if fetch_meta["cached"]:
             fetch_meta["cache_note"] = payload.get("note", "")
-        return _Reading(config, config_text, payload["tasks"], fetch_meta)
+        return payload["tasks"], fetch_meta
     raise RecordsError(
         f"后端 {backend} 未实现(首版支持 local-markdown 与 github-issues)")
+
+
+def _read_workspace(project_root: Path | str, config_rel: str, *,
+                    transport=None, api_base: str | None = None,
+                    cache_dir: Path | str | None = None) -> _Reading:
+    """顶层读取一次:CONFIG 原文一次;需要任务集合时获取一次。
+
+    任务集合保留来源顺序,本次判断都从这一份结果推导;下一次顶层调用重新
+    读取,不复用本次载体。
+    """
+
+    root = Path(project_root)
+    config, config_text = load_config_document(root, config_rel)
+    tasks, fetch_meta = _read_tasks(root, config, transport=transport,
+                                    api_base=api_base, cache_dir=cache_dir)
+    return _Reading(config, config_text, tasks, fetch_meta)
 
 
 def list_tasks(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
@@ -250,22 +264,46 @@ def task_dependencies(project_root: Path | str,
     return _dependency_graph(reading.tasks)
 
 
-def _doc_baseline_versions(root: Path, config: dict) -> dict[str, str]:
-    """按文档映射建立可引用文档的当前逻辑版本表(如 GAME_DESIGN → "v2")。"""
+def _doc_texts(root: Path, config: dict) -> dict[str, str]:
+    """读取文档映射中实际存在文件的原文一次(路径→原文,供本次调用复用)。
+
+    同一已读原文同时用于逻辑版本与内容指纹判断;下一次顶层调用重新读取,
+    不做跨调用缓存(第一阶段设计:核心文档按实际路径复用已读文本)。
+    """
+
+    texts: dict[str, str] = {}
+    for row in config["docmap"]:
+        rel = row["path"]
+        if rel in texts:
+            continue
+        path = root / rel
+        if path.is_file():
+            texts[rel] = path.read_text(encoding="utf-8")
+    return texts
+
+
+def _versions_from_texts(config: dict, texts: dict[str, str]) -> dict[str, str]:
+    """由同一份已读文档原文建立逻辑版本表(如 GAME_DESIGN → "v2")。"""
 
     versions: dict[str, str] = {}
     for row in config["docmap"]:
-        path = root / row["path"]
-        if not path.is_file():
+        text = texts.get(row["path"])
+        if text is None:
             continue
-        text = path.read_text(encoding="utf-8")
         match = re.search(r"基线版本\s*[:：]\s*v(\d+)", text)
         if match:
-            versions[row["path"]] = f"v{match.group(1)}"
+            value = f"v{match.group(1)}"
+            versions[row["path"]] = value
             stem = Path(row["path"]).stem
-            versions.setdefault(stem, f"v{match.group(1)}")
-            versions.setdefault(str(Path(row["path"]).name), f"v{match.group(1)}")
+            versions.setdefault(stem, value)
+            versions.setdefault(str(Path(row["path"]).name), value)
     return versions
+
+
+def _doc_baseline_versions(root: Path, config: dict) -> dict[str, str]:
+    """按文档映射建立可引用文档的当前逻辑版本表(如 GAME_DESIGN → "v2")。"""
+
+    return _versions_from_texts(config, _doc_texts(root, config))
 
 
 _BASELINE_REF_RE = re.compile(
@@ -451,11 +489,13 @@ def baseline_report(project_root: Path | str,
     """
 
     root = Path(project_root)
+    # 本次判断只用同一份 CONFIG 原文与已读核心文档:一次读取、版本与指纹同源
     config = load_config(root, config_rel)
     if config["backend"] not in SUPPORTED_BACKENDS:
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
-    versions = _doc_baseline_versions(root, config)
+    texts = _doc_texts(root, config)
+    versions = _versions_from_texts(config, texts)
     grouped = _core_rows(config["docmap"])
     docs: list[dict] = []
     seen_paths: set[str] = set()
@@ -465,8 +505,8 @@ def baseline_report(project_root: Path | str,
             if rel in seen_paths:
                 continue  # 重复映射位置只报一次(verify 另行判冲突)
             seen_paths.add(rel)
-            path = root / rel
-            if not path.is_file():
+            text = texts.get(rel)
+            if text is None:
                 docs.append({"path": rel, "content": row["content"],
                              "role": row["role"], "declared_version": None,
                              "recorded_fingerprint": None,
@@ -474,7 +514,6 @@ def baseline_report(project_root: Path | str,
                              "status": "文件缺失",
                              "note": "核心基线权威位置不存在"})
                 continue
-            text = path.read_text(encoding="utf-8")
             version_match = re.search(r"基线版本\s*[:：]\s*v(\d+)", text)
             declared = f"v{version_match.group(1)}" if version_match else None
             strict_fp = _FINGERPRINT_RE.search(text)
@@ -502,10 +541,10 @@ def baseline_report(project_root: Path | str,
                          "current_fingerprint": f"sha256:{current_strict}",
                          "status": status, "note": note})
 
-    reading = _read_workspace(root, config_rel, transport=transport,
-                              api_base=api_base, cache_dir=cache_dir)
+    # 任务集合同样由本次已加载配置获取一次(不重读 CONFIG),受本次同调用约束
+    tasks, _ = _read_tasks(root, config, transport=transport,
+                           api_base=api_base, cache_dir=cache_dir)
     affected: list[dict] = []
-    tasks = reading.tasks
     for task in tasks:
         baseline_text = task["request"].get("输入与基线", "")
         for name, ref in _BASELINE_REF_RE.findall(baseline_text or ""):
@@ -545,7 +584,11 @@ def verify_project(project_root: Path | str,
     github-issues 后端(任务票 17)的远端侧检查由 mgs_github 承担:
     仓库坐标明确、映射标签在仓库实际存在、远端任务结构有效、依赖可解析
     无循环、评论结果与所属任务一致;离线时远端侧检查标注「未核对」,
-    不冒充已核验。
+    不冒充已核验。标签、评论与本地结果文件的核验读取照常实际发生
+    (一次任务集合获取不等于只允许一个网络请求)。
+
+    本次调用只读一次 CONFIG 并直接以该配置构造后端;本地任务集合由该配置
+    获取一次,不再按相对路径二次读取。
     """
 
     root = Path(project_root)
@@ -556,8 +599,10 @@ def verify_project(project_root: Path | str,
         return {"ok": False, "checks": [check_item("config-present", False, str(exc))]}
     checks.append(check_item("config-present", True, str(root / config_rel)))
     if config["backend"] == "github-issues":
-        return github_backend(root, config_rel, transport=transport,
-                              api_base=api_base, cache_dir=cache_dir).verify(root)
+        # 由本次已解析配置构造后端(verify 内部自行完成任务集合、标签与评论读取)
+        return _github_backend_for(
+            config, transport=transport, api_base=api_base,
+            cache_dir=cache_dir).verify(root)
     if config["backend"] != "local-markdown":
         checks.append(check_item("backend-local-markdown", False,
                              f"backend={config['backend']} 未实现"))
@@ -572,7 +617,8 @@ def verify_project(project_root: Path | str,
     checks += label_mapping_checks(config["labels"])
     checks += docmap_checks(root, config["docmap"])
 
-    tasks = list_tasks(root, config_rel)
+    # 任务集合由本次已加载配置获取一次(不重读 CONFIG);畸形任务不被过滤
+    tasks, _ = _read_tasks(root, config)
     task_problems: list[str] = []
     for task in tasks:
         if task["identity"] != task["directory"]:
