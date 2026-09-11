@@ -2673,10 +2673,11 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
     text = run_sh.read_text(encoding="utf-8")
     ev_dir = REPO_ROOT / "acceptance" / "18-complete-package-acceptance" / "evidence"
 
-    # 判据 module 与 Shell 适配层(票 08):测试经真实 module 的 __main__ 入口
-    # 调用与运行脚本同一 seam——不再正则截取 Shell 函数源码,也不再为每例
-    # 拼接大段 Shell。journal 为路径时 module 逐行解析 JSONL,为可迭代事件时
-    # 直接消费已构造事件(离线事件回放,零网络/零模型)。
+    # 判据 module 与 Shell 适配层(票 08 工具拒绝 + 票 09 curl 直连):测试
+    # 经真实 module 的 __main__ 入口与 run.sh 共用同一 seam——不再正则截取
+    # Shell 函数源码,也不再为每例拼接大段 Shell。journal 为路径时 module
+    # 逐行解析 JSONL,为可迭代事件时直接消费已构造事件(离线事件回放,零
+    # 网络/零模型)。
     judge_module = (REPO_ROOT / "acceptance" / "18-complete-package-acceptance"
                     / "evidence_judgement.py")
     adapter_sh = (REPO_ROOT / "acceptance" / "18-complete-package-acceptance"
@@ -3526,27 +3527,34 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
               == "SHELL:OK",
               "Shell 适配层对真实 deny/path 必须 OK(现场接入对照,票 08)")
 
+        # curl 直连判据(票 09)同样经真实 Shell 适配层调用的最小现场对照:
+        # 适配层接共享 module 后,若现场漏接(例如适配层未转发),这一层会
+        # 暴露;module 层单独通过不构成现场接入证据。
+        def shell_curl(events: Path) -> str:
+            script = "\n".join([
+                "set -u",
+                f'ACC_DIR={shlex.quote(str(adapter_sh.parent))}',
+                f'set -- {shlex.quote(str(events))}',
+                '. "$ACC_DIR/evidence_adapter.sh"',
+                'echo "SHELL:$(curl_direct_denied "$1")"',
+            ])
+            return run_bash(script).strip()
+
+        check(shell_curl(g1_fixture_d_events) == "SHELL:MISSING",
+              "Shell 适配层对无命令执行的示例文本必须 MISSING"
+              "(现场接入对照,票 09)")
+        check(shell_curl(g1_fixture_e_events) == "SHELL:OK",
+              "Shell 适配层对真实 curl 直连失败必须 OK(现场接入对照,票 09)")
+
         # 1b)同一判据 module 直接调用(离线事件回放,零网络/零模型;路径
         # 传入走 JSONL 逐行解析,可迭代事件容器走已构造事件消费)
         def anchor(events, *args) -> str:
             return judge.judge_mcp_deny(events, *args)
 
-        def curl_call(events: Path) -> str:
-            # curl 直连判据属票 09,尚未迁入共享 module;仍以正则取出
-            # run.sh 内实现做留存回放(票 09 将改为经同一 seam 调用)。
-            curl_fn = re.search(r"^curl_direct_denied\(\) \{.*?^\}$",
-                                text, re.MULTILINE | re.DOTALL)
-            if curl_fn is None:
-                check(False, "run.sh 应定义 curl_direct_denied(事件流 "
-                             "commandExecution 锚定,属票 09)")
-                return "CURL:ERROR"
-            script = "\n".join([
-                "set -u", curl_fn.group(0),
-                f'set -- {shlex.quote(str(events))}',
-                'R=$(curl_direct_denied "$1")',
-                'echo "CURL:$R"',
-            ])
-            return run_bash(script).strip()
+        def curl_call(events) -> str:
+            # curl 直连判据(票 09)已迁入共享 module:直接经同一 seam 回放,
+            # 不再正则截取 run.sh 内实现,也不再为每例拼接大段 Shell。
+            return "CURL:" + judge.judge_curl_direct_denied(events)
 
         link = "/tmp/mgs18-evil-link.md"
         check(anchor(fixture_a, "mgs_write", "path", link, "write") == judge.RESULT_MISSING,
@@ -3996,6 +4004,8 @@ def test_accept18_probe_checks_anchored_to_events() -> None:
           "run.sh 应以 source 接入 Shell 适配层(判据 module 的现场入口,票 08)")
     check('called = str(args.get("path")' not in text,
           "run.sh 不应再内联 mcp_deny_anchor 判据实现(应经共享 module,票 08)")
+    check('CURL_VALUE_SHORT' not in text and 'def url_targets' not in text,
+          "run.sh 不应再内联 curl_direct_denied 判据实现(应经共享 module,票 09)")
     for snippet, desc in (
         ('mcp_deny_anchor "$EVIDENCE_DIR/r1-events.jsonl" mgs_write path '
          '/tmp/mgs18-evil-link.md write',
