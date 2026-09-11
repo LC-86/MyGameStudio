@@ -36,3 +36,13 @@
 - 主控验收：五套实跑 rc=0；verify-reproducible.sh rc=0；Status=resolved；三个新测试（静态依赖方向 AST、双导入顺序、已加载配置同源）真实存在；ready 读取计数与基线一致（单次化留待票 04）
 - 复审：跳过（非核心）
 - 遗留：R1 未修（属票 04，按设计）
+
+## 票 04 — 修正可开工查询的重复读取与混合结果（阶段 1，R1 行为修正）
+
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`ff16231314ec30b9503ca8d51d95cdc32cc0420d`
+- 交付提交：`91b33dc`（mgs_records.py 807→860：_Reading 同调用载体 + _read_workspace 单次读取 + 纯依赖/分流计算；tests +341；dist 重建；mgs_github/model/source 零改动）
+- 主控验收：独立复跑 records_probe——本地 ready CONFIG 1/task 1；R1 场景第二响应未消费（本地 task_list_reads=0、GitHub 集合请求 1）、结果 startable 无混合；五套 rc=0；verify-reproducible PASS；冻结基线未动；Status=resolved
+- 复审：跳过（非核心）
+- 效益记录：**R1 已修正；读取计数 6/2→1/1 达成（spec 33 目标）**
+- 遗留：基线探针文案仍描述修复前现象（观察性、冻结产物未改）；baseline_report 同源整理未单列计数断言（已记录）
