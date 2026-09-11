@@ -11,32 +11,19 @@
 用法:python3 client_probe.py [--out <report.json>]
 """
 
-import argparse
 import hashlib
 import importlib.util
 import inspect
 import json
-import re
 import sys
 import threading
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+from baseline_common import REPO_ROOT, emit, normalize_source, parse_out_args
+
 ACCEPTANCE = REPO_ROOT / "acceptance"
 EVENT_COUNT = 1000
 POLLS = 10
-
-
-def normalize_source(text: str) -> str:
-    """忽略注释/文档串,只规范化编号身份常量,保留全部结构。"""
-
-    text = re.sub(r'""".*?"""', "", text, flags=re.S)
-    text = re.sub(r"'''.*?'''", "", text, flags=re.S)
-    lines = [re.sub(r"#.*$", "", line).rstrip() for line in text.splitlines()]
-    text = "\n".join(line for line in lines if line.strip())
-    text = re.sub(r"mgs\d+", "MGS", text)
-    text = re.sub(r"MyGameStudio \d+", "MyGameStudio N", text)
-    return hashlib.sha256(text.encode()).hexdigest()
 
 
 def load_client(path: Path):
@@ -116,9 +103,7 @@ def decode_probe(path: Path) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--out")
-    args = parser.parse_args()
+    args = parse_out_args(__doc__)
 
     clients = sorted(ACCEPTANCE.glob("*/appserver_client.py"))
     members = []
@@ -151,11 +136,7 @@ def main() -> int:
         "scope": ("合成回放只覆盖现有 wait_turn_completed 代码;不启动子进程、"
                   "不访问网络、不启动真实模型;不代表端到端加速倍数"),
     }
-    text = json.dumps(report, ensure_ascii=False, indent=2)
-    if args.out:
-        Path(args.out).write_text(text + "\n", encoding="utf-8")
-    else:
-        print(text)
+    emit(report, args.out)
     return 0
 
 

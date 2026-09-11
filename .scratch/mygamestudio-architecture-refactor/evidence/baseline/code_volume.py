@@ -11,25 +11,16 @@ tracked 的 .py/.sh/.js/.ts/.tsx,位于 plugin/、tests/、acceptance/、dist/,
 用法:python3 code_volume.py [--out <report.json>]
 """
 
-import argparse
-import hashlib
-import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+from baseline_common import REPO_ROOT, emit, git, normalize_source, parse_out_args
+
 ROOT_PRE_COMMIT = "b8cda58ea2ff3b0fb18ae7d888cbd5d01eaca586"
 SPEC_BASELINE_COMMIT = "49f3b1e7323c02a5fd39f3d9c847df023c4f2459"
 CODE_SUFFIXES = (".py", ".sh", ".js", ".ts", ".tsx")
 EXCLUDE = re.compile(r"/(evidence|fixtures|__fixtures__)/")
-
-
-def git(*args: str) -> str:
-    out = subprocess.run(["git", "-C", str(REPO_ROOT), *args],
-                         capture_output=True, text=True, check=False)
-    return out.stdout.strip()
 
 
 def area_files(area: str) -> list[str]:
@@ -47,26 +38,16 @@ def line_count(paths: list[str]) -> int:
 
 
 def normalized_families(paths: list[str]) -> list[list[str]]:
-    def key(rel: str) -> str:
-        text = (REPO_ROOT / rel).read_text(encoding="utf-8")
-        text = re.sub(r'""".*?"""', "", text, flags=re.S)
-        text = re.sub(r"'''.*?'''", "", text, flags=re.S)
-        lines = [re.sub(r"#.*$", "", line).rstrip() for line in text.splitlines()]
-        text = "\n".join(line for line in lines if line.strip())
-        text = re.sub(r"mgs\d+", "MGS", text)
-        text = re.sub(r"MyGameStudio \d+", "MyGameStudio N", text)
-        return hashlib.sha256(text.encode()).hexdigest()
-
     groups: dict[str, list[str]] = {}
     for rel in paths:
-        groups.setdefault(key(rel), []).append(rel)
+        key = normalize_source(
+            (REPO_ROOT / rel).read_text(encoding="utf-8"))
+        groups.setdefault(key, []).append(rel)
     return [sorted(group) for group in groups.values()]
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--out")
-    args = parser.parse_args()
+    args = parse_out_args(__doc__)
 
     areas = {}
     for area in ("plugin", "tests", "acceptance", "dist"):
@@ -106,11 +87,7 @@ def main() -> int:
                               "areas 行数、records_probe 读取次数与 client_probe "
                               "解码次数,与本次 baseline.json 逐项比较"),
     }
-    text = json.dumps(report, ensure_ascii=False, indent=2)
-    if args.out:
-        Path(args.out).write_text(text + "\n", encoding="utf-8")
-    else:
-        print(text)
+    emit(report, args.out)
     return 0
 
 

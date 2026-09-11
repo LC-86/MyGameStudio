@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** done
+**Status:** resolved
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 4, 5, 6, 7, 8, 32, 60
 
 **Verification mapping:** 按本票所属阶段的验收集合
 
-- [x] 固定实际代码身份、现有入口输出和六个重构方向的覆盖清单；区分静态事实、合成回放与真实验收。
+- [x] 固定实际代码身份、现有入口输出和全部 26 票（阶段 0 基线 + 六个重构阶段方向 + 收口）的覆盖清单；区分静态事实、合成回放与真实验收。
 - [x] 现有五套检查能按所需隔离条件运行并保留完整结果；任何失败或缺失不得写成已通过。
 - [x] 复现 ready 的 CONFIG 六次、任务集合两次与混合时点现象；作为 R1 的缺陷证据保留，不将错误现状固化为长期正确性断言，也不将红测试留在普通通过基线中。
 - [x] 记录客户端五族差异，以及一千条固定事件、十次轮询的解码计数；不启动真实模型或远端写入。
@@ -34,11 +34,13 @@
 `.scratch/mygamestudio-architecture-refactor/evidence/baseline/`：
 
 - `run_baseline.py` / `run_baseline.sh`：总入口，跑现有五套检查 + 四个探针 + 汇总。
-- `code_identity.py`：静态事实（HEAD SHA、五份生产文件 SHA-256/行数、六方向覆盖清单）。
+- `code_identity.py`：静态事实（HEAD SHA、五份生产文件 SHA-256/行数、26 票覆盖清单）。
 - `records_probe.py`：合成回放（用 `sys.addaudithook` 对底层读取型 `open` 计数；
-  GitHub 用本地替身 transport，零网络）。
+  GitHub 用本地替身 transport，零网络）；含受控写入 runtime 读取计数复算。
 - `client_probe.py`：客户端族归一与 1000 事件 ×10 轮询解码计数（替换 time/json.loads）。
 - `code_volume.py`：代码量口径、客户端净减潜力、回退参照。
+- `entry_probe.py`：经现有命令行入口实跑，固定读取命令的 JSON 输出结构与退出码。
+- `baseline_common.py`：探针间共享 helper（夹具、归一化、`git()`、argparse/JSON 尾段）。
 - `evidence-map.md`：现有案例/正反对照/已接受限制/历史证据的行为映射。
 - 产物：`results/baseline.json`、`results/checks/*.txt`、`BASELINE-REPORT.md`、`README.md`。
 
@@ -58,10 +60,69 @@
 - 复跑稳定性：连续两次运行 `records_probe`/`client_probe` 的稳定字段逐字节一致。
 
 **净行数。** 生产代码 `plugin/ tests/ acceptance/ dist/` 净变化 **0 行**（`git diff --numstat`
-为空）；本票新增基线脚本与记录合计 1,141 行（含报告/映射文档，均为 `.scratch/evidence/` 下
-产物，不是生产或测试代码）。
+为空）；本票新增基线产物行数分列如下（均为 `.scratch/evidence/` 下产物，不是生产或测试
+代码），与 `results/baseline.json` 的 `artifact_lines` 一致：
+
+- 脚本（探针与入口 `.py`/`.sh`，8 个）：1,432 行。
+- 文档（`README.md`/`evidence-map.md`，2 个）：158 行；本报告 `BASELINE-REPORT.md`：118 行。
+- results 产物 JSON（探针报告 5 个）：1,140 行；汇总自身 `results/baseline.json`：1,289 行
+  （JSON 合计 2,429 行）。
+- results 检查原始日志 `checks/*.txt`（另计，非本票新写）：15 行。
 
 **未验证限制。** 本票未执行真实模型轮、真实远端写入、安装或发布；历史
 `dist/ACCEPTANCE-RESULTS.md` 的通过结果仅作引用，不替代本次实测。系统级真实验收、
 其他宿主（Windows/Linux/非 0.151.0 codex CLI）与人工体验仍按原票限制保留待验证。
 `records_probe` 的 GitHub 替换为本地替身，不代表真实网络耗时或全部宿主行为。
+命令行入口基线仅覆盖 local-markdown 后端读取命令与代表性错误路径，github-issues
+专属子命令及需要远端/凭据的入口未跑（零网络、零凭据）。
+
+### 2026-09-11 复审修复记录（第一轮独立复审发现）
+
+逐条处理独立复审的 F1–F6 与 S1–S3；范围内只改 `.scratch/mygamestudio-architecture-refactor/`
+下的基线产物与工单文件，未触及 `plugin/ tests/ acceptance/ dist/`。
+
+- **F1（Status 规范，已修复）。** 工单 `Status` 由自造值 `done` 改为仓库约定终态
+  `resolved`（`docs/agents/issue-tracker.md` 第 26 行）。
+- **F2（验收条件 1 入口输出，已补齐）。** 新增 `entry_probe.py`：在 `/tmp` 隔离项目上经
+  **现有命令行入口**实跑 `config/list/show/deps/ready/baseline/verify`，固定 JSON 输出
+  字段结构与退出码（成功 0、记录/文件错误 2、判定失败 1；含任务缺失、依赖未解析、
+  配置缺失三类代表失败）。只记键集合与类型、不记取值，保证复跑稳定；纳入
+  `run_baseline.py`、`results/entry_probe.json`、`baseline.json` 与 `BASELINE-REPORT.md`
+  第 6 节。覆盖范围如实登记：github-issues 专属子命令与需远端/凭据入口未跑。
+- **F3（26 票覆盖清单，已修复）。** `code_identity.py` 的清单改为
+  `refactor_directions`，补全阶段 1 的 05/06/07 票与收口 26 票，覆盖全部 26 票；
+  计数措辞改为「阶段 0 固定基线 + 六个重构阶段方向（1-6）+ 收口，合计 26 票」，
+  不再把 7/8 行表述成「六个重构方向」。报告第 2 节同步。
+- **F4（行数口径，已修正）。** 原「脚本与记录合计 1,141 行」不实；改为分列脚本 /
+  文档 / results 产物 JSON，并由 `run_baseline.py` 的 `artifact_lines` 按实际文件
+  计算（脚本 8 个 1,432 行、文档 158 行 + 本报告 118 行、探针 JSON 1,140 行、汇总自身
+  1,289 行、JSON 合计 2,429 行、检查日志另计 15 行）。报告与工单执行记录同步。
+- **F5（工作区口径，已统一）。** `code_identity.json` 与 `baseline.json` 同时给出
+  `worktree_clean`（原始 `git status --porcelain`，生成时为 false，因基线产物未提交）
+  与 `worktree_clean_excluding_baseline`（排除 `.scratch/` 下票产物与主控进度记录后，
+  即本票零产品行为变更口径，为 true）；报告引用后者时明确注明口径。
+- **F6（runtime 计数，已纳入复跑）。** 在 `records_probe.py` 增加
+  `runtime-write` / `runtime-remote-read` 两段合成回放：用 audit hook 在 `/tmp`
+  运行根与临时项目上回放 `GateService.write()` 与 `remote_record(read)`（远端用本地
+  替身 transport，零网络），复算前置 `evidence/baseline.json` 的 policy/instances/
+  remote/CONFIG 读取计数。结果：runtime-write policy 3 / instances 2；runtime-remote-read
+  再加 remote 1 / CONFIG 2、替身请求 3、真实远端 0。限制如实登记：CPython 3.14 的
+  `Path.read_bytes()` 触发 open mode 为 `r`，故按文件聚合总次数（policy 合计 3 =
+  前置 text 2 + bytes 1），未逐字节复刻 text/bytes 拆分。
+- **S1（已修）。** `run_baseline.py` 不再由 command 字符串反推套件名，改用
+  `run_suite` 回填的 `name` 字段。
+- **S2（已修）。** `records_probe.py` 的 `get_log` 更名为 `request_log`（如实表达为
+  全部请求日志）。
+- **S3（已做，低风险共享 helper）。** 新增同目录 `baseline_common.py`，收拢四类同形
+  重复：探针 argparse/`--out`/JSON 尾段、`git()` 助手、客户端源码归一化、临时项目与
+  任务夹具；`records_probe/client_probe/code_volume/code_identity/entry_probe` 均改用。
+  不作进一步抽象；README 注明保留的探针特有重复与接受理由。
+
+**验证命令与真实结果（复审修复后）。**
+
+- `sh .scratch/mygamestudio-architecture-refactor/evidence/baseline/run_baseline.sh`
+  退出码 0，五套检查全绿（`all_existing_checks_green=True`），新产物含
+  `results/entry_probe.json`。
+- 复跑稳定性抽查：连续两次运行，`baseline.json` 稳定字段（排除 `generated_at` 与各套
+  `duration_seconds`）、`records_probe.json`、`entry_probe.json` 逐字节一致。
+- 红线：`git diff --numstat -- plugin tests acceptance dist` 为 0 行。

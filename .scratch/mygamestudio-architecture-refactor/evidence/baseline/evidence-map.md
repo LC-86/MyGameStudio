@@ -70,8 +70,22 @@
 
 ## 5. 本票新增基线与上述材料的对应
 
-- `results/baseline.json`:本次实测的结构化汇总(读/解码计数、五套退出码、代码量)。
+- `results/baseline.json`:本次实测的结构化汇总(读/解码计数、五套退出码、代码量、
+  入口输出结构、产物行数口径)。
 - `BASELINE-REPORT.md`:人可读报告,含证据分类(静态事实/合成回放/现有检查/真实验收)。
 - `results/checks/*.txt`:五套检查的完整原始输出(失败也如实保留)。
 - `records_probe.py`:`dist/ACCEPTANCE-RESULTS.md` 历史通过结果**不能替代**本次实测;
-  本探针独立复现 READ-01/03 现象。
+  本探针独立复现 READ-01/03 现象,并用同形合成回放复算前置 `evidence/baseline.json`
+  的受控写入运行时读取计数(READ-12 相关的 policy/instances/remote 读取)。
+- `entry_probe.py`:经现有命令行入口实跑,固定 READ-09 所需的 JSON 类型/字段结构与
+  退出码(成功 0、记录/文件错误 2、判定失败 1),对齐 READ-07 的任务缺失错误码。
+
+## 6. 未验证限制(仍作限制登记,不得当作已通过)
+
+- 命令行入口基线只覆盖 local-markdown 后端与代表性错误路径(任务缺失、依赖未解析、
+  配置缺失);github-issues 专属子命令与需要远端/凭据的入口未跑(零网络、零凭据)。
+- 前置证据 `evidence/baseline.json` 的 text/bytes 读取拆分未逐字节复刻:CPython 3.14
+  的 `Path.read_bytes()` 触发的 open 事件 mode 为 `r`,故 runtime 计数按文件聚合,
+  总次数与前置一致(policy.json 合计 3 = text 2 + bytes 1)。
+- `records_probe` 的 GitHub 替换为本地替身 transport,不代表真实网络耗时或全部宿主
+  行为;真实模型轮、真实远端写入、安装与发布均未在本票执行。

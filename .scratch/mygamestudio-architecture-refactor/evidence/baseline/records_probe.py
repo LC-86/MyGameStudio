@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""票 01 基线探针 B:R1 缺陷证据(合成回放,不启动真实模型/不访问网络)。
+"""票 01 基线探针 B:R1 缺陷证据与运行时读取计数(合成回放,零网络)。
 
 复现并记录以下既有现象,作为 R1 的缺陷证据保留(不写成长期正确性断言):
 - 一次本地 ready 读取 CONFIG 原文 6 次、每份 task.md 2 次;
@@ -7,82 +7,34 @@
 - 第二次任务读取给出不同依赖时,结果混用第一次任务内容与第二次依赖
   (第一次「依赖:无」、第二次「依赖:02-missing」→ blocked 依赖未解析)。
 
+另复算前置证据 evidence/baseline.json 曾记录的受控写入运行时读取计数
+(runtime-write / runtime-remote-read),用审计钩子在临时 runtime root 上
+回放同形调用,不触及生产代码、不访问网络:
+- runtime-write:policy.json 文本 2 次、instances.json 文本 2 次、
+  policy.json 字节 1 次,决策 allow;
+- runtime-remote-read:再加 remote.json 文本 1 次、CONFIG.md 文本 2 次。
+
 读取次数用 sys.addaudithook 的 open 事件对读取模式计数(底层真实读取,
 不是私有助手调用计数)。GitHub 用本地替身 transport,零网络。
 
 用法:python3 records_probe.py [--out <report.json>]
 """
 
-import argparse
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+from baseline_common import (REPO_ROOT, emit, make_project, parse_out_args,
+                             write_local_task)
+
 sys.path.insert(0, str(REPO_ROOT / "plugin" / "records"))
+sys.path.insert(0, str(REPO_ROOT / "plugin" / "runtime"))
 
 import mgs_records  # noqa: E402
 import mgs_github  # noqa: E402
-
-FIVE_LABELS = ("needs-triage", "needs-info", "ready-for-agent",
-               "ready-for-human", "wontfix")
-
-CONFIG_TEMPLATE = """# 基线项目:协作配置
-
-维护责任:制作统筹。配置版本:v1。采用依据:基线探针夹具。
-
-## 任务来源
-
-- 后端:{backend}
-- 当前位置:{location}
-- 任务读取规则:基线探针夹具
-- 外部连接引用及已确认操作范围:{external}
-
-## 标签映射
-
-| 语义 | 项目标签 |
-| --- | --- |
-{label_rows}
-
-## 文档映射
-
-| 内容 | 当前权威位置 | 维护角色 |
-| --- | --- | --- |
-| 项目目标与范围 | docs/mygamestudio/PROJECT.md | 制作统筹 |
-| 游戏需求与设计 | docs/mygamestudio/GAME_DESIGN.md | 方案设计 |
-| 技术设计 | docs/mygamestudio/TECH_DESIGN.md | 制作实现 |
-| 术语、ADR 与历史 | docs/mygamestudio/records/ | 对应专业角色 |
-
-## 执行条件
-
-- 工程、原型、资源与构建入口:src/
-- 可用能力及已验证执行边界:文件读写
-- 尚未就绪的能力及影响:无
-"""
-
-TASK_TEMPLATE = """# {title}
-
-任务身份:{identity}。当前分流:ready-for-agent。进度:待执行。
-
-## 工作请求
-
-- 当前目标:基线探针目标
-- 输入与基线:PROJECT.md v1
-- 本次交付:示例交付
-- 允许修改范围:src/**
-- 所需能力:文件读写
-- 完成标准:示例标准
-- 执行责任:Agent(制作实现)
-- 验收方式:代码级检查
-- 依赖:{deps}
-- 依赖与写入协调:无
-- 尚缺信息:无
-
-## 结果索引
-
-(暂无)
-"""
+import mgs_runtime  # noqa: E402
 
 # ---------- 底层读取计数(audit hook) ----------
 
@@ -95,9 +47,11 @@ def _audit_hook(event: str, args: tuple) -> None:
     raw = args[0]
     if isinstance(raw, bytes):
         raw = raw.decode("utf-8", "replace")
+    elif not isinstance(raw, (str, os.PathLike)):
+        return  # 文件描述符等非路径形态(os.fdopen)不计入
     mode = args[1] if len(args) > 1 and isinstance(args[1], str) else ""
-    if "r" not in mode and "+" not in mode:
-        return  # 只计读取;写入夹具不计入被观测读取
+    if not mode.startswith("r"):
+        return  # 只计纯读取;锁文件 a+、夹具写入等不计入被观测读取
     try:
         path = Path(raw).resolve()
     except OSError:
@@ -128,40 +82,18 @@ class read_counter:
         _COUNTERS.pop(self.root, None)
 
     def by_name(self) -> dict[str, int]:
+        """按文件名聚合纯读取次数(text/bytes 形态合并为同一文件的总读取数)。
+
+        说明:CPython 3.14 的 `Path.read_bytes()` 触发的 open 事件 mode 为
+        `"r"`(非 `"rb"`),故本探针不区分文本/字节形态,只报文件级总读取数;
+        前置证据的 text/bytes 拆分见报告「未验证限制」。
+        """
+
         result: dict[str, int] = {}
         for rel, count in self.counts.items():
             name = Path(rel).name
             result[name] = result.get(name, 0) + count
         return result
-
-
-# ---------- 夹具 ----------
-
-def make_project(tmp: Path, *, backend: str = "local-markdown") -> Path:
-    tmp.mkdir(parents=True, exist_ok=True)
-    docs = tmp / "docs" / "mygamestudio"
-    docs.mkdir(parents=True, exist_ok=True)
-    location = ("github.com/mygamestudio/baseline"
-                if backend == "github-issues"
-                else "docs/mygamestudio/work/")
-    (docs / "CONFIG.md").write_text(
-        CONFIG_TEMPLATE.format(
-            backend=backend, location=location,
-            external=("github.com/mygamestudio/baseline:issues-write"
-                      "(基线探针;仅本地替身)" if backend == "github-issues" else "无"),
-            label_rows="\n".join(f"| {n} | {n} |" for n in FIVE_LABELS)),
-        encoding="utf-8")
-    for name in ("PROJECT.md", "GAME_DESIGN.md", "TECH_DESIGN.md"):
-        (docs / name).write_text(f"# {name}\n\n基线探针夹具。\n", encoding="utf-8")
-    return tmp
-
-
-def write_local_task(root: Path, identity: str, *, title: str, deps: str) -> None:
-    task_dir = root / "docs" / "mygamestudio" / "work" / identity
-    task_dir.mkdir(parents=True, exist_ok=True)
-    (task_dir / "task.md").write_text(
-        TASK_TEMPLATE.format(title=title, identity=identity, deps=deps),
-        encoding="utf-8")
 
 
 class BaselineTransport:
@@ -170,12 +102,12 @@ class BaselineTransport:
     def __init__(self, task_lists: list[list[dict]]) -> None:
         self.task_lists = task_lists
         self.requests = 0
-        self.get_log: list[str] = []
+        self.request_log: list[str] = []  # 全部请求的方法与路径(非仅 GET)
 
     def request(self, method: str, path: str, body: dict | None = None,
                 *, auth: bool = True):
         self.requests += 1
-        self.get_log.append(f"{method} {path}")
+        self.request_log.append(f"{method} {path}")
         plain = path.split("?", 1)[0].rstrip("/")
         if method == "GET" and plain.endswith("issues"):
             index = min(len(self.task_lists), max(0, self._issue_list_calls() - 1))
@@ -183,7 +115,7 @@ class BaselineTransport:
         return 404, {"message": "baseline stand-in has no such route"}
 
     def _issue_list_calls(self) -> int:
-        return sum(1 for entry in self.get_log
+        return sum(1 for entry in self.request_log
                    if entry.startswith("GET") and "issues" in entry)
 
 
@@ -280,10 +212,107 @@ def probe_github(workdir: Path) -> dict:
     }
 
 
+# ---------- 受控写入运行时读取计数(F6,复算前置观测) ----------
+
+class ReadOnlyFakeTransport:
+    """远端读取替身:按 GET 路径返回列表 / 单 Issue / 空评论集;零网络。"""
+
+    def __init__(self, list_payload: list[dict], issue_payload: dict) -> None:
+        self.list_payload = list_payload
+        self.issue_payload = issue_payload
+        self.request_log: list[str] = []
+
+    def request(self, method: str, path: str, body: dict | None = None,
+                *, auth: bool = True):
+        self.request_log.append(f"{method} {path}")
+        plain = path.split("?", 1)[0].rstrip("/")
+        if method == "GET" and plain.endswith("issues"):
+            return 200, self.list_payload
+        if method == "GET" and plain.endswith("comments"):
+            return 200, []
+        if method == "GET" and "/issues/" in plain:
+            return 200, self.issue_payload
+        return 404, {"message": "baseline stand-in has no such route"}
+
+
+def probe_runtime_write(workdir: Path) -> dict:
+    """回放一次受控本地写入,计数 policy/instances/policy 字节读取。
+
+    与前置证据 evidence/baseline.json 的 runtime-write 同形:调用
+    GateService.write() 的只读检查 + 落盘路径,项目与运行根都在 /tmp,
+    零网络、零真实远端写入(写入只落在临时项目内)。
+    """
+
+    project = workdir / "runtime-write-project"
+    (project / "docs" / "mygamestudio" / "work" / "01-alpha").mkdir(parents=True,
+                                                                    exist_ok=True)
+    runtime_root = workdir / "runtime-write"
+    service = mgs_runtime.GateService(runtime_root)
+    service.init_policy(project_root=project,
+                        roles={"producer": ["docs/mygamestudio/work/*/task.md"]},
+                        purposes={"production": None})
+    instance = service.create_instance(
+        role="producer", task="01-alpha", purpose="production",
+        resources=["docs/mygamestudio/work/01-alpha/task.md"], ttl_seconds=1800)
+    with read_counter(runtime_root) as counter:
+        result = service.write(instance.token, "docs/mygamestudio/work/01-alpha/task.md",
+                               "# 基线探针\n\n受控写入合成回放。\n")
+    return {
+        "probe": "runtime-write",
+        "decision": result.get("decision"),
+        "reads": counter.by_name(),
+        "counted_scope": "runtime root 内按文件名的读取型 open 次数",
+        "note": ("合成回放;临时项目内本地写入;零网络、零真实远端写入;"
+                 "策略/实例登记为夹具"),
+    }
+
+
+def probe_runtime_remote_read(workdir: Path) -> dict:
+    """回放一次受控远端读取,计数 policy/instances/remote/CONFIG 读取。
+
+    与前置证据 evidence/baseline.json 的 runtime-remote-read 同形:经
+    GateService.remote_record(read) 走完整校验与审计路径,但远端用本地
+    替身 transport(零网络);CONFIG 与运行根都在 /tmp。
+    """
+
+    project = make_project(workdir / "runtime-remote-project",
+                           backend="github-issues")
+    runtime_root = workdir / "runtime-remote"
+    service = mgs_runtime.GateService(runtime_root)
+    resource = "github://github.com/mygamestudio/baseline/issues"
+    service.init_policy(project_root=project,
+                        roles={"producer": [resource + "/**"]},
+                        purposes={"production": None})
+    instance = service.create_instance(
+        role="producer", task="01-alpha", purpose="production",
+        resources=[resource], ttl_seconds=1800)
+    (runtime_root / "remote.json").write_text(json.dumps({
+        "github": {"api_base": "https://example.invalid/api",
+                   "token_env": "MGS_BASELINE_TOKEN"}}, ensure_ascii=False),
+        encoding="utf-8")
+    fake = ReadOnlyFakeTransport([issue("01-alpha", deps="无", number=1)],
+                                 issue("01-alpha", deps="无", number=1))
+    with read_counter(runtime_root) as runtime_counter, \
+            read_counter(project) as project_counter:
+        result = service.remote_record(instance.token, "read",
+                                       {"identity": "01-alpha"}, transport=fake)
+    counts = dict(runtime_counter.by_name())
+    for name, count in project_counter.by_name().items():
+        counts[name] = counts.get(name, 0) + count
+    return {
+        "probe": "runtime-remote-read",
+        "decision": result.get("decision"),
+        "reads": counts,
+        "transport_calls": len(fake.request_log),
+        "network_requests_to_remote": 0,
+        "counted_scope": "runtime root 内按文件名的读取型 open 次数",
+        "note": ("合成回放;远端用本地替身 transport;零网络、零真实远端写入;"
+                 "策略/实例登记/CONFIG 为夹具"),
+    }
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--out")
-    args = parser.parse_args()
+    args = parse_out_args(__doc__)
     with tempfile.TemporaryDirectory(prefix="mgs-baseline-records-") as tmp:
         workdir = Path(tmp)
         report = {
@@ -294,15 +323,22 @@ def main() -> int:
                 probe_local_no_change(workdir),
                 probe_local_r1(workdir),
                 probe_github(workdir),
+                probe_runtime_write(workdir),
+                probe_runtime_remote_read(workdir),
             ],
-            "status": ("observed baseline:上述为既有缺陷证据(复现用单独探针),"
-                       "不作为长期正确性断言"),
+            "prior_evidence_replay": {
+                "source": ".scratch/mygamestudio-architecture-refactor/evidence/baseline.json",
+                "counted_objects": ["runtime-write", "runtime-remote-read"],
+                "note": ("前置证据的受控写入运行时读取计数本次用同形合成回放"
+                         "复算;策略/实例/远端配置均为 /tmp 夹具,远端为本地替身,"
+                         "零网络。前置证据中 CONFIG.md 的读取由 runtime-remote-read"
+                         "携带,本次一并计数。"),
+            },
+            "status": ("observed baseline:ready 相关条目为既有缺陷证据(复现用单独"
+                       "探针),不作为长期正确性断言;runtime 计数为前置观测的本次"
+                       "复算,零网络/零真实写入"),
         }
-    text = json.dumps(report, ensure_ascii=False, indent=2)
-    if args.out:
-        Path(args.out).write_text(text + "\n", encoding="utf-8")
-    else:
-        print(text)
+    emit(report, args.out)
     return 0
 
 
