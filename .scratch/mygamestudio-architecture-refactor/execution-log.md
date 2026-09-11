@@ -75,7 +75,9 @@
 - 留档 smell：request 默认字典两处重复（测试辅助）；_seed_raw_issue 10 参数（测试辅助）；tests 大文件沿用 spec 31 豁免（票 11 将重组）
 - **阶段 1 效益小结（对照票 01 基线 4526/9086/20739/146）：plugin 4526→4793（7 文件，+267，新增共享 model 252 + source 266，mgs_records 1109→897、mgs_github 1848→1809）；读取计数达成：ready CONFIG 6→1、任务集合 2→1、baseline/verify CONFIG 2→1、list/show CONFIG 2→1；R1 已修正；测试 9086→10406（+1320）**
 
-## 票 08 — 让工具拒绝判据直接服务运行与测试（阶段 2）
-
-- 状态：in_progress
-- 前基点 SHA：待本日志提交后回填
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`b58442115d27abb25587cafe2d72e6222d1e1e12`
+- 交付提交：`8bb5408`（新增 acceptance/18 evidence_judgement.py 171 行共享判据 seam + evidence_adapter.sh 11 行 Shell 适配层；run.sh 1323→1232 去内联 heredoc；tests +41 不再正则截取；生产 plugin/ 零改动）
+- 主控验收：五套 rc=0；verify-reproducible PASS；Status=resolved；seam 存在且 run.sh/测试的正则截取清零；A/B 留存回放对照 9/9+21/21 一致（子代理实测）
+- 复审：跳过（非核心）
+- 遗留：curl 判据迁移属票 09；test_plugin_package.py 仍 4090 行（票 10 拆分）；最小接入对照不含真实 turn
