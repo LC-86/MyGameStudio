@@ -21,5 +21,14 @@
 
 ## 票 02 — 让双后端共用正文与错误语义（阶段 1）
 
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`05038fdd632a18ad5a17b60f51a0bc6f30df876d`
+- 交付提交：`e2ae564`（新增 plugin/records/mgs_record_model.py 252 行：共同错误身份 RecordsError + 共同正文规则 + 纯记录核验；mgs_records.py 1109→937；mgs_github.py 1848→1843；tests +220；dist 交付包同步重建）
+- 主控验收：五套检查实跑 rc=0；dist/verify-reproducible.sh PASS（交付包 SHA-256 bfe5b982…）；票文件 Status=resolved；净行数生产 +75 / 测试 +220 / dist manifest +1；records_probe 稳定字段与基线一致（CONFIG 6、task 2、GitHub 集合 2、解码 21000——本票按设计不改读取次数）
+- 复审：跳过（非核心）
+- 遗留：无（真实模型/远端写入按授权范围未执行，属全任务一贯限制）
+
+## 票 03 — 统一配置与本地来源并解除反向依赖（阶段 1）
+
 - 状态：in_progress
 - 前基点 SHA：待本日志提交后回填
