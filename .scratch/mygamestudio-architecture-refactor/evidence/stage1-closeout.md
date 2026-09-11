@@ -28,7 +28,7 @@
 | READ-08 | `test_github_backend::test_record_model_cross_backend_body_semantics`;`::test_verify_shared_core_validation_both_backends`;`::test_label_priority_and_conflict_preserved`(本票新增);`test_records_backend::test_record_model_shared_body_and_error_identity`;`::test_verify_malformed_records_still_discoverable` | PASS | 同正文经双后端读取共通字段一致(空字段/未知小节/全角冒号/分号/畸形任务),核心核验结论一致;后端专有字段保留;标签优先于正文、多标签取首个可识别语义、`triage_conflict` 登记(本票补测) |
 | READ-09 | `test_records_backend::test_cli`;`::test_cli_deps_and_ready`;`::test_cli_list_show_projection_and_exit_codes`;`test_github_backend::test_cli_github_write_ops`;`::test_cli_local_backend_refuses_write_subcommands`;`::test_cli_github_handover_end_to_end` | PASS | 真实脚本入口 list/show/deps/ready/baseline/verify 的成功、阻塞与失败;JSON 类型/字段/原因/退出码(0/1/2)兼容;无新增 envelope |
 | READ-10 | `test_github_backend::test_error_identity_across_import_orders_and_script`;`test_records_backend::test_record_model_shared_body_and_error_identity`;`::test_source_shared_with_query_and_import_orders` | PASS | records-first / github-first 两种导入顺序单一错误身份(`RecordsError` 同一对象,`GithubRecordsError` 继承);直接脚本触发记录错误走既有 except 分支、退出码 2、无未捕获 traceback |
-| READ-11 | `test_github_backend::test_github_list_show_read_config_once_and_necessary_reads`;`::test_verify_offline_keeps_unchecked_and_skipped`;`test_records_backend::test_verify_github_reads_single_task_set_and_keeps_backend_reads` | PASS | GitHub show 保留集合定位+Issue 详情+评论读取;verify 任务集合 1 次且标签/评论核验各 1 次;离线标签/评论检查列入 `skipped` 并保持「未核对」表达 |
+| READ-11 | `test_github_backend::test_github_list_show_read_config_once_and_necessary_reads`;`::test_verify_offline_keeps_unchecked_and_skipped`;`test_records_backend::test_verify_github_reads_single_task_set_and_keeps_backend_reads`;`test_records_backend::test_verify_reads_config_and_tasks_once_local` | PASS | GitHub show 保留集合定位+Issue 详情+评论读取;verify 任务集合 1 次且标签/评论核验各 1 次;离线标签/评论检查列入 `skipped` 并保持「未核对」表达;本地 verify 支撑「本地结果核验」:CONFIG 原文 1 次、每份 task.md(7 份)各 1 次,检查名称与顺序保持(对应 5.4 表「本地 verify」行) |
 | READ-12 | `test_runtime_gate::review_fix_section`(R1 实例撤销在途、R3 审计失败回滚、R4 远端已发生结果);`::review2_sp1_section`(CONFIG 在途撤销);`::records_review_fix_section`;`test_runtime_boundaries` | PASS | 实例撤销后旧请求被拒且目标不变;CONFIG 在途撤销后锁内重读以 `remote_scope` 拒绝、远端零写入;审计不可用时本地回滚/远端不执行、结果审计失败如实回报;读取复用未回退受控写入语义 |
 | READ-13 | `test_github_backend::test_switch_local_to_github`;`::test_handover_baseline_check`;`::test_switch_github_to_local_consistency`;`::test_cli_github_handover_end_to_end`;`::test_cli_reverse_migration_real_entry`;`::test_handover_reachability_requires_executed_check` | PASS | 迁移清单源任务/映射/保留项/确认项(唯一当前来源+授权确认)不变;apply 前置授权闸门、不自我授权;交接可达性只来自实际执行的检查且不携带凭据;替身 transport,零真实远端写入 |
 | READ-14 | `test_plugin_package::test_records_backend_module`;`::test_mcp_gate_config`;`::test_no_dev_machine_paths`;`::test_dist_package_consistent`;`::test_dist_rebuild_byte_reproducible`;`::test_internal_references_resolve`;`::test_internal_material_provenance`;`::test_provenance_version_consistency`;`dist/verify-reproducible.sh` | PASS | 脚本与公开函数真实可导入可调用;`.mcp.json` 引用 `runtime/mcp_gate.py`;包内无 `/Users/` 绝对路径;清单/指纹/引用闭包一致;干净副本隔离重建逐字节一致;来源指纹核对通过 |
@@ -69,13 +69,21 @@
 
 ## 3. 受影响的后端、运行时、包与实际 CLI 检查(AC3)
 
-| 套件 | 本次结果 | 退出码 | 原始输出 |
+| 套件 | 本次结果 | 退出码 | 票 01 冻结产物路径(历史证据,非本次输出) |
 | --- | --- | --- | --- |
 | tests/test_plugin_package.py | PASS | 0 | `.scratch/.../evidence/baseline/results/checks/test_plugin_package.txt` |
 | tests/test_runtime_gate.py | PASS | 0 | `.../checks/test_runtime_gate.txt` |
 | tests/test_runtime_boundaries.py | PASS | 0 | `.../checks/test_runtime_boundaries.txt` |
 | tests/test_records_backend.py | PASS | 0 | `.../checks/test_records_backend.txt` |
 | tests/test_github_backend.py | PASS | 0 | `.../checks/test_github_backend.txt` |
+
+- 上表末列仅指向票 01 冻结并在每次 `run_baseline.sh` 跑完即被 `git checkout --`
+  还原的 `evidence/baseline/results/checks/*.txt` 与 `results/baseline.json`
+  (`generated_at` 仍为 09-12T00:02)。这些是**票 01 冻结的历史证据,不是本次
+  运行的原始输出**,末列只标示同一套检查的冻结归档位置,不能作为本次实跑凭据。
+- 本票五套检查的本次实跑以上述「本次结果/退出码」为准,其可复查记录见票文件
+  (issues/07-read-stage-closeout.md)Comments 的「验证命令与真实结果」,并以独立
+  复核结论为最终依据;冻结产物本身未作任何改动(F2 复核修正)。
 
 - 实际 CLI:`entry_probe.py` 实跑本地 7 入口 11 案例,退出码合同
   `{success:0, records_or_file_error:2, judgement_failure:1}` 全部保持;

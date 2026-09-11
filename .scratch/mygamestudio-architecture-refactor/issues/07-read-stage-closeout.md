@@ -77,3 +77,39 @@
 **未验证限制(如实标注)**:真实模型轮、真实远端写入、日常安装替换与发布均未执行
 (GitHub 检查全部使用本地替身 transport,零网络/零凭据);真实网络耗时未测。
 阶段技术结论不代替安装与发布,留待对应授权单独执行。
+
+### 复审修复记录(第一轮)
+
+独立复审对票 07 交付(固定点 `ce6c81f...085f02a`)提出三项发现,逐条处理如下。
+
+**F1(映射漏引,已改)**:收口报告 READ-11 行原先只列 GitHub verify 与离线测试,
+漏了支撑「本地结果核验」的 `test_records_backend::test_verify_reads_config_and_tasks_once_local`
+(报告 5.4 表「本地 verify」行正依赖它)。已核实该测试真实存在
+(`tests/test_records_backend.py:1379`),其断言与 READ-11 表述匹配:CONFIG 原文
+恰 1 次、每份 task.md(7 份)各 1 次、11 项检查名称与顺序保持、健康项目 ok。
+已在 READ-11 覆盖测试列补上该引用,并在结论列同步补偿本地 verify 计数口径。
+
+**F2(冻结产物措辞,已改)**:报告第 1 节称「所有测试均为本次真实运行……非历史结果」,
+第 3 节却把 `results/checks/*.txt` 列为「原始输出」,二者矛盾——这些产物是票 01
+冻结、每次跑完 `run_baseline.sh` 后被 `git checkout --` 还原的历史证据
+(`results/baseline.json` 的 `generated_at` 仍为 09-12T00:02)。已改第 3 节表头与
+措辞:明确 `results/checks/*.txt` 与 `results/baseline.json` 是**票 01 冻结的历史
+证据(非本次输出)**,末列只标示同一套检查的冻结归档位置;本次五套结果以票文件
+Comments 的实跑记录与独立复核为准。冻结产物本身零改动。
+
+**F3(测试重复,已改)**:`test_github_backend.py` 新增的局部 `_issue()` 与同文件
+既有 `_seed_raw_issue` 几乎重复,且内联 8 键 request 字典为第 4 处副本。已将
+`_seed_raw_issue` 扩展为可选构造面(`body` 可选、新增 `labels/identity/title/
+triage/request` 关键字参数;`body` 缺省时用 `build_task_body` 生成),新测试的三处
+种子改为复用 `_seed_raw_issue`,删除局部 `_issue()`。既有调用点
+(`test_record_model_cross_backend_body_semantics` 的 `_seed_raw_issue(fake, SHARED_BODY)`)
+保持兼容未改;行为断言未变,`test_github_backend.py` 仍绿。
+
+**验证结果**:
+- 五套 `python3 -B tests/test_*.py` 全 rc 0(plugin_package / runtime_gate /
+  runtime_boundaries / records_backend / github_backend)。
+- `sh .scratch/.../evidence/baseline/run_baseline.sh` 五套全 PASS、
+  `all_existing_checks_green=True`;跑后已 `git checkout --` 恢复 `results/` 与
+  `BASELINE-REPORT.md` 冻结产物。
+- `git diff --numstat 085f02a -- plugin acceptance dist` 为空(生产区零改动);
+  工作区相对 `085f02a` 仅改本票文件与 `tests/test_github_backend.py`。

@@ -2272,10 +2272,29 @@ SHARED_BODY = (
 )
 
 
-def _seed_raw_issue(fake: FakeTransport, body: str, *,
-                    label: str = "agent-ready", number: int = 1) -> dict:
-    issue = {"number": number, "id": 1000 + number, "title": "畸形任务",
-             "body": body, "labels": [{"name": label}] if label else [],
+def _seed_raw_issue(fake: FakeTransport, body: str | None = None, *,
+                    label: str | None = "agent-ready", number: int = 1,
+                    labels: list[str] | None = None,
+                    identity: str = "05-malformed", title: str = "畸形任务",
+                    triage: str = "ready-for-agent", progress: str = "待执行",
+                    request: dict | None = None) -> dict:
+    """种子 Issue:给 body 则原样写入(畸形/共享正文用例);不给则按给定分流
+    与标签用 build_task_body 生成(分流标签规则用例)。labels 优先于单 label
+    参数,用于多标签/标签冲突场景。
+    """
+    if labels is None:
+        labels = [label] if label else []
+    if body is None:
+        request = dict(request or {
+            "当前目标": "演示目标", "输入与基线": "GAME_DESIGN v1",
+            "本次交付": "示例交付", "允许修改范围": "src/**",
+            "所需能力": "文件读写", "完成标准": "示例标准",
+            "执行责任": "Agent(制作实现)", "验收方式": "代码级检查"})
+        request["依赖"] = "无"
+        body = mgs_github.build_task_body(title, identity, triage, progress,
+                                          request)
+    issue = {"number": number, "id": 1000 + number, "title": title,
+             "body": body, "labels": [{"name": n} for n in labels],
              "state": "open", "state_reason": None,
              "html_url": f"https://example.invalid/i/{number}"}
     fake.issues.append(issue)
@@ -2693,29 +2712,16 @@ def test_label_priority_and_conflict_preserved() -> None:
         root = make_github_project(Path(tmp))
         fake = FakeTransport()
 
-        def _issue(identity: str, body_triage: str, labels: list[str],
-                   number: int) -> dict:
-            body = mgs_github.build_task_body(
-                "冲突任务", identity, body_triage, "待执行",
-                {"当前目标": "演示目标", "输入与基线": "GAME_DESIGN v1",
-                 "本次交付": "示例交付", "允许修改范围": "src/**",
-                 "所需能力": "文件读写", "完成标准": "示例标准",
-                 "执行责任": "Agent(制作实现)", "验收方式": "代码级检查",
-                 "依赖": "无"})
-            issue = {"number": number, "id": 1000 + number, "title": "冲突任务",
-                     "body": body, "labels": [{"name": n} for n in labels],
-                     "state": "open", "state_reason": None,
-                     "html_url": f"https://example.invalid/i/{number}"}
-            fake.issues.append(issue)
-            fake.comments[number] = []
-            return issue
-
         # ① 标签与正文不一致:标签赢,并登记冲突
-        _issue("01-conflict", "ready-for-agent", ["info"], 1)
+        _seed_raw_issue(fake, number=1, identity="01-conflict", title="冲突任务",
+                        triage="ready-for-agent", labels=["info"])
         # ② 多标签:按后端返回顺序取第一个可识别语义(wont-do → wontfix 优先)
-        _issue("02-multi", "ready-for-agent", ["wont-do", "agent-ready"], 2)
+        _seed_raw_issue(fake, number=2, identity="02-multi", title="冲突任务",
+                        triage="ready-for-agent",
+                        labels=["wont-do", "agent-ready"])
         # ③ 仅正文:按正文表达,无冲突
-        _issue("03-body", "ready-for-human", [], 3)
+        _seed_raw_issue(fake, number=3, identity="03-body", title="冲突任务",
+                        triage="ready-for-human", labels=[])
 
         tasks = {t["identity"]: t for t in
                  mgs_records.list_tasks(root, transport=fake)}
