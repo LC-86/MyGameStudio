@@ -20,7 +20,6 @@ expand 迁移(票 13):标准事件场景(原 02/17/18)改用本 module,尚未迁
 import json
 import os
 import subprocess
-import sys
 import threading
 import time
 from typing import Any
@@ -38,15 +37,14 @@ class AppServer:
     行号惰性建立,同一行最多解码一次。
     """
 
-    def __init__(self, codex_bin: str | None = None,
-                 env: dict[str, str] | None = None) -> None:
-        bin_path = codex_bin or os.environ.get("CODEX_BIN", "codex")
+    def __init__(self) -> None:
+        bin_path = os.environ.get("CODEX_BIN", "codex")
         self.proc = subprocess.Popen(
             [bin_path, "app-server"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
-            env=dict(os.environ if env is None else env),
+            env=dict(os.environ),
         )
         self.lines: list[str] = []
         self._lock = threading.Lock()
@@ -171,10 +169,8 @@ def iter_skills(result: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def write_event_stream(events: list[dict[str, Any]], path: str,
-                       keep_types: set[str],
-                       trailing_methods: tuple[str, ...] = ("turn/completed",)
-                       ) -> None:
-    """落盘事件证据:item/completed 仅保留 keep_types,另外保留列举的结束方法。
+                       keep_types: set[str]) -> None:
+    """落盘事件证据:item/completed 仅保留 keep_types,另外保留 turn/completed。
 
     场景各自持有 keep_types,共享 module 只负责按既有规则写文件。
     """
@@ -185,7 +181,7 @@ def write_event_stream(events: list[dict[str, Any]], path: str,
                 item = msg.get("params", {}).get("item", {})
                 if item.get("type") in keep_types:
                     fh.write(json.dumps(msg, ensure_ascii=False) + "\n")
-            elif msg.get("method") in trailing_methods:
+            elif msg.get("method") == "turn/completed":
                 fh.write(json.dumps(msg, ensure_ascii=False) + "\n")
 
 
@@ -242,12 +238,3 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
         return 0
     finally:
         server.close()
-
-
-def main() -> int:  # pragma: no cover - 供直接自检,不参与场景命令
-    print(__doc__)
-    return 0
-
-
-if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())

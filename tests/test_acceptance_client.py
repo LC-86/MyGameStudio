@@ -10,11 +10,15 @@
     python3 -B tests/test_acceptance_client.py
 """
 
+import contextlib
+import inspect
+import io
 import json
 import os
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 from acceptance_client_support import (
     CORE_MODULE, MIGRATED_SCENARIOS, client_path, find_legacy_client,
@@ -40,32 +44,119 @@ def _pid_alive(pid: int) -> bool:
     return True
 
 
+def _load_shared_and_shells():
+    """真实 import 共享核心与三份场景入口;三入口共享同一 appserver_core 对象。"""
+
+    core = load_module(CORE_MODULE, "appserver_core")
+    shells = {}
+    for scenario in MIGRATED_SCENARIOS:
+        name = "mgs13_shell_" + scenario.replace("-", "_")
+        shells[scenario] = load_module(client_path(scenario), name)
+    return core, shells
+
+
+class _SpyServer:
+    """替代共享核心的 AppServer,记录入口触发的调用序列(不启动子进程)。"""
+
+    def __init__(self, sink: list) -> None:
+        self.calls: list[str] = []
+        sink.append(self)
+
+    def request(self, method, params=None, timeout=0):
+        self.calls.append(method)
+        if method == "thread/start":
+            return {"thread": {"id": "spy-thread"}}
+        if method == "skills/list":
+            return {"data": [{"skills": [{"name": "s", "scope": "user",
+                                          "pluginId": "p", "path": "/x"}]}]}
+        return {}
+
+    def wait_turn_completed(self, timeout, events=None):
+        if events is not None:
+            events.append({"method": "turn/completed", "params": {}})
+        return ["spy reply"]
+
+    def close(self) -> None:
+        self.calls.append("close")
+
+
 def test_migrated_clients_share_implementation() -> None:
-    """三份标准事件入口字节一致、经共享 module 驱动、无自有等待实现。"""
+    """三份标准事件入口经真实 import 委托共享核心;相同输入可观察输出一致。
+
+    以行为而非源码声明绑定:真实 import 后核对入口的公共可调用对象来自共享
+    核心(inspect 模块归属 + 对象身份),并替换共享核心的 AppServer 观察入口
+    是否把完整 turn/skills 调用转发过去;再以受控替身进程验证三份入口在相同
+    输入下产生相同的可观察报告、事件证据与身份(行为一致,非字节一致)。
+    """
 
     check(CORE_MODULE.is_file(), "缺少共享客户端 acceptance/_shared/appserver_core.py")
-    core = CORE_MODULE.read_text(encoding="utf-8") if CORE_MODULE.is_file() else ""
-    for needle in ("def request(", "def drain_events(", "def wait_turn_completed(",
-                   "def close(", "def run_turn(", "def run_skills("):
-        check(needle in core, f"共享客户端缺少 {needle}")
-    sources = {}
+    core, shells = _load_shared_and_shells()
+    for scenario, shell in shells.items():
+        check(shell.AppServer is core.AppServer,
+              f"{scenario} 未使用共享核心的 AppServer")
+        check(shell.run_turn is core.run_turn and shell.run_skills is core.run_skills,
+              f"{scenario} 未委托共享核心的 run_turn/run_skills")
+        check(inspect.getmodule(shell.run_turn) is core,
+              f"{scenario} 的 run_turn 不来自共享核心")
+
+    # 转发探针:替换共享核心的 AppServer 后调用薄壳入口,核对完整调用序列。
+    original = core.AppServer
+    created: list[_SpyServer] = []
+    core.AppServer = lambda: _SpyServer(created)
+    try:
+        for scenario, shell in shells.items():
+            created.clear()
+            with tempfile.TemporaryDirectory(prefix="mgs13-fwd-") as tmp:
+                out = Path(tmp) / "report.md"
+                with contextlib.redirect_stdout(io.StringIO()):
+                    rc = shell.cmd_turn(SimpleNamespace(
+                        cwd=tmp, sandbox="read-only", mention=None, text="hi",
+                        timeout=5, out=str(out), events_out=None))
+                report = out.read_text(encoding="utf-8") if out.is_file() else None
+                calls = created[-1].calls if created else []
+            check(rc == 0, f"{scenario} cmd_turn 应成功,实际 rc={rc}")
+            check(calls == ["initialize", "thread/start", "turn/start", "close"],
+                  f"{scenario} turn 调用应完整转发共享核心,实际 {calls}")
+            check(report == "spy reply",
+                  f"{scenario} turn 输出应来自共享核心等待结果,实际 {report!r}")
+            created.clear()
+            with contextlib.redirect_stdout(io.StringIO()):
+                rc = shell.cmd_skills(SimpleNamespace(cwd="/tmp"))
+            calls = created[-1].calls if created else []
+            check(rc == 0, f"{scenario} cmd_skills 应成功,实际 rc={rc}")
+            check(calls == ["initialize", "skills/list", "close"],
+                  f"{scenario} skills 调用应完整转发共享核心,实际 {calls}")
+    finally:
+        core.AppServer = original
+
+    # 行为一致性(非字节一致):三份入口相同受控输入下可观察输出相同。
+    observed = {}
     for scenario in MIGRATED_SCENARIOS:
-        path = client_path(scenario)
-        check(path.is_file(), f"缺少场景入口 {path}")
-        text = path.read_text(encoding="utf-8") if path.is_file() else ""
-        sources[scenario] = text
-        check("appserver_core" in text, f"{scenario} 未引用共享客户端实现")
-        check("def wait_turn_completed" not in text,
-              f"{scenario} 不应再自带等待实现(应经共享 module)")
-        check("def request" not in text, f"{scenario} 不应再自带请求实现")
-        run_sh = (path.parent / "run.sh").read_text(encoding="utf-8")
-        check("appserver_client.py" in run_sh, f"{scenario}/run.sh 应仍接入本入口")
-    digests = {s: hash(t) for s, t in sources.items()}
-    check(len(set(digests.values())) == 1,
-          f"三个标准事件入口应逐字节一致:{digests}")
-    # expand 红线:尚未迁移的场景必须仍有自己的旧实现。
-    legacy = find_legacy_client()
-    check(legacy is not None, "应至少保留一份未迁移旧客户端(expand:不删旧实现)")
+        with tempfile.TemporaryDirectory(prefix="mgs13-eq-") as tmp:
+            tmpdir = Path(tmp)
+            out = tmpdir / "report.md"
+            events_out = tmpdir / "events.jsonl"
+            identity = tmpdir / "identity.jsonl"
+            proc = run_client(
+                client_path(scenario),
+                ["turn", "--cwd", str(tmpdir), "--sandbox", "workspace-write",
+                 "--mention", "mygamestudio:game-code", "--text", "继续",
+                 "--out", str(out), "--events-out", str(events_out),
+                 "--timeout", "15"],
+                tmpdir, identity_log=identity)
+            observed[scenario] = {
+                "rc": proc.returncode,
+                "report": out.read_text(encoding="utf-8") if out.is_file() else None,
+                "events": (events_out.read_text(encoding="utf-8")
+                           if events_out.is_file() else None),
+                "identity": (identity.read_text(encoding="utf-8")
+                             if identity.is_file() else None),
+            }
+    reference = observed[MIGRATED_SCENARIOS[0]]
+    for scenario in MIGRATED_SCENARIOS:
+        check(observed[scenario] == reference,
+              f"{scenario} 与 {MIGRATED_SCENARIOS[0]} 的可观察输出应一致:"
+              f"rc={observed[scenario]['rc']}/{reference['rc']}")
 
 
 def test_controlled_process_turn_report_events_and_identity() -> None:
@@ -179,10 +270,16 @@ def test_timeout_returns_partial_without_new_decodes() -> None:
 
 
 def test_old_new_replay_parity() -> None:
-    """同一合成输入下,未迁移旧客户端与共享客户端的可观察结果一致(A/B)。"""
+    """expand 过渡期守卫:旧实现与共享客户端同输入可观察结果一致(A/B)。
+
+    本守卫依赖尚未迁移的旧客户端实现存在;票 17 收口删除旧实现时,前置检查
+    会显式失败并要求随票 17 更新,而不是静默通过。
+    """
 
     legacy_path = find_legacy_client()
-    if legacy_path is None:  # 迁移完成(如票 17 收口)后旧参照已不存在
+    check(legacy_path is not None,
+          "旧实现已被移除,本守卫需随票 17 更新(expand 过渡期守卫不可静默跳过)")
+    if legacy_path is None:
         return
     lines = synthetic_events(50)
     lines.append(json.dumps(
@@ -197,9 +294,15 @@ def test_old_new_replay_parity() -> None:
 
 
 def test_unmigrated_scenario_still_passes() -> None:
-    """expand 红线:未迁移场景的入口继续按旧实现独立通过(受控替身进程)。"""
+    """expand 过渡期守卫:未迁移场景继续按旧实现独立通过(受控替身进程)。
+
+    本守卫依赖尚未迁移的旧实现存在;票 17 收口删除旧实现时会显式失败并要求
+    随票 17 更新,而不是静默通过。
+    """
 
     legacy = find_legacy_client()
+    check(legacy is not None,
+          "旧实现已被移除,本守卫需随票 17 更新(expand 过渡期守卫不可静默跳过)")
     if legacy is None:
         return
     with tempfile.TemporaryDirectory(prefix="mgs13-legacy-") as tmp:

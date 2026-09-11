@@ -82,3 +82,49 @@
 **未验证限制。** 真实 Codex 模型轮与真实远端写入未执行（零凭据、零网络，属全任务一贯
 限制）；受控替身只覆盖 stdio JSON-RPC 协议行为，不代表真实模型/网络结果。中断相关
 （绝对/相对阈值、进程组结束）属 15、16 票，本票未触及。
+
+### 复审修复记录（第一轮，2026-09-12）
+
+独立复审发现 4 项（F1 测试源码绑定、F2 守卫静默通过、F3 死参数、F4 留档），本轮处置如下。
+
+**F1（测试源码绑定，已改）。** 删除 `tests/test_acceptance_client.py` 中对核心源码
+`def request(` 等子串断言、薄壳 `"def ..." not in text` 反断言、`run.sh` 源码子串断言
+与三入口 `hash()` 逐字节相等断言。改为行为等价断言：
+- 经真实 import 加载共享核心与三份入口（三入口共享同一 `appserver_core` 对象），以
+  `inspect.getmodule(shell.run_turn) is core` 与对象身份核对 `AppServer`/`run_turn`/
+  `run_skills` 均来自共享核心；
+- 转发探针：替换共享核心的 `AppServer` 后调用薄壳入口 `cmd_turn`/`cmd_skills`，核对完整
+  调用序列 `initialize→thread/start→turn/start→close` 与 `initialize→skills/list→close`
+  确实转发到共享核心（证明薄壳无独立 JSON-RPC 实现）；
+- 行为一致性：三份入口经受控替身进程在相同输入下产出相同的报告、事件证据与身份，断言
+  可观察输出相等而非字节相等。
+
+**F2（守卫静默通过，已改）。** `test_old_new_replay_parity`、
+`test_unmigrated_scenario_still_passes` 原先在 `find_legacy_client()` 返回 None 时 `return`
+静默通过。现改为前置 `check(legacy is not None, "旧实现已被移除,本守卫需随票 17 更新
+(expand 过渡期守卫不可静默跳过)")`：旧实现消失时响亮失败并点名需随票 17 有意识处理；两测试
+docstring 已注明是 expand 过渡期守卫、票 17 需更新。
+
+**F3（死参数清理，已改）。** 全仓 grep 核实无调用者后删除：
+- `AppServer.__init__` 的 `codex_bin`/`env`（全部调用方均 `AppServer()`）→ 无参构造，保留
+  `CODEX_BIN` 环境变量回退与 `dict(os.environ)`；
+- `write_event_stream` 的 `trailing_methods`（仅一个取值且无外部传入）→ 直接保留
+  `turn/completed`；
+- 仅打印 docstring 的 `main`/`__main__` 存根及随之无用的 `import sys`。
+`turn_completed()` 有 `wait_turn_completed` 内部调用，保留为内部方法。共享核心 253 → 240 行。
+
+**F4（留档不改）。** `close()` 裸 `except` 吞异常与旧实现逐行相同，保持外部语义，票 15/16
+迁移中断场景时随行为族一并处理；三份薄壳 60 行 argparse/main 重复是 expand 模式有意为之
+（场景身份壳），票 17 收口时统一处理。
+
+**验证。**
+- `tests/test_acceptance_client.py` rc=0；五套聚合器（`test_plugin_package`、
+  `test_runtime_gate`、`test_runtime_boundaries`、`test_records_backend`、
+  `test_github_backend`）全绿 rc=0。
+- 证据探针 `13-client-evidence.py` 复跑：解码计数不变（旧 21000 / 共享 1000，`_message`
+  解码行为未受 F3 影响），A/B parity 仍 true；仅 `shared_core` 行数 253→240，已更新
+  `13-client-shared.json`。
+- 故障注入自检（/tmp 副本，未污染仓库）：把 02 薄壳 `run_turn` 改为本地实现 → F1 新断言
+  4 项失败；模拟旧实现全部消失 → F2 两处守卫各 1 项失败。证明行为绑定与显式守卫有效。
+- `plugin/` 零改动；三份薄壳零改动（F3 未波及）；`./dist/verify-reproducible.sh` PASS
+  （交付包 SHA-256 `af91503f…`，与验收记录一致；dist 不打包 acceptance/，无需重建）。

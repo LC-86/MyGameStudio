@@ -26,7 +26,7 @@
     "event_count": 7
   },
   "line_counts": {
-    "shared_core": 253,
+    "shared_core": 240,
     "migrated_clients": {
       "acceptance/02-role-scoped-write/appserver_client.py": 80,
       "acceptance/17-github-issue-workflow/appserver_client.py": 80,
