@@ -30,5 +30,9 @@
 
 ## 票 03 — 统一配置与本地来源并解除反向依赖（阶段 1）
 
-- 状态：in_progress
-- 前基点 SHA：待本日志提交后回填
+- 状态：**done（2026-09-12，非核心票，主控验收通过、跳过复审）**
+- 前基点 SHA：`1e78104631dba1088815871413f8455bb3c4f92e`
+- 交付提交：`891dfe6`（新增 plugin/records/mgs_record_source.py 266 行：CONFIG 原文解析 + 仓库坐标/授权解析 + 本地 adapter；mgs_records.py 936→807、mgs_github.py 1843→1809；tests +143；dist 重建）
+- 主控验收：五套实跑 rc=0；verify-reproducible.sh rc=0；Status=resolved；三个新测试（静态依赖方向 AST、双导入顺序、已加载配置同源）真实存在；ready 读取计数与基线一致（单次化留待票 04）
+- 复审：跳过（非核心）
+- 遗留：R1 未修（属票 04，按设计）
