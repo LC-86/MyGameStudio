@@ -9,9 +9,11 @@
 /``drain_events`` / ``wait_turn_completed`` 都经同一条 ``_message`` 惰性解码并按
 行号缓存,因此每条输入只解码一次,轮询不会重复解码旧事件。
 
-expand 迁移(票 13):标准事件场景(原 02/17/18)改用本 module,尚未迁移的
-场景继续使用各自的旧实现;本 module 不改变普通完成、失败、超时、事件筛选、
-退出码与子进程结束语义。
+expand 迁移(票 13、票 14):标准事件场景(原 02/17/18,票 13)与最小场景
+(原 01)、扩展事件场景(原 03/04,票 14)改用本 module,尚未迁移的场景继续
+使用各自的旧实现;本 module 不改变普通完成、失败、超时、事件筛选、退出码与
+子进程结束语义。场景差异(固定只读沙箱、事件筛选范围与 turn 生命周期通知)
+经 ``run_turn`` 的显式参数保留,不强制统一。
 
 用法(由场景入口经 sys.path 注入后导入):
   from appserver_core import AppServer, run_skills, run_turn
@@ -27,6 +29,10 @@ from typing import Any
 # 请求响应等待上限(与旧实现一致,不在票 13 改为可配)。
 REQUEST_TIMEOUT_SECONDS = 60.0
 REQUEST_POLL_SECONDS = 0.2
+
+# 事件证据默认保留的通知方法(标准事件场景);扩展事件场景经 event_methods 追加
+# turn 生命周期通知,不改变标准场景的落盘结果。
+DEFAULT_EVENT_METHODS = ("turn/completed",)
 
 
 class AppServer:
@@ -169,19 +175,23 @@ def iter_skills(result: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def write_event_stream(events: list[dict[str, Any]], path: str,
-                       keep_types: set[str]) -> None:
-    """落盘事件证据:item/completed 仅保留 keep_types,另外保留 turn/completed。
+                       keep_types: set[str] | None,
+                       event_methods: tuple[str, ...] = DEFAULT_EVENT_METHODS) -> None:
+    """落盘事件证据:item/completed 按 keep_types 过滤,另保留 event_methods。
 
-    场景各自持有 keep_types,共享 module 只负责按既有规则写文件。
+    ``keep_types`` 为 None 时保留全部 item/completed 类型(扩展事件场景 03/04),
+    否则只保留声明类型(标准事件场景 02/17/18)。场景各自持有筛选值,共享
+    module 只负责按既有规则写文件,不新增原场景不存在的事件类型。
     """
 
     with open(path, "w", encoding="utf-8") as fh:
         for msg in events:
-            if msg.get("method") == "item/completed":
+            method = msg.get("method")
+            if method == "item/completed":
                 item = msg.get("params", {}).get("item", {})
-                if item.get("type") in keep_types:
+                if keep_types is None or item.get("type") in keep_types:
                     fh.write(json.dumps(msg, ensure_ascii=False) + "\n")
-            elif msg.get("method") == "turn/completed":
+            elif method in event_methods:
                 fh.write(json.dumps(msg, ensure_ascii=False) + "\n")
 
 
@@ -207,7 +217,8 @@ def run_skills(client_info: dict[str, Any], cwd: str) -> int:
 
 def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str,
              timeout: int, out: str | None, events_out: str | None,
-             keep_types: set[str]) -> int:
+             keep_types: set[str] | None,
+             event_methods: tuple[str, ...] = DEFAULT_EVENT_METHODS) -> int:
     server = AppServer()
     try:
         initialize(server, client_info)
@@ -227,7 +238,7 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
         events: list[dict[str, Any]] = []
         messages = server.wait_turn_completed(timeout, events)
         if events_out:
-            write_event_stream(events, events_out, keep_types)
+            write_event_stream(events, events_out, keep_types, event_methods)
         report = "\n\n".join(messages)
         if out:
             with open(out, "w", encoding="utf-8") as fh:

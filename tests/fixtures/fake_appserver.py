@@ -7,6 +7,8 @@
 
 - ``default``(缺省):initialize/skills/list/thread/start 正常,并在 turn/start
   之后发出固定的 item/completed 流与 turn/completed(含重复项以核对去重)。
+- ``lifecycle``:在 default 的事件流前追加 turn/started(扩展事件场景 03/04
+  的证据筛选含 turn 生命周期通知)。
 - ``no_thread_id``:thread/start 返回空对象(驱动客户端的线程 id 失败分支)。
 - ``error_init``:initialize 返回 JSON-RPC error(驱动失败分支)。
 
@@ -80,6 +82,8 @@ def handle(msg: dict, mode: str) -> None:
         send({"jsonrpc": "2.0", "id": req_id, "result": thread})
     elif method == "turn/start":
         send({"jsonrpc": "2.0", "id": req_id, "result": {}})
+        if mode == "lifecycle":
+            send({"method": "turn/started", "params": {"turn": {"id": "t-fake"}}})
         for event in default_events():
             send(event)
     else:

@@ -1,0 +1,72 @@
+{
+  "ticket": "14-shared-client-basic-migrate",
+  "base_commit": "e42d17b4659db09550575d3f29fb32d8074d7829",
+  "method": "复用票 01/13 的合成回放方法:1000 条固定事件、10 次轮询,计数器替换 json.loads;不启动子进程/网络/模型",
+  "decode_count": {
+    "basic_01": {
+      "old_json_loads": 20000,
+      "new_json_loads": 1000,
+      "baseline_ticket01_json_loads": 21000,
+      "old_messages": 1000,
+      "new_messages": 1000
+    },
+    "extended_03": {
+      "old_json_loads": 21000,
+      "new_json_loads": 1000,
+      "baseline_ticket01_json_loads": 21000,
+      "old_messages": 1000,
+      "new_messages": 1000
+    }
+  },
+  "ab_parity": {
+    "extended_agent_messages_equal": true,
+    "extended_events_equal": true,
+    "extended_event_count": 8,
+    "basic_agent_messages_equal": true,
+    "new_agent_messages": [
+      "first agent reply",
+      "second agent reply"
+    ]
+  },
+  "selection_difference": {
+    "standard_methods": [
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "turn/completed"
+    ],
+    "extended_methods": [
+      "turn/started",
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "item/completed",
+      "turn/completed"
+    ],
+    "standard_keeps_turn_started": false,
+    "extended_keeps_all_item_types": true,
+    "note": "标准族(02/17/18)按 keep_types 过滤且不含 turn 生命周期;扩展族(01/03/04 中 03/04)保留全部 item 类型与 turn 生命周期。族差异经显式参数保留,未强加统一输出字段。"
+  },
+  "line_counts": {
+    "shared_core": 251,
+    "migrated_clients": {
+      "acceptance/01-explicit-project-status/appserver_client.py": 78,
+      "acceptance/03-indirect-write-failure/appserver_client.py": 84,
+      "acceptance/04-initialize-local-project/appserver_client.py": 84
+    },
+    "old_clients_at_base": {
+      "acceptance/01-explicit-project-status/appserver_client.py": 196,
+      "acceptance/03-indirect-write-failure/appserver_client.py": 225,
+      "acceptance/04-initialize-local-project/appserver_client.py": 225
+    }
+  },
+  "evidence_kind": "synthetic_replay",
+  "subprocesses_started": 0,
+  "network_requests": 0,
+  "model_calls": 0
+}

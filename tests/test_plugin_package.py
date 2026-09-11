@@ -87,6 +87,13 @@ THEMES = (
       "test_timeout_returns_partial_without_new_decodes",
       "test_old_new_replay_parity",
       "test_unmigrated_scenario_still_passes")),
+    ("test_acceptance_client_families.py",
+     "验收客户端共享实现(最小+扩展事件场景)",
+     ("test_basic_and_extended_clients_share_implementation",
+      "test_basic_scenario_controlled_process_and_option_contract",
+      "test_extended_event_evidence_and_identity",
+      "test_old_new_replay_parity",
+      "test_basic_and_extended_timeout_replay")),
 )
 
 
