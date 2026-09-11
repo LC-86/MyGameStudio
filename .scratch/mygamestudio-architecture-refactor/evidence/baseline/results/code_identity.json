@@ -1,0 +1,100 @@
+{
+  "evidence_kind": "static_fact",
+  "head_sha": "b8cda58ea2ff3b0fb18ae7d888cbd5d01eaca586",
+  "branch": "codex/architecture-optimization",
+  "worktree_clean": false,
+  "plugin": {
+    "name": "mygamestudio",
+    "version": "0.18.0"
+  },
+  "production_files": [
+    {
+      "path": "plugin/records/mgs_github.py",
+      "sha256": "9da929143f1113362f686cee34621b29884dea0f34bb1827d02002273218f287",
+      "lines": 1848
+    },
+    {
+      "path": "plugin/records/mgs_records.py",
+      "sha256": "8c1cbeae81663be0c450e53689c90cc601029a349de17fa4a6fe9f12b1c1aa2e",
+      "lines": 1109
+    },
+    {
+      "path": "plugin/runtime/mgs_runtime.py",
+      "sha256": "57009cdfc9d6348d20a50cb4060beab5937bade44266f73aece6a1e1e38d83dc",
+      "lines": 1119
+    },
+    {
+      "path": "plugin/runtime/mcp_gate.py",
+      "sha256": "3c2b755916bd824623d886795225858c48c92857a286ecc997dbb8f01a8fd026",
+      "lines": 261
+    },
+    {
+      "path": "plugin/runtime/mgsrt_admin.py",
+      "sha256": "f84f883d7f9fa06aadf607e98afcde4ce3f878283225ef915b59d672b6affa3f",
+      "lines": 189
+    }
+  ],
+  "production_total_lines": 4526,
+  "key_files": [
+    {
+      "path": "plugin/.codex-plugin/plugin.json",
+      "present": true,
+      "sha256": "fabdd53bb5245284ca91ba0bafc7a363f43293baaf3d55fe69219f45f74d5cec"
+    },
+    {
+      "path": "plugin/provenance/fingerprints.json",
+      "present": true,
+      "sha256": "2311e7ceb52786ba6ca2071cd3cbcf738a2631037fc8863e12824eda6006f84e"
+    },
+    {
+      "path": "dist/package-manifest.txt",
+      "present": true,
+      "sha256": "9711a8a4c354ea2abfe00074cbf087b2591c69723d357bc6996999329277895f"
+    },
+    {
+      "path": "dist/SHA256SUMS.txt",
+      "present": true,
+      "sha256": "854c4c783a313c2e5e030295a72d08e68ce5002345840c51da0afbfd67488359"
+    }
+  ],
+  "six_refactor_directions": {
+    "0 固定基线": [
+      "spec.md#solution",
+      "issues/01-behavior-baseline.md"
+    ],
+    "1 原子任务读取统一": [
+      "task-reading.md",
+      "issues/02-record-semantics.md",
+      "issues/03-record-source.md",
+      "issues/04-ready-single-read.md"
+    ],
+    "2 验收判据与测试组织": [
+      "issues/08-mcp-evidence.md",
+      "issues/09-curl-evidence.md",
+      "issues/10-package-tests.md",
+      "issues/11-backend-tests.md",
+      "issues/12-runtime-tests.md"
+    ],
+    "3 验收客户端去重": [
+      "issues/13-shared-client-expand.md",
+      "issues/14-shared-client-basic-migrate.md",
+      "issues/15-shared-client-absolute.md",
+      "issues/16-shared-client-relative.md",
+      "issues/17-client-contract.md"
+    ],
+    "4 工作结果发布恢复": [
+      "issues/18-result-publication.md",
+      "issues/19-recovery-ownership.md",
+      "issues/20-recovery-entrypoints.md"
+    ],
+    "5 受控写入内部整理": [
+      "issues/21-controlled-local-write.md",
+      "issues/22-controlled-remote-write.md"
+    ],
+    "6 业务 Skill 与包内说明": [
+      "issues/23-skill-common-expand.md",
+      "issues/24-skill-remaining-migrate.md",
+      "issues/25-skill-contract.md"
+    ]
+  }
+}

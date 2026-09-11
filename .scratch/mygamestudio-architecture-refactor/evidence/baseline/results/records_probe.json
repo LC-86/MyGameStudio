@@ -1,0 +1,73 @@
+{
+  "evidence_kind": "synthetic_replay",
+  "scope": "合成 /tmp 夹具;GitHub 用本地替身 transport;零网络;不启动真实模型;不进行任何远端写入",
+  "observations": [
+    {
+      "probe": "ready",
+      "backend": "local-markdown",
+      "reads": {
+        "CONFIG.md": 6,
+        "PROJECT.md": 1,
+        "GAME_DESIGN.md": 1,
+        "TECH_DESIGN.md": 1,
+        "task.md": 2
+      },
+      "startable": [
+        "01-alpha"
+      ],
+      "blocked": []
+    },
+    {
+      "probe": "ready-changing-second-fetch",
+      "backend": "local-markdown",
+      "task_list_reads": 2,
+      "reads": {
+        "CONFIG.md": 6,
+        "PROJECT.md": 1,
+        "GAME_DESIGN.md": 1,
+        "TECH_DESIGN.md": 1,
+        "task.md": 2
+      },
+      "first_fetch_deps": "无",
+      "second_fetch_deps": "02-missing",
+      "result_side": "blocked",
+      "blocked": {
+        "identity": "01-alpha",
+        "title": "甲任务",
+        "triage": "ready-for-agent",
+        "progress": "待执行",
+        "executor": "Agent(制作实现)",
+        "reasons": [
+          "依赖未解析:02-missing(任务不存在)"
+        ]
+      }
+    },
+    {
+      "probe": "ready-changing-second-fetch",
+      "backend": "github-issues",
+      "transport_task_list_requests": 2,
+      "transport_total_requests": 2,
+      "reads": {
+        "CONFIG.md": 6,
+        "PROJECT.md": 1,
+        "GAME_DESIGN.md": 1,
+        "TECH_DESIGN.md": 1
+      },
+      "first_fetch_deps": "无",
+      "second_fetch_deps": "02-missing",
+      "result_side": "blocked",
+      "blocked": {
+        "identity": "01-alpha",
+        "title": "基线任务",
+        "triage": "ready-for-agent",
+        "progress": "待执行",
+        "executor": "Agent(制作实现)",
+        "reasons": [
+          "依赖未解析:02-missing(任务不存在)"
+        ]
+      },
+      "network_requests_to_remote": 0
+    }
+  ],
+  "status": "observed baseline:上述为既有缺陷证据(复现用单独探针),不作为长期正确性断言"
+}

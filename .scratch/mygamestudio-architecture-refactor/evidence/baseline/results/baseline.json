@@ -1,0 +1,652 @@
+{
+  "ticket": "01-behavior-baseline",
+  "generated_at": "2026-09-11T23:23:33+08:00",
+  "environment": {
+    "platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O",
+    "python": "3.14.4",
+    "worktree_clean_excluding_baseline_artifacts": true,
+    "worktree_porcelain_at_start": [
+      "?? .scratch/mygamestudio-architecture-refactor/evidence/baseline/",
+      "?? .scratch/mygamestudio-architecture-refactor/execution-log.md"
+    ]
+  },
+  "evidence_classes": {
+    "static_fact": [
+      "code_identity",
+      "code_volume",
+      "client_family_inventory"
+    ],
+    "synthetic_replay": [
+      "records_probe",
+      "client_decode_probe"
+    ],
+    "existing_checks": [
+      "tests/test_*.py 五套"
+    ],
+    "real_acceptance": "未在本票执行(真实模型轮/真实远端写入保留待授权);历史结果见 dist/ACCEPTANCE-RESULTS.md,仅作引用"
+  },
+  "check_suites": [
+    {
+      "name": "test_plugin_package",
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/tests/test_plugin_package.py",
+      "returncode": 0,
+      "ok": true,
+      "duration_seconds": 6.715,
+      "raw_output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_plugin_package.txt",
+      "summary": "OK: 最小插件包静态完整性检查全部通过"
+    },
+    {
+      "name": "test_runtime_gate",
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/tests/test_runtime_gate.py",
+      "returncode": 0,
+      "ok": true,
+      "duration_seconds": 1.723,
+      "raw_output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_runtime_gate.txt",
+      "summary": "OK: 受控写入服务确定性检查全部通过"
+    },
+    {
+      "name": "test_runtime_boundaries",
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/tests/test_runtime_boundaries.py",
+      "returncode": 0,
+      "ok": true,
+      "duration_seconds": 0.732,
+      "raw_output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_runtime_boundaries.txt",
+      "summary": "OK: 间接写入与检查故障确定性边界检查全部通过"
+    },
+    {
+      "name": "test_records_backend",
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/tests/test_records_backend.py",
+      "returncode": 0,
+      "ok": true,
+      "duration_seconds": 1.433,
+      "raw_output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_records_backend.txt",
+      "summary": "OK: 本地 Markdown 任务后端统一接口检查全部通过"
+    },
+    {
+      "name": "test_github_backend",
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/tests/test_github_backend.py",
+      "returncode": 0,
+      "ok": true,
+      "duration_seconds": 2.482,
+      "raw_output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/checks/test_github_backend.txt",
+      "summary": "OK: GitHub Issues 任务后端检查全部通过"
+    }
+  ],
+  "probes": {
+    "code_identity": {
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/code_identity.py --out /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/code_identity.json",
+      "returncode": 0,
+      "output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/code_identity.json",
+      "report": {
+        "evidence_kind": "static_fact",
+        "head_sha": "b8cda58ea2ff3b0fb18ae7d888cbd5d01eaca586",
+        "branch": "codex/architecture-optimization",
+        "worktree_clean": false,
+        "plugin": {
+          "name": "mygamestudio",
+          "version": "0.18.0"
+        },
+        "production_files": [
+          {
+            "path": "plugin/records/mgs_github.py",
+            "sha256": "9da929143f1113362f686cee34621b29884dea0f34bb1827d02002273218f287",
+            "lines": 1848
+          },
+          {
+            "path": "plugin/records/mgs_records.py",
+            "sha256": "8c1cbeae81663be0c450e53689c90cc601029a349de17fa4a6fe9f12b1c1aa2e",
+            "lines": 1109
+          },
+          {
+            "path": "plugin/runtime/mgs_runtime.py",
+            "sha256": "57009cdfc9d6348d20a50cb4060beab5937bade44266f73aece6a1e1e38d83dc",
+            "lines": 1119
+          },
+          {
+            "path": "plugin/runtime/mcp_gate.py",
+            "sha256": "3c2b755916bd824623d886795225858c48c92857a286ecc997dbb8f01a8fd026",
+            "lines": 261
+          },
+          {
+            "path": "plugin/runtime/mgsrt_admin.py",
+            "sha256": "f84f883d7f9fa06aadf607e98afcde4ce3f878283225ef915b59d672b6affa3f",
+            "lines": 189
+          }
+        ],
+        "production_total_lines": 4526,
+        "key_files": [
+          {
+            "path": "plugin/.codex-plugin/plugin.json",
+            "present": true,
+            "sha256": "fabdd53bb5245284ca91ba0bafc7a363f43293baaf3d55fe69219f45f74d5cec"
+          },
+          {
+            "path": "plugin/provenance/fingerprints.json",
+            "present": true,
+            "sha256": "2311e7ceb52786ba6ca2071cd3cbcf738a2631037fc8863e12824eda6006f84e"
+          },
+          {
+            "path": "dist/package-manifest.txt",
+            "present": true,
+            "sha256": "9711a8a4c354ea2abfe00074cbf087b2591c69723d357bc6996999329277895f"
+          },
+          {
+            "path": "dist/SHA256SUMS.txt",
+            "present": true,
+            "sha256": "854c4c783a313c2e5e030295a72d08e68ce5002345840c51da0afbfd67488359"
+          }
+        ],
+        "six_refactor_directions": {
+          "0 固定基线": [
+            "spec.md#solution",
+            "issues/01-behavior-baseline.md"
+          ],
+          "1 原子任务读取统一": [
+            "task-reading.md",
+            "issues/02-record-semantics.md",
+            "issues/03-record-source.md",
+            "issues/04-ready-single-read.md"
+          ],
+          "2 验收判据与测试组织": [
+            "issues/08-mcp-evidence.md",
+            "issues/09-curl-evidence.md",
+            "issues/10-package-tests.md",
+            "issues/11-backend-tests.md",
+            "issues/12-runtime-tests.md"
+          ],
+          "3 验收客户端去重": [
+            "issues/13-shared-client-expand.md",
+            "issues/14-shared-client-basic-migrate.md",
+            "issues/15-shared-client-absolute.md",
+            "issues/16-shared-client-relative.md",
+            "issues/17-client-contract.md"
+          ],
+          "4 工作结果发布恢复": [
+            "issues/18-result-publication.md",
+            "issues/19-recovery-ownership.md",
+            "issues/20-recovery-entrypoints.md"
+          ],
+          "5 受控写入内部整理": [
+            "issues/21-controlled-local-write.md",
+            "issues/22-controlled-remote-write.md"
+          ],
+          "6 业务 Skill 与包内说明": [
+            "issues/23-skill-common-expand.md",
+            "issues/24-skill-remaining-migrate.md",
+            "issues/25-skill-contract.md"
+          ]
+        }
+      }
+    },
+    "records_probe": {
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/records_probe.py --out /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/records_probe.json",
+      "returncode": 0,
+      "output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/records_probe.json",
+      "report": {
+        "evidence_kind": "synthetic_replay",
+        "scope": "合成 /tmp 夹具;GitHub 用本地替身 transport;零网络;不启动真实模型;不进行任何远端写入",
+        "observations": [
+          {
+            "probe": "ready",
+            "backend": "local-markdown",
+            "reads": {
+              "CONFIG.md": 6,
+              "PROJECT.md": 1,
+              "GAME_DESIGN.md": 1,
+              "TECH_DESIGN.md": 1,
+              "task.md": 2
+            },
+            "startable": [
+              "01-alpha"
+            ],
+            "blocked": []
+          },
+          {
+            "probe": "ready-changing-second-fetch",
+            "backend": "local-markdown",
+            "task_list_reads": 2,
+            "reads": {
+              "CONFIG.md": 6,
+              "PROJECT.md": 1,
+              "GAME_DESIGN.md": 1,
+              "TECH_DESIGN.md": 1,
+              "task.md": 2
+            },
+            "first_fetch_deps": "无",
+            "second_fetch_deps": "02-missing",
+            "result_side": "blocked",
+            "blocked": {
+              "identity": "01-alpha",
+              "title": "甲任务",
+              "triage": "ready-for-agent",
+              "progress": "待执行",
+              "executor": "Agent(制作实现)",
+              "reasons": [
+                "依赖未解析:02-missing(任务不存在)"
+              ]
+            }
+          },
+          {
+            "probe": "ready-changing-second-fetch",
+            "backend": "github-issues",
+            "transport_task_list_requests": 2,
+            "transport_total_requests": 2,
+            "reads": {
+              "CONFIG.md": 6,
+              "PROJECT.md": 1,
+              "GAME_DESIGN.md": 1,
+              "TECH_DESIGN.md": 1
+            },
+            "first_fetch_deps": "无",
+            "second_fetch_deps": "02-missing",
+            "result_side": "blocked",
+            "blocked": {
+              "identity": "01-alpha",
+              "title": "基线任务",
+              "triage": "ready-for-agent",
+              "progress": "待执行",
+              "executor": "Agent(制作实现)",
+              "reasons": [
+                "依赖未解析:02-missing(任务不存在)"
+              ]
+            },
+            "network_requests_to_remote": 0
+          }
+        ],
+        "status": "observed baseline:上述为既有缺陷证据(复现用单独探针),不作为长期正确性断言"
+      }
+    },
+    "client_probe": {
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/client_probe.py --out /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/client_probe.json",
+      "returncode": 0,
+      "output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/client_probe.json",
+      "report": {
+        "evidence_kind": "static_fact + synthetic_replay",
+        "client_count": 18,
+        "total_client_lines": 4605,
+        "family_count": 5,
+        "families": [
+          {
+            "members": [
+              "acceptance/15-goal-change-concurrency-recovery/appserver_client.py",
+              "acceptance/16-producer-complete-loop/appserver_client.py"
+            ],
+            "count": 2,
+            "family_key": "20ebbb89fadf11bd9f1defbaa25c5aeb4953bf88b687cdf814f356e281046efa"
+          },
+          {
+            "members": [
+              "acceptance/02-role-scoped-write/appserver_client.py",
+              "acceptance/17-github-issue-workflow/appserver_client.py",
+              "acceptance/18-complete-package-acceptance/appserver_client.py"
+            ],
+            "count": 3,
+            "family_key": "5ba633f3fe747b64fb699b0c20c7fc187c3c8157f33fc9d2068be0717ac7cc00"
+          },
+          {
+            "members": [
+              "acceptance/01-explicit-project-status/appserver_client.py"
+            ],
+            "count": 1,
+            "family_key": "601038b27539c6541b6e36fc9eb113d5fd9e279391cd95a00413ecac00efcf2a"
+          },
+          {
+            "members": [
+              "acceptance/03-indirect-write-failure/appserver_client.py",
+              "acceptance/04-initialize-local-project/appserver_client.py"
+            ],
+            "count": 2,
+            "family_key": "d74a58dc06c6a2c2908d8e90fe8df1c1cd29286c95c2150c27dc02ccb32d78af"
+          },
+          {
+            "members": [
+              "acceptance/05-adopt-existing-project/appserver_client.py",
+              "acceptance/06-idea-to-current-spec/appserver_client.py",
+              "acceptance/07-isolated-design-prototype/appserver_client.py",
+              "acceptance/08-spec-to-local-tasks/appserver_client.py",
+              "acceptance/09-code-task-delivery/appserver_client.py",
+              "acceptance/10-visual-asset-delivery/appserver_client.py",
+              "acceptance/11-audio-asset-delivery/appserver_client.py",
+              "acceptance/12-build-and-run-delivery/appserver_client.py",
+              "acceptance/13-independent-deliverable-review/appserver_client.py",
+              "acceptance/14-playtest-and-human-feedback/appserver_client.py"
+            ],
+            "count": 10,
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e"
+          }
+        ],
+        "members": [
+          {
+            "path": "acceptance/01-explicit-project-status/appserver_client.py",
+            "lines": 196,
+            "sha256": "e4b2744442e1cf9a70c04d5d6ceeb7dfac7071dad8f6cfbf1af2f2969ea4e000",
+            "family_key": "601038b27539c6541b6e36fc9eb113d5fd9e279391cd95a00413ecac00efcf2a",
+            "has_incremental_drain": false,
+            "has_kill_process_group": false,
+            "has_kill_after_allows": false,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 3
+          },
+          {
+            "path": "acceptance/02-role-scoped-write/appserver_client.py",
+            "lines": 225,
+            "sha256": "75c333ac5a6a0c154854f4c7b5f7f543a58522112c1bb2d8fdb35a3476293127",
+            "family_key": "5ba633f3fe747b64fb699b0c20c7fc187c3c8157f33fc9d2068be0717ac7cc00",
+            "has_incremental_drain": true,
+            "has_kill_process_group": false,
+            "has_kill_after_allows": false,
+            "has_kill_relative": false,
+            "event_type_filter": true,
+            "json_loads_sites": 4
+          },
+          {
+            "path": "acceptance/03-indirect-write-failure/appserver_client.py",
+            "lines": 225,
+            "sha256": "99b37746f13fbf3f30d45c68f647dcae6b8e8f5bc67a1b2de45616aff4d931a9",
+            "family_key": "d74a58dc06c6a2c2908d8e90fe8df1c1cd29286c95c2150c27dc02ccb32d78af",
+            "has_incremental_drain": true,
+            "has_kill_process_group": false,
+            "has_kill_after_allows": false,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 4
+          },
+          {
+            "path": "acceptance/04-initialize-local-project/appserver_client.py",
+            "lines": 225,
+            "sha256": "a6cf234e78b58f942ce13a6eb30d8d761f6a4d8eaed95dfb2fbb3c258c33e63e",
+            "family_key": "d74a58dc06c6a2c2908d8e90fe8df1c1cd29286c95c2150c27dc02ccb32d78af",
+            "has_incremental_drain": true,
+            "has_kill_process_group": false,
+            "has_kill_after_allows": false,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 4
+          },
+          {
+            "path": "acceptance/05-adopt-existing-project/appserver_client.py",
+            "lines": 272,
+            "sha256": "073246a0d4a9a99a0b40f09419338aa052348ac86e7f276f1947b0512f6243d4",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/06-idea-to-current-spec/appserver_client.py",
+            "lines": 272,
+            "sha256": "cc5e5a9d2fdcc302dd5e56e3ed8ce8f6bb8e9e8dddd7e40d72a9cd1e8e7b9a2c",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/07-isolated-design-prototype/appserver_client.py",
+            "lines": 272,
+            "sha256": "91377a6c3cfd2468012c810b38330e3a693cf48f45eb491d776807e88589b5c4",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/08-spec-to-local-tasks/appserver_client.py",
+            "lines": 272,
+            "sha256": "75fc958fa2aeda522b29f02ef3a1a5688a817fc840ba106db2eb246ff48b601a",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/09-code-task-delivery/appserver_client.py",
+            "lines": 272,
+            "sha256": "42671f4bf291a88b4dfdaea6a855bf5a2e952f734faa9764a5ae4ec4cc9065a7",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/10-visual-asset-delivery/appserver_client.py",
+            "lines": 272,
+            "sha256": "c39606df29e77e98c0174e0e8f32a7e0504d7bbbff2246ac5def900a7300d238",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/11-audio-asset-delivery/appserver_client.py",
+            "lines": 272,
+            "sha256": "fb1c0b7a33996282ec5ba7936571afc6f29e0b0355af9e3eb6ab1198cee10cbb",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/12-build-and-run-delivery/appserver_client.py",
+            "lines": 272,
+            "sha256": "8f8607759bdc08f258e474e19c089aa825e1e91f9ffeff290b5afcb0cc4e8f3f",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/13-independent-deliverable-review/appserver_client.py",
+            "lines": 272,
+            "sha256": "0a87e9dec4761422a75c7044bc54eed1426e407ac778b15a661620354aa49bdb",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/14-playtest-and-human-feedback/appserver_client.py",
+            "lines": 272,
+            "sha256": "c6ee02befe341628b285ccf7193403bcf52c085f804fde6e8e2239fec57f907a",
+            "family_key": "f10db3c877ae2a0065b3170a3d0a78302b65bbadc2b3f358c1c7eb051767519e",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": false,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/15-goal-change-concurrency-recovery/appserver_client.py",
+            "lines": 282,
+            "sha256": "12e95cf3ff288affe42fb784c8896bd459429f4d7661296d869747fccd28353a",
+            "family_key": "20ebbb89fadf11bd9f1defbaa25c5aeb4953bf88b687cdf814f356e281046efa",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": true,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/16-producer-complete-loop/appserver_client.py",
+            "lines": 282,
+            "sha256": "981b0ea855733ec2c9acc1218bba751bd21c445787eb67dfd808d3b212cd9dc3",
+            "family_key": "20ebbb89fadf11bd9f1defbaa25c5aeb4953bf88b687cdf814f356e281046efa",
+            "has_incremental_drain": true,
+            "has_kill_process_group": true,
+            "has_kill_after_allows": true,
+            "has_kill_relative": true,
+            "event_type_filter": false,
+            "json_loads_sites": 5
+          },
+          {
+            "path": "acceptance/17-github-issue-workflow/appserver_client.py",
+            "lines": 225,
+            "sha256": "75c333ac5a6a0c154854f4c7b5f7f543a58522112c1bb2d8fdb35a3476293127",
+            "family_key": "5ba633f3fe747b64fb699b0c20c7fc187c3c8157f33fc9d2068be0717ac7cc00",
+            "has_incremental_drain": true,
+            "has_kill_process_group": false,
+            "has_kill_after_allows": false,
+            "has_kill_relative": false,
+            "event_type_filter": true,
+            "json_loads_sites": 4
+          },
+          {
+            "path": "acceptance/18-complete-package-acceptance/appserver_client.py",
+            "lines": 225,
+            "sha256": "75c333ac5a6a0c154854f4c7b5f7f543a58522112c1bb2d8fdb35a3476293127",
+            "family_key": "5ba633f3fe747b64fb699b0c20c7fc187c3c8157f33fc9d2068be0717ac7cc00",
+            "has_incremental_drain": true,
+            "has_kill_process_group": false,
+            "has_kill_after_allows": false,
+            "has_kill_relative": false,
+            "event_type_filter": true,
+            "json_loads_sites": 4
+          }
+        ],
+        "decode_probe": {
+          "evidence_kind": "synthetic_replay",
+          "representative": "acceptance/02-role-scoped-write/appserver_client.py",
+          "input_lines": 1000,
+          "poll_iterations": 10,
+          "json_loads_calls": 21000,
+          "recorded_events": 1000,
+          "decoded_messages": 1000,
+          "real_sleep_seconds": 0,
+          "subprocesses_started": 0,
+          "network_requests": 0,
+          "model_calls": 0
+        },
+        "scope": "合成回放只覆盖现有 wait_turn_completed 代码;不启动子进程、不访问网络、不启动真实模型;不代表端到端加速倍数"
+      }
+    },
+    "code_volume": {
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 -B /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/code_volume.py --out /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.scratch/mygamestudio-architecture-refactor/evidence/baseline/results/code_volume.json",
+      "returncode": 0,
+      "output_path": ".scratch/mygamestudio-architecture-refactor/evidence/baseline/results/code_volume.json",
+      "report": {
+        "evidence_kind": "static_fact",
+        "counting_scope": "tracked .py/.sh/.js/.ts/.tsx under plugin/tests/acceptance/dist, excluding evidence/fixtures directories; physical lines include comments and blanks",
+        "areas": {
+          "plugin": {
+            "files": 5,
+            "lines": 4526
+          },
+          "tests": {
+            "files": 5,
+            "lines": 9086
+          },
+          "acceptance": {
+            "files": 44,
+            "lines": 20739
+          },
+          "dist": {
+            "files": 2,
+            "lines": 146
+          }
+        },
+        "totals": {
+          "plugin": 4526,
+          "tests": 9086,
+          "acceptance": 20739,
+          "dist": 146
+        },
+        "production_files": [
+          {
+            "path": "plugin/records/mgs_github.py",
+            "lines": 1848
+          },
+          {
+            "path": "plugin/records/mgs_records.py",
+            "lines": 1109
+          },
+          {
+            "path": "plugin/runtime/mcp_gate.py",
+            "lines": 261
+          },
+          {
+            "path": "plugin/runtime/mgs_runtime.py",
+            "lines": 1119
+          },
+          {
+            "path": "plugin/runtime/mgsrt_admin.py",
+            "lines": 189
+          }
+        ],
+        "rollback": {
+          "ticket_pre_base_commit": "b8cda58ea2ff3b0fb18ae7d888cbd5d01eaca586",
+          "spec_code_baseline_commit": "49f3b1e7323c02a5fd39f3d9c847df023c4f2459"
+        },
+        "client_dedup": {
+          "client_count": 18,
+          "client_total_lines": 4605,
+          "family_count": 5,
+          "families": [
+            [
+              "acceptance/01-explicit-project-status/appserver_client.py"
+            ],
+            [
+              "acceptance/02-role-scoped-write/appserver_client.py",
+              "acceptance/17-github-issue-workflow/appserver_client.py",
+              "acceptance/18-complete-package-acceptance/appserver_client.py"
+            ],
+            [
+              "acceptance/03-indirect-write-failure/appserver_client.py",
+              "acceptance/04-initialize-local-project/appserver_client.py"
+            ],
+            [
+              "acceptance/05-adopt-existing-project/appserver_client.py",
+              "acceptance/06-idea-to-current-spec/appserver_client.py",
+              "acceptance/07-isolated-design-prototype/appserver_client.py",
+              "acceptance/08-spec-to-local-tasks/appserver_client.py",
+              "acceptance/09-code-task-delivery/appserver_client.py",
+              "acceptance/10-visual-asset-delivery/appserver_client.py",
+              "acceptance/11-audio-asset-delivery/appserver_client.py",
+              "acceptance/12-build-and-run-delivery/appserver_client.py",
+              "acceptance/13-independent-deliverable-review/appserver_client.py",
+              "acceptance/14-playtest-and-human-feedback/appserver_client.py"
+            ],
+            [
+              "acceptance/15-goal-change-concurrency-recovery/appserver_client.py",
+              "acceptance/16-producer-complete-loop/appserver_client.py"
+            ]
+          ],
+          "one_representative_per_family_lines": 1200,
+          "estimated_net_reduction_lines": 3405,
+          "note": "规划估计,最终以实施后相同范围实测净增减为准;共享实现与入口适配的成本须计入"
+        },
+        "comparison_method": "每票完成后运行 run_baseline.sh,对相同范围复算上述 areas 行数、records_probe 读取次数与 client_probe 解码次数,与本次 baseline.json 逐项比较"
+      }
+    }
+  },
+  "all_existing_checks_green": true
+}
