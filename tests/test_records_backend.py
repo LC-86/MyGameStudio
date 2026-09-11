@@ -958,6 +958,207 @@ def test_loaded_config_local_read_is_same_source() -> None:
           "已加载配置的来源读取应与现有入口 read_task 一致")
 
 
+# ---------- 票 04:一次 ready 单份来源(R1/READ-01..06) ----------
+
+class scoped_read_counter:
+    """统计某项目根内的底层读取型 open 次数(按文件名聚合)。
+
+    计数的是真实 open 事件(不是私有助手调用次数),与基线探针同一口径;
+    只服务本次上下文,退出时注销审计钩子。
+    """
+
+    def __init__(self, root: Path) -> None:
+        self.root = str(Path(root).resolve())
+        self.counts: dict[str, int] = {}
+        self.by_path: dict[str, int] = {}
+        self._active = False
+
+    def _hook(self, event: str, args: tuple) -> None:
+        if event != "open" or not self._active:
+            return
+        raw = args[0]
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", "replace")
+        elif not isinstance(raw, (str, __import__("os").PathLike)):
+            return
+        mode = args[1] if len(args) > 1 and isinstance(args[1], str) else ""
+        if not mode.startswith("r"):
+            return
+        try:
+            rel = Path(raw).resolve().relative_to(self.root)
+        except (OSError, ValueError):
+            return
+        rel = str(rel)
+        self.counts[Path(rel).name] = self.counts.get(Path(rel).name, 0) + 1
+        self.by_path[rel] = self.by_path.get(rel, 0) + 1
+
+    def __enter__(self) -> "scoped_read_counter":
+        sys.addaudithook(self._hook)
+        self._active = True
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._active = False
+
+    def config_reads(self) -> int:
+        return sum(n for rel, n in self.by_path.items()
+                   if Path(rel).name == "CONFIG.md")
+
+    def task_reads(self) -> dict[str, int]:
+        return {rel: n for rel, n in self.by_path.items()
+                if Path(rel).name == "task.md"}
+
+
+def test_ready_reads_config_and_each_task_once() -> None:
+    """READ-01:本地正常 ready 只读 CONFIG 原文一次、每份 task.md 一次;
+
+    静态输入下的最终分类与既有语义一致(不含被替换前的二次读取)。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        with scoped_read_counter(root) as counter:
+            report = mgs_records.startable_tasks(root)
+        check(counter.config_reads() == 1,
+              f"ready 应只读 CONFIG 原文一次,实际 {counter.by_path}")
+        task_reads = counter.task_reads()
+        check(task_reads and all(n == 1 for n in task_reads.values())
+              and len(task_reads) == 7,
+              f"ready 每份 task.md 应恰好读一次,实际 {task_reads}")
+        startable = {i["identity"] for i in report["startable"]}
+        blocked = {i["identity"] for i in report["blocked"]}
+        check(startable == {"01-alpha", "04-delta"} and blocked == set(
+            {"01-alpha-done", "02-beta", "03-gamma", "05-epsilon", "06-zeta"}),
+            f"静态输入下最终分类应保持,实际 startable={sorted(startable)} "
+            f"blocked={sorted(blocked)}")
+
+
+def test_deps_reads_once_and_ready_does_not_recall_public_dependency_entry() -> None:
+    """READ-01/依赖纪律:依赖由本次唯一任务集合生成,ready 不再回调公开依赖入口。
+
+    ① task_dependencies 自身只读 CONFIG 一次、每份 task.md 一次;
+    ② ready 期间把公开依赖入口替换为哨兵,证明它没有被 ready 调用。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        with scoped_read_counter(root) as counter:
+            graph = mgs_records.task_dependencies(root)
+        check(counter.config_reads() == 1,
+              f"deps 应只读 CONFIG 一次,实际 {counter.by_path}")
+        deps_reads = counter.task_reads()
+        check(deps_reads and all(n == 1 for n in deps_reads.values()),
+              f"deps 每份 task.md 应恰好读一次,实际 {deps_reads}")
+        check(graph["edges"].get("02-beta") == ["01-alpha"],
+              f"deps 依赖边应保持,实际 {graph['edges']}")
+
+        calls: list[str] = []
+        real = mgs_records.task_dependencies
+
+        def sentinel(*args, **kwargs):
+            calls.append("called")
+            raise AssertionError("ready 不应回调公开依赖入口重新获取任务")
+
+        mgs_records.task_dependencies = sentinel
+        try:
+            report = mgs_records.startable_tasks(root)
+        finally:
+            mgs_records.task_dependencies = real
+        check(calls == [],
+              "ready 不得回调公开依赖入口(否则会二次获取任务集合)")
+        blocked = {i["identity"]: i for i in report["blocked"]}
+        check(any("依赖未完成" in r for r in blocked["02-beta"]["reasons"]),
+              f"依赖判断仍应使用同一集合给出未完成原因,实际 {blocked['02-beta']}")
+
+
+def test_ready_second_call_reflects_changes_without_cross_call_cache() -> None:
+    """READ-04/R1:两次顶层调用之间修改任务与配置都会影响第二次结果。
+
+    第二次调用重新读取(非缓存),分类随新依赖更新;不存在跨调用复用。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        first = mgs_records.startable_tasks(root)
+        check("01-alpha" in {i["identity"] for i in first["startable"]},
+              "初始 01-alpha 无依赖应可开工")
+
+        def first_call(task: dict) -> tuple[set[str], set[str]]:
+            return ({i["identity"] for i in task["startable"]},
+                    {i["identity"] for i in task["blocked"]})
+
+        # 第一次调用后新增一个不存在的依赖 → 第二次应看到并转为不可开工
+        task_path = root / "docs" / "mygamestudio" / "work" / "01-alpha" / "task.md"
+        task_path.write_text(
+            task_path.read_text(encoding="utf-8").replace(
+                "- 依赖:无", "- 依赖:02-missing"), encoding="utf-8")
+        second = mgs_records.startable_tasks(root)
+        startable, blocked = first_call(second)
+        check("01-alpha" not in startable and "01-alpha" in blocked,
+              f"第二次调用应看到新依赖并把 01-alpha 转为不可开工,实际 {second}")
+        entry = next(i for i in second["blocked"] if i["identity"] == "01-alpha")
+        check(any("依赖未解析:02-missing" in r for r in entry["reasons"]),
+              f"第二次应报告新依赖未解析,实际 {entry['reasons']}")
+
+        # 再改 CONFIG(未就绪能力)影响第二次调用之后的第三次结果
+        config_path = root / "docs" / "mygamestudio" / "CONFIG.md"
+        config_path.write_text(
+            config_path.read_text(encoding="utf-8").replace(
+                "- 尚未就绪的能力及影响:无",
+                "- 尚未就绪的能力及影响:音频制作能力未就绪"),
+            encoding="utf-8")
+        third = mgs_records.startable_tasks(root)
+        epsilon = next((i for i in third["blocked"] + third["startable"]
+                        if i["identity"] == "05-epsilon"), None)
+        check(epsilon is not None and any("能力未就绪" in r
+                                          for r in epsilon["reasons"]),
+              f"第三次调用应读到新 CONFIG 能力缺口,实际 {epsilon}")
+
+
+def test_ready_and_deps_preserve_directory_order() -> None:
+    """READ-06:本地 ready/deps 沿目录顺序;list 排序副本不污染其他判断。
+
+    目录名与正文身份刻意相反:dep 边顺序应保持目录顺序而非身份排序。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp), extra_task=False)
+        docs = root / "docs" / "mygamestudio" / "work"
+        # 目录 05-zzz 的正文身份为 02-aaa;目录 02-aaa 的正文身份为 05-zzz
+        (docs / "05-zzz").mkdir(parents=True)
+        (docs / "05-zzz" / "task.md").write_text(
+            PLAN_TASK_TEMPLATE.format(
+                title="目录序一", identity="02-aaa", triage="ready-for-agent",
+                progress="待执行", goal="目标", deliver="交付", scope="src/**",
+                capability="文件读写", executor="Agent(制作实现)",
+                acceptance="检查", deps="无", coordination="无", missing="无",
+                index="(暂无)"), encoding="utf-8")
+        (docs / "02-aaa").mkdir(parents=True)
+        (docs / "02-aaa" / "task.md").write_text(
+            PLAN_TASK_TEMPLATE.format(
+                title="目录序二", identity="05-zzz", triage="ready-for-agent",
+                progress="待执行", goal="目标", deliver="交付", scope="src/**",
+                capability="文件读写", executor="Agent(制作实现)",
+                acceptance="检查", deps="无", coordination="无", missing="无",
+                index="(暂无)"), encoding="utf-8")
+        # 目录顺序:02-aaa(正文身份 05-zzz)在前,05-zzz(正文身份 02-aaa)在后
+        deps = mgs_records.task_dependencies(root)
+        check(list(deps["edges"].keys()) == ["05-zzz", "02-aaa"],
+              f"deps 应沿目录顺序(02-aaa 目录的正文身份 05-zzz 在前),"
+              f"实际 {list(deps['edges'])}")
+        ready = mgs_records.startable_tasks(root)
+        check([i["identity"] for i in ready["startable"]] == ["05-zzz", "02-aaa"],
+              f"ready 应沿目录顺序输出,实际 "
+              f"{[i['identity'] for i in ready['startable']]}")
+        # list 按目录排序的投影不改变 deps/ready 的来源顺序
+        listed = [t["directory"] for t in mgs_records.list_tasks(root)]
+        check(listed == ["02-aaa", "05-zzz"],
+              f"list 应按目录排序,实际 {listed}")
+        deps_again = mgs_records.task_dependencies(root)
+        check(list(deps_again["edges"].keys()) == ["05-zzz", "02-aaa"],
+              "list 的排序副本不得原地污染 deps 的来源顺序")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

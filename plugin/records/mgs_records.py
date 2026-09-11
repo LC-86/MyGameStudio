@@ -63,7 +63,7 @@ from mgs_record_model import (  # noqa: E402  (路径调整后导入)
 # 同样直接依赖该来源,不再反向调用本模块。
 from mgs_record_source import (  # noqa: E402
     DEFAULT_CONFIG_REL, DEFAULT_TASK_ROOT, SUPPORTED_BACKENDS, _task_root,
-    load_config, local_list_tasks, local_read_task)
+    load_config, load_config_document, local_list_tasks, local_read_task)
 
 # 错误身份唯一性由 mgs_record_model 的 RecordsError 单一定义保证(脚本与
 # 模块导入同一类),不再需要把 __main__ 注册进 sys.modules 的临时身份补偿。
@@ -90,14 +90,13 @@ def _local_config(project_root: Path | str, config_rel: str) -> dict:
     return config
 
 
-def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
-                   *, transport=None, api_base: str | None = None,
-                   cache_dir: Path | str | None = None):
-    """构建 GitHub Issues 后端适配器(公开接缝;transport 供测试注入替身)。"""
+def _github_backend_for(config: dict, *, transport=None,
+                        api_base: str | None = None,
+                        cache_dir: Path | str | None = None):
+    """由本次已解析配置构造 GitHub adapter(不再重读 CONFIG)。"""
 
     import mgs_github  # noqa: PLC0415 - 延迟导入避免循环依赖
 
-    config = load_config(project_root, config_rel)
     if config["backend"] != "github-issues":
         raise RecordsError(f"当前后端为 {config['backend']},不是 github-issues")
     if transport is None:
@@ -107,36 +106,70 @@ def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_RE
     return mgs_github.GithubBackend(config, transport, cache_dir)
 
 
-def _tasks_for(project_root: Path, config_rel: str, *, transport=None,
-               api_base: str | None = None,
-               cache_dir: Path | str | None = None) -> tuple[dict, list[dict], dict]:
-    """按 CONFIG 后端取规范化任务列表。返回 (config, tasks, 读取元信息)。
-
-    读取元信息(审查修复票 01/S5):是否缓存、抓取时间与来源——离线回缓存
-    与在线当前确认是两种不同状态,统一接口必须能把两者区分传递到顶层结果,
-    调用方才能判断是否在依据旧状态安排工作。
-    """
+def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
+                   *, transport=None, api_base: str | None = None,
+                   cache_dir: Path | str | None = None):
+    """构建 GitHub Issues 后端适配器(公开接缝;transport 供测试注入替身)。"""
 
     config = load_config(project_root, config_rel)
-    if config["backend"] == "local-markdown":
-        meta = {"cached": False,
-                "fetched_at": _dt.datetime.now().astimezone().isoformat(
-                    timespec="seconds"),
-                "source": {"backend": "local-markdown",
-                           "task_root": config["task_root"]}}
-        return config, list_tasks(project_root, config_rel), meta
-    if config["backend"] == "github-issues":
-        payload = github_backend(project_root, config_rel, transport=transport,
-                                 api_base=api_base,
-                                 cache_dir=cache_dir).fetch_tasks()
-        meta = {"cached": bool(payload.get("cached")),
-                "fetched_at": payload.get("fetched_at"),
-                "source": payload.get("source")}
-        if meta["cached"]:
-            meta["cache_note"] = payload.get("note", "")
-        return config, payload["tasks"], meta
+    return _github_backend_for(config, transport=transport, api_base=api_base,
+                               cache_dir=cache_dir)
+
+
+class _Reading:
+    """一次顶层读取的内部载体:配置原文、配置、任务集合与读取元信息。
+
+    只在本次调用内存在,不成为公共参数或返回对象;下一次顶层调用重新
+    读取,不复用。它保证「本次不在隐式重取任务集合后混合计算」,但不
+    承诺多个文件、远端详情与基线处于同一事务时刻。
+    """
+
+    __slots__ = ("config", "config_text", "tasks", "fetch_meta")
+
+    def __init__(self, config: dict, config_text: str, tasks: list[dict],
+                 fetch_meta: dict) -> None:
+        self.config = config
+        self.config_text = config_text
+        self.tasks = tasks
+        self.fetch_meta = fetch_meta
+
+
+def _read_workspace(project_root: Path | str, config_rel: str, *,
+                    transport=None, api_base: str | None = None,
+                    cache_dir: Path | str | None = None) -> _Reading:
+    """顶层读取一次:CONFIG 原文一次;需要任务集合时获取一次。
+
+    本地每份 task.md 读取一次,GitHub 全量任务集合获取一次。任务集合保留
+    来源顺序(本地目录顺序、GitHub list 原后端顺序),依赖与可开工判断都
+    从这一份结果推导,不再回调重新获取任务的公开入口。读取元信息(是否
+    缓存、抓取时间与来源)随载体传递到顶层结果——离线回缓存与在线当前
+    确认由此可区分(审查修复票 01/S5)。
+    """
+
+    root = Path(project_root)
+    config, config_text = load_config_document(root, config_rel)
+    backend = config["backend"]
+    if backend == "local-markdown":
+        tasks = local_list_tasks(root, config)
+        fetch_meta = {
+            "cached": False,
+            "fetched_at": _dt.datetime.now().astimezone().isoformat(
+                timespec="seconds"),
+            "source": {"backend": "local-markdown",
+                       "task_root": config["task_root"]}}
+        return _Reading(config, config_text, tasks, fetch_meta)
+    if backend == "github-issues":
+        payload = _github_backend_for(
+            config, transport=transport, api_base=api_base,
+            cache_dir=cache_dir).fetch_tasks()
+        fetch_meta = {"cached": bool(payload.get("cached")),
+                      "fetched_at": payload.get("fetched_at"),
+                      "source": payload.get("source")}
+        if fetch_meta["cached"]:
+            fetch_meta["cache_note"] = payload.get("note", "")
+        return _Reading(config, config_text, payload["tasks"], fetch_meta)
     raise RecordsError(
-        f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
+        f"后端 {backend} 未实现(首版支持 local-markdown 与 github-issues)")
 
 
 def list_tasks(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
@@ -188,19 +221,14 @@ def read_task(project_root: Path | str, task_id: str,
 # _parse_dep_ids / _find_cycles 的唯一定义在 mgs_record_model(共同记录语义),
 # 本模块与 GitHub adapter 共用;此处不再重复定义。
 
-def task_dependencies(project_root: Path | str,
-                      config_rel: str = DEFAULT_CONFIG_REL, *,
-                      transport=None, api_base: str | None = None,
-                      cache_dir: Path | str | None = None) -> dict:
-    """解析任务依赖关系:边、未解析引用与循环(关系可解析且无循环为 ok)。
+def _dependency_graph(tasks: list[dict]) -> dict:
+    """由一份已取得的任务集合生成依赖关系:边、未解析引用与循环。
 
-    双后端同语义:本地从 work/ 解析,github-issues 从远端任务正文解析
-    (「依赖」字段可写 `#Issue号 身份` 或直接写身份,均按身份核对)。
+    纯函数:不自行再次获取任务,供 deps 与 ready 在同一个已取集合上复用
+    (票 04:一次查询的依赖与任务状态不混用两次读取结果)。任务集合的
+    原始顺序决定 edges 的插入顺序,调用方各自的排序不受影响。
     """
 
-    root = Path(project_root)
-    tasks = _tasks_for(root, config_rel, transport=transport, api_base=api_base,
-                       cache_dir=cache_dir)[1]
     by_id = {task["identity"]: task for task in tasks}
     edges: dict[str, list[str]] = {}
     unresolved: list[dict] = []
@@ -213,6 +241,22 @@ def task_dependencies(project_root: Path | str,
     cycles = _find_cycles(edges)
     return {"edges": edges, "unresolved": unresolved, "cycles": cycles,
             "ok": not unresolved and not cycles}
+
+
+def task_dependencies(project_root: Path | str,
+                      config_rel: str = DEFAULT_CONFIG_REL, *,
+                      transport=None, api_base: str | None = None,
+                      cache_dir: Path | str | None = None) -> dict:
+    """解析任务依赖关系:边、未解析引用与循环(关系可解析且无循环为 ok)。
+
+    双后端同语义:本地从 work/ 解析,github-issues 从远端任务正文解析
+    (「依赖」字段可写 `#Issue号 身份` 或直接写身份,均按身份核对)。
+    本次调用只取一份任务集合,依赖由该集合生成。
+    """
+
+    reading = _read_workspace(project_root, config_rel, transport=transport,
+                              api_base=api_base, cache_dir=cache_dir)
+    return _dependency_graph(reading.tasks)
 
 
 def _doc_baseline_versions(root: Path, config: dict) -> dict[str, str]:
@@ -286,33 +330,16 @@ def _capability_gaps(config_text: str, phrases: str) -> list[str]:
     return gaps
 
 
-def startable_tasks(project_root: Path | str,
-                    config_rel: str = DEFAULT_CONFIG_REL, *,
-                    transport=None, api_base: str | None = None,
-                    cache_dir: Path | str | None = None) -> dict:
-    """当前可开工集合:综合未完成依赖、输入、版本、能力与记录完整性。
+def _ready_classification(tasks: list[dict], graph: dict,
+                          versions: dict[str, str],
+                          config_text: str) -> tuple[list[dict], list[dict]]:
+    """把一份已取得的任务集合分为可开工与不可开工两侧(纯判断,不读取)。
 
-    ready-for-agent 不等于依赖已完成或已获全部授权——见返回 note;
-    wontfix 与非待执行任务保留在 blocked 侧可见,不静默消失。
-    双后端同语义(任务来源经 CONFIG 分发;核心基线与执行条件仍读本地文档)。
-    顶层携带任务读取元信息(cached/fetched_at/source,断网回缓存时另附
-    cache_note)——缓存推断与当前确认可区分(审查修复票 01/S5)。
+    graph 由同一份任务集合生成;分流、进度、依赖、字段、版本漂移与能力
+    规则按原语义保留。wontfix 与待执行之外的任务保留在 blocked 侧可见。
     """
 
-    root = Path(project_root)
-    config = load_config(root, config_rel)
-    if config["backend"] not in SUPPORTED_BACKENDS:
-        raise RecordsError(
-            f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
-    config_text = (root / config_rel).read_text(encoding="utf-8")
-    # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档)
-    versions = _doc_baseline_versions(root, config)
-    _config, tasks, fetch_meta = _tasks_for(
-        root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
     by_id = {task["identity"]: task for task in tasks}
-    graph = task_dependencies(root, config_rel, transport=transport,
-                              api_base=api_base, cache_dir=cache_dir)
     startable: list[dict] = []
     blocked: list[dict] = []
     for task in tasks:
@@ -353,8 +380,33 @@ def startable_tasks(project_root: Path | str,
             startable.append(entry)
         else:
             blocked.append(entry)
+    return startable, blocked
+
+
+def startable_tasks(project_root: Path | str,
+                    config_rel: str = DEFAULT_CONFIG_REL, *,
+                    transport=None, api_base: str | None = None,
+                    cache_dir: Path | str | None = None) -> dict:
+    """当前可开工集合:综合未完成依赖、输入、版本、能力与记录完整性。
+
+    ready-for-agent 不等于依赖已完成或已获全部授权——见返回 note;
+    wontfix 与非待执行任务保留在 blocked 侧可见,不静默消失。
+    双后端同语义(任务来源经 CONFIG 分发;核心基线与执行条件仍读本地文档)。
+    顶层携带任务读取元信息(cached/fetched_at/source,断网回缓存时另附
+    cache_note)——缓存推断与当前确认可区分(审查修复票 01/S5)。
+    """
+
+    root = Path(project_root)
+    reading = _read_workspace(root, config_rel, transport=transport,
+                              api_base=api_base, cache_dir=cache_dir)
+    # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档)
+    versions = _doc_baseline_versions(root, reading.config)
+    # 依赖与任务状态都来自本次唯一的任务集合,不再回调公开依赖入口重取
+    graph = _dependency_graph(reading.tasks)
+    startable, blocked = _ready_classification(
+        reading.tasks, graph, versions, reading.config_text)
     result = {"startable": startable, "blocked": blocked, "note": READY_NOTE}
-    result.update(fetch_meta)
+    result.update(reading.fetch_meta)
     return result
 
 
@@ -459,9 +511,10 @@ def baseline_report(project_root: Path | str,
                          "current_fingerprint": f"sha256:{current_strict}",
                          "status": status, "note": note})
 
-    tasks = _tasks_for(root, config_rel, transport=transport, api_base=api_base,
-                       cache_dir=cache_dir)[1]
+    reading = _read_workspace(root, config_rel, transport=transport,
+                              api_base=api_base, cache_dir=cache_dir)
     affected: list[dict] = []
+    tasks = reading.tasks
     for task in tasks:
         baseline_text = task["request"].get("输入与基线", "")
         for name, ref in _BASELINE_REF_RE.findall(baseline_text or ""):
