@@ -269,12 +269,25 @@ def test_role_scope_demo_fixture() -> None:
 def test_records_backend_module() -> None:
     module = PLUGIN_ROOT / "records" / "mgs_records.py"
     check(module.is_file(), "缺少 records/mgs_records.py(本地 Markdown 后端统一接口)")
+    source = PLUGIN_ROOT / "records" / "mgs_record_source.py"
+    check(source.is_file(), "缺少 records/mgs_record_source.py(协作配置与本地来源)")
     if module.is_file():
-        text = module.read_text()
-        for seam in ("def load_config", "def list_tasks", "def read_task",
-                     "def task_dependencies", "def startable_tasks",
-                     "def verify_project"):
-            check(seam in text, f"records/mgs_records.py 缺少公开接缝 {seam}")
+        # 兼容目的用导入与调用验证(不再正则截取源码):公开接缝与来源
+        # module 的实体必须真实可导入、可调用(票 03 职责迁移后同此)。
+        records_dir = str(module.parent)
+        if records_dir not in sys.path:
+            sys.path.insert(0, records_dir)
+        import mgs_record_source
+        import mgs_records
+        for name in ("load_config", "list_tasks", "read_task",
+                     "task_dependencies", "startable_tasks",
+                     "verify_project"):
+            check(callable(getattr(mgs_records, name, None)),
+                  f"records/mgs_records.py 缺少可用公开接缝 {name}")
+        for name in ("load_config", "local_list_tasks", "local_read_task",
+                     "parse_repo_location", "parse_remote_authorizations"):
+            check(callable(getattr(mgs_record_source, name, None)),
+                  f"records/mgs_record_source.py 缺少可用来源接缝 {name}")
 
 
 def test_templates_and_game_init() -> None:
@@ -1796,14 +1809,26 @@ def test_github_issue_workflow_content() -> None:
     module = PLUGIN_ROOT / "records" / "mgs_github.py"
     check(module.is_file(), "缺少 records/mgs_github.py(GitHub Issues 后端适配器)")
     if module.is_file():
+        # 公开接缝用导入与调用验证:仓库坐标/授权解析归来源 module,
+        # adapter 保持同名可用接缝(错误身份与既有捕获分支不变)。
+        records_dir = str(module.parent)
+        if records_dir not in sys.path:
+            sys.path.insert(0, records_dir)
+        import mgs_github
+        for seam in ("parse_repo_location", "parse_remote_authorizations"):
+            check(callable(getattr(mgs_github, seam, None)),
+                  f"records/mgs_github.py 缺少可用公开接缝 {seam}")
+        check(isinstance(getattr(mgs_github, "GithubBackend", None), type),
+              "records/mgs_github.py 缺少 GithubBackend")
+        for method in ("create_task", "update_task", "set_triage", "append_result",
+                       "set_relations", "set_parent", "close_task", "publish_drafts"):
+            check(callable(getattr(mgs_github.GithubBackend, method, None)),
+                  f"GithubBackend 缺少公开接缝 {method}")
+        for seam in ("plan_backend_switch", "apply_backend_switch",
+                     "handover_baseline_check"):
+            check(callable(getattr(mgs_github, seam, None)),
+                  f"records/mgs_github.py 缺少可用公开接缝 {seam}")
         text = module.read_text(encoding="utf-8")
-        for seam in ("def parse_repo_location", "def parse_remote_authorizations",
-                     "class GithubBackend", "def create_task", "def update_task",
-                     "def set_triage", "def append_result", "def set_relations",
-                     "def set_parent", "def close_task", "def publish_drafts",
-                     "def plan_backend_switch", "def apply_backend_switch",
-                     "def handover_baseline_check"):
-            check(seam in text, f"records/mgs_github.py 缺少公开接缝 {seam}")
         for concept in ("issues-write", "不等于批准远端写入", "不静默切换本地后端",
                         "未发布草稿", "避免重复创建", "关闭 Issue 不自动等于验证通过"):
             check(concept in text, f"mgs_github.py 应覆盖概念:{concept}")

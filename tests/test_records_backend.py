@@ -840,6 +840,124 @@ def test_record_model_shared_body_and_error_identity() -> None:
               f"畸形任务应进入核验并报告身份问题:{tasks_check['detail']}")
 
 
+# ---------- 票 03:来源归属与依赖方向(READ-13/依赖纪律) ----------
+
+RECORDS_DIR = REPO_ROOT / "plugin" / "records"
+
+
+def _imported_modules(path: Path) -> set[str]:
+    """AST 扫描一份源码中所有 import(含函数内导入),返回模块名集合。
+
+    用 AST 而非正则:函数内 import(延迟导入)同样计为依赖,防止用新的
+    延迟导入掩盖反向调用。
+    """
+
+    import ast
+
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+            names.add(node.module.split(".")[0])
+    return names
+
+
+def test_dependency_direction_static() -> None:
+    """依赖方向:共同语义/来源不反向依赖查询或 GitHub;GitHub 不反向调用查询。
+
+    用 AST 扫描全部 import(含函数内),证明方向靠职责归属实现,而不是
+    延迟导入;查询组织与 adapter 正向依赖来源 module。
+    """
+
+    model = _imported_modules(RECORDS_DIR / "mgs_record_model.py")
+    source = _imported_modules(RECORDS_DIR / "mgs_record_source.py")
+    github = _imported_modules(RECORDS_DIR / "mgs_github.py")
+    records = _imported_modules(RECORDS_DIR / "mgs_records.py")
+
+    for banned in ("mgs_records", "mgs_github", "mgs_record_source"):
+        check(banned not in model,
+              f"mgs_record_model 不得依赖 {banned}(含延迟导入),实际 {sorted(model)}")
+    for banned in ("mgs_records", "mgs_github"):
+        check(banned not in source,
+              f"mgs_record_source 不得依赖 {banned}(含延迟导入),实际 {sorted(source)}")
+    check("mgs_records" not in github,
+          f"mgs_github 不得反向调用查询组织 mgs_records,实际 {sorted(github)}")
+    # 正向:查询组织与 adapter 都依赖来源 module 与共同语义
+    check("mgs_record_source" in records,
+          f"mgs_records 应依赖来源 module,实际 {sorted(records)}")
+    check("mgs_record_source" in github,
+          f"mgs_github 应直接依赖来源 module,实际 {sorted(github)}")
+
+
+def test_source_shared_with_query_and_import_orders() -> None:
+    """两种导入顺序下共同语义/来源同一身份、无循环导入错误(READ-10/13)。
+
+    来源先导入与查询先导入都必须成功,且配置读取是同一实现。
+    """
+
+    records_dir = str(RECORDS_DIR)
+    probe = (
+        "import sys\n"
+        f"sys.path.insert(0, {records_dir!r})\n"
+        "{first}\n"
+        "{second}\n"
+        "import mgs_record_source, mgs_records, mgs_record_model\n"
+        "assert mgs_records.load_config is mgs_record_source.load_config\n"
+        "assert mgs_records.RecordsError is mgs_record_model.RecordsError\n"
+        "assert mgs_record_source.RecordsError is mgs_record_model.RecordsError\n"
+        "print('OK')\n"
+    )
+    for label, first, second in (
+            ("source-first", "import mgs_record_source", "import mgs_records"),
+            ("records-first", "import mgs_records", "import mgs_record_source")):
+        result = subprocess.run(
+            [sys.executable, "-B", "-c", probe.format(first=first, second=second)],
+            capture_output=True, text=True)
+        check(result.returncode == 0 and "OK" in result.stdout,
+              f"{label} 导入顺序来源身份应单一且无循环导入:{result.stderr[-300:]}")
+
+
+def test_loaded_config_local_read_is_same_source() -> None:
+    """已加载配置的本地读取经现有入口可用,且与正式入口同一结果(AC1/AC5)。
+
+    - ``load_config_document`` 由同一 CONFIG 原文返回 (config, text);
+    - 本地 adapter 接收本次已加载配置,不再重读 CONFIG;
+    - 经现有公开入口 list_tasks/read_task 得到的结果与直接来源读取一致。
+    """
+
+    import mgs_record_source
+
+    config, text = mgs_record_source.load_config_document(SAMPLE)
+    check(config == mgs_records.load_config(SAMPLE),
+          "同一 CONFIG 原文应解析出与正式入口相同的配置字段")
+    check(text and "- 后端:local-markdown" in text,
+          "同一原文应随配置返回,供本次调用内派生执行条件")
+
+    # 已加载配置的本地读取不重读 CONFIG:审计钩子统计 open 调用
+    import sys as _sys
+    opened: list[str] = []
+
+    def _hook(event: str, args: tuple) -> None:
+        if event == "open" and args and isinstance(args[0], str):
+            opened.append(args[0])
+
+    _sys.addaudithook(_hook)
+    tasks = mgs_record_source.local_list_tasks(SAMPLE, config)
+    task = mgs_record_source.local_read_task(SAMPLE, config, "02-coin-magnet")
+    config_reads = [p for p in opened if p.endswith("CONFIG.md")]
+    check(config_reads == [],
+          f"接收已加载配置的本地读取不得再读 CONFIG,实际打开 {config_reads}")
+
+    # 与现有公开入口的结果一致
+    check([t["identity"] for t in tasks]
+          == [t["identity"] for t in mgs_records.list_tasks(SAMPLE)],
+          "已加载配置的来源列举应与现有入口 list_tasks 一致")
+    check(task == mgs_records.read_task(SAMPLE, "02-coin-magnet"),
+          "已加载配置的来源读取应与现有入口 read_task 一致")
+
+
 def main() -> int:
     for name, func in sorted(globals().items()):
         if name.startswith("test_") and callable(func):

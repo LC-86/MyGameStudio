@@ -58,105 +58,26 @@ from mgs_record_model import (  # noqa: E402  (路径调整后导入)
     _find_cycles, _parse_dep_ids, _sections, check_item, dependency_problems,
     docmap_checks, label_mapping_checks, parse_task_body, task_core_problems)
 
+# 协作配置与本地任务来源的唯一定义在 mgs_record_source:本模块(查询组织)
+# 从这里取配置、本地列举与按目录读取,并重导出既有公开名字;GitHub adapter
+# 同样直接依赖该来源,不再反向调用本模块。
+from mgs_record_source import (  # noqa: E402
+    DEFAULT_CONFIG_REL, DEFAULT_TASK_ROOT, SUPPORTED_BACKENDS, _task_root,
+    load_config, local_list_tasks, local_read_task)
+
 # 错误身份唯一性由 mgs_record_model 的 RecordsError 单一定义保证(脚本与
 # 模块导入同一类),不再需要把 __main__ 注册进 sys.modules 的临时身份补偿。
 
-DEFAULT_CONFIG_REL = "docs/mygamestudio/CONFIG.md"
-# 本地 Markdown 任务根(《项目目录模板》默认布局;github→local 迁移的
-# 目标任务根,与 CONFIG 任务根、文件落点、返回路径共用同一常量;
-# 与解析后的 task_root 同为无尾斜杠形态)
-DEFAULT_TASK_ROOT = "docs/mygamestudio/work"
 READY_NOTE = ("可开工=分流 ready 且记录字段完整且未完成依赖为空;这是开工条件核对,"
               "不等于依赖已全部完成或已获全部写入授权——开工前按任务「允许修改范围」"
               "与运行保障核对授权;能力与授权以实际执行环境为准。")
 
 
-# ---------- 通用 Markdown 解析(CONFIG 表格) ----------
-# 任务正文的共同解析(_sections/_bullets/_field)在 mgs_record_model;
-# 这里只保留 CONFIG.md 表格解析,属于本地配置读取职责。
-
-def _table_rows(lines: list[str]) -> list[list[str]]:
-    """解析 Markdown 表格(跳过表头与分隔行)。"""
-
-    rows: list[list[str]] = []
-    for line in lines:
-        if not line.startswith("|"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if all(re.fullmatch(r":?-{2,}:?", cell) for cell in cells):
-            continue
-        rows.append(cells)
-    return rows[1:]  # 第一行是表头
-
-
-def _strip_annotation(value: str) -> str:
-    """去掉位置标注括号(半角/全角),如 `docs/x/(暂空)` → `docs/x`。"""
-
-    for mark in ("(", "\uff08"):  # 第二项为全角左括号
-        index = value.find(mark)
-        if index >= 0:
-            value = value[:index]
-    return value.strip().rstrip("/").strip()
-
-
 # ---------- 逻辑操作(公开接缝) ----------
 
-def load_config(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL) -> dict:
-    """读取协作配置:后端、任务位置、标签映射与文档映射。"""
-
-    root = Path(project_root)
-    config_path = root / config_rel
-    if not config_path.is_file():
-        raise RecordsError(f"缺少协作配置:{config_path}(项目根 {root})")
-    try:
-        text = config_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise RecordsError(f"协作配置不可读:{config_path}:{exc}") from exc
-    sections = _sections(text)
-    source = _bullets(sections.get("任务来源", []))
-    backend = source.get("后端", "").strip().lower()
-    task_root = _strip_annotation(source.get("当前位置", ""))
-    external = source.get("外部连接引用及已确认操作范围", "")
-    repo = None
-    if backend == "github-issues":
-        # 任务票 17:GitHub 后端必须明确 host/owner/repository(含糊即报错)。
-        # 延迟导入避免与 mgs_github(反向引用本模块的解析助手)循环依赖。
-        import mgs_github  # noqa: PLC0415
-
-        repo = mgs_github.parse_repo_location(task_root)
-        remote_write_authorized = any(
-            "issues-write" in scope["ops"]
-            for scope in mgs_github.parse_remote_authorizations(external)
-            if (scope["host"], scope["owner"], scope["repo"])
-            == (repo["host"], repo["owner"], repo["repo"]))
-    else:
-        remote_write_authorized = False
-    labels: dict[str, str] = {}
-    for cells in _table_rows(sections.get("标签映射", [])):
-        if len(cells) >= 2:
-            labels[cells[0]] = cells[1]
-    docmap = []
-    for cells in _table_rows(sections.get("文档映射", [])):
-        if len(cells) >= 3:
-            docmap.append({"content": cells[0],
-                           "path": _strip_annotation(cells[1]),
-                           "role": cells[2]})
-    if not backend:
-        raise RecordsError(f"协作配置缺少「任务来源/后端」:{config_path}")
-    return {
-        "project_root": str(root),
-        "config_path": config_rel,
-        "backend": backend,
-        "task_root": task_root,
-        "repo": repo,
-        "remote_write_authorized": remote_write_authorized,
-        "labels": labels,
-        "docmap": docmap,
-        "external": external,
-    }
-
-
 def _local_config(project_root: Path | str, config_rel: str) -> dict:
+    """读取配置并确认本地后端(未实现/非本地后端保持原有错误表达)。"""
+
     config = load_config(project_root, config_rel)
     if config["backend"] != "local-markdown":
         if config["backend"] == "github-issues":
@@ -167,9 +88,6 @@ def _local_config(project_root: Path | str, config_rel: str) -> dict:
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 "
             "github-issues;未实现的后端不声称可用)")
     return config
-
-
-SUPPORTED_BACKENDS = ("local-markdown", "github-issues")
 
 
 def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
@@ -221,46 +139,13 @@ def _tasks_for(project_root: Path, config_rel: str, *, transport=None,
         f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
 
 
-def _task_root(project_root: Path, config: dict) -> Path:
-    return project_root / config["task_root"]
-
-
-def _parse_task_file(project_root: Path, task_dir: Path) -> dict | None:
-    task_path = task_dir / "task.md"
-    if not task_path.is_file():
-        return None
-    text = task_path.read_text(encoding="utf-8")
-    # 共同正文规则来自中性记录 module(与 GitHub 后端同一实现);本地
-    # adapter 只补齐目录、结果文件与相对路径等存储专有字段。键序沿用
-    # 既有公开返回顺序,不改变 JSON 输出结构。
-    record = parse_task_body(text)
-    results_dir = task_dir / "results"
-    results = []
-    if results_dir.is_dir():
-        results = sorted(
-            f"results/{path.name}"
-            for path in results_dir.iterdir() if path.is_file())
-    return {
-        "identity": record["identity"],
-        "title": record["title"],
-        "triage": record["triage"],
-        "progress": record["progress"],
-        "directory": task_dir.name,
-        "request": record["request"],
-        "sections": record["sections"],
-        "results": results,
-        "result_index_text": record["result_index_text"],
-        "path": str(task_path.relative_to(project_root)),
-    }
-
-
 def list_tasks(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
                *, transport=None, api_base: str | None = None,
                cache_dir: Path | str | None = None) -> list[dict]:
     """列出任务身份、标题、分流与进度(经 CONFIG 解析任务源,不硬编码)。
 
     github-issues 后端经远端适配器列出(离线时返回任务级 cached_read 标注);
-    其他已实现后端同理由对应适配器承担。
+    本地后端委托 mgs_record_source 的本地 adapter,按目录顺序列举。
     """
 
     root = Path(project_root)
@@ -278,17 +163,7 @@ def list_tasks(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
     if config["backend"] != "local-markdown":
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
-    task_root = _task_root(root, config)
-    tasks = []
-    if task_root.is_dir():
-        for task_dir in sorted(task_root.iterdir()):
-            if not task_dir.is_dir():
-                continue
-            parsed = _parse_task_file(root, task_dir)
-            if parsed is not None:
-                tasks.append(parsed)
-    tasks.sort(key=lambda task: task["directory"])
-    return tasks
+    return local_list_tasks(root, config)
 
 
 def read_task(project_root: Path | str, task_id: str,
@@ -306,11 +181,7 @@ def read_task(project_root: Path | str, task_id: str,
     if config["backend"] != "local-markdown":
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
-    task_dir = _task_root(root, config) / task_id
-    parsed = _parse_task_file(root, task_dir) if task_dir.is_dir() else None
-    if parsed is None:
-        raise RecordsError(f"任务不存在或缺少 task.md:{task_dir}")
-    return parsed
+    return local_read_task(root, config, task_id)
 
 
 # ---------- 关系解析与开工集合(任务票 08) ----------

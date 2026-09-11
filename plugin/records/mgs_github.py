@@ -45,11 +45,11 @@ from urllib.request import Request, urlopen
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import mgs_record_model  # noqa: E402
-import mgs_records  # noqa: E402
+import mgs_record_source  # noqa: E402
 from mgs_record_model import CANONICAL_LABELS, RecordsError  # noqa: E402
 
 GITHUB_BACKEND = "github-issues"
-WRITE_OP = "issues-write"
+WRITE_OP = mgs_record_source.WRITE_OP
 TOKEN_ENVS = ("MGS_GITHUB_TOKEN", "GH_TOKEN")
 # 测试接缝:覆盖 API 端点(默认按 host 推导);验收与本地替身使用
 API_BASE_ENV = "MGS_GH_API_BASE"
@@ -77,59 +77,23 @@ class TransportError(Exception):
 
 
 # ---------- 配置解析(公开接缝) ----------
+# 仓库坐标与远端授权声明的文本解析归属中性来源 module(mgs_record_source:
+# 协作配置职责),本 adapter 只在其公开接缝上把共同错误转成 GitHub 记录错误。
 
-_REPO_RE = re.compile(
-    r"^(?:https?://)?([A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}|localhost)"
-    r"(?::\d+)?/([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+?)(?:\.git)?/?$")
+parse_remote_authorizations = mgs_record_source.parse_remote_authorizations
 
 
 def parse_repo_location(value: str) -> dict:
     """解析明确的 GitHub host/owner/repository;含糊位置直接拒绝。
 
-    接受 `host/owner/repo` 与 `https://host/owner/repo`;拒绝缺 host、
-    缺段或多段的位置(不扫描、不猜测无关仓库)。
+    实现归 mgs_record_source(协作配置职责);此处保持 GitHub 公开接缝的
+    错误身份——含糊位置仍可被 ``GithubRecordsError`` 捕获。
     """
 
-    text = (value or "").strip()
-    match = _REPO_RE.fullmatch(text)
-    if match is None:
-        raise GithubRecordsError(
-            f"GitHub 任务位置必须明确到 host/owner/repository,当前为 {text!r}"
-            "(不接受含糊位置,不扫描无关仓库)")
-    return {"host": match.group(1).lower(), "owner": match.group(2),
-            "repo": match.group(3)}
-
-
-_REPO_FIND_RE = re.compile(
-    r"(?:https?://)?([A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}|localhost)"
-    r"(?::\d+)?/([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+?)(?:\.git)?(?=[/?:;)\s]|$)")
-
-
-def parse_remote_authorizations(text: str) -> list[dict]:
-    """解析外部访问行中的远端授权条目。
-
-    写授权条目形如 `host/owner/repo:issues-write(说明)`——必须明确到
-    仓库并带 issues-write 标记;仅出现仓库坐标(无 issues-write)视为
-    只读引用,不是写授权。写授权按「仓库坐标之后、下一坐标之前」的
-    片段判定,说明文字里的分号不破坏解析。
-    """
-
-    matches = list(_REPO_FIND_RE.finditer(text or ""))
-    entries: dict[tuple[str, str, str], dict] = {}
-    for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        segment = text[match.end():end]
-        key = (match.group(1).lower(), match.group(2), match.group(3))
-        note = ""
-        paren = re.search(r"[（(]([^）)]*)[)）]", segment)
-        if paren:
-            note = paren.group(1)
-        entries[key] = {
-            "host": key[0], "owner": key[1], "repo": key[2],
-            "ops": ("issues-write" if WRITE_OP in segment else "reference"),
-            "note": note,
-        }
-    return list(entries.values())
+    try:
+        return mgs_record_source.parse_repo_location(value)
+    except RecordsError as exc:
+        raise GithubRecordsError(str(exc)) from exc
 
 
 def _authorization_for(config: dict, op: str) -> tuple[bool, str]:
@@ -1430,7 +1394,7 @@ class GithubBackend:
         """github-issues 后端回读核验(与本地后端同一含义的检查集)。
 
         标签映射、核心文档映射、任务核心字段(含工作请求必填字段)与依赖
-        关系使用 mgs_records 的单一共享实现(审查修复票 01/核验建议 1:
+        关系使用 mgs_record_model 的单一共享实现(审查修复票 01/核验建议 1:
         同一畸形任务在两个后端得到相同结论);本方法只保留存储特有检查
         (远端标签实际存在、评论一致性、身份重复、标签与正文冲突、关闭原因)。
         离线时基于缓存核对结构与依赖,远端存在性检查标注「未核对(离线)」,
@@ -1572,7 +1536,7 @@ def _ref_check_url(ref: str) -> str | None:
 
 
 def handover_baseline_check(project_root: Path | str,
-                            config_rel: str = mgs_records.DEFAULT_CONFIG_REL,
+                            config_rel: str = mgs_record_source.DEFAULT_CONFIG_REL,
                             *, transport=None) -> dict:
     """远端交接核对基线引用可达(《工作记录合同》:本地尚未发布的基线可供
     本机执行者引用,但不得声称远端执行者已可访问)。
@@ -1585,7 +1549,7 @@ def handover_baseline_check(project_root: Path | str,
     """
 
     root = Path(project_root)
-    config = mgs_records.load_config(root, config_rel)
+    config = mgs_record_source.load_config(root, config_rel)
     refs = _published_refs((root / config_rel).read_text(encoding="utf-8"))
     grouped = mgs_record_model._core_rows(config["docmap"])
     docs: list[dict] = []
@@ -1653,12 +1617,14 @@ def plan_backend_switch(project_root: Path | str, *, target: str,
     if target not in ("github-issues", "local-markdown"):
         raise GithubRecordsError(f"未知目标后端 {target!r}")
     root = Path(project_root)
-    config = mgs_records.load_config(root)
+    config = mgs_record_source.load_config(root)
     if config["backend"] == target:
         raise GithubRecordsError(f"当前后端已是 {target},无需切换")
     if target == "github-issues":
         target_repo = parse_repo_location(repo or config["task_root"])
-        tasks = mgs_records.list_tasks(root)
+        # 本地任务读取直接依赖本地来源 adapter(不反向经查询入口);
+        # 本次已加载配置只供本次列举,不重读 CONFIG。
+        tasks = mgs_record_source.local_list_tasks(root, config)
         task_items = [{
             "identity": task["identity"], "title": task["title"],
             "triage": task["triage"], "progress": task["progress"],
@@ -1677,7 +1643,7 @@ def plan_backend_switch(project_root: Path | str, *, target: str,
             "request": task["request"],
             "source_ref": (f"github:{config['repo']['host']}/{config['repo']['owner']}/"
                            f"{config['repo']['repo']}/issues/{task['issue_number']}"),
-            "target_ref": (f"local:{mgs_records.DEFAULT_TASK_ROOT}/"
+            "target_ref": (f"local:{mgs_record_source.DEFAULT_TASK_ROOT}/"
                            f"{task['identity']}/task.md(身份保持)"),
         } for task in tasks]
     if not task_items:
@@ -1689,7 +1655,7 @@ def plan_backend_switch(project_root: Path | str, *, target: str,
         # repo = 目标位置(github 目标=仓库坐标;本地目标=本地任务根),与
         # CONFIG 任务根、文件落点、返回路径共用同一来源(审查修复票 01/S3)
         "repo": (_repo_str(target_repo) if target_repo
-                 else mgs_records.DEFAULT_TASK_ROOT),
+                 else mgs_record_source.DEFAULT_TASK_ROOT),
         # 旧位置 = 迁移源的实际任务位置(github 源=旧仓库坐标;本地源=旧任务根)
         "old_position": config["task_root"],
         "project_root": str(root),
@@ -1739,7 +1705,7 @@ def _emitted_config_text(plan: dict, old_config_text: str) -> str:
     # 旧位置兜底:旧清单无 old_position 字段时按方向推断(github 目标的
     # 旧位置是本地任务根;本地目标的旧位置沿用清单 repo 字段的旧语义)
     old_position = plan.get("old_position") or (
-        mgs_records.DEFAULT_TASK_ROOT if plan["to"] == "github-issues"
+        mgs_record_source.DEFAULT_TASK_ROOT if plan["to"] == "github-issues"
         else plan["repo"])
     lines.append("- 历史任务位置(只读历史):" + old_position
                  + "(切换前账本,只作历史追溯,不再是当前任务来源)")
@@ -1782,7 +1748,7 @@ def apply_backend_switch(plan_path: Path | str, *, confirmed: bool,
     if not confirmed:
         raise GithubRecordsError("迁移清单未经确认(confirmed=False),不执行切换")
     root = Path(project_root)
-    current = mgs_records.load_config(root)
+    current = mgs_record_source.load_config(root)
     emit = Path(emit_dir)
     emit.mkdir(parents=True, exist_ok=True)
     created = 0
@@ -1820,7 +1786,7 @@ def apply_backend_switch(plan_path: Path | str, *, confirmed: bool,
             body = build_task_body(item["title"], item["identity"],
                                    item["triage"], item["progress"],
                                    item["request"])
-            rel = (f"{mgs_records.DEFAULT_TASK_ROOT}/"
+            rel = (f"{mgs_record_source.DEFAULT_TASK_ROOT}/"
                    f"{item['identity']}/task.md")
             path = emit / rel
             path.parent.mkdir(parents=True, exist_ok=True)
