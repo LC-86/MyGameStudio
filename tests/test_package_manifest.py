@@ -220,6 +220,64 @@ def test_internal_references_resolve() -> None:
             resolved = (md.parent / rel).resolve()
             check(resolved.exists(),
                   f"{md.relative_to(PLUGIN_ROOT)} 引用的 {target} 无法在包内解析")
+def test_skill_authority_references() -> None:
+    """任务票 23:共同执行规则/受控写入协议/结果字段各有唯一权威,五入口引用可达。
+
+    检查:三处权威文件各自带可定位的标注小节;五个制作实现入口同时引用三处
+    权威(引用不悬空);入口指向权威小节而非内联共同规程。未迁入的九个入口
+    在迁移期间继续按旧规则可用(票 24 处理)。
+    """
+
+    authority_sections = {
+        PLUGIN_ROOT / "internal" / "contracts" / "common.md": (
+            "## 共同规则的权威位置", "## 共同执行规则(唯一权威)"),
+        PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md": (
+            "## 越界探针(边界核对)", "## 执行凭据"),
+        PLUGIN_ROOT / "templates" / "work" / "result.md": (),
+    }
+    for doc, sections in authority_sections.items():
+        check(doc.is_file(), f"缺少共同权威文件 {doc.relative_to(PLUGIN_ROOT)}")
+        if doc.is_file():
+            text = doc.read_text()
+            for section in sections:
+                check(section in text,
+                      f"{doc.relative_to(PLUGIN_ROOT)} 应含权威小节「{section}」")
+    result_template = PLUGIN_ROOT / "templates" / "work" / "result.md"
+    if result_template.is_file():
+        text = result_template.read_text()
+        for field in ("实际成果", "已执行验证", "独立审查", "人工验收", "未完成与限制"):
+            check(field in text,
+                  f"结果字段权威 templates/work/result.md 应含字段「{field}」")
+
+    authorities = ("../../internal/contracts/common.md",
+                   "../../internal/protocols/gate-protocol.md",
+                   "../../templates/work/result.md")
+    migrated = ("game-implement", "game-code", "game-art", "game-audio", "game-build")
+    for name in migrated:
+        skill_md = PLUGIN_ROOT / "skills" / name / "SKILL.md"
+        check(skill_md.is_file(), f"缺少 skills/{name}/SKILL.md")
+        if not skill_md.is_file():
+            continue
+        text = skill_md.read_text()
+        for ref in authorities:
+            check(ref in text, f"{name} SKILL.md 应引用共同权威 {ref}")
+            resolved = (skill_md.parent / ref).resolve()
+            check(resolved.is_file(),
+                  f"{name} SKILL.md 引用的 {ref} 悬空(解析为 {resolved})")
+        check("共同执行规则" in text, f"{name} SKILL.md 应指向《共同执行规则》")
+        check("受控写入协议" in text, f"{name} SKILL.md 应指向《受控写入协议》")
+        check("结果字段" in text, f"{name} SKILL.md 应指向《结果字段》")
+
+    # 迁移期间新旧并存:未迁入的九个入口继续可用,不因本票精简而缺席。
+    skills_root = PLUGIN_ROOT / "skills"
+    migrated_names = set(migrated)
+    for skill_dir in sorted(p for p in skills_root.iterdir() if p.is_dir()):
+        if skill_dir.name in migrated_names:
+            continue
+        check((skill_dir / "SKILL.md").is_file(),
+              f"未迁入入口 {skill_dir.name} 在迁移期间应继续可用")
+
+
 def test_config_template_adaptation() -> None:
     """任务票 18:模板相对设计仓库的适配只允许已登记的两处。
 
@@ -265,6 +323,7 @@ TESTS = (
     test_templates_and_game_init,
     test_internal_methods_closure,
     test_internal_references_resolve,
+    test_skill_authority_references,
     test_config_template_adaptation,
 
 )

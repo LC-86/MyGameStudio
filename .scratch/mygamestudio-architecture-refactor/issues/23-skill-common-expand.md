@@ -4,17 +4,17 @@
 
 **Blocked by:** 22 集中受控远端动作与结果审计
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 1, 56, 57, 58, 59
 
 **Verification mapping:** 按本票所属阶段的验收集合
 
-- [ ] 共同执行规则、受控写入协议和结果字段的权威位置清晰可直接读取，旧入口在迁移期间继续可用。
-- [ ] 完整迁入 Game-Implement、Game-Code、Game-Art、Game-Audio、Game-Build 五个入口，保留显式调用、输入输出、能力缺口、资源范围和人工待验收语义。
-- [ ] 每个入口均可沿其真实专业流程取得必要规则，不需要从多处拼接缺失步骤；共同引用不改变执行角色或授权。
-- [ ] 先用原场景核对结果及证据要求，再检查文本引用、来源与适配指纹；实际模型行为未核验时不宣称仅因文案通过便完成真实验收。
-- [ ] 应用已确认的文档编写方法，固定上游方法和许可证保持；未迁入的其他入口继续使用旧规则。
+- [x] 共同执行规则、受控写入协议和结果字段的权威位置清晰可直接读取，旧入口在迁移期间继续可用。
+- [x] 完整迁入 Game-Implement、Game-Code、Game-Art、Game-Audio、Game-Build 五个入口，保留显式调用、输入输出、能力缺口、资源范围和人工待验收语义。
+- [x] 每个入口均可沿其真实专业流程取得必要规则，不需要从多处拼接缺失步骤；共同引用不改变执行角色或授权。
+- [x] 先用原场景核对结果及证据要求，再检查文本引用、来源与适配指纹；实际模型行为未核验时不宣称仅因文案通过便完成真实验收。
+- [x] 应用已确认的文档编写方法，固定上游方法和许可证保持；未迁入的其他入口继续使用旧规则。
 
 **依赖理由：** 依赖 22 完成受控行为与结果表达，随后依据已确认的阶段验收顺序整理共同说明。
 
@@ -27,3 +27,14 @@
 ## Comments
 
 用户已确认 26 票拆分及其依赖安排；本票按确认稿发布，未启动实施。
+
+### 执行记录（2026-09-12，阶段 6 首票/核心票）
+
+- 前基点 SHA：`850dc7441ba13c062b5705e2fc471652b8be794c`。
+- 三处唯一权威：`internal/contracts/common.md`《共同执行规则(唯一权威)》(原「执行与完成」升级并标注唯一维护位置)、`internal/protocols/gate-protocol.md`《越界探针(边界核对)》(新增,收拢各入口重复的边界核对规程)、《工作结果模板》`templates/work/result.md`(结果字段唯一权威,内容未改)。共同合同新增《共同规则的权威位置》一节明示三处。
+- 迁入五入口(Game-Implement/Code/Art/Audio/Build)：包内依据列表把三处标为权威并加"只补充专业差异、不内联共同规程"声明；结果记录步骤改为引用模板《结果字段》并补 `expected_sha256`；待验收步骤指向共同执行规则第 4-5 步；边界核对步骤改引协议《越界探针》并保留原探针清单；边界一节把凭据纪律改引协议《执行凭据》并保留"不自动提交/推送/发布"、"新增命令执行路径保持受控"、"失败或中断保存实际进度和缺口"等专业约束。显式触发、输入输出、能力缺口、资源范围、人工待验收语义全部保留（`test_package_skill_content_*` 的关键词检查零回归）。
+- 引用闭包：新增 `tests/test_package_manifest.py::test_skill_authority_references`——三处权威文件带可定位小节、五入口同时引用三处且解析到实文件（不悬空）、入口指向权威小节、未迁入九入口 SKILL.md 仍在（新旧并存）。已接入 `test_plugin_package` 聚合主题。
+- 来源与指纹保持：上游 `production.md`、`common.md` 适配版权限与许可未动；`provenance/fingerprints.json` 仅更新 `common.md`/`gate-protocol.md` 两处指纹与 source 说明，`manifest.md` 对应两行更新；`mattpocock-skills` 许可证与固定上游方法(6 个 internal/methods)未改。
+- 检查结果：五套聚合器全绿（`test_plugin_package`+四套 `test_{runtime_gate,runtime_boundaries,records_backend,github_backend}`，退出码 0）；`run_baseline.sh` 五套 PASS（all_existing_checks_green=True），跑后 `git checkout --` 恢复冻结产物；`dist/build-package.sh` 重建 90 文件包。
+- 净行数（物理行）：plugin 生产 +23（internal +17：common +8、协议 +9；skills +6：implement +1、code +1、art +1、audio +1、build +2）；tests +60 −1（新增闭包主题）；dist 交付包重生成（`plugin/` 内容变化）。权威文件职责单一，入口文件未膨胀（五入口 60-69 行）。
+- 未验证限制：本票为说明/引用重构，未执行真实模型轮；文案通过不等于实际模型行为已验收（spec「阶段 6 不能只靠文本缩短判断完成」）。真实模型行为、安装与发布留待票 26 及另行授权。未迁入的九个入口继续使用旧规则（票 24 处理）。

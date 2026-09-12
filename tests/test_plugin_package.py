@@ -31,7 +31,7 @@ THEMES = (
      ("test_manifest", "test_explicit_skills", "test_mcp_gate_config",
       "test_records_backend_module", "test_templates_and_game_init",
       "test_internal_methods_closure", "test_internal_references_resolve",
-      "test_config_template_adaptation")),
+      "test_skill_authority_references", "test_config_template_adaptation")),
     ("test_package_provenance.py",
      "来源/许可/指纹",
      ("test_internal_material_provenance", "test_no_dev_machine_paths",
