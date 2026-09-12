@@ -14,11 +14,12 @@
   (release_instance)与策略更换持同一把锁,撤销完成后在途写入必然在锁内
   重读时被拒,不可能再落盘。
 
-状态访问(执行登记、策略文件、审计、服务锁)集中在 ``mgs_gate_registry.py``;
-本模块经宿主门面(GateService)调用这些接缝,使既有工作实例入口与可信
-调度侧操作继续可用。文本与二进制载荷走同一事务:``content``(UTF-8)或
-``data``(原始字节)语义一致,通道层负责校验恰提供其一。本模块只依赖
-标准库与登记职责的哈希/形态助手。
+状态访问(执行登记、策略文件、写入占用、审计、服务锁)集中在
+``mgs_gate_registry.py``;本模块经宿主门面(GateService)调用这些接缝——
+占用只经接缝判定与登记,``locks.json`` 的条目形状不在本模块解释——使既有
+工作实例入口与可信调度侧操作继续可用。文本与二进制载荷走同一事务:
+``content``(UTF-8)或 ``data``(原始字节)语义一致,通道层负责校验恰提供
+其一。本模块只依赖标准库与登记职责的哈希/形态助手。
 """
 
 from __future__ import annotations
@@ -27,10 +28,9 @@ import os
 import re
 import secrets
 import stat
-import time
 from pathlib import Path
 
-from mgs_gate_registry import LOCKS_FILE, sha256_bytes, valid_restrict
+from mgs_gate_registry import sha256_bytes, valid_restrict
 
 POLICY_MISSING_REASON = ("runtime policy missing, corrupt or malformed "
                          "(fail closed)")
@@ -333,11 +333,10 @@ class LocalWriteTransaction:
                 if grant is not None:
                     denial = ("write", grant[0], grant[1])
             if denial is None:
-                locks = host._read_json(LOCKS_FILE, {})
-                holder = locks.get(rel)
-                if holder and holder.get("instance_id") != record["instance_id"]:
-                    denial = ("write", "occupancy",
-                              f"resource held by instance {holder.get('instance_id')}")
+                # 占用判定经登记职责:locks.json 的条目形状不在本模块解释。
+                conflict = host._occupancy_conflict(rel, record["instance_id"])
+                if conflict is not None:
+                    denial = ("write", "occupancy", conflict)
                 elif expected_sha256 is not None:
                     # 版本校验在锁内读取(02 已知边界:消除读取与占用之间的调度窗口)
                     if resolved.exists():
@@ -412,9 +411,7 @@ class LocalWriteTransaction:
                                                   payload, existing_mode)
                                 os.replace(tmp_name, base,
                                            src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
-                                locks[rel] = {"instance_id": record["instance_id"],
-                                              "since": time.time()}
-                                host._write_json(LOCKS_FILE, locks)
+                                host._occupy(rel, record["instance_id"])
                                 host._audit_unlocked(result)
                             except Exception as exc:
                                 # 落盘后状态记录失败:回滚已写入字节,失效闭合。

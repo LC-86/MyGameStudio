@@ -5,7 +5,7 @@
 
 - ``policy.json`` 资源策略:读取、结构校验、指纹、写入;
 - ``instances.json`` 执行登记:签发记录追加、令牌哈希解析、撤销;
-- ``locks.json`` 写入占用:读取、释放、回收;
+- ``locks.json`` 写入占用:读取、判定、登记、释放、回收;
 - ``audit/audit.jsonl`` 审计:允许、意图与拒绝都追加(追加时才盖时间戳与
   策略指纹)。
 
@@ -201,6 +201,31 @@ class GateRegistry:
 
     def locks(self) -> dict:
         return self.read_json(LOCKS_FILE, {})
+
+    def occupancy_conflict(self, rel: str, instance_id: str) -> str | None:
+        """本资源的写入占用是否与给定实例冲突(占用条目的唯一读取处)。
+
+        有占用且持有者不是该实例时,返回拒绝说明(含持有者身份);无占用、
+        占用登记本就属于该实例时返回 None。``locks.json`` 的条目形状只在
+        本模块内解释,写入事务不必了解占用条目字段。
+        """
+
+        holder = self.read_json(LOCKS_FILE, {}).get(rel)
+        if holder and holder.get("instance_id") != instance_id:
+            return f"resource held by instance {holder.get('instance_id')}"
+        return None
+
+    def occupy(self, rel: str, instance_id: str) -> None:
+        """登记本资源由实例持有写入占用(占用条目的唯一写入处)。
+
+        调用方必须已持有服务锁,且必须在字节写入成功之后、结果审计之前调用;
+        登记失败由调用方按原语义回滚已写入字节(「无审计则无生效写入」)。
+        占用的初始时间戳在这里盖,与登记本身一次落盘。
+        """
+
+        locks = self.read_json(LOCKS_FILE, {})
+        locks[rel] = {"instance_id": instance_id, "since": time.time()}
+        self.write_json(LOCKS_FILE, locks)
 
     def reclaim_locks(self, instance_id: str) -> dict:
         """回收一个旧实例遗留的写入占用(任务票 15)。

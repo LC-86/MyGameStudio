@@ -13,8 +13,9 @@
 ``remote_record`` 与调度侧 ``init_policy`` / ``create_instance`` /
 ``release_instance`` / ``list_locks`` / ``reclaim_locks``)与既有私有状态接缝
 (``_locked`` / ``_read_json`` / ``_write_json`` / ``_policy`` /
-``_resolve_instance`` / ``_audit_unlocked``);后者经登记职责委派,既有回归
-(含故障注入)语义不变。
+``_resolve_instance`` / ``_audit_unlocked``);写入占用另经
+``_occupancy_conflict`` / ``_occupy`` 收拢到登记职责(占用条目形状不外泄)。
+上述接缝均经登记职责委派,既有回归(含故障注入)语义不变。
 
 职责说明(原始合同):
 
@@ -154,14 +155,27 @@ class GateService:
     def _write_json(self, name: str, data) -> None:
         self._registry.write_json(name, data)
 
+    def _occupancy_conflict(self, rel: str, instance_id: str) -> str | None:
+        """本资源的写入占用是否与给定实例冲突(经执行登记职责,占用条目
+        形状不外泄)。
+
+        占用判定与登记分别经本方法与 ``_occupy`` 委派给执行登记职责,替代
+        原先由写入事务直接读写的 ``_read_json`` / ``_write_json``;后两者
+        仍保留给既有直连调用方与故障注入,注入点语义不变。
+        """
+
+        return self._registry.occupancy_conflict(rel, instance_id)
+
+    def _occupy(self, rel: str, instance_id: str) -> None:
+        """登记本资源由实例持有写入占用(调用方须已持锁;经执行登记职责)。"""
+
+        self._registry.occupy(rel, instance_id)
+
     def _policy(self) -> dict | None:
         """读取资源策略;缺失、损坏或结构无效(含角色/用途条目形状无效,
         R2)时返回 None(调用方必须失效闭合)。"""
 
         return self._registry.read_policy()
-
-    def _policy_sha256(self) -> str:
-        return self._registry.policy_sha256()
 
     def _audit(self, entry: dict) -> None:
         with self._locked():
