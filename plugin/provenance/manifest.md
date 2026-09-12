@@ -1,10 +1,10 @@
-# mygamestudio 0.18.0 来源与许可追溯
+# mygamestudio 0.18.1 来源与许可追溯
 
 本 manifest 记录最小包随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。各文件的逐版本适配历程不再在本文件逐条累加;当前适配事实见下表,历史见 fingerprints.json 的 source 字段与仓库 acceptance/ 各票证据。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.18.0`。十四个业务入口(状态/统筹/初始化/计划/设计讨论/规格整理/隔离原型/制作组织/代码/视觉/音频/构建/独立审查/试玩)均仅显式触发;任务后端支持本地 Markdown 与 GitHub Issues;项目写入统一经 `mgs-gate` 受控通道(角色 ∩ 任务 ∩ 用途 ∩ 实际授权);共同执行规则、受控写入协议与结果字段三处共同权威各有唯一维护位置。交付物见仓库 `dist/`,验收证据见 `acceptance/`。
+- 名称:`mygamestudio`,版本 `0.18.1`。十四个业务入口(状态/统筹/初始化/计划/设计讨论/规格整理/隔离原型/制作组织/代码/视觉/音频/构建/独立审查/试玩)均仅显式触发;任务后端支持本地 Markdown 与 GitHub Issues;项目写入统一经 `mgs-gate` 受控通道(角色 ∩ 任务 ∩ 用途 ∩ 实际授权);共同执行规则、受控写入协议与结果字段三处共同权威各有唯一维护位置。交付物见仓库 `dist/`,验收证据见 `acceptance/`。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 
@@ -39,7 +39,7 @@
 
 ## records/(本地 Markdown 与 GitHub 任务后端,本项目自有内容)
 
-- `records/mgs_records.py`:统一回读接口——`load_config`/`list_tasks`/`read_task`/`verify_project` 与 `task_dependencies`/`startable_tasks`(依赖关系解析与循环检测、当前可开工集合;核对未完成依赖/输入/版本/能力并声明可开工不等于已获授权)与 `baseline_report`(核心基线内容指纹与归一指纹双指纹核对,区分一致/指纹未登记/疑似格式修正/实质变更/文件缺失,识别引用旧版本基线的受影响任务并附「原版本完成事实保留」语义,实质变更未同步时 CLI 退出码 1)及其 CLI。只读不写(项目写入一律经 mgs-gate),首版不支持 GitHub Issues 后端(明确报错,不静默降级)。确定性接缝检查见 `tests/test_records_backend.py`。
+- `records/mgs_records.py`:统一回读接口——`load_config`/`list_tasks`/`read_task`/`verify_project` 与 `task_dependencies`/`startable_tasks`(依赖关系解析与循环检测、当前可开工集合;核对未完成依赖/输入/版本/能力并声明可开工不等于已获授权)与 `baseline_report`(核心基线内容指纹与归一指纹双指纹核对,区分一致/指纹未登记/疑似格式修正/实质变更/文件缺失,识别引用旧版本基线的受影响任务并附「原版本完成事实保留」语义,实质变更未同步时 CLI 退出码 1)。本模块组织本地 Markdown 与 GitHub Issues 双后端读取,不提供本地项目写入(项目写入经 mgs-gate)。CLI 参数解析、输出投影与退出码由 `records/mgs_records_cli.py` 承担,旧脚本入口保持。确定性接缝检查见 `tests/test_records_backend.py`。
 - `records/mgs_github.py`:GitHub Issues 后端适配器——仓库坐标与授权范围解析(含糊位置拒绝;issues-write 授权按仓库精确匹配)、Issue 正文沿用 task.md 同格式(身份/执行/验收/进度语义与本地后端一致)、拉取与离线缓存(标注时间与来源)、写操作(创建防重:读前回读+超时回读收养+单次重试;安排更新可带远端正文 SHA-256 版本校验;分流换映射标签并同步正文;结果评论带任务身份前缀并登记结果索引;依赖写为「#Issue号 身份」明确可解析引用;父子关系优先原生 sub-issues、不可用回退正文引用;关闭限定 完成/不再执行/已有成果覆盖 三因,关闭不自动等于验证通过)、未发布草稿与重放发布、后端切换迁移清单与应用(目标侧创建+新 CONFIG 产出,不改写项目文件,身份映射留档,旧记录只读历史)、远端交接基线引用可达核对(未发布本地资料不宣称远端可访问)。传输层可注入(`--api-base`/MGS_GH_API_BASE 指向本地替身);真实远端写入仅在明确授权的测试仓库执行。确定性接缝检查见 `tests/test_github_backend.py`。
 - 基线内容指纹实现选择:在基线文档自身头部登记双指纹——`内容指纹:sha256:<hex>`(空白敏感)与 `归一指纹:sha256:<hex>`(去空白),由该基线维护角色在版本采纳或格式修正同步时更新(登记方法与统一规范化口径见 `skills/game-spec/SKILL.md` 与 `mgs_records.py`:sha256 槽位以占位替换后计算,登记时先写 64 个 0 再回填);双指纹配合把仅空白差异判为疑似格式修正、字符增删判为实质变更。未登记的核心基线报「指纹未登记」,不判漂移。
 - 任务记录字段实现选择:「依赖」用工作请求中独立字段(以任务身份逐项列出)表达,供 `deps`/`ready` 确定性解析;「所需能力」字段引用 CONFIG 执行条件,命中"尚未就绪的能力"说明即列为不可开工原因;两者按模板实例化规则由拆单轮添加,不改动设计模板的逐字节副本;旧记录无这两个字段时视为无依赖、不判 verify 失败。

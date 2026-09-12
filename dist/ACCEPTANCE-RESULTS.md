@@ -1,5 +1,7 @@
 # MyGameStudio 0.18.0 逐项验收结果
 
+> 历史记录：本文件描述 0.18.0 的验收时点与结果，不代表 0.18.1 的真实宿主验收。0.18.1 的代码审查、离线验证和用户选择正常使用反馈的决定见 [本轮收尾记录](../.scratch/mygamestudio-architecture-refactor/CLOSURE.md)。
+
 生成:2026-09-09(任务票 18)。包:`mygamestudio` 0.18.0(与仓库 `plugin/`
 及本目录安装包逐字节一致)。验收执行环境:codex-cli **0.151.0**、macOS
 26.5.1 arm64、Python 3.14.4;隔离 HOME/CODEX_HOME 于 /tmp(凭据符号链接),

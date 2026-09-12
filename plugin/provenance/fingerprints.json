@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_for": "mygamestudio 0.18.0",
+  "generated_for": "mygamestudio 0.18.1",
   "files": [
     {
       "path": "internal/contracts/common.md",

@@ -1,5 +1,7 @@
 # 票 26 全插件集成与重构效益核验报告
 
+> 收尾更新（2026-09-12）：PR #28 已合并。用户决定不再进行本轮隔离宿主验收，进入正常使用并在使用中反馈问题；该决定替代本报告第 8 节的发布前置安排。未执行项仍为未验证，不改写为通过。当前收尾与发布范围见 [CLOSURE.md](../CLOSURE.md)。
+
 - 票：`issues/26-integrated-verification.md`（收口，核心票）
 - 本票前基点（开始代码身份）：`9d44d5a9c9f7eda233f26360012f6bef61b640b6`（分支 `codex/architecture-optimization`）
 - 交付候选：`mygamestudio` 0.18.0，交付包 `dist/mygamestudio-0.18.0.tar.gz`
@@ -53,7 +55,7 @@
 | 2 | 已有任务/配置/记录保持可读、不需迁移 | 记录格式未变（`records.md` 合同；本地/GitHub adapter） | READ-08/READ-13 主题套件 PASS；本阶段零持久化格式变更（spec 决策 20） | 已验证（离线） |
 | 3 | 原子任务身份/分流/进度/基线与验收含义保持 | `mgs_records.py` 判定；`mgs_record_model.py` | `test_records_deps_ready`、`test_records_baseline`、`test_records_verify` PASS | 已验证（离线） |
 | 4 | 每阶段交付可运行可检查的完整行为 | 各阶段收口报告 + 五套件 | `run_baseline.sh` 全绿；26 票全部完成收口（执行日志；工单 `Status:` 为标准五类分流标签、完成进度另列 `Progress:` 行，PR #28 复审 ST-2 修正） | 已验证（离线） |
-| 5 | 新增/整理文件有明确职责与长度约束 | `plugin/records/*`、`plugin/runtime/*` 17 文件 | §6 文件清单；>600 行仅 `mgs_records.py` 691（查询编排；CLI 已分离至 `mgs_records_cli.py` 273 行，PR #28 复审 ST-1 + 二轮 R2-SP-1 复用接缝，理由见 §6.3/§9） | 已验证（离线） |
+| 5 | 新增/整理文件有明确职责与长度约束 | `plugin/records/*`、`plugin/runtime/*` 17 文件 | §6 文件清单；>600 行仅 `mgs_records.py` 693（查询编排；CLI 已分离至 `mgs_records_cli.py` 273 行，PR #28 复审 ST-1 + 二轮 R2-SP-1 复用接缝，理由见 §6.3/§9） | 已验证（离线） |
 | 6 | 净减量含共享实现与适配成本 | `mgs_record_model/source`、客户端共享核心 | §6 净行数（同范围口径，含新增成本） | 已验证（离线） |
 | 7 | 行为修正与结构调整分别登记 | `task-reading.md#行为修正登记`（R1） | R1 单列；`test_ready_second_call_reflects_changes_without_cross_call_cache` PASS | 已验证（离线） |
 | 8 | 每阶段保留可说明的回退方式 | 各票基点 SHA；`b8cda58`；阶段交付提交见 execution-log | §6.6 回退参照表 | 已验证（离线） |
@@ -212,7 +214,7 @@
 
 | 项 | 票 01 基线 | 当前 | 说明 |
 | --- | --- | --- | --- |
-| 最大生产文件 | `mgs_github.py` 1848 | `mgs_records.py` **691** | 复审修复后（原 897；CLI 已分离至 `mgs_records_cli.py`，二轮 R2-SP-1 增加同次复用接缝，见 §9）；691 >600 例外理由见 §9 |
+| 最大生产文件 | `mgs_github.py` 1848 | `mgs_records.py` **693** | 复审修复后（原 897；CLI 已分离至 `mgs_records_cli.py`，二轮 R2-SP-1 增加同次复用接缝，见 §9）；693 >600 例外理由见 §9 |
 | 第二大生产文件 | `mgs_runtime.py` 1119 | `mgs_github.py` 549 | 549 ≤600 |
 | 最大生产函数 | `_cli` 223 / `append_result` 185 / `remote_record` 180 | `_cli` 223（`mgs_records_cli.py`）、`record` 164、`write` 157 | 均为参数分发或读-执行-审计-回滚**完整事务豁免**（spec 30） |
 | 最大测试文件 | 4024 | **432**（≤500 目标） | 全部 ≤500 |
@@ -325,7 +327,7 @@
 
 ## 9. 职责例外与已知限制（如实登记）
 
-1. `plugin/records/mgs_records.py` 691 行 >600（2026-09-12 二轮 R2-SP-1 修复后；ST-1 分离时 678、原 897 含 CLI）：CLI 已分离至 `mgs_records_cli.py`（273 行，参数解析/输出投影/退出码；旧脚本 `mgs_records.py` 保持原调用入口，子命令/参数/输出/退出码合同不变）。剩余为统一查询组织，不可拆部分是**一次顶层读取的完整生命周期**：CONFIG 原文→任务集合→同一份已读核心文档（版本/指纹/受影响任务推导）在同一次调用内同源闭合（spec 9/10），`_dependency_graph`/`_ready_classification`/`baseline_report`/`verify_project` 都是这条生命周期上的判断层，与读取计时、来源元信息（cached/fetched_at）交织；纯助手（指纹计算、能力短语等）虽可再移，但单独成文件不构成职责边界，只会增加转发层（task-reading 明确不为行数写空转发）。验证方式：五套检查 + records/github 主题套件 + CLI 全路由退出码（CLI 用例走真实脚本入口）。
+1. `plugin/records/mgs_records.py` 693 行 >600（2026-09-12 二轮 R2-SP-1 修复后；ST-1 分离时 678、原 897 含 CLI）：CLI 已分离至 `mgs_records_cli.py`（273 行，参数解析/输出投影/退出码；旧脚本 `mgs_records.py` 保持原调用入口，子命令/参数/输出/退出码合同不变）。剩余为统一查询组织，不可拆部分是**一次顶层读取的完整生命周期**：CONFIG 原文→任务集合→同一份已读核心文档（版本/指纹/受影响任务推导）在同一次调用内同源闭合（spec 9/10），`_dependency_graph`/`_ready_classification`/`baseline_report`/`verify_project` 都是这条生命周期上的判断层，与读取计时、来源元信息（cached/fetched_at）交织；纯助手（指纹计算、能力短语等）虽可再移，但单独成文件不构成职责边界，只会增加转发层（task-reading 明确不为行数写空转发）。验证方式：五套检查 + records/github 主题套件 + CLI 全路由退出码（CLI 用例走真实脚本入口）。
 2. 生产函数 `_cli` 223（2026-09-12 起位于 `mgs_records_cli.py`）、`record` 164、`write` 157、`verify` 114 行 >80：均为**完整事务**例外（spec 30）。`_cli` 的事务边界是一次 CLI 调用的端到端分发：参数解析→业务分发→JSON 输出投影→退出码合同（`RecordsError`/`OSError`→2、verify/deps/baseline/handover `ok=False`→1），错误映射与退出码判定分散到别处会把同一事务的失败语义拆开，故不按分支数机械切分；该例外自阶段一收口（evidence/stage1-closeout.md §5.3）登记并延续，PR #28 审查亦按 223 行实测而未将其列为违规项。`record`/`write`/`verify` 为读-执行-审计-回滚完整事务。
 3. `acceptance/16-producer-complete-loop/run.sh` 1417 行 >300 目标：顶层验收脚本为旧大文件，客户端核心已抽入 `_shared/appserver_core.py`（票 13-17）；run.sh 本体随所属阶段处理。
 4. 客户端净减实测 2815 行，**低于** spec 33 规划估计 3000–3500；属如实负向偏差，未以改写口径制造收益。
@@ -361,9 +363,9 @@ PR #28 双轴独立审查（Standards ST-1/ST-2、Spec SP-1/SP-2，均 P2）未�
 按 /implement 完成四项修复；本节更新现势状态，历史章节数字保留当时口径：
 
 1. **ST-1**：CLI 职责分离——`mgs_records.py` 897→678（查询编排；二轮 R2-SP-1
-   增加同次复用接缝后现势 **691**），新增 `mgs_records_cli.py` 273（命令行层，
+   增加同次复用接缝后现势 **693**），新增 `mgs_records_cli.py` 273（命令行层，
    旧脚本入口/参数/输出/退出码不变）；§6.3/§9 已同步更新，>600 例外仅剩
-   `mgs_records.py` 691（理由见 §9 第 1 项）。
+   `mgs_records.py` 693（理由见 §9 第 1 项）。
 2. **ST-2**：26 张工单 `Status:` 恢复标准五类分流值 `ready-for-agent`，
    完成进度另列 `Progress:` 行；本报告第 4/5 行与执行日志流程备忘已修正。
 3. **SP-1**：`appserver_core` 恢复各行为族原等待策略（中断族 0.3 秒、

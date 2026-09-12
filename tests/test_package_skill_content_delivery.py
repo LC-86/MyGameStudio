@@ -407,7 +407,8 @@ def test_github_issue_workflow_content() -> None:
               "mgsrt_admin 应提供 set-remote-config(凭据只登记环境变量名)")
     manifest_path = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"
     manifest = json.loads(manifest_path.read_text())
-    check(manifest.get("version") == "0.18.0", "任务票 18 后包版本应为 0.18.0")
+    version = tuple(int(part) for part in manifest["version"].split("."))
+    check(version >= (0, 18, 0), "包含任务票 18 能力的包版本应不早于 0.18.0")
     check("github-issues-backend" in manifest.get("keywords", []),
           "plugin.json keywords 应含 github-issues-backend")
 
