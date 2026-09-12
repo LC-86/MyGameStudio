@@ -12,9 +12,12 @@ description: Game-Status 项目状态检查。仅在用户显式调用($game-sta
 本技能位于 `<插件根>/skills/game-status/`,包内材料在其上级目录:
 
 - [管理技能合同](../../internal/contracts/management.md)中的 Game-Status 一节:输入、输出、写入与完成条件
-- [共同合同](../../internal/contracts/common.md):业务入口共同约定
+- [共同合同](../../internal/contracts/common.md)**《共同执行规则》《写入与保障》**:业务入口共同约定与「按本次用途收窄写入范围」的唯一权威;本检查为只读模式,写入范围收窄为零
 - [工作记录合同](../../internal/contracts/records.md)与[任务分流设计](../../internal/contracts/task-triage.md):任务记录与分流语义
+- [工作结果模板](../../templates/work/result.md)**《结果字段》**:被核对的结果记录字段的唯一权威(读取与核验结果时参照)
 - [writing-for-agents](../../internal/methods/writing-for-agents/SKILL.md):文档写入方法;仅当后续被明确要求写入管理记录时才需要读取,只读检查不加载
+
+共同执行规则与结果字段以上述权威文件为准;本入口只做只读状态核对:不提交受控写入(写入通道见[受控写入协议](../../internal/protocols/gate-protocol.md)《受控写入协议》),也不执行任何越界探针。
 
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-status/SKILL.md`,再取其包根(上级两级)。
 

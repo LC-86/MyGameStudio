@@ -12,13 +12,16 @@ description: Game-Plan 规格拆单入口。仅在用户显式调用($game-plan)
 本技能位于 `<插件根>/skills/game-plan/`,包内材料在其上级目录:
 
 - [管理技能合同](../../internal/contracts/management.md)中的 Game-Plan 一节:输入、输出、写入与完成条件
-- [共同合同](../../internal/contracts/common.md):业务入口共同约定
+- [共同合同](../../internal/contracts/common.md)**《共同执行规则》《写入与保障》**:业务入口共同约定(显式调用、范围与授权、执行与完成五步、待验收)与外部动作授权(提交/推送/发布不自动)的唯一权威
 - [工作记录合同](../../internal/contracts/records.md):任务最少信息、后端接口与版本引用
 - [任务分流规则](../../internal/contracts/task-triage.md):五类状态与人机分工语义
-- [受控写入协议](../../internal/protocols/gate-protocol.md):两层拦截、mgs-gate 工具与写入步骤(必须先读)
+- [受控写入协议](../../internal/protocols/gate-protocol.md)**《受控写入协议》**:两层拦截、`mgs-gate` 工具、越界探针与凭据处理的唯一权威(必须先读)
 - [writing-for-agents](../../internal/methods/writing-for-agents/SKILL.md):文档写入方法(**所有任务记录写入步骤必读**)
 - [工作请求模板](../../templates/work/task.md):任务记录字段与落点
+- [工作结果模板](../../templates/work/result.md)**《结果字段》**:任务结果记录字段的唯一权威(结果索引指向的结果记录按此字段)
 - 统一接口:`<插件根>/records/mgs_records.py`(config/list/show/deps/ready/verify)
+
+共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充拆单的专业差异(原子任务、真实依赖、第五类分流),不重复其中的共同规程。
 
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-plan/SKILL.md`,再取其包根(上级两级)。
 
@@ -47,12 +50,12 @@ description: Game-Plan 规格拆单入口。仅在用户显式调用($game-plan)
 ### 遗留事项(缺信息/需人决定/未拆解的远期工作)
 ```
 
-报告按「未参与讨论的执行者可独立读取」标准书写,引用实际身份与版本,不依赖对话记忆。
+报告按[共同合同](../../internal/contracts/common.md)《共同执行规则》的「未参与讨论的执行者可独立读取」标准书写,引用实际身份与版本,不依赖对话记忆。
 
 ## 边界
 
 - 只写任务记录与工作安排(work/ 及统筹管理资料);需求经引用保持设计维护者,技术约定经引用保持制作实现维护;发现规格缺口或目标范围问题时如实报告并交回,不自行改基线。
 - 不代开发者决定未决项(如预警是否采纳);相关事项列 needs-info 并注明需要谁补齐。
 - 不虚构完成或进度;已有任务的进度只按事实更新。
-- 不把执行凭据写入任何文件或报告正文。
-- 越界写入被拒即停止该项并原样记录,不换路径重试。
+- 任务说明要求边界核对时,按[受控写入协议](../../internal/protocols/gate-protocol.md)《越界探针》执行直接写探针与越界 `mgs_write` 探针,记录与未要求时的处理均按该节纪律。
+- 凭据处理按[受控写入协议](../../internal/protocols/gate-protocol.md)《执行凭据》一节;普通拆单完成不自动授权提交、推送、发布或修改远端工单,外部动作边界见[共同合同](../../internal/contracts/common.md)《写入与保障》。

@@ -12,13 +12,16 @@ description: Game-Init 项目初始化与协作配置入口。仅在用户显式
 本技能位于 `<插件根>/skills/game-init/`,包内材料在其上级目录:
 
 - [管理技能合同](../../internal/contracts/management.md)中的 Game-Init 一节:输入、输出、写入与完成条件
-- [共同合同](../../internal/contracts/common.md):业务入口共同约定
+- [共同合同](../../internal/contracts/common.md)**《共同执行规则》《写入与保障》**:业务入口共同约定(显式调用、范围与授权、执行与完成五步、待验收)与外部动作授权(提交/推送/发布不自动)的唯一权威
 - [协作配置合同](../../internal/contracts/project-configuration.md):配置范围、过程与保存
 - [初始化流程](../../internal/proposals/project-onboarding.md):探查/清单/确认/应用/核对与恢复规则(「已有项目」与「中断与重复运行」两节为接手路径的依据)
 - [项目目录模板](../../internal/proposals/project-layout.md)与[模板入口](../../templates/README.md):落点与维护责任
 - [工作记录合同](../../internal/contracts/records.md)与[任务分流设计](../../internal/contracts/task-triage.md):任务与结果记录结构
-- [受控写入协议](../../internal/protocols/gate-protocol.md):应用阶段的写入通道(写入前必读)
+- [受控写入协议](../../internal/protocols/gate-protocol.md)**《受控写入协议》**:两层拦截、`mgs-gate` 工具、越界探针与凭据处理的唯一权威(应用阶段写入前必读)
+- [工作结果模板](../../templates/work/result.md)**《结果字段》**:结果记录字段的唯一权威
 - [writing-for-agents](../../internal/methods/writing-for-agents/SKILL.md):文档写入方法(**所有文档写入步骤必读**)
+
+共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充初始化与协作配置的专业差异(探查/清单/确认/应用/核对),不重复其中的共同规程。
 
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-init/SKILL.md`,再取其包根(上级两级)。
 
@@ -94,4 +97,5 @@ description: Game-Init 项目初始化与协作配置入口。仅在用户显式
 - 现有实现与旧文档矛盾时提供证据与待决定项,不自动把实现采纳为产品意图,不替开发者裁决。
 - 混合职责文档的各部分由对应维护角色应用;统筹不因组织接入而获得专业文档写入权。
 - 任务字段中的角色或范围描述是记录,不是授权。
-- 不把执行凭据写入任何文件或报告正文;需要人决定的事项原样保留。
+- 任务说明要求边界核对时,按[受控写入协议](../../internal/protocols/gate-protocol.md)《越界探针》执行直接写探针与越界 `mgs_write` 探针,记录与未要求时的处理均按该节纪律。
+- 凭据处理按[受控写入协议](../../internal/protocols/gate-protocol.md)《执行凭据》一节;普通接入完成不自动授权提交、推送、发布或修改远端工单,外部动作边界见[共同合同](../../internal/contracts/common.md)《写入与保障》;需要人决定的事项原样保留。

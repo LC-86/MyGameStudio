@@ -220,31 +220,46 @@ def test_internal_references_resolve() -> None:
             resolved = (md.parent / rel).resolve()
             check(resolved.exists(),
                   f"{md.relative_to(PLUGIN_ROOT)} 引用的 {target} 无法在包内解析")
-def test_skill_authority_references() -> None:
-    """任务票 23:共同执行规则/受控写入协议/结果字段各有唯一权威,五入口引用可达。
+ALL_SKILLS = (
+    "game-art", "game-audio", "game-build", "game-code", "game-design",
+    "game-implement", "game-init", "game-plan", "game-playtest",
+    "game-producer", "game-prototype", "game-review", "game-spec",
+    "game-status",
+)
 
-    校验:(1)被引用的小节名在目标权威文件中有对应标题文本(《共同执行规则》
-    《写入与保障》→ common.md,《越界探针》→ gate-protocol.md,《结果字段》→
-    result.md),锚点失配即失败;(2)五个制作实现入口同时引用三处权威且解析到
-    实文件(引用不悬空);(3)入口文本指向上述权威小节而非内联共同规程;(4)未
-    迁入的九个入口在迁移期间继续按旧规则可用(票 24 处理)。
+
+def test_skill_authority_references() -> None:
+    """任务票 23/24:共同执行规则/受控写入协议/结果字段各有唯一权威,十四入口引用可达。
+
+    校验:(1)被引用的小节名在目标权威文件中有对应**完整标题行**文本(《共同执行
+    规则》《写入与保障》→ common.md,《越界探针》《执行凭据》→ gate-protocol.md,
+    《结果字段》→ result.md),锚点失配(含标题被改坏、去名)即失败,不以关键词
+    子串出现代替小节存在;(2)票 24 起十四个业务入口全部同时引用三处权威且解析到
+    实文件(引用不悬空);(3)入口文本指向上述权威小节而非内联共同规程——并断言
+    票 23 之前的「不把执行凭据写入任何文件或报告正文」内联复制已在全部入口清零
+    (共同规则只引用不复制)。
     """
 
     authority_sections = {
         PLUGIN_ROOT / "internal" / "contracts" / "common.md": (
-            "## 共同规则的权威位置", "## 共同执行规则", "## 写入与保障"),
+            "共同规则的权威位置", "共同执行规则", "写入与保障"),
         PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md": (
-            "## 越界探针", "## 执行凭据"),
+            "越界探针", "执行凭据"),
         PLUGIN_ROOT / "templates" / "work" / "result.md": (
-            "## 结果字段",),
+            "结果字段",),
     }
     for doc, sections in authority_sections.items():
         check(doc.is_file(), f"缺少共同权威文件 {doc.relative_to(PLUGIN_ROOT)}")
         if doc.is_file():
             text = doc.read_text()
             for section in sections:
-                check(section in text,
-                      f"{doc.relative_to(PLUGIN_ROOT)} 应含权威小节「{section}」")
+                # 小节名必须作为完整 Markdown 标题行出现(允许标题后接括号说明),
+                # 而不是仅作为任意位置的子串——否则「共同执行规则X」这类被改坏的
+                # 锚点会假绿(/tmp 变异验证覆盖此点)。
+                heading_ok = re.search(
+                    rf"^##\s+{re.escape(section)}(\s*\(|$)", text, re.MULTILINE)
+                check(heading_ok is not None,
+                      f"{doc.relative_to(PLUGIN_ROOT)} 应含完整权威小节标题「## {section}」")
     result_template = PLUGIN_ROOT / "templates" / "work" / "result.md"
     if result_template.is_file():
         text = result_template.read_text()
@@ -255,8 +270,11 @@ def test_skill_authority_references() -> None:
     authorities = ("../../internal/contracts/common.md",
                    "../../internal/protocols/gate-protocol.md",
                    "../../templates/work/result.md")
-    migrated = ("game-implement", "game-code", "game-art", "game-audio", "game-build")
-    for name in migrated:
+    authority_anchors = ("共同执行规则", "写入与保障", "受控写入协议",
+                         "越界探针", "结果字段")
+    # 票 23 之前各入口内联复制的凭据纪律原句;票 24 迁移后应改为引用《执行凭据》。
+    inline_credential_copy = "不把执行凭据写入任何文件或报告正文"
+    for name in ALL_SKILLS:
         skill_md = PLUGIN_ROOT / "skills" / name / "SKILL.md"
         check(skill_md.is_file(), f"缺少 skills/{name}/SKILL.md")
         if not skill_md.is_file():
@@ -267,20 +285,10 @@ def test_skill_authority_references() -> None:
             resolved = (skill_md.parent / ref).resolve()
             check(resolved.is_file(),
                   f"{name} SKILL.md 引用的 {ref} 悬空(解析为 {resolved})")
-        check("共同执行规则" in text, f"{name} SKILL.md 应指向《共同执行规则》")
-        check("写入与保障" in text, f"{name} SKILL.md 应指向《写入与保障》(外部动作边界)")
-        check("受控写入协议" in text, f"{name} SKILL.md 应指向《受控写入协议》")
-        check("越界探针" in text, f"{name} SKILL.md 应指向《越界探针》")
-        check("结果字段" in text, f"{name} SKILL.md 应指向《结果字段》")
-
-    # 迁移期间新旧并存:未迁入的九个入口继续可用,不因本票精简而缺席。
-    skills_root = PLUGIN_ROOT / "skills"
-    migrated_names = set(migrated)
-    for skill_dir in sorted(p for p in skills_root.iterdir() if p.is_dir()):
-        if skill_dir.name in migrated_names:
-            continue
-        check((skill_dir / "SKILL.md").is_file(),
-              f"未迁入入口 {skill_dir.name} 在迁移期间应继续可用")
+        for anchor in authority_anchors:
+            check(anchor in text, f"{name} SKILL.md 应指向《{anchor}》权威小节")
+        check(inline_credential_copy not in text,
+              f"{name} SKILL.md 仍内联复制共同凭据规则,应改为引用协议《执行凭据》")
 
 
 def test_config_template_adaptation() -> None:

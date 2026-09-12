@@ -8,10 +8,75 @@
 """
 
 import json
+import re
 import sys
 from plugin_package_support import (PLUGIN_ROOT, make_checker, run_theme)
 
 FAILURES, check = make_checker()
+
+def test_game_status_skill_content() -> None:
+    """任务票 24:Game-Status 只读状态检查的依据、引用与关键步骤序列。
+
+    Game-Status 此前只有入口存在性检查(test_explicit_skills),无独立语义检查。
+    本票补「关键步骤序列」断言:按步骤编号顺序核对真实只读流程(先定目标项目根
+    → 读资料入口 INDEX → 按 INDEX 与协作配置读取约定/基线/任务 → 按分类规则
+    逐项核对证据 → 按报告结构输出),而非零散关键词匹配;并断言只读语义与
+    「记录声明不等于完成」的分类纪律。
+    """
+
+    status = PLUGIN_ROOT / "skills" / "game-status" / "SKILL.md"
+    check(status.is_file(), "缺少 skills/game-status/SKILL.md")
+    if not status.is_file():
+        return
+    text = status.read_text(encoding="utf-8")
+    for ref in (
+        "../../internal/contracts/management.md",
+        "../../internal/contracts/common.md",
+        "../../internal/contracts/records.md",
+        "../../internal/contracts/task-triage.md",
+        "../../internal/protocols/gate-protocol.md",
+        "../../templates/work/result.md",
+        "../../internal/methods/writing-for-agents/SKILL.md",
+        "references/status-check.md",
+    ):
+        check(ref in text, f"game-status SKILL.md 应引用包内依据 {ref}")
+    for concept in (
+        "只读",            # 检查不写入、不创建、不删除
+        "INDEX",           # 唯一默认资料入口
+        "协作配置",        # 后端与文档映射
+        "基线核对",        # 版本一致性核对
+        "可接续",          # 可接续工作
+        "未知/存疑",       # 缺失/矛盾归入存疑
+        "不当作完成",      # 记录声明不等于完成
+        "不替用户决定",    # 需要人决定的事项原样保留
+    ):
+        check(concept in text, f"game-status SKILL.md 应覆盖概念:{concept}")
+
+    # 关键步骤序列:按编号顺序断言(不是零散关键词是否出现)。
+    ordered_steps = [body for _, body in re.findall(r"^(\d+)\.\s*(.+)$", text, re.MULTILINE)]
+    sequence = (
+        "确定目标项目根",
+        "读取资料入口",
+        "按 INDEX 与协作配置",
+        "分类规则逐项核对",
+        "报告结构输出状态报告",
+    )
+    positions = []
+    for fragment in sequence:
+        positions.append(next((i for i, body in enumerate(ordered_steps)
+                               if fragment in body), -1))
+    missing = [s for s, p in zip(sequence, positions) if p < 0]
+    check(not missing, f"game-status SKILL.md 缺少关键步骤:{missing}")
+    check(positions == sorted(positions) and len(set(positions)) == len(positions),
+          f"game-status SKILL.md 关键步骤顺序错乱:{list(zip(sequence, positions))}")
+
+    # 只读语义:报告声明只读;发现资料需更新时作为可接续工作报告,不代为修改。
+    check("只读检查:本次未写入、未创建、未删除" in text or
+          ("只读" in text and "不使用" in text),
+          "game-status 应明确本次检查不写入")
+    check("可接续工作" in text and "不代为修改" in text,
+          "game-status 应把需要更新的事项作为可接续工作报告而非代改")
+
 
 def test_game_build_skill_content() -> None:
     """任务票 12:Game-Build 构建运行工作流的包内依据与关键纪律。"""
@@ -348,6 +413,7 @@ def test_github_issue_workflow_content() -> None:
 
 
 TESTS = (
+    test_game_status_skill_content,
     test_game_build_skill_content,
     test_game_review_skill_content,
     test_game_playtest_skill_content,
