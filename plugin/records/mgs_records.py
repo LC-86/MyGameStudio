@@ -23,6 +23,9 @@
 - 开工集合是「记录可核对的开工条件」判断,不是授权:ready-for-agent
   不等于依赖已完成或已获全部写入授权,开工前仍需按任务允许修改范围与
   运行保障核对授权(startable_tasks 输出附此提示)。
+- 命令行层(参数解析、输出投影与退出码)定义在 mgs_records_cli.py
+  (PR #28 复审 ST-1:查询组织与命令行职责分离);本文件保持旧脚本
+  原调用入口,子命令、参数、JSON 输出与退出码合同不变。
 
 用法:
   mgs_records.py config --project <项目根> [--config <CONFIG相对路径>]
@@ -39,11 +42,8 @@
 
 from __future__ import annotations
 
-import argparse
 import datetime as _dt
 import hashlib
-import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -269,16 +269,26 @@ def _doc_texts(root: Path, config: dict) -> dict[str, str]:
 
     同一已读原文同时用于逻辑版本与内容指纹判断;下一次顶层调用重新读取,
     不做跨调用缓存(第一阶段设计:核心文档按实际路径复用已读文本)。
+    复用键是**解析后的实际路径**(spec 10):同一物理文件经 docs/DESIGN.md 与
+    docs/./DESIGN.md 等合法映射写法出现时只实际读取一次,各映射路径仍分别
+    定位输出,不因写法差异混入两次读取结果(PR #28 复审 SP-2)。
     """
 
     texts: dict[str, str] = {}
+    by_location: dict[str, str] = {}  # 解析后实际路径 → 首次读取的原文
     for row in config["docmap"]:
         rel = row["path"]
         if rel in texts:
             continue
         path = root / rel
-        if path.is_file():
-            texts[rel] = path.read_text(encoding="utf-8")
+        if not path.is_file():
+            continue
+        location = str(path.resolve())
+        text = by_location.get(location)
+        if text is None:
+            text = path.read_text(encoding="utf-8")
+            by_location[location] = text
+        texts[rel] = text
     return texts
 
 
@@ -656,242 +666,13 @@ def verify_project(project_root: Path | str,
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
 
 
-# ---------- CLI ----------
+# ---------- 兼容入口 ----------
 
-def _parse_fields(pairs: list[str]) -> dict:
-    fields: dict[str, str] = {}
-    for pair in pairs:
-        if "=" not in pair:
-            raise RecordsError(f"字段必须形如 键=值,当前 {pair!r}")
-        key, value = pair.split("=", 1)
-        fields[key.strip()] = value.strip()
-    return fields
-
-
-def _cli() -> int:
-    common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--project", required=True, help="目标项目根目录")
-    common.add_argument("--config", default=DEFAULT_CONFIG_REL,
-                        help=f"CONFIG 相对路径(默认 {DEFAULT_CONFIG_REL})")
-    common.add_argument("--api-base", default=None,
-                        help="GitHub API 端点覆盖(测试/本地替身;默认按 host 推导,"
-                             "或环境变量 MGS_GH_API_BASE)")
-    common.add_argument("--cache-dir", default=None,
-                        help="远端读取缓存与未发布草稿目录(离线缓存/草稿语义)")
-    parser = argparse.ArgumentParser(
-        description="任务后端统一接口(本地 Markdown 读取与核验;"
-                    "github-issues 后端读写与切换迁移)")
-    sub = parser.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("config", parents=[common], help="读取协作配置")
-    sub.add_parser("list", parents=[common], help="列出任务")
-    p_show = sub.add_parser("show", parents=[common], help="读取单个任务")
-    p_show.add_argument("--task", required=True, help="任务身份")
-    sub.add_parser("deps", parents=[common],
-                   help="解析任务依赖关系(未解析引用或循环时退出码 1)")
-    sub.add_parser("ready", parents=[common], help="当前可开工集合及原因")
-    sub.add_parser("baseline", parents=[common],
-                   help="核心基线内容指纹核对与受影响任务"
-                        "(存在实质变更未同步时退出码 1)")
-    sub.add_parser("verify", parents=[common], help="回读核验")
-    # github-issues 后端写操作(任务票 17;本地后端写入经 mgs-gate 受控通道)
-    p_create = sub.add_parser(
-        "create", parents=[common], help="创建远端任务(防重复:同身份收养)")
-    p_create.add_argument("--identity", required=True, help="任务身份(NN-<slug>)")
-    p_create.add_argument("--title", required=True, help="任务标题")
-    p_create.add_argument("--field", action="append", default=[],
-                          help="工作请求字段 键=值,可重复")
-    p_create.add_argument("--triage", default="needs-triage",
-                          choices=CANONICAL_LABELS, help="初始分流")
-    p_create.add_argument("--progress", default="待执行", help="初始进度")
-    p_update = sub.add_parser(
-        "update", parents=[common], help="更新任务安排(字段合并,可带版本校验)")
-    p_update.add_argument("--task", required=True, help="任务身份")
-    p_update.add_argument("--field", action="append", default=[],
-                          help="字段 键=值(进度/工作请求字段),可重复")
-    p_update.add_argument("--change-note", default=None,
-                          help="安排更新说明(写入状态变化;缺省「安排更新」;"
-                               "与草稿保存/重放共用同一参数)")
-    p_update.add_argument("--expected-body-sha256", default=None,
-                          help="预期远端正文 SHA-256(不符则拒绝,不覆盖他人改动)")
-    p_append = sub.add_parser(
-        "append-result", parents=[common], help="追加结果评论并登记结果索引")
-    p_append.add_argument("--task", required=True, help="任务身份")
-    src = p_append.add_mutually_exclusive_group(required=True)
-    src.add_argument("--text", help="结果正文(Markdown)")
-    src.add_argument("--file", help="结果正文文件路径")
-    p_triage = sub.add_parser(
-        "set-triage", parents=[common], help="设置分流(标签与正文同步)")
-    p_triage.add_argument("--task", required=True, help="任务身份")
-    p_triage.add_argument("--label", required=True, choices=CANONICAL_LABELS)
-    p_rels = sub.add_parser(
-        "set-relations", parents=[common], help="设置依赖(明确可解析引用)")
-    p_rels.add_argument("--task", required=True, help="任务身份")
-    p_rels.add_argument("--dep", action="append", default=[],
-                        help="依赖任务身份,可重复;留空表示无依赖")
-    p_parent = sub.add_parser(
-        "set-parent", parents=[common],
-        help="设置父任务(优先原生 sub-issues,不可用回退正文引用)")
-    p_parent.add_argument("--task", required=True, help="任务身份")
-    p_parent.add_argument("--parent", default=None, help="父任务身份;省略即解除")
-    p_close = sub.add_parser(
-        "close", parents=[common],
-        help="关闭任务(完成/不再执行/已有成果覆盖;关闭不等于验收通过)")
-    p_close.add_argument("--task", required=True, help="任务身份")
-    p_close.add_argument("--reason", required=True,
-                         choices=["完成", "不再执行", "已有成果覆盖"])
-    p_close.add_argument("--note", default="", help="关闭说明(入评论)")
-    sub.add_parser("publish-drafts", parents=[common],
-                   help="重放未发布草稿(远端恢复后)")
-    p_handover = sub.add_parser(
-        "handover", parents=[common],
-        help="远端交接核对基线引用可达(未发布本地资料不宣称远端可访问;"
-             "不可达时退出码 1)")
-    p_plan = sub.add_parser(
-        "switch-plan", parents=[common],
-        help="生成后端切换迁移清单(只读;确认前不执行)")
-    p_plan.add_argument("--target", required=True,
-                        choices=["github-issues", "local-markdown"])
-    p_plan.add_argument("--repo", default=None,
-                        help="目标为 github-issues 时的 host/owner/repository")
-    p_plan.add_argument("--emit", default=None, help="迁移清单 JSON 输出路径")
-    p_apply = sub.add_parser(
-        "switch-apply", parents=[common],
-        help="执行已确认的切换(目标侧创建+产出新 CONFIG;不改写项目 CONFIG)")
-    p_apply.add_argument("--plan", required=True, help="switch-plan 产出的清单")
-    p_apply.add_argument("--emit-dir", required=True, help="产出目录")
-    p_apply.add_argument("--confirmed", action="store_true",
-                         help="确认标记(未确认则拒绝执行)")
-
-    args = parser.parse_args()
-    root = Path(args.project)
-    remote = {"transport": None, "api_base": args.api_base,
-              "cache_dir": args.cache_dir}
-
-    def read_transport(config: dict):
-        """CLI 子命令所需的真实读取通道(审查修复票 01/S3、S4):反向
-        switch-plan 要读取 github 源任务,handover 要实际执行可达检查;
-        --api-base/环境变量可指向本地替身,不注入测试桩。"""
-
-        import mgs_github  # noqa: PLC0415
-
-        return mgs_github.UrllibTransport(
-            api_base=mgs_github.api_base_for(config, args.api_base),
-            token=mgs_github.token_from_env())
-
-    def github_only(action: str):
-        import mgs_github  # noqa: PLC0415
-
-        config = load_config(root, args.config)
-        if config["backend"] != "github-issues":
-            raise RecordsError(
-                f"{action} 仅支持 github-issues 后端(当前 {config['backend']});"
-                "本地 Markdown 后端的项目内写入一律经 mgs-gate 受控通道"
-                "(mgs_write),本 CLI 不提供绕过")
-        return mgs_github.GithubBackend(
-            config, read_transport(config), args.cache_dir)
-
-    try:
-        if args.cmd == "config":
-            payload: object = load_config(root, args.config)
-        elif args.cmd == "list":
-            payload = [{"identity": t["identity"], "title": t["title"],
-                        "triage": t["triage"], "progress": t["progress"],
-                        **({"cached_read": True} if t.get("cached_read") else {})}
-                       for t in list_tasks(root, args.config, **remote)]
-        elif args.cmd == "show":
-            payload = read_task(root, args.task, args.config, **remote)
-        elif args.cmd == "deps":
-            payload = task_dependencies(root, args.config, **remote)
-        elif args.cmd == "ready":
-            payload = startable_tasks(root, args.config, **remote)
-        elif args.cmd == "baseline":
-            payload = baseline_report(root, args.config, **remote)
-        elif args.cmd == "verify":
-            payload = verify_project(root, args.config, **remote)
-        elif args.cmd == "create":
-            payload = github_only("create").create_task(
-                args.identity, args.title, _parse_fields(args.field),
-                triage=args.triage, progress=args.progress)
-        elif args.cmd == "update":
-            if not args.field:
-                raise RecordsError("update 至少需要一个 --field")
-            payload = github_only("update").update_task(
-                args.task, _parse_fields(args.field),
-                expected_body_sha256=args.expected_body_sha256,
-                change_note=args.change_note or "安排更新")
-        elif args.cmd == "append-result":
-            text = (Path(args.file).read_text(encoding="utf-8") if args.file
-                    else args.text)
-            payload = github_only("append-result").append_result(args.task, text)
-        elif args.cmd == "set-triage":
-            payload = github_only("set-triage").set_triage(args.task, args.label)
-        elif args.cmd == "set-relations":
-            payload = github_only("set-relations").set_relations(
-                args.task, args.dep)
-        elif args.cmd == "set-parent":
-            payload = github_only("set-parent").set_parent(args.task, args.parent)
-        elif args.cmd == "close":
-            payload = github_only("close").close_task(
-                args.task, args.reason, note=args.note)
-        elif args.cmd == "publish-drafts":
-            payload = github_only("publish-drafts").publish_drafts()
-        elif args.cmd == "handover":
-            import mgs_github  # noqa: PLC0415
-
-            config = load_config(root, args.config)
-            if config["backend"] != "github-issues":
-                raise RecordsError(
-                    f"handover 仅用于 github-issues 后端的远端交接核对"
-                    f"(当前 {config['backend']})")
-            # 可达性结论只能来自实际执行的检查(S4):建立真实读取通道
-            payload = mgs_github.handover_baseline_check(
-                root, args.config, transport=read_transport(config))
-        elif args.cmd == "switch-plan":
-            import mgs_github  # noqa: PLC0415
-
-            config = load_config(root, args.config)
-            payload = mgs_github.plan_backend_switch(
-                root, target=args.target, repo=args.repo,
-                transport=read_transport(config), cache_dir=args.cache_dir)
-            if args.emit:
-                Path(args.emit).write_text(
-                    json.dumps(payload, ensure_ascii=False, indent=2),
-                    encoding="utf-8")
-        elif args.cmd == "switch-apply":
-            import mgs_github  # noqa: PLC0415
-
-            plan_data = json.loads(Path(args.plan).read_text(encoding="utf-8"))
-            transport = None
-            if plan_data.get("to") == "github-issues":
-                host = mgs_github.parse_repo_location(plan_data["repo"])["host"]
-                base = (args.api_base
-                        or os.environ.get(mgs_github.API_BASE_ENV, "").strip()
-                        or mgs_github.default_api_base(host))
-                transport = mgs_github.UrllibTransport(
-                    base, mgs_github.token_from_env())
-            payload = mgs_github.apply_backend_switch(
-                args.plan, confirmed=args.confirmed, emit_dir=args.emit_dir,
-                project_root=root, transport=transport,
-                cache_dir=args.cache_dir)
-        else:  # pragma: no cover - 子命令已穷举
-            raise RecordsError(f"未知子命令 {args.cmd}")
-    except RecordsError as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
-        return 2
-    except OSError as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
-        return 2
-    print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
-    if args.cmd == "verify" and not payload["ok"]:
-        return 1
-    if args.cmd == "deps" and not payload["ok"]:
-        return 1
-    if args.cmd == "baseline" and not payload["ok"]:
-        return 1
-    if args.cmd == "handover" and not payload["ok"]:
-        return 1
-    return 0
-
-
+# 命令行层(参数解析、输出投影、退出码)唯一定义在 mgs_records_cli;本文件
+# 保持旧脚本原调用入口与退出码合同(PR #28 复审 ST-1)。脚本实例即本模块
+# 本体:先注册再导入 CLI 层,查询组织不会被重复执行,也不会反向成为
+# mgs_records_cli 的模块级依赖环。
 if __name__ == "__main__":
+    sys.modules.setdefault("mgs_records", sys.modules[__name__])
+    from mgs_records_cli import _cli  # noqa: E402  (脚本入口延迟导入)
     sys.exit(_cli())

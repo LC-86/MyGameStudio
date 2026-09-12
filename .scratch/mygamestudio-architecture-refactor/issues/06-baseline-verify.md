@@ -4,7 +4,9 @@
 
 **Blocked by:** 04 修正可开工查询的重复读取与混合结果
 
-**Status:** resolved
+**Status:** ready-for-agent
+
+**Progress:** 已完成（2026-09-12 收口；执行记录见 Comments 与执行日志）
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 3, 11, 21, 25, 26
 

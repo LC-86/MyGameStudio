@@ -4,7 +4,9 @@
 
 **Blocked by:** 14 迁移最小与扩展事件的普通场景；16 迁移相对阈值与完整闭环场景
 
-**Status:** resolved
+**Status:** ready-for-agent
+
+**Progress:** 已完成（2026-09-12 收口；执行记录见 Comments 与执行日志）
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 4, 5, 6, 32, 35, 36, 37, 38, 39, 40, 41
 

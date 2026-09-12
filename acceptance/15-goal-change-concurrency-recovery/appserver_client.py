@@ -35,7 +35,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "_shared"))
 
-from appserver_core import run_skills, run_turn  # noqa: E402,F401
+from appserver_core import (  # noqa: E402,F401
+    INTERRUPT_POLL_SECONDS, run_skills, run_turn)
 
 # 场景身份:迁移前 clientInfo 常量,保持逐项兼容。
 CLIENT_INFO = {
@@ -67,6 +68,7 @@ def cmd_turn(args: argparse.Namespace) -> int:
         watch_audit=args.watch_audit,
         kill_after_allows=args.kill_after_allows,
         kill_relative=args.kill_relative,
+        wait_poll_seconds=INTERRUPT_POLL_SECONDS,
         new_session=True,
     )
 

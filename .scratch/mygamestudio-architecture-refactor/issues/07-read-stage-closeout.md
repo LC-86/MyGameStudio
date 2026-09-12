@@ -4,7 +4,9 @@
 
 **Blocked by:** 05 让列表与单任务读取复用配置并保持兼容；06 让基线与核验复用读取且保留证据含义
 
-**Status:** resolved
+**Status:** ready-for-agent
+
+**Progress:** 已完成（2026-09-12 收口；执行记录见 Comments 与执行日志）
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 1, 2, 4, 5, 6, 7, 8, 21, 22, 27, 51, 59, 60
 

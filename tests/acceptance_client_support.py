@@ -115,6 +115,7 @@ class SpyServer:
         self.calls: list[str] = []
         self.params: list = []
         self.init_kwargs = kwargs
+        self.wait_polls: list[float] = []
         sink.append(self)
 
     def request(self, method, params=None, timeout=0):
@@ -127,7 +128,8 @@ class SpyServer:
                                           "pluginId": "p", "path": "/x"}]}]}
         return {}
 
-    def wait_turn_completed(self, timeout, events=None):
+    def wait_turn_completed(self, timeout, events=None, poll_seconds=1.0):
+        self.wait_polls.append(poll_seconds)
         if events is not None:
             events.append({"method": "turn/completed", "params": {}})
         return ["spy reply"]

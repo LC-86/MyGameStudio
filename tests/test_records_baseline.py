@@ -189,11 +189,83 @@ def test_baseline_reads_config_and_core_docs_once() -> None:
               f"下一次调用应重新读取并看到仅空白差异,实际 {states}")
         check(second["ok"] is True, "疑似格式修正不应判为需要重审")
 
+def test_baseline_docmap_alias_reuses_one_read() -> None:
+    """spec 10:核心文档按解析后的实际路径复用已读文本(PR #28 复审 SP-2)。
+
+    同一物理文件经 ``docs/mygamestudio/GAME_DESIGN.md`` 与
+    ``docs/mygamestudio/./GAME_DESIGN.md`` 两种合法映射写法出现时,本次调用
+    只实际读取一次:逻辑版本、双指纹与受影响任务判断都从同一份原文推导,
+    不因映射写法差异实际读取两次、混入不同时点的结果;各映射路径仍分别
+    定位输出。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio"
+        config = docs / "CONFIG.md"
+        config.write_text(config.read_text(encoding="utf-8").replace(
+            "| 技术设计 | docs/mygamestudio/TECH_DESIGN.md | 制作实现 |",
+            "| 技术设计 | docs/mygamestudio/TECH_DESIGN.md | 制作实现 |\n"
+            "| 游戏需求与设计(别名) | docs/mygamestudio/./GAME_DESIGN.md | 方案设计 |"),
+            encoding="utf-8")
+        design = docs / "GAME_DESIGN.md"
+        design.write_text("# 当前游戏需求与设计\n\n基线版本:v2。\n- 规则\n",
+                          encoding="utf-8")
+        work = docs / "work" / "07-alias-ref"
+        work.mkdir(parents=True)
+        (work / "task.md").write_text(PLAN_TASK_TEMPLATE.format(
+            title="别名引用任务", identity="07-alias-ref", triage="ready-for-agent",
+            progress="待执行", goal="演示别名引用", deliver="示例", scope="src/**",
+            capability="文件读写", executor="Agent(制作实现)", acceptance="行为检查",
+            deps="无", coordination="无", missing="无", index="(暂无)").replace(
+            "GAME_DESIGN v2「本轮可执行规格」",
+            "docs/mygamestudio/./GAME_DESIGN.md v2"), encoding="utf-8")
+
+        # 首次实际读取取得 v2 后,同一物理文件变为 v3:若按映射写法各读一次,
+        # 两个映射位置会分别拿到 v2 与 v3,报告出现混合时点结论(审查反例)。
+        target = design.resolve()
+        real_read_text = Path.read_text
+        reads = {"count": 0}
+
+        def counted_read_text(path_self, *args, **kwargs):
+            text = real_read_text(path_self, *args, **kwargs)
+            if path_self.resolve() == target:
+                reads["count"] += 1
+                if reads["count"] == 1:
+                    design.write_text(
+                        "# 当前游戏需求与设计\n\n基线版本:v3。\n- 新规则\n",
+                        encoding="utf-8")
+            return text
+
+        Path.read_text = counted_read_text  # type: ignore[method-assign]
+        try:
+            report = mgs_records.baseline_report(root)
+        finally:
+            Path.read_text = real_read_text
+
+        check(reads["count"] == 1,
+              f"同一物理文件的两种映射写法应只实际读取一次,实际 {reads['count']} 次")
+        rows = [d for d in report["docs"]
+                if d["path"].replace("./", "").endswith("GAME_DESIGN.md")]
+        check(len(rows) == 2,
+              f"两种映射位置都应保留输出定位,实际 {[d['path'] for d in rows]}")
+        declared = {d["declared_version"] for d in rows}
+        fingerprints = {d["current_fingerprint"] for d in rows}
+        check(declared == {"v2"},
+              f"两种映射位置应从同一份已读原文推导逻辑版本,实际 {declared}")
+        check(len(fingerprints) == 1,
+              f"两种映射位置应从同一份已读原文推导指纹,实际 {fingerprints}")
+        check(not report["affected_tasks"],
+              f"任务引用 v2 与本次已读原文一致,不应列为受影响,实际 "
+              f"{report['affected_tasks']}")
+
+
 TESTS = (
     test_baseline_report_states,
     test_baseline_report_affected_tasks,
     test_baseline_cli,
     test_baseline_reads_config_and_core_docs_once,
+    test_baseline_docmap_alias_reuses_one_read,
 )
 
 if __name__ == "__main__":

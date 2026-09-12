@@ -17,6 +17,13 @@
 (固定只读沙箱、事件筛选范围与 turn 生命周期通知、绝对/相对中断阈值与进程组)经
 ``run_turn`` 的显式参数保留,不强制统一。
 
+等待策略按行为族保留(PR #28 复审 SP-1):普通完成场景(原 01-04/17/18)旧
+实现以 1 秒粒度轮询(``NORMAL_POLL_SECONDS``);中断族(原 05-16)旧实现是固定
+0.3 秒的单一等待循环,与是否配置 ``--watch-audit`` 无关——族内入口经
+``run_turn(wait_poll_seconds=INTERRUPT_POLL_SECONDS)`` 声明该策略,未配置审计时
+仍按 0.3 秒轮询,不回落到 1 秒粒度(1 秒粒度会漏收最后一次轮询之后、截止
+之前到达的回复与完成事件,却仍以退出码 0 结束)。
+
 中断阈值(票 15 绝对、票 16 相对):``run_turn`` 传 ``watch_audit``/``kill_after_allows``
 时,等待 turn 完成的同时轮询审计文件,累计 allow 条目达到阈值即对本次子进程组发
 SIGKILL 并以退出码 3 结束;事件流中没有 turn/completed,已取得的事件证据照常落盘。
@@ -49,6 +56,7 @@ __all__ = (
     "write_event_stream",
     "REQUEST_TIMEOUT_SECONDS",
     "REQUEST_POLL_SECONDS",
+    "NORMAL_POLL_SECONDS",
     "INTERRUPT_POLL_SECONDS",
     "DEFAULT_EVENT_METHODS",
     "INTERRUPTED_EXIT_CODE",
@@ -57,6 +65,8 @@ __all__ = (
 # 请求响应等待上限(与旧实现一致,不在票 13 改为可配)。
 REQUEST_TIMEOUT_SECONDS = 60.0
 REQUEST_POLL_SECONDS = 0.2
+# 普通族(原 01-04/17/18)turn 等待的轮询间隔(与旧实现一致)。
+NORMAL_POLL_SECONDS = 1.0
 # 中断场景的轮询间隔(与旧 05-14 实现一致,保证中断时点响应性)。
 INTERRUPT_POLL_SECONDS = 0.3
 
@@ -202,8 +212,17 @@ class AppServer:
                     agent_messages.append(text)
 
     def wait_turn_completed(self, timeout: float,
-                            events: list[dict[str, Any]] | None = None
+                            events: list[dict[str, Any]] | None = None,
+                            poll_seconds: float = NORMAL_POLL_SECONDS
                             ) -> list[dict[str, Any]]:
+        """按 poll_seconds 粒度轮询等待 turn/completed,增量消费事件。
+
+        默认 1 秒与普通族旧实现一致;中断族(原 05-16)旧实现是固定 0.3 秒的
+        单一等待循环(与是否配置审计无关),经 ``run_turn`` 的
+        ``wait_poll_seconds`` 传入 ``INTERRUPT_POLL_SECONDS`` 保留——粒度差异
+        决定截止前最后时刻到达的回复与完成事件是否被收到(PR #28 复审 SP-1)。
+        """
+
         deadline = time.time() + timeout
         agent_messages: list[str] = []
         seen: set[str] = set()
@@ -213,7 +232,7 @@ class AppServer:
             self._collect_agent_messages(seen, agent_messages)
             if self.turn_completed():
                 return agent_messages
-            time.sleep(1)
+            time.sleep(poll_seconds)
         return agent_messages
 
     def kill_process_group(self) -> None:
@@ -336,7 +355,8 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
              keep_types: set[str] | None,
              event_methods: tuple[str, ...] = DEFAULT_EVENT_METHODS,
              watch_audit: str | None = None, kill_after_allows: int = 0,
-             kill_relative: bool = False, new_session: bool = False) -> int:
+             kill_relative: bool = False, new_session: bool = False,
+             wait_poll_seconds: float | None = None) -> int:
     """跑一个 turn 并落盘报告/事件证据;配置 watch_audit 时支持中断阈值。
 
     中断(原 05-14,票 15 绝对;原 15/16,票 16 相对):``watch_audit`` +
@@ -344,6 +364,12 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
     本子进程组,事件流不含 turn/completed,已取得证据照常落盘,并以退出码 3 结束
     (不再 close)。阈值为累计绝对次数;``kill_relative=True`` 时改为进入等待时的基数
     加本轮新增(共享运行根多轮场景)。其余场景沿用普通等待与退出码 0,行为不变。
+
+    等待策略按行为族保留(PR #28 复审 SP-1):中断族(原 05-16)旧实现是固定
+    0.3 秒的单一等待循环,与是否配置审计无关,族内入口传
+    ``wait_poll_seconds=INTERRUPT_POLL_SECONDS``;未配置审计时不再回落到普通族
+    的 1 秒粒度——1 秒粒度会漏收最后一次轮询之后、截止之前到达的回复与完成
+    事件,却仍以退出码 0 结束。普通族(原 01-04/17/18)保持 1 秒默认。
     """
 
     server = AppServer(new_session=new_session)
@@ -370,7 +396,10 @@ def run_turn(client_info: dict[str, Any], *, cwd: str, sandbox: str, prompt: str
                 kill_after_allows=kill_after_allows,
                 kill_relative=kill_relative)
         else:
-            messages = server.wait_turn_completed(timeout, events)
+            messages = server.wait_turn_completed(
+                timeout, events,
+                poll_seconds=(NORMAL_POLL_SECONDS if wait_poll_seconds is None
+                              else wait_poll_seconds))
         if events_out:
             write_event_stream(events, events_out, keep_types, event_methods)
         report = "\n\n".join(messages)

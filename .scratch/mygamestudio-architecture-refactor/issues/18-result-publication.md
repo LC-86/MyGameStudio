@@ -4,7 +4,9 @@
 
 **Blocked by:** 09 让直连失败判据通过同一事件入口验证；11 按用户行为组织任务后端回归
 
-**Status:** resolved
+**Status:** ready-for-agent
+
+**Progress:** 已完成（2026-09-12 收口；执行记录见 Comments 与执行日志）
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 4, 5, 7, 42, 43, 44, 45, 46, 47, 48
 

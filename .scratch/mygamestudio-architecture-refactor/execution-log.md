@@ -7,7 +7,7 @@
 - 开始日期：2026-09-11
 - 核心票（需主控 code-review 复审）：01、07、13、17、18、21、22、23、25、26
 - 授权：每票由子代理提交一次；主控每票收尾后单独提交本文件；不推送、不打标签、不动 GitHub
-- 流程备忘（复审轮沉淀，后续票子代理提示沿用）：工单 Status 终态用仓库约定 `resolved`（docs/agents/issue-tracker.md L26），不用自造值。
+- 流程备忘（2026-09-12 修正：原备忘把 /wayfinder 地图子票的终态 `claimed/resolved`误当作实现票的分流约定（docs/agents/issue-tracker.md L26 属 Wayfinding operations 一节），PR #28 复审 ST-2 指正）：工单 `Status:` 记录**分流状态**，使用 docs/agents/triage-labels.md的五类标准值（issue-tracker.md「Conventions」）；`claimed/resolved` 仅用于 /wayfinder地图子票。完成进度另列记录（工单 `Progress:` 行与本文件），不写入 Status。
 
 ## 票 01 — 固定可复跑的兼容与效率基线（阶段 0，核心票）
 
@@ -263,3 +263,30 @@
 - 交付候选：包 SHA cc8cf90e…（90 文件，隔离可复现构建 PASS）；回退参照 b8cda58 及各阶段回退点
 - 未完成（需用户授权）：U1 真实模型轮、U2 真实远端写入、U3 隔离安装、U4 人工体验、U5 安装发布决定——材料在 evidence/final-integrated-report.md §8
 - **不宣称全插件通过；安装与发布留待用户决定**
+
+## PR #28 双轴审查修复轮（2026-09-12）
+
+- 背景：PR #28 双轴独立审查（Standards+Spec，各 2 项 P2）未通过，反馈在
+  [PR 评论](https://github.com/LC-86/MyGameStudio/pull/28#issuecomment-5643052474)。
+  主代理按 /implement 修复四项，全程 TDD（先红后绿），修复后另行复审。
+- ST-1（CLI 职责分离）：`plugin/records/mgs_records.py` 897→678 行，新增
+  `plugin/records/mgs_records_cli.py`（273 行，参数解析/输出投影/退出码）；
+  旧脚本保持原调用入口，子命令/参数/JSON 输出/退出码合同不变（16 个
+  records/github 套件含真实脚本入口用例全绿）。
+- ST-2（工单分流状态）：26 张工单 `Status:` 由 `resolved` 恢复为发布时标准
+  分流值 `ready-for-agent`，完成进度另列 `Progress:` 行；本文件流程备忘已
+  修正（`claimed/resolved` 仅用于 /wayfinder 地图子票）。工单正文与历史
+  执行记录保持原样，由本节统一说明修正背景。
+- SP-1（等待策略）：`acceptance/_shared/appserver_core.py` 新增
+  `NORMAL_POLL_SECONDS=1.0` 与 `run_turn(wait_poll_seconds=…)`；族 4/5 十二个
+  入口传 `INTERRUPT_POLL_SECONDS`，未配置审计时恢复旧实现的 0.3 秒单一等待
+  粒度（1 秒粒度会漏收截止前最后时刻到达的回复与完成事件）；普通族保持
+  1 秒。回归：接线探针（18 入口）、虚拟时钟旧新 A/B（含基点提交旧实现）、
+  受控进程 late-reply（替身新 `late-reply` 模式）。
+- SP-2（文档复用）：`mgs_records._doc_texts` 复用键改为解析后的实际路径，
+  同一物理文件经别名映射写法只实际读取一次，各映射路径分别定位输出；
+  回归 `test_baseline_docmap_alias_reuses_one_read`（红：读 2 次、v2/v3 混合、
+  幽灵受影响任务 → 绿）。
+- 结果：全量测试套件与 `dist/verify-reproducible.sh` 详见
+  evidence/review-fix-2026-09-12.md；交付包重建后 SHA 以该文件与
+  dist/SHA256SUMS.txt 为准。

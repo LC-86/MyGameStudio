@@ -188,6 +188,29 @@ def test_dependency_direction_static() -> None:
           f"mgs_records 应依赖来源 module,实际 {sorted(records)}")
     check("mgs_record_source" in github,
           f"mgs_github 应直接依赖来源 module,实际 {sorted(github)}")
+    # PR #28 复审 ST-1:命令行层是最上层职责,唯一定义在 mgs_records_cli,
+    # 单向依赖查询组织与适配器门面(mgs_github,与迁移前一致);records 目录
+    # 内除查询组织脚本入口(mgs_records.py 的脚本守卫延迟导入)外,任何
+    # module 不得导入命令行层。
+    cli = _imported_modules(RECORDS_DIR / "mgs_records_cli.py")
+    check("mgs_records" in cli,
+          f"mgs_records_cli 应依赖查询组织(业务行为经公开接缝),实际 {sorted(cli)}")
+    lower = {"mgs_github_issue", "mgs_github_read", "mgs_github_migration",
+             "mgs_github_transport", "mgs_result_publication",
+             "mgs_pending_index", "mgs_record_model", "mgs_record_source"}
+    check(not (lower & cli),
+          f"mgs_records_cli 只经查询组织与适配器门面(mgs_github,与迁移前 "
+          f"一致),不直连下层职责,实际 {sorted(cli)}")
+    for module_path in sorted(RECORDS_DIR.glob("*.py")):
+        imported = _imported_modules(module_path)
+        if module_path.name == "mgs_records.py":
+            check("mgs_records_cli" in imported,
+                  "mgs_records.py 脚本守卫应延迟导入命令行层(兼容入口),"
+                  f"实际 {sorted(imported)}")
+            continue
+        check("mgs_records_cli" not in imported,
+              f"{module_path.name} 不得导入命令行层 mgs_records_cli,"
+              f"实际 {sorted(imported)}")
 
 
 def test_runtime_entrypoint_uses_public_draft_seam() -> None:

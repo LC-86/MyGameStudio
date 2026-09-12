@@ -4,7 +4,9 @@
 
 **Blocked by:** 02 让双后端共用正文与错误语义
 
-**Status:** resolved
+**Status:** ready-for-agent
+
+**Progress:** 已完成（2026-09-12 收口；执行记录见 Comments 与执行日志）
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 2, 10, 13, 15, 16, 21, 22, 27, 51
 
