@@ -207,9 +207,11 @@ def test_runtime_entrypoint_uses_public_draft_seam() -> None:
     source = "\n".join(path.read_text(encoding="utf-8")
                        for path in runtime_paths)
     check("_save_draft" not in source,
-          "mgs_runtime 不得直接调用后端私有草稿保存细节 _save_draft")
+          "扫描的 mgs_runtime 与 mgs_remote_write 并集不得直接调用后端私有草稿"
+          "保存细节 _save_draft")
     check("record_unpublished_draft" in source,
-          "mgs_runtime 应经公开草稿接缝 record_unpublished_draft 兜底离线草稿")
+          "扫描的 mgs_runtime 与 mgs_remote_write 并集应经公开草稿接缝 "
+          "record_unpublished_draft 兜底离线草稿")
     import mgs_github
     check(callable(getattr(mgs_github.GithubBackend,
                            "record_unpublished_draft", None)),

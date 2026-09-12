@@ -42,7 +42,7 @@
 `_remote_grant_denial` 与 `grant_denial` 的重复（票 21 留档 F5）本票收口：两者在 `remote_grant_denial`（mgs_remote_write）→ `grant_denial`（mgs_local_write）收敛为一份实现，差异仅在匹配器（远端 `remote_match` 接受 `/**` 子树覆盖）与拒绝措辞（`noun="remote resource"`），两条路径的规则、拒绝阶段与失效闭合语义一致。
 
 **锁内重读与持锁语义保留证明**（spec 决策 27-28 红线）：
-- `mgs_remote_write.RemoteWriteTransaction.record` 的最终临界区（`with host._locked():`，L284-320）内依次重读身份（`_resolve_instance`）、重读策略（`_policy`）、重读项目 CONFIG 与仓库级授权（`config_state`）并**据此构建 backend**、重算授权交集（`remote_grant_denial`）、持久记录写入意图、执行远端动作、追加结果审计。锁外只做「快速拒绝」预检（L256-262）。
+- `mgs_remote_write.RemoteWriteTransaction.record` 的最终临界区（`with host._locked():`，L284-373）内依次重读身份（`_resolve_instance`）、重读策略（`_policy`）、重读项目 CONFIG 与仓库级授权（`config_state`）并**据此构建 backend**、重算授权交集（`remote_grant_denial`）、持久记录写入意图、执行远端动作、追加结果审计（`_settle_outcome` 延至 L373）。锁外只做「快速拒绝」预检（L256-262）。
 - 网络期间持锁语义未放宽：远端传输调用（`run_action`）仍在同一临界区内执行，撤销（`release_instance`）与策略更换持同一把锁，因此撤销完成后在途远端写入在锁内重读时被拒（identity / remote_scope）。锁外读到的 CONFIG 快照不再沿用（`config` 在锁内被覆盖），未缓存旧权限。
 - 意图先行与结果披露未变：`action != "read"` 时意图条目先落盘，意图审计不可用即拒绝且不执行（rule_stage=audit）；结果审计失败时如实回报已发生的远端结果并标注 `audit_recorded=False`，不包装成拒绝。
 - 上游失联（remote_upstream，不绕行直连）、结果不确定（uncertain）、部分成功（partial）与未发布草稿仍如实区分，在线执行与草稿重放共用后端 `execute_op` 参数分发（`run_action` 与 `publish_drafts` 同一入口）。
@@ -76,3 +76,9 @@
 - `RemoteWriteTransaction.record` 164 行（>80）例外：与 `LocalWriteTransaction.write`（157 行）同类，是受控远端完整事务，锁外预检与锁内最终核对/意图/执行/结果审计/结果表达必须作为不可分割顺序在同一职责内连续阅读；豁免依据 spec 决策 30「完整事务允许有明确理由的例外」。验证方式：`test_runtime_gate_remote.py`、`test_runtime_gate_recovery_review.py`（SP-1/SP-2/SP-7/SP-10）、`test_runtime_gate_review_fix.py`（R4/R2-remote/R1-remote）全绿。其余函数最大 44 行（`config_state`），全部 ≤80。
 
 **遗留限制**：本票未执行真实模型轮、真实远端写入或人工体验验收（均由独立授权与验收流程承担）。受控远端事务已集中，阶段 5 两票（本地 + 远端）收口；`mgs_runtime.py` 无 >600 行例外残留。
+
+### 复审修复记录（2026-09-11）
+
+- F1 死默认臂：`mgs_remote_write.py` 两处 `_OP_FOR_ACTION.get(action, action)` 改为直接索引 `_OP_FOR_ACTION[action]`。全仓核实 `REMOTE_ACTIONS` 与 `_OP_FOR_ACTION` 键集合逐项相同（8 个 action 全覆盖，差集为空），且 `record` 在入口以 `action not in REMOTE_ACTIONS` 拒绝未知 action，故两处默认臂为死代码；改为直接索引后未来新增 action 未登记时以 KeyError 暴露（预期）。
+- F2 临界区区间：工单执行记录原写 `with host._locked():` 临界区 L284-320，实测含结果审计（`_settle_outcome`）延至 L373，已修正为 L284-373 并注明结果审计延至 L373。
+- F3 check 文案：`tests/test_records_shared_body.py::test_runtime_entrypoint_uses_public_draft_seam` 扩展扫描后的两条 check 文案原仍写 `mgs_runtime`，改为如实描述扫描 `mgs_runtime` 与 `mgs_remote_write` 并集；只改文案字符串，断言逻辑不变。

@@ -190,7 +190,7 @@ class RemoteWriteTransaction:
                     "task": backend.read_task(str(payload["identity"]))}
         # 其余动作与草稿重放共用后端的同一份参数分发(ST-1:在线执行与
         # 重放不再各自维护动作参数,语义变更两路同时生效)
-        return backend.execute_op(_OP_FOR_ACTION.get(action, action), payload)
+        return backend.execute_op(_OP_FOR_ACTION[action], payload)
 
     def _settle_outcome(self, outcome: dict, result: dict, note: dict) -> None:
         """R4:结果审计追加失败不否认已发生的远端结果。
@@ -324,7 +324,7 @@ class RemoteWriteTransaction:
                     draft = None
                     if exc.kind == "offline" and channel.get("cache_dir"):
                         draft = backend.record_unpublished_draft(
-                            _OP_FOR_ACTION.get(action, action),
+                            _OP_FOR_ACTION[action],
                             dict(payload), str(exc))
                     denial = ("remote_upstream",
                               f"remote upstream unavailable (fail closed): {exc}",
