@@ -308,5 +308,11 @@
   「当前 v2,任务引用 v1」假漂移；绿：读 1 次同源，下一次调用如实反映 v2。
 - R2-ST-1：测试数量记录修正——`tests/test_*.py` 实际 46 个文件
   （5 聚合器 + 41 主题），evidence 与本日志「35」笔误已更正。
-- 结果：全量 46 个测试文件实跑全绿；提交后 `dist/verify-reproducible.sh`
-  与推送情况见本节收口补记。
+- 内部 /code-review 双轴复审：Spec R2-SP-1/R2-ST-1 均 resolved；Standards
+  1 硬违规 + 5 判断性意见——H2/J9/J10 已修（报告时点标注、§9 引用格式、
+  config_text keyword-only），J11/J12/J13 留档；处置表见
+  evidence/review-fix-2026-09-12.md 二轮节。
+- 结果：全量 46 个测试文件实跑全绿；修复主提交 `2726827` 后
+  `dist/verify-reproducible.sh` 全部 PASS（干净副本隔离重建逐字节一致），
+  交付包 SHA-256 `70a1172a28218bee32c1cbadfc660909403bc32a537b0807b73a6c52e2a136c1`。
+  提交与推送按本任务授权执行；合并决定留待用户与下一轮独立审查。
