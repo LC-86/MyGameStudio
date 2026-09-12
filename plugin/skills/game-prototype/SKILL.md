@@ -17,8 +17,6 @@ description: Game-Prototype 隔离设计原型入口。仅在用户显式调用(
 - [工作结果模板](../../templates/work/result.md)**《结果字段》**:共同执行规则第 5 步结果记录的字段唯一权威(原型验证记录另按其模板)
 - [writing-for-agents](../../internal/methods/writing-for-agents/SKILL.md):文档写入方法(写验证记录与说明文件前必读)
 
-共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充隔离原型的专业差异(最小可检验实现、四类结论区分),不重复其中的共同规程。
-
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-prototype/SKILL.md`,再取其包根(上级两级)。
 
 ## 步骤

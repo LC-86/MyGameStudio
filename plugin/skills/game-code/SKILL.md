@@ -19,8 +19,6 @@ description: Game-Code 代码任务专业入口。仅在用户显式调用($game
 - [工作结果模板](../../templates/work/result.md)**《结果字段》**:结果记录字段的唯一权威
 - 统一接口:`<插件根>/records/mgs_records.py`(config/list/show/deps/ready,读取任务与依赖,不硬编码目录)
 
-共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充专业差异,不重复其中的共同规程。
-
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-code/SKILL.md`,再取其包根(上级两级)。
 
 ## 步骤

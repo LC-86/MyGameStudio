@@ -4,17 +4,17 @@
 
 **Blocked by:** 24 迁移管理、设计与独立验证入口
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 **Spec:** [MyGameStudio 全插件分阶段架构重构 v1](../spec.md) · User Stories 1, 5, 6, 56, 57, 58, 59, 60
 
 **Verification mapping:** 按本票所属阶段的验收集合
 
-- [ ] 确认十四入口不再依赖被替代的说明后，删除相应重复内容；固定上游方法、许可证和历史证据保留。
-- [ ] 产品元数据描述当前能力，压缩累加的实现历程；角色、显式调用和专业完成标准保持。
-- [ ] 检查共同规则、受控协议与结果模板各自唯一维护位置及直接可达引用，避免拆分后产生知识散落。
-- [ ] 核对来源、适配指纹、模板与包依赖闭包；用匹配当前内容的交付候选验证，不能沿用旧包。
-- [ ] 报告文本字符数、物理行数和专业场景对照；没有实测时不把文案缩短等同 token 或模型成本下降。
+- [x] 确认十四入口不再依赖被替代的说明后，删除相应重复内容；固定上游方法、许可证和历史证据保留。
+- [x] 产品元数据描述当前能力，压缩累加的实现历程；角色、显式调用和专业完成标准保持。
+- [x] 检查共同规则、受控协议与结果模板各自唯一维护位置及直接可达引用，避免拆分后产生知识散落。
+- [x] 核对来源、适配指纹、模板与包依赖闭包；用匹配当前内容的交付候选验证，不能沿用旧包。
+- [x] 报告文本字符数、物理行数和专业场景对照；没有实测时不把文案缩短等同 token 或模型成本下降。
 
 **依赖理由：** 依赖 24 完成全部入口迁移，之后才能 contract 删除旧共同说明。
 
@@ -27,3 +27,16 @@
 ## Comments
 
 用户已确认 26 票拆分及其依赖安排；本票按确认稿发布，未启动实施。
+
+### 执行记录（2026-09-12，阶段 6 收口核心票）
+
+- 前基点 SHA：`2820ce2b6492fe7e8a1e62e7cad980903607a490`。
+- **删除清单与「原位置 → 权威归宿」映射**：见 `evidence/25-skill-contract-cleanup.md` 第 2 节。共两类重复说明：(1) 票 23/24 迁移期的过渡脚手架声明「以上述三个权威文件为准;本入口只补充<专业>差异……不重复其中的共同规程」——十三个写入入口各 1 行，归宿 `common.md`《共同规则的权威位置》(唯一维护位置与「入口只引用不复制」声明)；(2) 入口内重复的收尾句——game-art/game-audio/game-implement/game-build 各 1 行与另处逐字重复的「报告按《共同执行规则》的『未参与者可独立读取』标准书写」，归宿 `common.md`《共同执行规则》(各入口报告结构节均已有同一权威引用；game-build 保留《执行凭据》引用)。game-status(只读入口)不在删除范围。
+- **无依赖（删除安全）证明**：三处权威小节以完整标题行存在（common.md L7/L27/L41、gate-protocol.md L50/L64、result.md L5）；`test_skill_authority_references` 覆盖十四入口（同时引用三处权威且解析到实文件、指向权威小节、无凭据纪律内联复制）；grep 复核内联复制为零。删除后 `test_package_manifest.py` 与 `test_plugin_package.py` 立即 rc=0。
+- **删除范围外保留**：来源、许可证、固定上游方法（6 个 `internal/methods/` 及提交 pin）、历史证据、入口显式触发（frontmatter `description` 与 `agents/openai.yaml` 的 `allow_implicit_invocation: false`）、角色、输入输出与专业完成标准全部未动。
+- **产品元数据与 provenance 压缩**：`plugin.json` description 611→386、longDescription 4063→1375、shortDescription 改为「十四个显式业务入口」；`provenance/manifest.md` 23531→13149 字符（逐版本适配历程移出为「历史见 fingerprints.json source 字段与 acceptance/ 证据」）。来源、MIT 许可与许可副本、上游提交 pin、逐文件来源全部保留。产品说明整体 −13291 字符（−47.1%）。
+- **字符/物理行对照**：十四入口 票25基点 59352 字符/980 行 → 当前 58133 字符/953 行（**−1219 字符、−27 行**）；相对票01基线 53310/946（+4823 字符/+7 行，为阶段6把共同规则收敛为引用并加权威定位声明的净增）。逐入口表见证据文件第 5 节。**未以文案缩短宣称 token/模型成本下降**：文本量为可复核事实，收益未实测。
+- **来源/指纹/闭包核对**：未新增或删除 `internal/`+`templates/` 文件，故不需要改 `provenance/fingerprints.json` 与 `manifest.md` 的逐文件指纹（仅入口与 `plugin.json`/`manifest.md` 变化，二者不在指纹表内）；模板与包依赖闭包检查（`test_config_template_adaptation`、`test_internal_methods_closure`、`test_internal_references_resolve`）全绿。
+- **交付候选（不沿用旧包）**：`dist/build-package.sh` 重建 90 文件包；`test_dist_rebuild_byte_reproducible`（隔离副本重建逐字节一致 + 无 PAX 扩展头）通过。`dist/verify-reproducible.sh` 需在提交后对 `git archive HEAD` 复跑（比对基准是已提交内容）。
+- **检查结果**：五套聚合器全绿 rc=0（`test_plugin_package`+四套）；`run_baseline.sh` 五套 PASS（`all_existing_checks_green=True`），跑后 `git checkout --` 恢复冻结产物。
+- **未验证限制**：本票为说明/引用与元数据重构，**未执行真实模型轮**；文案与闭包通过不等于实际模型行为已验收（spec 阶段 6「不能只靠文本缩短判断完成」）。`acceptance/01-18` 真实模型验收未重跑（需真实模型与授权）；安装与发布留待票 26 及另行授权。产品说明缩短的收益以字符/行数计，token/成本/耗时下降未实测，不据此宣称。

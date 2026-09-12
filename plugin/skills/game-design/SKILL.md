@@ -18,8 +18,6 @@ description: Game-Design 设计讨论入口。仅在用户显式调用($game-des
 - [工作结果模板](../../templates/work/result.md)**《结果字段》**:共同执行规则第 5 步结果记录的字段唯一权威(设计过程记录另按其 records 模板)
 - [writing-for-agents](../../internal/methods/writing-for-agents/SKILL.md):文档写入方法(**所有文档写入步骤必读**)
 
-共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充设计讨论的专业差异(质询/决策地图分支、事实与决定区分),不重复其中的共同规程。
-
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-design/SKILL.md`,再取其包根(上级两级)。
 
 ## 分支选择(内部方法按问题需要加载)

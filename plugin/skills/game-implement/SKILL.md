@@ -19,8 +19,6 @@ description: Game-Implement 制作实现组织入口。仅在用户显式调用(
 - [工作结果模板](../../templates/work/result.md)**《结果字段》**:结果记录字段的唯一权威
 - 统一接口:`<插件根>/records/mgs_records.py`(config/list/show/deps/ready,读取任务与依赖,不硬编码目录)
 
-共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充专业差异(组织、集成与交接),不重复其中的共同规程。
-
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-implement/SKILL.md`,再取其包根(上级两级)。
 
 ## 步骤
@@ -58,4 +56,4 @@ description: Game-Implement 制作实现组织入口。仅在用户显式调用(
 - 已实现的专业入口(Code/Art/Audio/Build/Review/Playtest)按各自技能约定委派;尚未实现的专业入口不伪装成已调用;约定的独立审查与人工验收未完成时保留待验收。
 - 产品要求变化回到对应设计与统筹流程,不代为修改产品基线,不自行降低要求。
 - 凭据处理按[受控写入协议](../../internal/protocols/gate-protocol.md)《执行凭据》一节;普通实现完成不自动授权提交、推送、发布或修改远端工单;新增命令执行路径保持受控(项目写入一律经 mgs-gate,共同边界见[共同合同](../../internal/contracts/common.md)《写入与保障》)。
-- 失败或中断时保存实际进度与缺口,如实交接,不宣称未完成的工作;报告按[共同合同](../../internal/contracts/common.md)《共同执行规则》的「未参与者可独立读取」标准书写。
+- 失败或中断时保存实际进度与缺口,如实交接,不宣称未完成的工作。

@@ -19,8 +19,6 @@ description: Game-Spec 规格整理入口。仅在用户显式调用($game-spec)
 - [writing-for-agents](../../internal/methods/writing-for-agents/SKILL.md):文档写入方法(**所有文档写入步骤必读**)
 - 决定与研究记录模板:`<插件根>/templates/records/`
 
-共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充规格整理的专业差异(版本纪律、双指纹登记、采纳依据),不重复其中的共同规程。
-
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-spec/SKILL.md`,再取其包根(上级两级)。
 
 ## 步骤

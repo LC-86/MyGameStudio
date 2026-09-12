@@ -19,8 +19,6 @@ description: Game-Playtest 试玩与运行观察入口。仅在用户显式调�
 - [试玩与运行记录模板](../../templates/evidence/playtest.md):试玩记录字段参考(场景表、人工反馈、尚未执行);结果记录字段以[工作结果模板](../../templates/work/result.md)《结果字段》为准(被核对的结果记录按此字段)
 - 统一接口:`<插件根>/records/mgs_records.py`(config/list/show/deps,读取任务与约定引用,不硬编码目录)
 
-共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充试玩的专业差异(版本指纹绑定、真实观察与人工反馈区分),不重复其中的共同规程。
-
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-playtest/SKILL.md`,再取其包根(上级两级)。
 
 ## 步骤

@@ -19,8 +19,6 @@ description: Game-Review 独立审查入口。仅在用户显式调用($game-rev
 - [独立审查模板](../../templates/evidence/review.md):审查记录字段参考(两轴表、未覆盖、修复后复核);结果记录字段以[工作结果模板](../../templates/work/result.md)《结果字段》为准(被核对的结果记录按此字段)
 - 统一接口:`<插件根>/records/mgs_records.py`(config/list/show/deps,读取任务与规格引用,不硬编码目录)
 
-共同执行规则、受控写入协议与结果字段以上述三个权威文件为准;本入口只补充独立审查的专业差异(版本绑定、两轴独立执行、证据与影响),不重复其中的共同规程。
-
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-review/SKILL.md`,再取其包根(上级两级)。
 
 ## 步骤
