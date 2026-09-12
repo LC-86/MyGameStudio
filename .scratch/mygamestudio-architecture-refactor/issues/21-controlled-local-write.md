@@ -65,7 +65,7 @@
 **文件长度与例外**：
 - `mgs_gate_registry.py` 240 行、`mgs_local_write.py` 440 行 → 均在新整理文件 200–400 目标的同量级内（440 略高，为完整本地事务与路径身份的唯一归属，未再切分以避免调用方拼接）。复审修复（第一轮 F1）后为 265 行与 437 行：registry 增加占用接缝 +25；local_write 收拢占用读写 −3。
 - `mgs_runtime.py` 662 行（>600）例外：本文件是既有文件（1120→662，净减 458），保留的 `remote_record`（函数体 181 行，即 AST `end_lineno - lineno + 1`；含尾随空行与下一个 `@staticmethod` 边界计 183 行）是受控远端完整事务，属票 22 的集中范围；本票条件 6 要求远端通道与本共享锁语义不变，故不在此票拆分。验证方式：`test_runtime_gate_remote.py`、`test_runtime_gate_recovery_review.py`、`test_runtime_gate_review_fix.py`（R4/R2-remote/R1-remote/SP-1）全绿。
-- `LocalWriteTransaction.write` 160 行（>80）例外：完整事务允许有明确理由的例外（spec 决策 30）。复审修复（第一轮 F4）修正豁免理由：完整事务*内部*允许私有阶段助手（私有助手调用方不可见，「拆开会被调用方跳过其中一步」不构成反对内部拆分的准确理由）；本函数仍保留为单函数，是为审阅锁序连贯性——锁前预检与锁内最终核对/占用/版本/竞态/锚定/落盘/回滚在同一函数体内可连续阅读。纯代码移动提取私有助手会引入阶段结果（重读记录/策略、占用冲突、版本判定、竞态、锚定成败）在多个返回值间回填给统一 `denial`/`result` 的传递错误风险，收益不抵风险，故本票不改（详见 Comments 复审修复记录 F4）。`remote_record` 同理（函数体 181 行）。其余函数最大 48 行（`_remote_config_state`），全部 ≤80。
+- `LocalWriteTransaction.write` 157 行（>80）例外：完整事务允许有明确理由的例外（spec 决策 30）。复审修复（第一轮 F4）修正豁免理由：完整事务*内部*允许私有阶段助手（私有助手调用方不可见，「拆开会被调用方跳过其中一步」不构成反对内部拆分的准确理由）；本函数仍保留为单函数，是为审阅锁序连贯性——锁前预检与锁内最终核对/占用/版本/竞态/锚定/落盘/回滚在同一函数体内可连续阅读。纯代码移动提取私有助手会引入阶段结果（重读记录/策略、占用冲突、版本判定、竞态、锚定成败）在多个返回值间回填给统一 `denial`/`result` 的传递错误风险，收益不抵风险，故本票不改（详见 Comments 复审修复记录 F4）。`remote_record` 同理（函数体 181 行）。其余函数最大 48 行（`_remote_config_state`），全部 ≤80。
 
 **遗留限制**：本票未执行真实模型轮、真实远端写入或人工体验验收（均由独立授权与验收流程承担）；受控远端操作的内部整理属票 22。`mgs_runtime.py` 仍 >600 行，待票 22 收口远端事务后复查。
 
@@ -99,3 +99,8 @@
 - `git diff 497869b -- tests/ acceptance/` 为空；红线自检：锁内重读 if-chain 仍在 `with host._locked():` 内（`mgs_local_write.py` 唯一 `_locked()` 调用点）、`open_pinned_parent` 的 O_NOFOLLOW 与 `rollback` 未改动、`fcntl.flock` 未改动。
 - 生产内容变化 → `./dist/build-package.sh` 重建（89 文件），提交后 `./dist/verify-reproducible.sh` PASS（提交报告）。
 - 本轮净行数：runtime 三文件 240+440+662=1342 → 265+437+676=1378（净 +36：registry +25 占用接缝、local_write −3、runtime +14 接缝委派与去死代码）。`tests/`、`acceptance/` 零 diff。
+
+### 复审修复记录（第二轮，2026-09-12）
+
+- **F1【行数同步】：`LocalWriteTransaction.write` 160 → 157。** 第一轮 F1 占用读写收归 registry（local_write 整体 −3 行）后，该函数行数随之变化；工单「文件长度与例外」仍写 160，未同步。以 `python3` AST 实测（`plugin/runtime/mgs_local_write.py`，函数 `lineno=281`、`end_lineno=437`，`end_lineno - lineno + 1 = 157`；`inspect.getsourcelines` 同值 157）确认为 **157** 行，已改为 157；>80 行豁免结论不变（保留理由见第一轮 F4）。
+- **F2【留档】：门面单行委派接缝为故障注入的有意设计，留档不改。** `mgs_runtime.GateService` 的 8 个单行委派接缝——`_locked` / `_read_json` / `_write_json` / `_occupancy_conflict` / `_occupy` / `_policy` / `_audit_unlocked` / `_resolve_instance`——是既有直连故障注入点（测试经覆写这些方法注入读写/占用中断），语义与注入点保持不变；属有意保留的测试接缝，本票不改。
