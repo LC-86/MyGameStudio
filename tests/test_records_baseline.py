@@ -13,7 +13,8 @@ import tempfile
 from pathlib import Path
 
 from records_backend_support import (
-    PLAN_TASK_TEMPLATE, _register_fingerprint, make_checker, make_project,
+    PLAN_TASK_TEMPLATE, _register_fingerprint, counted_config_reads,
+    make_checker, make_config_selfmap_project, make_project,
     run_cli, run_theme, scoped_read_counter,
 )
 
@@ -260,8 +261,41 @@ def test_baseline_docmap_alias_reuses_one_read() -> None:
               f"{report['affected_tasks']}")
 
 
+def test_config_self_mapping_reuses_first_read() -> None:
+    """spec 9/10:顶层已取得的 CONFIG 原文纳入同次文档复用(R2-SP-1)。
+
+    文档映射含 CONFIG 自映射时,同一次顶层调用不得把 load_config 已读的
+    CONFIG 原文再读一遍。首读后同次把 CONFIG 改为 v2:读两次会以第二次原文
+    判出「CONFIG 当前 v2,任务引用 v1」的假漂移;修复后只读一次、受影响任务
+    为空;下一次顶层调用重新读取,如实反映 v2(跨调用刷新语义保持)。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_config_selfmap_project(Path(tmp))
+        config_path = root / "docs" / "mygamestudio" / "CONFIG.md"
+        rewritten = config_path.read_text(encoding="utf-8").replace(
+            "基线版本:v1。", "基线版本:v2。")
+
+        with counted_config_reads(config_path, rewritten) as reads:
+            report = mgs_records.baseline_report(root)
+        check(reads["count"] == 1,
+              f"CONFIG 自映射时应复用顶层已读原文、只实际读取一次,"
+              f"实际 {reads['count']} 次")
+        check(not report["affected_tasks"],
+              f"任务引用 v1 与本次已读原文一致,不应列为受影响,实际 "
+              f"{report['affected_tasks']}")
+
+        # 下一次顶层调用重新读取:磁盘已是 v2,应如实列出受影响任务。
+        second = mgs_records.baseline_report(root)
+        affected = {item["identity"]: item for item in second["affected_tasks"]}
+        entry = affected.get("08-config-ref", {})
+        check(entry.get("ref_version") == "v1" and entry.get("current_version") == "v2",
+              f"下一次调用应重新读取并反映 v2,实际 {entry}")
+
+
 TESTS = (
     test_baseline_report_states,
+    test_config_self_mapping_reuses_first_read,
     test_baseline_report_affected_tasks,
     test_baseline_cli,
     test_baseline_reads_config_and_core_docs_once,

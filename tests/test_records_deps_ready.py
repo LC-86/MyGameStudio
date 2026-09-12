@@ -13,7 +13,8 @@ import tempfile
 from pathlib import Path
 
 from records_backend_support import (
-    PLAN_TASK_TEMPLATE, make_checker, make_plan_project, make_project,
+    PLAN_TASK_TEMPLATE, counted_config_reads, make_checker,
+    make_config_selfmap_project, make_plan_project, make_project,
     run_cli, run_theme, scoped_read_counter,
 )
 
@@ -350,6 +351,40 @@ def test_ready_and_deps_preserve_directory_order() -> None:
         check(list(deps_again["edges"].keys()) == ["05-zzz", "02-aaa"],
               "list 的排序副本不得原地污染 deps 的来源顺序")
 
+def test_config_self_mapping_ready_reuses_first_read() -> None:
+    """spec 9:CONFIG 自映射时 ready 复用顶层已读原文(R2-SP-1)。
+
+    同一次 startable_tasks 内,CONFIG 由 _read_workspace 读取一次;文档映射
+    自映射行不得再读一遍。首读后同次把 CONFIG 改为 v2:读两次会按第二次
+    原文判出「CONFIG 当前 v2,任务引用 v1」假漂移并把任务放入 blocked;
+    修复后任务正常 startable;下一次调用重新读取,如实反映 v2。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_config_selfmap_project(Path(tmp))
+        config_path = root / "docs" / "mygamestudio" / "CONFIG.md"
+        rewritten = config_path.read_text(encoding="utf-8").replace(
+            "基线版本:v1。", "基线版本:v2。")
+
+        with counted_config_reads(config_path, rewritten) as reads:
+            result = mgs_records.startable_tasks(root)
+        check(reads["count"] == 1,
+              f"CONFIG 自映射时应复用顶层已读原文、只实际读取一次,"
+              f"实际 {reads['count']} 次")
+        identities = {item["identity"] for item in result["startable"]}
+        check("08-config-ref" in identities,
+              f"任务引用 v1 与本次已读原文一致,应可开工;blocked 侧: "
+              f"{[b for b in result['blocked'] if b['identity'] == '08-config-ref']}")
+
+        # 下一次顶层调用重新读取:磁盘已是 v2,任务应因版本漂移进入 blocked。
+        second = mgs_records.startable_tasks(root)
+        blocked = {item["identity"]: item for item in second["blocked"]}
+        entry = blocked.get("08-config-ref", {})
+        check(any("当前 v2" in reason and "引用 v1" in reason
+                  for reason in entry.get("reasons", [])),
+              f"下一次调用应按 v2 报告版本漂移,实际 {entry}")
+
+
 TESTS = (
     test_parse_dep_ids_ignores_dates,
     test_task_dependencies_graph,
@@ -363,6 +398,7 @@ TESTS = (
     test_deps_reads_once_and_ready_does_not_recall_public_dependency_entry,
     test_ready_second_call_reflects_changes_without_cross_call_cache,
     test_ready_and_deps_preserve_directory_order,
+    test_config_self_mapping_ready_reuses_first_read,
 )
 
 if __name__ == "__main__":

@@ -290,7 +290,23 @@
 - /code-review 双轴复审（implement 收尾）：Spec 四项 resolved、无越界；
   Standards 1 硬违规 + 8 判断性意见，H1/J1/J2/J6/J7 已修、J3/J4/J5/J8 留档，
   处置表见 evidence/review-fix-2026-09-12.md。
-- 结果：全量 35 个测试文件实跑全绿；修复主提交 `7ff3d36`（54 文件）后
+- 结果：全量 46 个测试文件（5 聚合器 + 41 主题，R2-ST-1 修正口径）实跑全绿；修复主提交 `7ff3d36`（54 文件）后
   `dist/verify-reproducible.sh` 全部 PASS（干净副本隔离重建逐字节一致），
   交付包 SHA-256 `247fa99579e45c8565a9f7c55993282883a686c3f9f65a73dbeb1a17495cb5e3`。
   未执行（与全任务一致）：真实模型轮、真实远端写入、安装与发布。
+
+## PR #28 二轮审查修复（2026-09-12，R2）
+
+- 背景：二轮独立双轴审查（对 `ec13736`，PR 评论 5643458535）：上一轮四项
+  反例全部关闭；新增 R2-SP-1（P2）与 R2-ST-1（P3，非阻塞）。
+- R2-SP-1：CONFIG 自映射纳入同次复用——`_doc_texts` 增加可选 `config_text`
+  以解析后实际路径预置复用上下文；`startable_tasks` 经 `_Reading.config_text`
+  接线，`baseline_report` 改用 `load_config_document`（仍一次读取）并透传。
+  回归（先红后绿）：`test_config_self_mapping_reuses_first_read`（baseline）、
+  `test_config_self_mapping_ready_reuses_first_read`（ready），共享夹具
+  `make_config_selfmap_project` + `counted_config_reads`。红：CONFIG 读 2 次、
+  「当前 v2,任务引用 v1」假漂移；绿：读 1 次同源，下一次调用如实反映 v2。
+- R2-ST-1：测试数量记录修正——`tests/test_*.py` 实际 46 个文件
+  （5 聚合器 + 41 主题），evidence 与本日志「35」笔误已更正。
+- 结果：全量 46 个测试文件实跑全绿；提交后 `dist/verify-reproducible.sh`
+  与推送情况见本节收口补记。

@@ -264,7 +264,8 @@ def task_dependencies(project_root: Path | str,
     return _dependency_graph(reading.tasks)
 
 
-def _doc_texts(root: Path, config: dict) -> dict[str, str]:
+def _doc_texts(root: Path, config: dict, *,
+               config_text: str | None = None) -> dict[str, str]:
     """读取文档映射中实际存在文件的原文一次(路径→原文,供本次调用复用)。
 
     同一已读原文同时用于逻辑版本与内容指纹判断;下一次顶层调用重新读取,
@@ -272,10 +273,15 @@ def _doc_texts(root: Path, config: dict) -> dict[str, str]:
     复用键是**解析后的实际路径**(spec 10):同一物理文件经 docs/DESIGN.md 与
     docs/./DESIGN.md 等合法映射写法出现时只实际读取一次,各映射路径仍分别
     定位输出,不因写法差异混入两次读取结果(PR #28 复审 SP-2)。
+    ``config_text`` 是本次顶层调用已取得的 CONFIG 原文(spec 9:每次顶层调用
+    取得 CONFIG 原文一次,由同一原文解析配置与执行条件):文档映射含 CONFIG
+    自映射时复用该原文,不二次读取(PR #28 二轮审查 R2-SP-1)。
     """
 
     texts: dict[str, str] = {}
-    by_location: dict[str, str] = {}  # 解析后实际路径 → 首次读取的原文
+    by_location: dict[str, str] = {}  # 解析后实际路径 → 本次已读原文
+    if config_text is not None:
+        by_location[str((root / config["config_path"]).resolve())] = config_text
     for row in config["docmap"]:
         rel = row["path"]
         if rel in texts:
@@ -310,10 +316,16 @@ def _versions_from_texts(config: dict, texts: dict[str, str]) -> dict[str, str]:
     return versions
 
 
-def _doc_baseline_versions(root: Path, config: dict) -> dict[str, str]:
-    """按文档映射建立可引用文档的当前逻辑版本表(如 GAME_DESIGN → "v2")。"""
+def _doc_baseline_versions(root: Path, config: dict, *,
+                           config_text: str | None = None) -> dict[str, str]:
+    """按文档映射建立可引用文档的当前逻辑版本表(如 GAME_DESIGN → "v2")。
 
-    return _versions_from_texts(config, _doc_texts(root, config))
+    ``config_text`` 透传给 ``_doc_texts``:CONFIG 自映射时复用顶层已读原文;
+    keyword-only 与 ``_doc_texts`` 一致,省略即显式声明无顶层原文可复用。
+    """
+
+    return _versions_from_texts(
+        config, _doc_texts(root, config, config_text=config_text))
 
 
 _BASELINE_REF_RE = re.compile(
@@ -438,8 +450,10 @@ def startable_tasks(project_root: Path | str,
     root = Path(project_root)
     reading = _read_workspace(root, config_rel, transport=transport,
                               api_base=api_base, cache_dir=cache_dir)
-    # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档)
-    versions = _doc_baseline_versions(root, reading.config)
+    # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档);
+    # CONFIG 自映射行复用 _read_workspace 已读原文,不二次读取
+    versions = _doc_baseline_versions(
+        root, reading.config, config_text=reading.config_text)
     # 依赖与任务状态都来自本次唯一的任务集合,不再回调公开依赖入口重取
     graph = _dependency_graph(reading.tasks)
     startable, blocked = _ready_classification(
@@ -500,11 +514,12 @@ def baseline_report(project_root: Path | str,
 
     root = Path(project_root)
     # 本次判断只用同一份 CONFIG 原文与已读核心文档:一次读取、版本与指纹同源
-    config = load_config(root, config_rel)
+    # (config_text 复用给文档映射的 CONFIG 自映射行,R2-SP-1)
+    config, config_text = load_config_document(root, config_rel)
     if config["backend"] not in SUPPORTED_BACKENDS:
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
-    texts = _doc_texts(root, config)
+    texts = _doc_texts(root, config, config_text=config_text)
     versions = _versions_from_texts(config, texts)
     grouped = _core_rows(config["docmap"])
     docs: list[dict] = []

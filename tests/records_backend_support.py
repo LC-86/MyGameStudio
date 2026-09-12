@@ -7,6 +7,7 @@ mgs_records 公开接缝作出,本 module 不复制任何生产规则。每个�
 make_checker 各自持有失败清单,互不串扰;原总入口聚合各主题清单。
 """
 
+import contextlib
 import subprocess
 import sys
 from pathlib import Path
@@ -231,6 +232,68 @@ def make_project(root: Path, *, backend: str = "local-markdown",
                                  goal="演示目标", index="(暂无)"),
             encoding="utf-8")
     return root
+
+
+def make_config_selfmap_project(root: Path) -> Path:
+    """搭建 CONFIG 自映射项目(R2-SP-1 复现夹具,PR #28 二轮审查)。
+
+    文档映射含 CONFIG 自身一行;CONFIG 声明「基线版本:v1。」;任务
+    「输入与基线」引用 docs/mygamestudio/CONFIG.md v1。verify 语义下该映射
+    合法(独立审查已核对);用于核对「顶层已取得的 CONFIG 原文纳入同次文档
+    复用」。
+    """
+
+    root = make_project(root)
+    docs = root / "docs" / "mygamestudio"
+    config_path = docs / "CONFIG.md"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        .replace("| 技术设计 | docs/mygamestudio/TECH_DESIGN.md | 制作实现 |",
+                 "| 技术设计 | docs/mygamestudio/TECH_DESIGN.md | 制作实现 |\n"
+                 "| 协作配置 | docs/mygamestudio/CONFIG.md | 制作统筹 |")
+        .replace("配置版本:v1。", "配置版本:v1。基线版本:v1。"),
+        encoding="utf-8")
+    work = docs / "work" / "08-config-ref"
+    work.mkdir(parents=True)
+    (work / "task.md").write_text(PLAN_TASK_TEMPLATE.format(
+        title="配置引用任务", identity="08-config-ref", triage="ready-for-agent",
+        progress="待执行", goal="演示配置引用", deliver="示例", scope="src/**",
+        capability="文件读写", executor="Agent(制作实现)", acceptance="行为检查",
+        deps="无", coordination="无", missing="无", index="(暂无)").replace(
+        "GAME_DESIGN v2「本轮可执行规格」",
+        "docs/mygamestudio/CONFIG.md v1"), encoding="utf-8")
+    return root
+
+
+@contextlib.contextmanager
+def counted_config_reads(config_path: Path, rewrite_to: str):
+    """上下文内包装 Path.read_text:统计 CONFIG 实际读取次数,首次读取后
+    真实改版;退出时恢复原 read_text。与基线主题别名映射回归同一手法。
+
+    用法::
+
+        with counted_config_reads(config_path, v2_text) as reads:
+            report = mgs_records.baseline_report(root)
+        # reads["count"] == 1 表示同次只实际读取一次
+    """
+
+    real_read_text = Path.read_text
+    reads = {"count": 0}
+    target = config_path.resolve()
+
+    def wrapper(path_self, *args, **kwargs):
+        text = real_read_text(path_self, *args, **kwargs)
+        if path_self.resolve() == target:
+            reads["count"] += 1
+            if reads["count"] == 1:
+                config_path.write_text(rewrite_to, encoding="utf-8")
+        return text
+
+    Path.read_text = wrapper  # type: ignore[method-assign]
+    try:
+        yield reads
+    finally:
+        Path.read_text = real_read_text  # type: ignore[method-assign]
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess:
