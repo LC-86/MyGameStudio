@@ -1,0 +1,79 @@
+{
+  "ticket": "15-shared-client-absolute",
+  "base_commit": "8f8407f6e30646e16367c52fce538fea202b8327",
+  "method": "复用票 01/13/14 的合成回放方法:虚拟时钟 + 计数器替换 json.loads,合成审计文件驱动阈值;kill_process_group 记计数、不发送真实信号;不启动子进程/网络/模型",
+  "absolute_threshold_parity": {
+    "threshold_reached": {
+      "threshold": 3,
+      "old_killed": true,
+      "new_killed": true,
+      "old_kill_calls": 1,
+      "new_kill_calls": 1,
+      "old_messages": [],
+      "new_messages": [],
+      "events_equal": true,
+      "event_count": 8
+    },
+    "threshold_unmet": {
+      "threshold": 3,
+      "present_allows": 1,
+      "old_killed": false,
+      "new_killed": false,
+      "old_messages": [
+        "first agent reply",
+        "second agent reply"
+      ],
+      "new_messages": [
+        "first agent reply",
+        "second agent reply"
+      ],
+      "messages_equal": true,
+      "events_equal": true,
+      "event_count": 8
+    },
+    "note": "阈值为累计绝对次数(含进入等待前已有的 allow);阈值达到即中断(killed=True),未达到则普通返回。共享实现未引入相对新增计数。"
+  },
+  "decode_count": {
+    "old_json_loads": 69034,
+    "new_json_loads": 1034,
+    "input_lines": 1000,
+    "baseline_ticket01_json_loads": 21000,
+    "note": "中断等待口径:事件行每条只解码一次,另含审计文件轮询的少量json.loads(每次轮询 ≤ 审计行数);旧实现每次轮询重复解码全部事件行。事件一次解码的净计数结论见票 13/14 与普通路径测试"
+  },
+  "line_counts": {
+    "shared_core": 359,
+    "migrated_family4": {
+      "acceptance/05-adopt-existing-project/appserver_client.py": 97,
+      "acceptance/06-idea-to-current-spec/appserver_client.py": 97,
+      "acceptance/07-isolated-design-prototype/appserver_client.py": 97,
+      "acceptance/08-spec-to-local-tasks/appserver_client.py": 97,
+      "acceptance/09-code-task-delivery/appserver_client.py": 97,
+      "acceptance/10-visual-asset-delivery/appserver_client.py": 97,
+      "acceptance/11-audio-asset-delivery/appserver_client.py": 97,
+      "acceptance/12-build-and-run-delivery/appserver_client.py": 97,
+      "acceptance/13-independent-deliverable-review/appserver_client.py": 97,
+      "acceptance/14-playtest-and-human-feedback/appserver_client.py": 97
+    },
+    "old_family4_at_base": {
+      "acceptance/05-adopt-existing-project/appserver_client.py": 272,
+      "acceptance/06-idea-to-current-spec/appserver_client.py": 272,
+      "acceptance/07-isolated-design-prototype/appserver_client.py": 272,
+      "acceptance/08-spec-to-local-tasks/appserver_client.py": 272,
+      "acceptance/09-code-task-delivery/appserver_client.py": 272,
+      "acceptance/10-visual-asset-delivery/appserver_client.py": 272,
+      "acceptance/11-audio-asset-delivery/appserver_client.py": 272,
+      "acceptance/12-build-and-run-delivery/appserver_client.py": 272,
+      "acceptance/13-independent-deliverable-review/appserver_client.py": 272,
+      "acceptance/14-playtest-and-human-feedback/appserver_client.py": 272
+    }
+  },
+  "family_roster": {
+    "migrated_family4": 10,
+    "migrated_before": 6,
+    "relative_unmigrated": 2
+  },
+  "evidence_kind": "synthetic_replay",
+  "subprocesses_started": 0,
+  "network_requests": 0,
+  "model_calls": 0
+}

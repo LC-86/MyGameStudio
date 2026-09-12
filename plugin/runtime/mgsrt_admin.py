@@ -103,7 +103,7 @@ def cmd_set_remote_config(args: argparse.Namespace) -> int:
 
 def cmd_status(args: argparse.Namespace) -> int:
     service = GateService(args.runtime_root)
-    instances = service._read_json("instances.json", [])  # noqa: SLF001
+    instances = service.list_instances()
     now = time.time()
     summary = []
     for record in instances:

@@ -1,0 +1,105 @@
+{
+  "evidence_kind": "synthetic_replay",
+  "scope": "合成 /tmp 夹具;GitHub 用本地替身 transport;零网络;不启动真实模型;不进行任何远端写入",
+  "observations": [
+    {
+      "probe": "ready",
+      "backend": "local-markdown",
+      "reads": {
+        "CONFIG.md": 6,
+        "PROJECT.md": 1,
+        "GAME_DESIGN.md": 1,
+        "TECH_DESIGN.md": 1,
+        "task.md": 2
+      },
+      "startable": [
+        "01-alpha"
+      ],
+      "blocked": []
+    },
+    {
+      "probe": "ready-changing-second-fetch",
+      "backend": "local-markdown",
+      "task_list_reads": 2,
+      "reads": {
+        "CONFIG.md": 6,
+        "PROJECT.md": 1,
+        "GAME_DESIGN.md": 1,
+        "TECH_DESIGN.md": 1,
+        "task.md": 2
+      },
+      "first_fetch_deps": "无",
+      "second_fetch_deps": "02-missing",
+      "result_side": "blocked",
+      "blocked": {
+        "identity": "01-alpha",
+        "title": "甲任务",
+        "triage": "ready-for-agent",
+        "progress": "待执行",
+        "executor": "Agent(制作实现)",
+        "reasons": [
+          "依赖未解析:02-missing(任务不存在)"
+        ]
+      }
+    },
+    {
+      "probe": "ready-changing-second-fetch",
+      "backend": "github-issues",
+      "transport_task_list_requests": 2,
+      "transport_total_requests": 2,
+      "reads": {
+        "CONFIG.md": 6,
+        "PROJECT.md": 1,
+        "GAME_DESIGN.md": 1,
+        "TECH_DESIGN.md": 1
+      },
+      "first_fetch_deps": "无",
+      "second_fetch_deps": "02-missing",
+      "result_side": "blocked",
+      "blocked": {
+        "identity": "01-alpha",
+        "title": "基线任务",
+        "triage": "ready-for-agent",
+        "progress": "待执行",
+        "executor": "Agent(制作实现)",
+        "reasons": [
+          "依赖未解析:02-missing(任务不存在)"
+        ]
+      },
+      "network_requests_to_remote": 0
+    },
+    {
+      "probe": "runtime-write",
+      "decision": "allow",
+      "reads": {
+        "policy.json": 3,
+        "instances.json": 2
+      },
+      "counted_scope": "runtime root 内按文件名的读取型 open 次数",
+      "note": "合成回放;临时项目内本地写入;零网络、零真实远端写入;策略/实例登记为夹具"
+    },
+    {
+      "probe": "runtime-remote-read",
+      "decision": "allow",
+      "reads": {
+        "policy.json": 3,
+        "instances.json": 2,
+        "remote.json": 1,
+        "CONFIG.md": 2
+      },
+      "transport_calls": 3,
+      "network_requests_to_remote": 0,
+      "counted_scope": "runtime root 内按文件名的读取型 open 次数",
+      "note": "合成回放;远端用本地替身 transport;零网络、零真实远端写入;策略/实例登记/CONFIG 为夹具"
+    }
+  ],
+  "prior_evidence_replay": {
+    "source": ".scratch/mygamestudio-architecture-refactor/evidence/baseline.json",
+    "counted_objects": [
+      "runtime-write",
+      "runtime-remote-read"
+    ],
+    "note": "前置证据的受控写入运行时读取计数本次用同形合成回放复算;策略/实例/远端配置均为 /tmp 夹具,远端为本地替身,零网络。前置证据中 CONFIG.md 的读取由 runtime-remote-read携带,本次一并计数。"
+  },
+  "status": "observed baseline:ready 相关条目为既有缺陷证据(复现用单独探针),不作为长期正确性断言;runtime 计数为前置观测的本次复算,零网络/零真实写入"
+}

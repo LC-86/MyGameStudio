@@ -1,0 +1,519 @@
+{
+  "evidence_kind": "static_fact + existing_entry_run",
+  "scope": "隔离 /tmp 临时项目;经现有命令行入口实跑 local-markdown 后端的读取命令;零网络、零凭据、零真实远端写入;只记录 JSON 结构与退出码,不记录取值",
+  "declared_subcommands": {
+    "help_returncode": 0,
+    "declared": [
+      "append-result",
+      "baseline",
+      "close",
+      "config",
+      "create",
+      "deps",
+      "handover",
+      "list",
+      "publish-drafts",
+      "ready",
+      "set-parent",
+      "set-relations",
+      "set-triage",
+      "show",
+      "switch-apply",
+      "switch-plan",
+      "update",
+      "verify"
+    ]
+  },
+  "covered_read_entries": [
+    "config",
+    "list",
+    "show",
+    "deps",
+    "ready",
+    "baseline",
+    "verify"
+  ],
+  "not_covered": {
+    "commands": [
+      "create",
+      "update",
+      "append-result",
+      "set-triage",
+      "set-relations",
+      "set-parent",
+      "close",
+      "publish-drafts",
+      "handover",
+      "switch-plan",
+      "switch-apply"
+    ],
+    "reason": "github-issues 专属或需要远端/凭据的入口;现有 CLI 未提供 transport 注入,本次零网络覆盖不含"
+  },
+  "cases": [
+    {
+      "argv": [
+        "mgs_records.py",
+        "config",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "backend": "str",
+            "config_path": "str",
+            "docmap": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "keys": {
+                  "content": "str",
+                  "path": "str",
+                  "role": "str"
+                }
+              }
+            },
+            "external": "str",
+            "labels": {
+              "type": "object",
+              "keys": {
+                "needs-info": "str",
+                "needs-triage": "str",
+                "ready-for-agent": "str",
+                "ready-for-human": "str",
+                "wontfix": "str"
+              }
+            },
+            "project_root": "str",
+            "remote_write_authorized": "bool",
+            "repo": "null",
+            "task_root": "str"
+          }
+        }
+      },
+      "case": "config-success"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "list",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "keys": {
+              "identity": "str",
+              "progress": "str",
+              "title": "str",
+              "triage": "str"
+            }
+          }
+        }
+      },
+      "case": "list-success"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "show",
+        "--task",
+        "01-alpha",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "directory": "str",
+            "identity": "str",
+            "path": "str",
+            "progress": "str",
+            "request": {
+              "type": "object",
+              "keys": {
+                "依赖": "str",
+                "依赖与写入协调": "str",
+                "允许修改范围": "str",
+                "完成标准": "str",
+                "尚缺信息": "str",
+                "当前目标": "str",
+                "所需能力": "str",
+                "执行责任": "str",
+                "本次交付": "str",
+                "输入与基线": "str",
+                "验收方式": "str"
+              }
+            },
+            "result_index_text": "str",
+            "results": {
+              "type": "array",
+              "items": null
+            },
+            "sections": {
+              "type": "object",
+              "keys": {
+                "工作请求": "bool",
+                "结果索引": "bool"
+              }
+            },
+            "title": "str",
+            "triage": "str"
+          }
+        }
+      },
+      "case": "show-success"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "show",
+        "--task",
+        "99-missing",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 2,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "error": "str"
+          }
+        },
+        "error_present": true
+      },
+      "case": "show-task-missing"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "deps",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "cycles": {
+              "type": "array",
+              "items": null
+            },
+            "edges": {
+              "type": "object",
+              "keys": {
+                "01-alpha": {
+                  "type": "array",
+                  "items": null
+                },
+                "02-beta": {
+                  "type": "array",
+                  "items": "str"
+                }
+              }
+            },
+            "ok": "bool",
+            "unresolved": {
+              "type": "array",
+              "items": null
+            }
+          }
+        },
+        "ok_field": true
+      },
+      "case": "deps-success"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "deps",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 1,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "cycles": {
+              "type": "array",
+              "items": null
+            },
+            "edges": {
+              "type": "object",
+              "keys": {
+                "01-alpha": {
+                  "type": "array",
+                  "items": "str"
+                }
+              }
+            },
+            "ok": "bool",
+            "unresolved": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "keys": {
+                  "dep": "str",
+                  "identity": "str"
+                }
+              }
+            }
+          }
+        },
+        "ok_field": true
+      },
+      "case": "deps-unresolved-failure"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "ready",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "blocked": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "keys": {
+                  "executor": "str",
+                  "identity": "str",
+                  "progress": "str",
+                  "reasons": {
+                    "type": "array",
+                    "items": "str"
+                  },
+                  "title": "str",
+                  "triage": "str"
+                }
+              }
+            },
+            "cached": "bool",
+            "fetched_at": "str",
+            "note": "str",
+            "source": {
+              "type": "object",
+              "keys": {
+                "backend": "str",
+                "task_root": "str"
+              }
+            },
+            "startable": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "keys": {
+                  "executor": "str",
+                  "identity": "str",
+                  "progress": "str",
+                  "reasons": {
+                    "type": "array",
+                    "items": null
+                  },
+                  "title": "str",
+                  "triage": "str"
+                }
+              }
+            }
+          }
+        }
+      },
+      "case": "ready-success"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "ready",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "blocked": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "keys": {
+                  "executor": "str",
+                  "identity": "str",
+                  "progress": "str",
+                  "reasons": {
+                    "type": "array",
+                    "items": "str"
+                  },
+                  "title": "str",
+                  "triage": "str"
+                }
+              }
+            },
+            "cached": "bool",
+            "fetched_at": "str",
+            "note": "str",
+            "source": {
+              "type": "object",
+              "keys": {
+                "backend": "str",
+                "task_root": "str"
+              }
+            },
+            "startable": {
+              "type": "array",
+              "items": null
+            }
+          }
+        }
+      },
+      "case": "ready-blocked-still-ok"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "baseline",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "affected_tasks": {
+              "type": "array",
+              "items": null
+            },
+            "docs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "keys": {
+                  "content": "str",
+                  "current_fingerprint": "str",
+                  "declared_version": "null",
+                  "note": "str",
+                  "path": "str",
+                  "recorded_fingerprint": "null",
+                  "role": "str",
+                  "status": "str"
+                }
+              }
+            },
+            "note": "str",
+            "ok": "bool"
+          }
+        },
+        "ok_field": true
+      },
+      "case": "baseline-success"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "verify",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 0,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "keys": {
+                  "detail": "str",
+                  "name": "str",
+                  "ok": "bool"
+                }
+              }
+            },
+            "ok": "bool"
+          }
+        },
+        "ok_field": true
+      },
+      "case": "verify-success"
+    },
+    {
+      "argv": [
+        "mgs_records.py",
+        "config",
+        "--project",
+        "<tmp>"
+      ],
+      "returncode": 2,
+      "stderr_empty": true,
+      "output": {
+        "valid_json": true,
+        "shape": {
+          "type": "object",
+          "keys": {
+            "error": "str"
+          }
+        },
+        "error_present": true
+      },
+      "case": "config-missing-failure"
+    }
+  ],
+  "summary": {
+    "exit_code_contract": {
+      "success": 0,
+      "records_or_file_error": 2,
+      "judgement_failure": 1
+    },
+    "observed_returncodes": {
+      "config-success": 0,
+      "list-success": 0,
+      "show-success": 0,
+      "show-task-missing": 2,
+      "deps-success": 0,
+      "deps-unresolved-failure": 1,
+      "ready-success": 0,
+      "ready-blocked-still-ok": 0,
+      "baseline-success": 0,
+      "verify-success": 0,
+      "config-missing-failure": 2
+    }
+  }
+}

@@ -27,367 +27,79 @@
 本地替身验证说明:传输层可注入(API 端点可经 MGS_GH_API_BASE/--api-base
 覆盖),验收用本地 HTTP 替身覆盖故障语义;真实远端写入仅在明确授权的
 测试仓库执行(任务票 17 保留待办)。
+
+票 20 职责整理(纯结构调整,语义不变):本 adapter 只保留写操作与在线/
+重放共用的动作分发;Issue 正文序列化与仓库级授权核对归 ``mgs_github_issue``,
+读取/离线缓存与回读核验归 ``mgs_github_read``(``GithubBackend`` 经其
+mixin 继承),后端切换迁移与交接核对归 ``mgs_github_migration``。既有公开
+名字(含 ``plan_backend_switch``/``apply_backend_switch``/
+``handover_baseline_check`` 与传输层重导出)在本模块仍可达。
 """
 
 from __future__ import annotations
 
-import datetime as _dt
+import datetime as _dt  # noqa: F401 - 兼容接缝:既有测试经 mgs_github._dt 冻结时钟
 import hashlib
-import json
-import os
-import re
 import sys
 from pathlib import Path
-import http.client
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import mgs_records  # noqa: E402
-from mgs_records import (CANONICAL_LABELS, RecordsError,  # noqa: E402
-                         _field, _sections)
+import mgs_github_issue  # noqa: E402
+import mgs_github_read  # noqa: E402
+from mgs_github_read import GithubReadMixin  # noqa: E402
+import mgs_record_model  # noqa: E402
+import mgs_record_source  # noqa: E402
+import mgs_result_publication  # noqa: E402
+from mgs_record_model import (  # noqa: E402,F401
+    CANONICAL_LABELS, RecordsError, edit_body, today)
+from mgs_github_transport import (  # noqa: E402
+    GithubRecordsError, TransportError, repo_path, repo_str)
+# 兼容再导出:传输/错误接缝的公开名字仍从 mgs_github 可达(现有调用方与
+# 测试经 mgs_github.UrllibTransport / api_base_for / token_from_env /
+# default_api_base / API_BASE_ENV 定位),唯一定义在 mgs_github_transport。
+from mgs_github_transport import (  # noqa: E402,F401
+    API_BASE_ENV, UrllibTransport, api_base_for, default_api_base,
+    token_from_env)
 
 GITHUB_BACKEND = "github-issues"
-WRITE_OP = "issues-write"
-TOKEN_ENVS = ("MGS_GITHUB_TOKEN", "GH_TOKEN")
-# 测试接缝:覆盖 API 端点(默认按 host 推导);验收与本地替身使用
-API_BASE_ENV = "MGS_GH_API_BASE"
-DEFAULT_TIMEOUT = 10.0
+WRITE_OP = mgs_record_source.WRITE_OP
 
-OFFLINE_NOTE = ("远端不可用:以下为注明时间与来源的缓存,不是远端当前状态;"
-                "不静默切换本地后端。")
+OFFLINE_NOTE = mgs_github_read.OFFLINE_NOTE
 DRAFT_NOTE = ("远端不可用:已保存未发布草稿(标明来源与状态);草稿不是已发布任务,"
               "发布需在远端可用后重试;不静默切换本地后端。")
 CLOSE_NOTE = "关闭 Issue 不自动等于验证通过;验收以任务记录的验收方式与实际证据为准。"
 
 
-class GithubRecordsError(RecordsError):
-    """GitHub 后端配置缺失、坐标无效、未授权或远端操作失败。"""
-
-
-class TransportError(Exception):
-    """传输层故障。kind: offline(连不上)/ timeout(超时,结果不确定)/
-    bad_response(应答不可解析)。"""
-
-    def __init__(self, kind: str, detail: str) -> None:
-        super().__init__(f"{kind}: {detail}")
-        self.kind = kind
-        self.detail = detail
-
-
 # ---------- 配置解析(公开接缝) ----------
+# 仓库坐标与远端授权声明的文本解析归属中性来源 module(mgs_record_source:
+# 协作配置职责),仓库级授权核对与仓库坐标的 GitHub 错误身份归 Issue 形态
+# 职责 module(mgs_github_issue)。本 adapter 只保持既有公开名字可达(现有
+# 调用方与测试经 mgs_github 定位),错误仍为 GithubRecordsError。
+# 授权纪律不变:选择 GitHub 后端不等于批准远端写入,需 CONFIG 明确到
+# host/owner/repository 的 issues-write 授权。
 
-_REPO_RE = re.compile(
-    r"^(?:https?://)?([A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}|localhost)"
-    r"(?::\d+)?/([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+?)(?:\.git)?/?$")
-
-
-def parse_repo_location(value: str) -> dict:
-    """解析明确的 GitHub host/owner/repository;含糊位置直接拒绝。
-
-    接受 `host/owner/repo` 与 `https://host/owner/repo`;拒绝缺 host、
-    缺段或多段的位置(不扫描、不猜测无关仓库)。
-    """
-
-    text = (value or "").strip()
-    match = _REPO_RE.fullmatch(text)
-    if match is None:
-        raise GithubRecordsError(
-            f"GitHub 任务位置必须明确到 host/owner/repository,当前为 {text!r}"
-            "(不接受含糊位置,不扫描无关仓库)")
-    return {"host": match.group(1).lower(), "owner": match.group(2),
-            "repo": match.group(3)}
-
-
-_REPO_FIND_RE = re.compile(
-    r"(?:https?://)?([A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}|localhost)"
-    r"(?::\d+)?/([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+?)(?:\.git)?(?=[/?:;)\s]|$)")
-
-
-def parse_remote_authorizations(text: str) -> list[dict]:
-    """解析外部访问行中的远端授权条目。
-
-    写授权条目形如 `host/owner/repo:issues-write(说明)`——必须明确到
-    仓库并带 issues-write 标记;仅出现仓库坐标(无 issues-write)视为
-    只读引用,不是写授权。写授权按「仓库坐标之后、下一坐标之前」的
-    片段判定,说明文字里的分号不破坏解析。
-    """
-
-    matches = list(_REPO_FIND_RE.finditer(text or ""))
-    entries: dict[tuple[str, str, str], dict] = {}
-    for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        segment = text[match.end():end]
-        key = (match.group(1).lower(), match.group(2), match.group(3))
-        note = ""
-        paren = re.search(r"[（(]([^）)]*)[)）]", segment)
-        if paren:
-            note = paren.group(1)
-        entries[key] = {
-            "host": key[0], "owner": key[1], "repo": key[2],
-            "ops": ("issues-write" if WRITE_OP in segment else "reference"),
-            "note": note,
-        }
-    return list(entries.values())
-
-
-def _authorization_for(config: dict, op: str) -> tuple[bool, str]:
-    """核对本项目 CONFIG 是否对目标仓库授权了 op(issues-write)。"""
-
-    scopes = parse_remote_authorizations(config.get("external", ""))
-    repo = config["repo"]
-    hit = [s for s in scopes if s["host"] == repo["host"]
-           and s["owner"] == repo["owner"] and s["repo"] == repo["repo"]
-           and op in s["ops"]]
-    if not hit:
-        return False, (
-            f"CONFIG 外部访问未对 {repo['host']}/{repo['owner']}/{repo['repo']}"
-            f" 授权 {op}:选择 GitHub 后端不等于批准远端写入;"
-            "需在初始化清单确认后按 `host/owner/repo:issues-write(说明)` 记录授权")
-    return True, hit[0].get("note", "")
-
-
-def default_api_base(host: str) -> str:
-    """host → REST API 端点:github.com 用 api.github.com,
-    其他 host(GitHub Enterprise 约定)用 https://<host>/api/v3。"""
-
-    if host == "github.com":
-        return "https://api.github.com"
-    return f"https://{host}/api/v3"
-
-
-def api_base_for(config: dict, override: str | None = None) -> str:
-    """API 端点:override/环境变量优先,否则按 host 推导。
-
-    无仓库坐标的配置(如本地后端项目做交接可达检查)退回 github.com
-    端点——可达检查访问的是绝对引用 URL,端点仅作兜底。
-    """
-
-    base = (override or os.environ.get(API_BASE_ENV, "")).strip()
-    if base:
-        return base
-    host = ((config.get("repo") or {}).get("host")) or "github.com"
-    return default_api_base(host)
-
-
-def token_from_env() -> str | None:
-    for name in TOKEN_ENVS:
-        value = os.environ.get(name, "").strip()
-        if value:
-            return value
-    return None
-
-
-# ---------- 传输层 ----------
-
-class UrllibTransport:
-    """真实 HTTP 传输(stdlib urllib)。供可信调度/CLI/替身验收使用。"""
-
-    def __init__(self, api_base: str, token: str | None,
-                 timeout: float = DEFAULT_TIMEOUT) -> None:
-        self.api_base = api_base.rstrip("/")
-        self.token = token
-        self.timeout = timeout
-
-    def request(self, method: str, path: str, body: dict | None = None,
-                *, auth: bool = True) -> tuple[int, object]:
-        """执行一次 API 请求。auth=False 时不携带凭据(交接可达检查访问
-        CONFIG 引用指向的第三方地址,凭据只属于 API 端点,不得外发)。"""
-
-        # 绝对 URL(交接可达检查的引用地址)直接访问,不拼接 api_base
-        url = (path if path.startswith(("http://", "https://"))
-               else f"{self.api_base}{path}")
-        data = json.dumps(body).encode("utf-8") if body is not None else None
-        headers = {"Accept": "application/vnd.github+json",
-                   "X-Requested-With": "mgs-records"}
-        if self.token and auth:
-            headers["Authorization"] = f"Bearer {self.token}"
-        if data is not None:
-            headers["Content-Type"] = "application/json"
-        req = Request(url, data=data, headers=headers, method=method)
-        try:
-            with urlopen(req, timeout=self.timeout) as resp:
-                raw = resp.read().decode("utf-8", "replace")
-                status = resp.status
-        except HTTPError as exc:
-            raw = exc.read().decode("utf-8", "replace") if exc.fp else ""
-            return exc.code, _safe_json(raw)
-        except (http.client.RemoteDisconnected, ConnectionResetError,
-                BrokenPipeError) as exc:
-            # 连接在应答前被断开:请求可能已生效,结果不确定 → 按超时路径
-            # 先回读再重试(避免重复创建)
-            raise TransportError("timeout", f"connection dropped: {exc}") from exc
-        except URLError as exc:
-            reason = getattr(exc, "reason", exc)
-            if isinstance(reason, TimeoutError) or "timed out" in str(reason).lower():
-                raise TransportError("timeout", str(reason)) from exc
-            raise TransportError("offline", str(reason)) from exc
-        except TimeoutError as exc:
-            raise TransportError("timeout", str(exc)) from exc
-        return status, _safe_json(raw)
-
-
-def _safe_json(raw: str) -> object:
-    try:
-        return json.loads(raw) if raw else None
-    except ValueError:
-        return raw
+parse_remote_authorizations = mgs_record_source.parse_remote_authorizations
+parse_repo_location = mgs_github_issue.parse_repo_location
+_authorization_for = mgs_github_issue.authorization_for
 
 
 # ---------- Issue 正文(与本地 task.md 同一记录格式) ----------
+# 正文的序列化与解析由 mgs_github_issue 承担(同一套共同正文规则);本 adapter
+# 在公开接缝上重导出,既有调用与测试定位不变。
 
-def build_task_body(title: str, identity: str, triage: str, progress: str,
-                    request: dict, index: str = "(暂无)",
-                    changes: list[str] | None = None) -> str:
-    """把任务字段渲染为与 work/task.md 同格式的 Issue 正文。"""
-
-    lines = [f"# {title}", "",
-             f"任务身份:{identity}。当前分流:{triage}。进度:{progress}。", "",
-             "## 工作请求", ""]
-    for key, value in request.items():
-        lines.append(f"- {key}:{value}")
-    lines += ["", "## 结果索引", "", index, "", "## 状态变化", ""]
-    lines += changes or [f"{_today()} 经统一接口建立 GitHub Issues 任务记录。"]
-    return "\n".join(lines) + "\n"
-
-
-def parse_issue_payload(item: dict, label_map: dict) -> dict:
-    """GitHub Issue 原始对象 → 任务记录(parse_issue_body 的字典薄包装)。"""
-
-    return parse_issue_body(
-        item.get("number", 0), item.get("body") or "",
-        [label.get("name", "") for label in item.get("labels", [])],
-        item.get("state", "open"), item.get("state_reason"),
-        label_map, issue_id=item.get("id"))
-
-
-def _today() -> str:
-    return _dt.date.today().isoformat()
-
-
-def parse_issue_body(number: int, body: str, labels: list[str],
-                     state: str, state_reason: str | None,
-                     label_map: dict[str, str], issue_id: int | None = None) -> dict:
-    """Issue → 与本地后端同形的任务记录(身份/分流/进度语义一致)。
-
-    标签承载分流(经 CONFIG 映射回五类语义);正文头部是规范化记录,
-    两者不一致时以标签为准并把差异列入 triage_source 说明。
-    """
-
-    header_lines: list[str] = []
-    title = ""
-    for line in (body or "").splitlines():
-        if line.startswith("## "):
-            break
-        if line.startswith("# ") and not title:
-            title = line.lstrip("# ").strip()
-        header_lines.append(line)
-    header = "\n".join(header_lines)
-    sections = _sections(body or "")
-    # 标签 → 五类语义(反向映射)
-    reverse = {proj: canon for canon, proj in label_map.items()}
-    from_labels = [reverse.get(l, l) for l in labels]
-    triage_label = next((t for t in from_labels if t in CANONICAL_LABELS), None)
-    triage_body = _field(header, "当前分流")
-    triage = triage_label or triage_body or ""
-    return {
-        "identity": _field(header, "任务身份"),
-        "title": title,
-        "triage": triage,
-        "progress": _field(header, "进度"),
-        "issue_number": number,
-        "issue_id": issue_id,
-        "state": state,
-        "state_reason": state_reason,
-        "labels": list(labels),
-        "triage_source": ("label" if triage_label else
-                          "body" if triage_body else "missing"),
-        "triage_conflict": bool(triage_label and triage_body
-                                and triage_label != triage_body),
-        "request": mgs_records._bullets(sections.get("工作请求", [])),
-        "sections": {name: bool(lines and any(l.strip() for l in lines))
-                     for name, lines in sections.items()},
-        "results": [],  # 列表层不拉评论;read_task 单独补齐
-        "result_index_text": "\n".join(sections.get("结果索引", [])),
-        "body": body or "",
-    }
-
-
-# ---------- 拉取与缓存 ----------
-
-def _repo_path(repo: dict) -> str:
-    return f"/repos/{repo['owner']}/{repo['repo']}"
-
-
-def _repo_str(repo: dict) -> str:
-    """仓库坐标的人读形态(host/owner/repo;草稿、来源、迁移清单共用)。"""
-    return f"{repo['host']}/{repo['owner']}/{repo['repo']}"
+build_task_body = mgs_github_issue.build_task_body
+parse_issue_payload = mgs_github_issue.parse_issue_payload
+parse_issue_body = mgs_github_issue.parse_issue_body
 
 
 # ---------- Issue 正文编辑(保持与 task.md 同一记录格式) ----------
-
-def _section_lines(body: str, name: str) -> list[str]:
-    return list(_sections(body).get(name, []))
-
-
-def _edit_body(body: str, *, header: dict | None = None,
-               request: dict | None = None, index_lines: list[str] | None = None,
-               append_change: str | None = None) -> str:
-    """按字段编辑任务正文并重新序列化(小节名称与内容保留,格式一致化)。
-
-    header 替换头部行中的「键:值」段;request 替换/追加工作请求字段行;
-    index_lines 整体替换结果索引;append_change 向状态变化追加一行。
-    """
-
-    sections = _sections(body)
-    header_lines: list[str] = []
-    title = ""
-    for line in body.splitlines():
-        if line.startswith("## "):
-            break
-        if line.startswith("# ") and not title:
-            title = line.lstrip("# ").strip()
-        header_lines.append(line)
-    header_text = next((line for line in header_lines if "任务身份" in line), "")
-    for key, value in (header or {}).items():
-        pattern = rf"{key}\s*[:：][^。;；]*"
-        if re.search(pattern, header_text):
-            header_text = re.sub(pattern, f"{key}:{value}", header_text, count=1)
-        else:
-            header_text = header_text.rstrip("。") + f"。{key}:{value}"
-    if request is not None:
-        request_lines = sections.get("工作请求", [])
-        for key, value in request.items():
-            pattern = rf"^-\s+{re.escape(key)}\s*[:：].*$"
-            replacement = f"- {key}:{value}"
-            if any(re.match(pattern, line) for line in request_lines):
-                request_lines = [re.sub(pattern, replacement, line)
-                                 for line in request_lines]
-            else:
-                request_lines.append(replacement)
-        sections["工作请求"] = request_lines
-    if index_lines is not None:
-        sections["结果索引"] = list(index_lines)
-    if append_change:
-        changes = sections.setdefault("状态变化", [])
-        if changes and changes[-1].strip():
-            changes.append("")
-        changes.append(append_change)
-    parts = [f"# {title}", "", header_text, ""]
-    for name, lines in sections.items():
-        lines = list(lines)
-        while lines and not lines[0].strip():
-            lines.pop(0)
-        while lines and not lines[-1].strip():
-            lines.pop()
-        parts += [f"## {name}", ""]
-        if lines:
-            parts += lines + [""]
-    return "\n".join(parts).rstrip() + "\n"
+# section_lines/edit_body/today 的唯一定义在 mgs_record_model(共同正文
+# 规则的写面,与 parse_task_body 同一规则);本模块在其公开接缝上复用,
+# 不再各自维护一份正文序列化实现。
 
 
-class GithubBackend:
+class GithubBackend(GithubReadMixin):
     """同一套任务合同在 GitHub Issues 后端上的逻辑操作(公开接缝)。
 
     读:fetch_tasks/read_task(经传输层;离线回缓存并标注来源与时间)。
@@ -404,118 +116,6 @@ class GithubBackend:
         self.cache_dir = Path(cache_dir) if cache_dir else None
         self._sub_issues_available: bool | None = None
 
-    # ----- 缓存 -----
-
-    def _cache_file(self) -> Path | None:
-        if self.cache_dir is None:
-            return None
-        slug = f"{self.repo['host']}_{self.repo['owner']}_{self.repo['repo']}"
-        return self.cache_dir / f"tasks-{slug}.json"
-
-    def _load_cache(self) -> dict | None:
-        path = self._cache_file()
-        if path is None or not path.is_file():
-            return None
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return None
-
-    def _write_cache(self, payload: dict) -> None:
-        path = self._cache_file()
-        if path is None:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2),
-                        encoding="utf-8")
-
-    # ----- 读 -----
-
-    def fetch_tasks(self) -> dict:
-        """列出任务(身份/标题/分流/进度与本地后端同形;不含评论明细)。
-
-        远端不可用时返回缓存并标注 cached/fetched_at;无缓存时报错,
-        不回退到任何本地任务来源。
-        """
-
-        try:
-            status, data = self.transport.request(
-                "GET", f"{_repo_path(self.repo)}/issues?state=all&per_page=100")
-            if status != 200 or not isinstance(data, list):
-                raise TransportError("bad_response", f"list issues HTTP {status}")
-        except TransportError as exc:
-            cached = self._load_cache()
-            if cached is None:
-                raise GithubRecordsError(
-                    f"远端不可用({exc})且无缓存:{_repo_str(self.repo)};"
-                    "不静默切换本地后端") from exc
-            return {"tasks": cached["tasks"], "cached": True,
-                    "fetched_at": cached["fetched_at"],
-                    "source": cached["source"], "note": OFFLINE_NOTE}
-        tasks = [parse_issue_payload(item, self.config["labels"])
-                 for item in data if "pull_request" not in item]
-        payload = {
-            "tasks": tasks,
-            "cached": False,
-            "fetched_at": _dt.datetime.now().astimezone().isoformat(timespec="seconds"),
-            "source": {"backend": GITHUB_BACKEND,
-                       "repo": _repo_str(self.repo)},
-        }
-        self._write_cache({"tasks": tasks, "fetched_at": payload["fetched_at"],
-                           "source": payload["source"]})
-        return payload
-
-    def _get_issue(self, identity: str) -> tuple[dict | None, dict, dict]:
-        """按任务身份取 Issue。返回 (原始 Issue 或 None(缓存态), 解析后任务, 拉取载荷)。
-
-        远端不可用时回缓存正文(标注 cached);缓存也没有则由 fetch_tasks 报错。
-        """
-
-        payload = self.fetch_tasks()
-        cached = bool(payload.get("cached"))
-        for task in payload["tasks"]:
-            if task["identity"] != identity:
-                continue
-            if cached:
-                return None, task, payload
-            status, issue = self.transport.request(
-                "GET", f"{_repo_path(self.repo)}/issues/{task['issue_number']}")
-            if status != 200:
-                raise GithubRecordsError(
-                    f"读取 Issue #{task['issue_number']} 失败:HTTP {status}")
-            return issue, parse_issue_payload(issue, self.config["labels"]), payload
-        raise GithubRecordsError(f"任务不存在或正文缺少身份:{identity}")
-
-    def read_task(self, identity: str) -> dict:
-        """读取单个任务:正文字段 + 评论承载的结果与证据。"""
-
-        issue, parsed, payload = self._get_issue(identity)
-        results: list[dict] = []
-        if issue is not None:
-            status, comments = self.transport.request(
-                "GET", f"{_repo_path(self.repo)}/issues/{parsed['issue_number']}"
-                       "/comments?per_page=100")
-            if status == 200 and isinstance(comments, list):
-                for comment in comments:
-                    text = comment.get("body") or ""
-                    if identity in text:
-                        results.append({
-                            "ref": f"#issuecomment-{comment.get('id')}",
-                            "created_at": comment.get("created_at"),
-                            "excerpt": (text.strip().splitlines()[0][:120]
-                                        if text.strip() else ""),
-                        })
-            parsed["body_sha256"] = hashlib.sha256(
-                (issue.get("body") or "").encode("utf-8")).hexdigest()
-            parsed["html_url"] = issue.get("html_url")
-        else:
-            parsed["body_sha256"] = hashlib.sha256(
-                (parsed.get("body") or "").encode("utf-8")).hexdigest()
-            parsed["cached_read"] = True
-            parsed["cached_note"] = OFFLINE_NOTE
-        parsed["results"] = results
-        return parsed
-
     # ----- 写操作(先核对 CONFIG 仓库级 issues-write 授权) -----
 
     def _authorize_write(self) -> None:
@@ -526,59 +126,27 @@ class GithubBackend:
     def _save_draft(self, op: str, args: dict, cause: str) -> dict:
         """远端不可用时保存未发布草稿(标明来源与状态;不视为已发布)。
 
-        每个待发布操作带稳定且唯一的身份(操作+参数+**目标仓库**的内容
-        哈希;审查修复票 01/S6、review2-02/SP-3):同秒两次不同操作互不
-        覆盖;同一操作重复保存幂等(只保留一份,重放不重复);绝不覆盖
-        内容不同的既有草稿。目标仓库纳入身份与幂等比较——同一缓存目录
-        服务多个各有授权的仓库时,跨仓库的同参数请求各存各的草稿,
-        不得把新仓库请求当作旧仓库草稿的幂等重放而丢弃。
+        草稿的存储、身份(操作+参数+**目标仓库**)与重放自票 20 起收敛在
+        ``mgs_result_publication.save_unpublished_draft``(与发布生命周期同一
+        恢复事实);本 adapter 只注入目标仓库标签、缓存目录与草稿说明,保持
+        既有返回形态。
         """
 
-        if self.cache_dir is None:
-            raise GithubRecordsError(
-                f"远端不可用({cause})且未配置缓存/草稿目录(--cache-dir);"
-                "不丢弃请求,不静默切换本地后端")
-        drafts = self.cache_dir / "drafts"
-        drafts.mkdir(parents=True, exist_ok=True)
-        stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-        identity = re.sub(r"[^A-Za-z0-9._-]", "-", str(args.get("identity", "na")))
-        repo_str = _repo_str(self.repo)
-        digest = hashlib.sha256(json.dumps(
-            {"op": op, "args": args, "repo": repo_str},
-            ensure_ascii=False, sort_keys=True)
-            .encode("utf-8")).hexdigest()[:8]
+        return mgs_result_publication.save_unpublished_draft(
+            cache_dir=self.cache_dir, repo=repo_str(self.repo), op=op,
+            args=args, cause=cause, note=DRAFT_NOTE)
 
-        def candidate(index: int | None = None) -> Path:
-            name = f"{stamp}-{op}-{identity}-{digest}"
-            return drafts / (f"{name}-{index}.json" if index else f"{name}.json")
+    def record_unpublished_draft(self, op: str, args: dict, cause: str) -> dict:
+        """公开写接缝:把一次未能确认发布的远端操作保存为**未发布草稿**。
 
-        path = candidate()
-        if path.exists():
-            prior = None
-            try:
-                prior = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                prior = None
-            if prior and prior.get("op") == op and prior.get("args") == args \
-                    and prior.get("repo") == repo_str:
-                # 同一待发布操作(含目标仓库)重复保存:保留既有草稿,
-                # 不产生第二份(重放幂等)
-                return {"published": False, "status": "未发布草稿",
-                        "draft": str(path), "cause": cause, "note": DRAFT_NOTE,
-                        "idempotent": True}
-            # 同名但内容不同(理论上仅哈希碰撞):序号退避,绝不覆盖既有草稿
-            index = 1
-            while candidate(index).exists():
-                index += 1
-            path = candidate(index)
-        path.write_text(json.dumps({
-            "op": op, "args": args, "status": "未发布草稿",
-            "repo": repo_str,
-            "created_at": _dt.datetime.now().astimezone().isoformat(timespec="seconds"),
-            "cause": cause, "note": DRAFT_NOTE,
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
-        return {"published": False, "status": "未发布草稿", "draft": str(path),
-                "cause": cause, "note": DRAFT_NOTE}
+        与 ``_save_draft`` 是同一职责的公开表达:受控运行入口(mgs_remote)
+        在动作抛传输故障、适配器未自行保存草稿时经本接缝兜底,不再直接调用
+        私有草稿细节。返回形态与 ``_save_draft`` 完全一致(未发布/草稿路径/
+        原因/说明),错误语义(未配置缓存目录时报记录错误)保持。远端恢复后
+        由 ``publish_drafts`` 按原参数重放。
+        """
+
+        return self._save_draft(op, args, cause)
 
     def _find_by_identity(self, identity: str) -> dict | None:
         """按任务身份回读远端(防重复创建的读路径;不做缓存回退)。
@@ -588,7 +156,7 @@ class GithubBackend:
         """
 
         status, data = self.transport.request(
-            "GET", f"{_repo_path(self.repo)}/issues?state=all&per_page=100")
+            "GET", f"{repo_path(self.repo)}/issues?state=all&per_page=100")
         if status != 200 or not isinstance(data, list):
             raise TransportError("bad_response", f"list issues HTTP {status}")
         for item in data:
@@ -599,262 +167,10 @@ class GithubBackend:
                 return parsed
         return None
 
-    # ----- 待补索引登记(已确认发布、结果索引未完成的操作身份) -----
-
-    def _pending_identity(self, identity: str, result_markdown: str) -> dict:
-        """待补索引登记的**完整内容身份**:操作+参数+**目标仓库**(审查
-        修复票 review4-01/SP-11,与草稿身份及登记文件名的摘要构造同一
-        形态)。登记文件内容即保留该全量身份;登记归属以文件内的完整
-        身份核对为准(文件名摘要只是寻址,见 _pending_index_file)。"""
-
-        return {"op": "append_result",
-                "args": {"identity": identity,
-                         "result_markdown": result_markdown},
-                "repo": _repo_str(self.repo)}
-
-    def _pending_identity_digest(self, identity: str,
-                                 result_markdown: str) -> str:
-        """完整内容身份的 SHA-256 **全长**摘要(_pending_identity 的唯一
-        摘要形态;前 8 hex 与草稿身份及既有登记文件名的短摘要逐字节
-        一致,review5-01 抽出共用)。"""
-
-        return hashlib.sha256(json.dumps(
-            self._pending_identity(identity, result_markdown),
-            ensure_ascii=False, sort_keys=True)
-            .encode("utf-8")).hexdigest()
-
-    def _pending_index_file(self, identity: str,
-                            result_markdown: str) -> Path | None:
-        """待补索引登记文件路径(当前请求的**完整身份全长哈希**作文件名,
-        审查修复票 review5-01/SP-14):布局为 pending-index/
-        append-result-{safe}-{短摘要 8 hex}/{完整身份全长哈希}.json。
-        短摘要仍与草稿身份的摘要构造同一形态(review2-02/SP-3 的仓库
-        身份纪律:同一缓存目录服务多个仓库时各仓各的登记),但只作
-        **目录**名;文件名用完整身份全长哈希——确定性碰撞对(同一短
-        摘要)同目录不同文件,不同完整身份的登记**共存**、互不覆盖,
-        任一请求的重试都能找回自己的登记(此前平铺短摘要文件名在碰撞
-        对先后 partial 时后者覆盖前者,前者的重试失去登记被当作全新
-        发布而重复)。读入/清除仍以登记内的完整身份核对归属(SP-11)。
-        未配置缓存目录时不可用(能力边界,由调用侧如实说明)。"""
-
-        if self.cache_dir is None:
-            return None
-        digest = self._pending_identity_digest(identity, result_markdown)
-        safe = re.sub(r"[^A-Za-z0-9._-]", "-", identity)
-        return (self.cache_dir / "pending-index"
-                / f"append-result-{safe}-{digest[:8]}" / f"{digest}.json")
-
-    def _legacy_pending_index_file(self, identity: str,
-                                   result_markdown: str) -> Path | None:
-        """修复前布局(review5-01 之前写入)的登记文件路径:平铺的
-        append-result-{safe}-{短摘要 8 hex}.json。只读兼容——在盘旧登记
-        的读入/清除与当前布局走同一身份核验语义;经核验属于当前请求的
-        健康登记在读入时按当前布局重写迁移(见 _load_pending_index)。
-        与当前布局的目录同名不同型(一个带 .json 后缀的文件、一个是
-        目录),互不冲突。"""
-
-        if self.cache_dir is None:
-            return None
-        digest = self._pending_identity_digest(identity, result_markdown)
-        safe = re.sub(r"[^A-Za-z0-9._-]", "-", identity)
-        return (self.cache_dir / "pending-index"
-                / f"append-result-{safe}-{digest[:8]}.json")
-
-    def _record_pending_index(self, identity: str, result_markdown: str,
-                              comment: dict, ref: str,
-                              cause: object) -> str | None:
-        """登记已发布评论身份(审查修复票 review3-01/SP-7):部分成功发生时
-        把「已确认发布、索引未完成」的操作身份(含完整内容身份,SP-11)
-        留在本地——重试的读前收养查询失败(无法看远端)时,凭登记保留
-        待恢复状态,不当作全新发布。写入当前布局(完整身份哈希文件名,
-        review5-01/SP-14):碰撞对先后 partial 各写各的文件、共存互不
-        覆盖。索引补齐后由 _clear_pending_index 清除。返回错误说明即
-        登记**未生效**(未配置缓存目录,或写入失败/SP-10)——调用侧
-        据此如实披露退化模式,不把已发生的远端结果包装成异常(R4 同一
-        纪律)。"""
-
-        path = self._pending_index_file(identity, result_markdown)
-        if path is None:
-            return "未配置缓存目录(--cache-dir),本地待补索引登记不可用"
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps({
-                **self._pending_identity(identity, result_markdown),
-                "status": "已发布未补索引",
-                "comment_id": comment.get("id"), "ref": ref,
-                "created_at": _dt.datetime.now().astimezone().isoformat(
-                    timespec="seconds"),
-                "cause": str(cause),
-                "note": ("部分成功的本地身份登记:读前收养查询失败时保留"
-                         "待恢复状态(不当作全新发布);远端恢复后重试同一"
-                         "请求只收养既有评论并补齐索引"),
-            }, ensure_ascii=False, indent=2), encoding="utf-8")
-        except OSError as exc:
-            return f"{type(exc).__name__}: {exc}"
-        return None
-
-    def _load_pending_index(self, identity: str,
-                            result_markdown: str) -> dict | None:
-        """读取待补索引登记。文件存在但不可读/损坏时返回带 "corrupt" 键的
-        哨兵——「登记存在」本身就是前次已确认发布的证据,身份可读与否不
-        改变「不当作全新发布」的判定(结果未知 ≠ 确认不存在,S2 语义
-        家族);无登记返回 None(首试语义)。
-
-        身份核验(审查修复票 review4-01/SP-11):文件名摘要可碰撞,登记
-        归属以文件内的完整身份为准——①形态不完整(缺 op/args/repo 任一
-        身份字段或空身份)无法归属任何请求,按登记损坏披露(corrupt
-        语义沿既有非法 JSON 行为);②身份完整但与当前请求不一致,说明
-        这份登记属于**另一请求**(碰撞同目录),按无登记处理:不冒认
-        他人已发布身份,也不动他人登记。
-
-        回执核验(审查修复票 review5-01/SP-14 复审观察项):身份匹配但
-        登记缺 comment_id/ref 回执字段(无法确认已发布评论身份)按登记
-        损坏披露(口径沿既有:待恢复、不重发、提示人工核对),不再静默
-        返回缺失发布身份仍称已确认发布。
-
-        布局兼容(review5-01/SP-14):当前布局为短摘要目录下的完整身份
-        哈希文件(不同完整身份共存);修复前的平铺短摘要文件名(_legacy_
-        pending_index_file)只读兼容——先查当前布局,未命中再查旧布局,
-        两处同一身份核验语义。经核验属于当前请求的健康登记若仍在旧布局,
-        读入时按当前布局重写迁移并移除旧文件(尽力而为,失败沉默:
-        不影响本次读入返回,下次读入再试;清除时两布局一并处理,迁移
-        中途失败也不会「清除后自旧文件复活」)。"""
-
-        path = self._pending_index_file(identity, result_markdown)
-        if path is None:
-            return None
-        if not path.exists():
-            legacy = self._legacy_pending_index_file(identity, result_markdown)
-            if legacy is None or not legacy.exists():
-                return None
-            path = legacy
-        try:
-            pending = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            return {"corrupt": f"{type(exc).__name__}: {exc}", "path": str(path)}
-        if not isinstance(pending, dict):
-            return {"corrupt": "登记内容不是对象", "path": str(path)}
-        op, args, repo = (pending.get("op"), pending.get("args"),
-                          pending.get("repo"))
-        args = args if isinstance(args, dict) else {}
-        complete = (isinstance(op, str) and bool(op)
-                    and isinstance(args.get("identity"), str)
-                    and bool(args.get("identity"))
-                    and isinstance(args.get("result_markdown"), str)
-                    and isinstance(repo, str) and bool(repo))
-        if not complete:
-            return {"corrupt": ("登记身份不完整(缺 op/args(identity,"
-                                "result_markdown)/repo 之一或为空,无法"
-                                "归属任何请求)"),
-                    "path": str(path)}
-        if {"op": op, "args": args, "repo": repo} != \
-                self._pending_identity(identity, result_markdown):
-            return None
-        ref = pending.get("ref")
-        if pending.get("comment_id") is None \
-                or not isinstance(ref, str) or not ref:
-            return {"corrupt": ("登记回执不完整(缺 comment_id/ref 之一"
-                                "或为空,无法确认已发布评论身份)"),
-                    "path": str(path)}
-        if path == self._legacy_pending_index_file(identity, result_markdown):
-            # 旧布局健康登记:按当前布局重写迁移,移除旧文件(尽力而为)
-            try:
-                current = self._pending_index_file(identity, result_markdown)
-                current.parent.mkdir(parents=True, exist_ok=True)
-                current.write_text(json.dumps(pending, ensure_ascii=False,
-                                              indent=2), encoding="utf-8")
-                path.unlink(missing_ok=True)
-            except OSError:
-                pass
-        return pending
-
-    def _pending_receipt_matches_request(self, pending: object,
-                                         identity: str,
-                                         result_markdown: str) -> bool:
-        """单份登记内容是否经**完整身份核验与回执核验**归属当前请求
-        (审查修复票 review6-01/SP-17):{op,args,repo} 逐键等于当前请求
-        _pending_identity() 的对应值(逐键相等蕴含身份字段形态完整),
-        且回执字段完整(comment_id 非 None、ref 为非空字符串)。形态不
-        完整、身份不一致(他人登记)或回执缺失都不归属——与读入路径
-        (_load_pending_index)同一核验粒度;清除路径据此对每个待删除
-        文件独立判定,不由任一路径的核验代劳另一路径。"""
-
-        if not isinstance(pending, dict):
-            return False
-        if {key: pending.get(key) for key in ("op", "args", "repo")} \
-                != self._pending_identity(identity, result_markdown):
-            return False
-        ref = pending.get("ref")
-        return pending.get("comment_id") is not None \
-            and isinstance(ref, str) and bool(ref)
-
-    def _clear_pending_index(self, identity: str, result_markdown: str) -> None:
-        """结果索引补齐后清除登记。**每个待删除文件分别通过自身完整身份
-        核验**(审查修复票 review6-01/SP-17):读该文件自己的登记 JSON,
-        {op,args,repo} 逐键等于当前请求 _pending_identity() 的对应值且回执
-        字段(comment_id/ref)完整才 unlink——清除路径的核验粒度与读入
-        路径(_load_pending_index)一致。此前只凭一次读入核验(优先当前
-        布局)就对当前与旧(平铺)两路径无条件 unlink,会误删旧平铺路径
-        上**另一完整身份**的健康登记(自然升级序列:旧版本给 B 留平铺
-        登记 → 升级后碰撞对 A 写新布局登记 → A 补齐清理误删 B 的登记 →
-        B 重试读前失败失去登记被当作全新发布而重复)。不匹配(他人登记,
-        SP-11 不误删)/不可读/JSON 无效/形态不完整(含回执不完整,
-        review5-01)一律保守保留;若一布局损坏而另一布局是同身份健康
-        登记,按各自内容独立判定(健康侧清除、损坏侧保持原位由人工按
-        哨兵处置)。
-
-        同身份双布局残留(迁移中途失败留下的旧副本)在逐路径核验下两处
-        都属当前请求、都清除——「已清除的登记不因迁移残留复活」语义保持
-        (review5-01)。残留与清除失败(极端 I/O 故障)都保持沉默:只会
-        让后续读前查询失败的重试多保持一次待恢复或一次损坏披露(保守
-        方向,不会重复发布),远端可读时按远端权威修正。"""
-
-        for path in (self._pending_index_file(identity, result_markdown),
-                     self._legacy_pending_index_file(identity,
-                                                     result_markdown)):
-            if path is None:
-                continue
-            try:
-                pending = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                continue  # 不可读/JSON 无效:保守保留
-            if not self._pending_receipt_matches_request(pending, identity,
-                                                         result_markdown):
-                continue
-            try:
-                path.unlink(missing_ok=True)
-            except OSError:
-                pass
-
-    def _pending_recovery_result(self, number: int, pending: dict,
-                                 failure: str, attempts: list) -> dict:
-        """读前收养查询失败时的待恢复返回(review3-01/SP-7):凭本地登记
-        保留前次已确认发布的操作身份,保持部分成功(partial)语义——
-        「已发布未完索引」与「结果未知」(uncertain)是两种事实,分别表达;
-        本次不发布也不动索引(远端不可读时不做任何写),彻底恢复后重试
-        经读前收养只补索引。"""
-
-        attempts = attempts + [{"step": "pending-index", "outcome": "kept"}]
-        if pending.get("corrupt"):
-            return {"published": True, "partial": True, "comment_id": None,
-                    "ref": None, "issue_number": number, "index_updated": False,
-                    "attempts": attempts,
-                    "note": ("待恢复:前次调用已确认发布该结果评论(本地"
-                             "待补索引登记存在),本次读前收养查询失败"
-                             f"({failure})且登记不可读({pending['corrupt']};"
-                             f"登记文件 {pending.get('path')});已保留待恢复"
-                             "状态、不当作全新发布;请人工核对远端评论与登记"
-                             "文件后重试(远端可读时重试同一请求即经读前"
-                             "收养补齐索引)")}
-        return {"published": True, "partial": True,
-                "comment_id": pending.get("comment_id"),
-                "ref": pending.get("ref"), "issue_number": number,
-                "index_updated": False, "attempts": attempts,
-                "note": ("待恢复:前次调用已确认发布该结果评论(本地待补索引"
-                         f"登记:{pending.get('ref')}),本次读前收养查询失败"
-                         f"({failure})无法核对远端;已保留已发布操作身份、"
-                         "不当作全新发布(本次不发布也不动索引);彻底恢复后"
-                         "重试同一请求只收养既有评论并补齐索引")}
+    # ----- 结果发布恢复 -----
+    # 待补索引/碰撞/损坏/旧布局/清除的存储与归属规则集中在
+    # mgs_result_publication(票 18),本 adapter 的 append_result 只注入
+    # 自身的授权、读取、草稿与回读操作,不在此重复恢复规则。
 
     def create_task(self, identity: str, title: str, request: dict, *,
                     triage: str = "needs-triage", progress: str = "待执行") -> dict:
@@ -866,7 +182,7 @@ class GithubBackend:
         """
 
         self._authorize_write()
-        if not identity or not mgs_records.IDENTITY_RE.fullmatch(identity):
+        if not identity or not mgs_record_model.IDENTITY_RE.fullmatch(identity):
             raise GithubRecordsError(
                 f"任务身份必须形如 NN-<slug>,当前 {identity!r}(身份跨后端保持稳定)")
         if triage not in CANONICAL_LABELS:
@@ -895,7 +211,7 @@ class GithubBackend:
         for index in range(2):
             try:
                 status, issue = self.transport.request(
-                    "POST", f"{_repo_path(self.repo)}/issues", payload)
+                    "POST", f"{repo_path(self.repo)}/issues", payload)
                 if status not in (200, 201):
                     raise TransportError("bad_response", f"create HTTP {status}")
             except TransportError as exc:
@@ -967,12 +283,12 @@ class GithubBackend:
                           if key in ("进度",)}
         request_updates = {key: value for key, value in fields.items()
                            if key not in ("进度",)}
-        change_line = f"{_today()} {change_note}:{'、'.join(fields)}"
-        new_body = _edit_body(issue.get("body") or "", header=header_updates,
+        change_line = f"{today()} {change_note}:{'、'.join(fields)}"
+        new_body = edit_body(issue.get("body") or "", header=header_updates,
                               request=request_updates, append_change=change_line)
         try:
             status, updated = self.transport.request(
-                "PATCH", f"{_repo_path(self.repo)}/issues/{parsed['issue_number']}",
+                "PATCH", f"{repo_path(self.repo)}/issues/{parsed['issue_number']}",
                 {"body": new_body})
             if status != 200:
                 raise TransportError("bad_response", f"update HTTP {status}")
@@ -1006,12 +322,12 @@ class GithubBackend:
         keep = [l["name"] for l in issue.get("labels", [])
                 if l.get("name") not in mapped_values]
         new_labels = sorted(keep + ([mapped[label]] if mapped.get(label) else []))
-        new_body = _edit_body(issue.get("body") or "",
+        new_body = edit_body(issue.get("body") or "",
                               header={"当前分流": label},
-                              append_change=f"{_today()} 分流调整为 {label}")
+                              append_change=f"{today()} 分流调整为 {label}")
         try:
             status, updated = self.transport.request(
-                "PATCH", f"{_repo_path(self.repo)}/issues/{parsed['issue_number']}",
+                "PATCH", f"{repo_path(self.repo)}/issues/{parsed['issue_number']}",
                 {"labels": new_labels, "body": new_body})
             if status != 200:
                 raise TransportError("bad_response", f"set labels HTTP {status}")
@@ -1023,190 +339,20 @@ class GithubBackend:
                 "labels": new_labels, "readback": readback}
 
     def append_result(self, identity: str, result_markdown: str) -> dict:
-        """追加结果:发布评论(带任务身份前缀)并把评论登记进正文结果索引。
+        """追加结果(公开写接缝):完整发布恢复生命周期见
+        ``mgs_result_publication.ResultPublication.append``——发布前回读
+        收养、评论发布、结果索引更新、部分成功/结果未知与待补索引登记。
 
-        防重复与部分成功语义:
-        - 发布前先按评论正文回读,已存在同文评论即**收养**(不发第二条);
-          「评论已发布而索引未完成」的请求重试时因此只补索引,不重复发布
-          (与 create_task 的读前收养同一纪律);
-        - 读前回读失败时先核对本地**待补索引登记**(审查修复票
-          review3-01/SP-7):前次调用已确认发布的操作身份在部分成功时登记
-          于本地缓存目录,读前查询失败(无法看远端)时凭登记保留**待恢复
-          状态**,不当作全新发布;登记以文件内的完整内容身份核验归属
-          (review4-01/SP-11),身份不一致(短摘要文件名碰撞)按无登记
-          处理,不冒认他人已发布身份;无登记则本次尚未发布任何内容,按
-          首试语义继续尝试发布(未配置缓存目录时登记不可用,属能力边界,
-          部分成功结果中如实披露退化,SP-10);
-        - 评论请求超时先回读,区分「回读确认不存在」(才允许重试一次)与
-          「回读失败」——后者保留不确定状态并停止重发,不存草稿(审查修复
-          票 01/S2);
-        - 评论已真实发布而结果索引更新失败:如实回报**部分成功**——携带
-          已发布评论身份与索引未完成状态,不整体报错(审查修复票
-          review2-02/SP-2;runtime 合同:已写入待表达,不把已发生的远端
-          结果包装成未执行的失败)。
+        本 adapter 注入自身的写接缝操作(授权、按身份读取、未发布草稿、
+        索引补齐后的回读),远端动作仍经传输层;返回身份、attempts 与
+        恢复说明保持既有形态(未发布/结果未知/部分成功/完成分别表达)。
         """
 
-        self._authorize_write()
-        try:
-            issue, parsed, _payload = self._get_issue(identity)
-        except TransportError as exc:
-            return self._save_draft("append_result",
-                                    {"identity": identity,
-                                     "result_markdown": result_markdown}, str(exc))
-        if issue is None:
-            return self._save_draft("append_result",
-                                    {"identity": identity,
-                                     "result_markdown": result_markdown},
-                                    "离线缓存态无法发布评论")
-        number = parsed["issue_number"]
-        comment_body = f"任务:{identity}\n\n{result_markdown}"
-        comment = None
-        attempts: list[dict] = []
-        # 读前回读:同文评论已存在即收养(重试只补索引,不重复发布)。
-        # 读前回读本身失败时先核对本地待补索引登记(SP-7):有登记说明
-        # 前次调用已确认发布——保留待恢复状态,不当作全新发布;无登记则
-        # 本次尚未发布任何内容,按首试语义继续尝试发布。「回读失败停止
-        # 重发」(S2)针对的是发布超时之后的结果不确定,两者不混同。
-        read_first_failed: str | None = None
-        try:
-            status, comments = self.transport.request(
-                "GET", f"{_repo_path(self.repo)}/issues/{number}"
-                       "/comments?per_page=100")
-        except TransportError as exc:
-            attempts.append({"step": "read-first", "outcome": exc.kind,
-                             "detail": str(exc)})
-            read_first_failed = str(exc)
-        else:
-            if status == 200 and isinstance(comments, list):
-                hit = next((c for c in comments
-                            if c.get("body") == comment_body), None)
-                if hit is not None:
-                    comment = hit
-                    attempts.append({"step": "read-first", "outcome": "exists"})
-            else:
-                attempts.append({"step": "read-first", "outcome": "bad_response",
-                                 "detail": f"list comments HTTP {status}"})
-                read_first_failed = f"list comments HTTP {status}"
-        if read_first_failed is not None:
-            pending = self._load_pending_index(identity, result_markdown)
-            if pending is not None:
-                return self._pending_recovery_result(
-                    number, pending, read_first_failed, attempts)
-        for index in range(2):
-            if comment is not None:
-                break
-            try:
-                status, created = self.transport.request(
-                    "POST", f"{_repo_path(self.repo)}/issues/{number}/comments",
-                    {"body": comment_body})
-                if status not in (200, 201):
-                    raise TransportError("bad_response", f"comment HTTP {status}")
-                comment = created
-                attempts.append({"step": f"comment-{index + 1}",
-                                 "outcome": "created"})
-                break
-            except TransportError as exc:
-                attempts.append({"step": f"comment-{index + 1}",
-                                 "outcome": exc.kind, "detail": str(exc)})
-                if exc.kind == "offline":
-                    return self._save_draft(
-                        "append_result",
-                        {"identity": identity, "result_markdown": result_markdown},
-                        str(exc))
-                # 超时:回读评论。区分「回读确认不存在」与「回读失败」
-                # (审查修复票 01/S2):只有前者才允许重试;后者结果未知,
-                # 停止重发并如实回报不确定——重发与草稿重放都会造成重复评论。
-                readback_failed = False
-                try:
-                    status, comments = self.transport.request(
-                        "GET", f"{_repo_path(self.repo)}/issues/{number}"
-                               "/comments?per_page=100")
-                    if status == 200 and isinstance(comments, list):
-                        hit = next((c for c in comments
-                                    if c.get("body") == comment_body), None)
-                        if hit is not None:
-                            comment = hit
-                            attempts.append({"step": "readback", "outcome": "exists"})
-                            break
-                        attempts.append({"step": "readback", "outcome": "absent"})
-                    else:
-                        readback_failed = True
-                        attempts.append({"step": "readback",
-                                         "outcome": "bad_response",
-                                         "detail": f"list comments HTTP {status}"})
-                except TransportError as readback_exc:
-                    readback_failed = True
-                    attempts.append({"step": "readback", "outcome": "uncertain",
-                                     "detail": str(readback_exc)})
-                if readback_failed:
-                    return {
-                        "published": None, "uncertain": True,
-                        "issue_number": number, "attempts": attempts,
-                        "note": ("结果不确定:结果评论请求超时(可能已落地),"
-                                 "回读失败无法确认;已停止重发(避免重复评论),"
-                                 "也未保存草稿(重放会造成重复);请在远端可用后"
-                                 "先回读评论确认,再决定是否重发"),
-                    }
-        if comment is None:
-            raise GithubRecordsError(
-                f"结果评论两次尝试均未确认发布(attempts {attempts});不虚报成功")
-        ref = f"#issuecomment-{comment.get('id')}"
-        excerpt = (comment_body.strip().splitlines()[2][:60]
-                   if len(comment_body.strip().splitlines()) > 2 else "结果")
-        body = issue.get("body") or ""
-        index_lines = [line for line in _section_lines(body, "结果索引")
-                       if line.strip() != "(暂无)"]
-        already_indexed = any(ref in line for line in index_lines)
-        if not already_indexed:
-            index_lines.append(f"- {ref}:{excerpt}")
-        new_body = _edit_body(
-            body, index_lines=index_lines,
-            append_change=None if already_indexed
-            else f"{_today()} 追加结果评论 {ref}")
-        try:
-            status, _updated = self.transport.request(
-                "PATCH", f"{_repo_path(self.repo)}/issues/{number}",
-                {"body": new_body})
-            if status != 200:
-                raise TransportError("bad_response", f"update HTTP {status}")
-        except TransportError as exc:
-            # SP-2:评论已真实发布,结果索引更新失败 ≠ 整体失败。如实回报
-            # 部分成功:携带已发布评论身份与索引未完成状态;恢复后重试同一
-            # 请求经「读前收养」只补索引,不再重复发布评论。
-            attempts.append({"step": "index-patch", "outcome": exc.kind,
-                             "detail": str(exc)})
-            # SP-7:同时把已发布身份登记到本地——重试的读前收养查询失败
-            # (无法看远端)时凭登记保留待恢复状态,不当作全新发布。登记
-            # 写入失败不把已发生的远端结果包装成异常(R4 同一纪律)。
-            # SP-10:登记**实际落盘**才支撑「不会重复发布」承诺;未配置
-            # 缓存目录或写入失败(登记未生效)时如实披露退化——本结果无
-            # 跨调用身份保留,读前收养查询失败的重试会当作全新发布而
-            # 可能重复发布,不把该模式表述为拥有不重复发布保证。
-            record_error = self._record_pending_index(
-                identity, result_markdown, comment, ref, exc)
-            if record_error is None:
-                note = ("部分成功:结果评论已发布("
-                        f"{ref}),但正文结果索引更新未完成({exc});"
-                        "重试同一请求只会收养既有评论并补齐索引,"
-                        "不会重复发布")
-            else:
-                note = ("部分成功:结果评论已发布("
-                        f"{ref}),但正文结果索引更新未完成({exc});"
-                        f"警告:本地待补索引登记未生效({record_error})"
-                        "——本结果无跨调用身份保留,远端可读时重试同一"
-                        "请求经读前收养只补索引,但若重试时读前收养查询"
-                        "失败,会当作全新发布而可能重复发布同文评论;"
-                        "建议配置缓存目录(--cache-dir)启用登记")
-            return {"published": True, "partial": True,
-                    "comment_id": comment.get("id"), "ref": ref,
-                    "issue_number": number, "index_updated": False,
-                    "attempts": attempts, "note": note}
-        # 索引已补齐:清除待补索引登记(若前次部分成功留下;SP-7)
-        self._clear_pending_index(identity, result_markdown)
-        readback = self.read_task(identity)
-        return {"published": True, "comment_id": comment.get("id"),
-                "ref": ref, "issue_number": number, "readback": readback,
-                "attempts": attempts, "index_updated": True}
+        publication = mgs_result_publication.ResultPublication(
+            repo=self.repo, transport=self.transport, cache_dir=self.cache_dir,
+            authorize=self._authorize_write, load_issue=self._get_issue,
+            save_draft=self._save_draft, read_back=self.read_task)
+        return publication.append(identity, result_markdown)
 
     def set_relations(self, identity: str, deps: list[str]) -> dict:
         """设置依赖(阻塞关系):写成「#Issue号 身份」的明确可解析引用,
@@ -1253,7 +399,7 @@ class GithubBackend:
         if self._sub_issues_available is None:
             try:
                 status, _data = self.transport.request(
-                    "GET", f"{_repo_path(self.repo)}/issues/"
+                    "GET", f"{repo_path(self.repo)}/issues/"
                            f"{parent['issue_number']}/sub_issues")
                 self._sub_issues_available = status == 200
             except TransportError as exc:
@@ -1261,7 +407,7 @@ class GithubBackend:
         if self._sub_issues_available:
             try:
                 status, _data = self.transport.request(
-                    "POST", f"{_repo_path(self.repo)}/issues/"
+                    "POST", f"{repo_path(self.repo)}/issues/"
                             f"{parent['issue_number']}/sub_issues",
                     {"sub_issue_id": parsed.get("issue_id")
                      or parsed["issue_number"]})
@@ -1311,12 +457,12 @@ class GithubBackend:
                                     {"identity": identity, "reason": reason,
                                      "note": note}, "离线缓存态无法关闭远端任务")
         number = parsed["issue_number"]
-        new_body = _edit_body(issue.get("body") or "",
+        new_body = edit_body(issue.get("body") or "",
                               header={"进度": progress},
-                              append_change=f"{_today()} 关闭({reason})")
+                              append_change=f"{today()} 关闭({reason})")
         try:
             status, updated = self.transport.request(
-                "PATCH", f"{_repo_path(self.repo)}/issues/{number}",
+                "PATCH", f"{repo_path(self.repo)}/issues/{number}",
                 {"state": "closed", "state_reason": state_reason,
                  "body": new_body})
             if status != 200:
@@ -1327,7 +473,7 @@ class GithubBackend:
                                      "note": note}, str(exc))
         closing_note = f"关闭原因:{reason}。{note}".rstrip("。")
         self.transport.request(
-            "POST", f"{_repo_path(self.repo)}/issues/{number}/comments",
+            "POST", f"{repo_path(self.repo)}/issues/{number}/comments",
             {"body": f"任务:{identity}\n\n{closing_note}。{CLOSE_NOTE}"})
         readback = parse_issue_payload(updated, self.config["labels"])
         readback["state"] = updated.get("state", readback.get("state"))
@@ -1340,47 +486,14 @@ class GithubBackend:
         """重放未发布草稿(远端恢复后):逐条按原参数执行,成功即标记已发布;
         仍失败保留草稿。草稿在发布前始终标明「未发布」。
 
-        发布前逐份核对草稿记录的目标仓库与当前后端仓库(审查修复票 01/S1):
-        不一致即拒绝发布该草稿(不发请求、不移动、不标记)——选择/切换到
-        新后端不构成旧草稿的迁移授权,跨仓库移动需经明确的迁移流程。
+        草稿重放的存储、跨仓库归属拒绝与完成判定自票 20 起收敛在
+        ``mgs_result_publication.publish_drafts``(与在线失败时的草稿保存同一
+        恢复事实);本 adapter 只注入目标仓库标签、缓存目录与动作分发。
         """
 
-        if self.cache_dir is None:
-            raise GithubRecordsError("未配置缓存/草稿目录(--cache-dir),无草稿可发布")
-        drafts_dir = self.cache_dir / "drafts"
-        published_dir = drafts_dir / "published"
-        results = []
-        if not drafts_dir.is_dir():
-            return {"published_count": 0, "results": []}
-        current_repo = _repo_str(self.repo)
-        for path in sorted(drafts_dir.glob("*.json")):
-            try:
-                draft = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, ValueError) as exc:
-                results.append({"draft": str(path), "outcome": "unreadable",
-                                "detail": str(exc)})
-                continue
-            draft_repo = draft.get("repo")
-            if draft_repo != current_repo:
-                results.append({
-                    "draft": str(path), "published": False,
-                    "outcome": (
-                        f"拒绝发布:草稿记录的目标仓库 {draft_repo!r} 与当前后端"
-                        f"仓库 {current_repo!r} 不一致"
-                        + ("" if draft_repo else "(草稿未记录目标仓库)")
-                        + ";选择/切换新后端不构成旧草稿的迁移授权,"
-                        "跨仓库移动需经明确的迁移流程另行确认"),
-                })
-                continue
-            outcome = self._replay_draft(draft)
-            results.append({"draft": str(path), **outcome})
-            if outcome.get("published"):
-                published_dir.mkdir(parents=True, exist_ok=True)
-                (published_dir / path.name).write_text(
-                    json.dumps(draft, ensure_ascii=False, indent=2), encoding="utf-8")
-                path.unlink()
-        return {"published_count": sum(1 for r in results if r.get("published")),
-                "results": results}
+        return mgs_result_publication.publish_drafts(
+            cache_dir=self.cache_dir, repo=repo_str(self.repo),
+            execute=self.execute_op, note=DRAFT_NOTE)
 
     def execute_op(self, op: str, args: dict) -> dict:
         """按操作名把参数分发到对应写操作(公开接缝)。
@@ -1403,7 +516,7 @@ class GithubBackend:
                 expected_body_sha256=args.get("expected_body_sha256"),
                 change_note=str(args.get("change_note", "安排更新")))
         if op == "set_triage":
-            return self.set_triage(str(args["identity"]), str(args["label"]))
+            return self.set_triage(str(args["identity"]), str(args.get("label")))
         if op == "append_result":
             return self.append_result(str(args["identity"]),
                                       str(args.get("result_markdown", "")))
@@ -1413,436 +526,24 @@ class GithubBackend:
         if op == "set_parent":
             return self.set_parent(str(args["identity"]), args.get("parent"))
         if op == "close_task":
-            return self.close_task(str(args["identity"]), str(args["reason"]),
+            return self.close_task(str(args["identity"]), str(args.get("reason")),
                                    note=str(args.get("note", "")))
         raise GithubRecordsError(f"unknown op {op}")
 
-    def _replay_draft(self, draft: dict) -> dict:
-        op, args = draft["op"], draft.get("args", {})
-        try:
-            outcome = self.execute_op(op, args)
-        except (GithubRecordsError, TransportError) as exc:
-            return {"published": False, "outcome": f"仍失败:{exc}"}
-        # 部分成功(如评论已发布而结果索引未完成,SP-2)不算完成:保留草稿,
-        # 下次重放经「读前收养」只补未完成部分,不重复发布
-        return {"published": bool(outcome.get("published", outcome.get("created"))
-                                 and not outcome.get("partial")),
-                "outcome": outcome}
+# ---------- 后端切换与远端交接(兼容再导出,票 20) ----------
+# 迁移清单、切换执行与交接基线可达核对的实现归独立职责 module
+# mgs_github_migration(仅此职责,见其头部);本 adapter 保持既有公开名字
+# 可达(现有 CLI、脚本与测试经 mgs_github 定位这些入口),以模块级
+# __getattr__ 延迟解析——避免适配器与迁移模块在加载期相互导入(迁移模块
+# 延迟导入本适配器的 GithubBackend 完成目标侧创建)。
 
-    # ----- 回读核验 -----
-
-    def verify(self, project_root: Path | str) -> dict:
-        """github-issues 后端回读核验(与本地后端同一含义的检查集)。
-
-        标签映射、核心文档映射、任务核心字段(含工作请求必填字段)与依赖
-        关系使用 mgs_records 的单一共享实现(审查修复票 01/核验建议 1:
-        同一畸形任务在两个后端得到相同结论);本方法只保留存储特有检查
-        (远端标签实际存在、评论一致性、身份重复、标签与正文冲突、关闭原因)。
-        离线时基于缓存核对结构与依赖,远端存在性检查标注「未核对(离线)」,
-        不冒充已核验;整体结果附 offline 标记。远端不可用且无缓存时报错,
-        不回退本地。
-        """
-
-        root = Path(project_root)
-        checks: list[dict] = []
-        skipped: list[str] = []
-
-        checks.append(mgs_records.check_item(
-            "config-present", True, str(root / self.config["config_path"])))
-        repo = self.repo
-        checks.append(mgs_records.check_item(
-            "backend-github-coordinates", True,
-            f"{repo['host']}/{repo['owner']}/{repo['repo']}"))
-        checks += mgs_records.label_mapping_checks(self.config["labels"])
-        checks += mgs_records.docmap_checks(root, self.config["docmap"])
-
-        try:
-            payload = self.fetch_tasks()
-        except GithubRecordsError as exc:
-            checks.append(mgs_records.check_item("tasks-valid", False, str(exc)))
-            return {"ok": False, "checks": checks, "offline": True,
-                    "skipped": ["tasks-valid", "deps-consistent",
-                                "labels-remote-present", "results-consistent"]}
-        tasks = payload["tasks"]
-        offline = bool(payload.get("cached"))
-        if offline:
-            skipped += ["labels-remote-present", "results-consistent"]
-
-        task_problems: list[str] = []
-        seen: set[str] = set()
-        for task in tasks:
-            identity = task["identity"]
-            # 任务核心字段:与本地后端共享的单一实现(where 用 #Issue号 定位)
-            task_problems += mgs_records.task_core_problems(
-                task, f"#{task['issue_number']}")
-            if identity and identity in seen:
-                task_problems.append(f"{identity}:身份重复(#{task['issue_number']})")
-            seen.add(identity)
-            if task.get("triage_conflict"):
-                task_problems.append(f"{identity}:标签与正文分流不一致")
-            if task["state"] == "closed" and task.get("state_reason") not in (
-                    "completed", "not_planned"):
-                task_problems.append(f"{identity}:已关闭但缺少关闭原因"
-                                      f"(state_reason={task.get('state_reason')!r})")
-        checks.append(mgs_records.check_item(
-            "tasks-valid", not task_problems,
-            ";".join(task_problems) if task_problems
-            else f"{len(tasks)} 个远端任务结构有效"))
-
-        dep_problems = mgs_records.dependency_problems(tasks)
-        checks.append(mgs_records.check_item(
-            "deps-consistent", not dep_problems,
-            ";".join(dep_problems) if dep_problems else "依赖关系可解析且无循环"))
-
-        labels = self.config["labels"]
-        if offline:
-            checks.append(mgs_records.check_item(
-                "labels-remote-present", True, "未核对(离线缓存,不下结论)"))
-            checks.append(mgs_records.check_item(
-                "results-consistent", True, "未核对(离线缓存,不下结论)"))
-        else:
-            status, remote = self.transport.request(
-                "GET", f"{_repo_path(self.repo)}/labels?per_page=100")
-            remote_names = ({l.get("name") for l in remote}
-                            if status == 200 and isinstance(remote, list) else None)
-            if remote_names is None:
-                skipped.append("labels-remote-present")
-                checks.append(mgs_records.check_item(
-                    "labels-remote-present", True, "未核对(远端标签接口不可用)"))
-            else:
-                absent = [labels[name] for name in CANONICAL_LABELS
-                          if labels.get(name) and labels[name] not in remote_names]
-                checks.append(mgs_records.check_item(
-                    "labels-remote-present", not absent,
-                    f"仓库缺少映射标签:{absent}" if absent
-                    else "五类映射标签在仓库实际存在"))
-
-            result_problems: list[str] = []
-            for task in tasks:
-                status, comments = self.transport.request(
-                    "GET", f"{_repo_path(self.repo)}/issues/{task['issue_number']}"
-                           "/comments?per_page=100")
-                if status != 200 or not isinstance(comments, list):
-                    result_problems.append(f"{task['identity']}:评论读取失败")
-                    continue
-                valid_refs = {f"#issuecomment-{c.get('id')}" for c in comments}
-                for comment in comments:
-                    text = comment.get("body") or ""
-                    for other in seen:
-                        if other != task["identity"] and other in text:
-                            result_problems.append(
-                                f"{task['identity']}:评论引用了其他任务身份 {other}")
-                for ref in re.findall(r"#issuecomment-\d+",
-                                      task["result_index_text"] or ""):
-                    if ref not in valid_refs:
-                        result_problems.append(
-                            f"{task['identity']}:结果索引引用不存在的评论 {ref}")
-            checks.append(mgs_records.check_item(
-                "results-consistent", not result_problems,
-                ";".join(result_problems) if result_problems
-                else "评论结果与所属任务、结果索引互相一致"))
-
-        ok = all(item["ok"] for item in checks)
-        return {"ok": ok, "checks": checks, "offline": offline,
-                "skipped": skipped}
-
-# ---------- 后端切换与远端交接(公开接缝) ----------
-
-def _published_refs(config_text: str) -> dict[str, str]:
-    """解析 CONFIG 外部访问行中的已发布基线引用
-    (`已发布基线引用:<文件>=<url或commit@版本>`,分号分隔)。"""
-
-    refs: dict[str, str] = {}
-    match = re.search(r"已发布基线引用\s*[:：]\s*(.+)", config_text or "")
-    if not match:
-        return refs
-    for item in re.split(r"[;；,，]", match.group(1)):
-        if "=" not in item:
-            continue
-        name, ref = item.split("=", 1)
-        refs[name.strip()] = ref.strip()
-    return refs
+_MIGRATION_EXPORTS = ("plan_backend_switch", "apply_backend_switch",
+                      "handover_baseline_check")
 
 
-def _ref_check_url(ref: str) -> str | None:
-    """引用 → 可经传输层检查的绝对 URL。
+def __getattr__(name: str):
+    if name in _MIGRATION_EXPORTS:
+        import mgs_github_migration  # noqa: PLC0415 - 兼容再导出
 
-    `url@版本` 形态剥去版本后缀再检查;非 http(s) 引用(如本地 commit 串)
-    返回 None——无法实际检查的引用形态不宣称可达。
-    """
-
-    if not ref.startswith(("http://", "https://")):
-        return None
-    return re.sub(r"@[A-Za-z0-9._-]+$", "", ref)
-
-
-def handover_baseline_check(project_root: Path | str,
-                            config_rel: str = mgs_records.DEFAULT_CONFIG_REL,
-                            *, transport=None) -> dict:
-    """远端交接核对基线引用可达(《工作记录合同》:本地尚未发布的基线可供
-    本机执行者引用,但不得声称远端执行者已可访问)。
-
-    每份核心基线:本地存在性与当前版本 + 已发布引用的**实际可达检查**。
-    可达性结论只能来自实际执行的检查(审查修复票 01/S4):经传输层 GET
-    引用地址,2xx 才判可达;未执行检查(无通道/上游不可用)、检查失败或
-    引用形态不可检查,一律按未验证/不可达回报——引用存在不等于检查通过。
-    ok 仅在全部核心基线经检查可达时为 True(交接前须补发布引用或明确限制)。
-    """
-
-    root = Path(project_root)
-    config = mgs_records.load_config(root, config_rel)
-    refs = _published_refs((root / config_rel).read_text(encoding="utf-8"))
-    grouped = mgs_records._core_rows(config["docmap"])
-    docs: list[dict] = []
-    for key in ("goal", "design", "tech"):
-        for row in grouped[key]:
-            path = root / row["path"]
-            published = (refs.get(row["path"]) or refs.get(Path(row["path"]).name))
-            version = None
-            if path.is_file():
-                version_match = re.search(r"基线版本\s*[:：]\s*v(\d+)",
-                                          path.read_text(encoding="utf-8"))
-                version = f"v{version_match.group(1)}" if version_match else None
-            reachable = False
-            if not published:
-                note = ("本地未发布资料:远端执行者不可访问,不得宣称已可远端"
-                        "访问;发布资料仍需对应授权")
-            else:
-                url = _ref_check_url(published)
-                if transport is None:
-                    note = (f"已记录引用:{published};未执行可达检查(未提供"
-                            "检查通道)——引用存在不等于检查通过,未验证按"
-                            "不可达处理")
-                elif url is None:
-                    note = (f"已记录引用:{published};引用形态无法经传输层"
-                            "检查,未验证按不可达处理")
-                else:
-                    try:
-                        # 可达探测不带凭据:引用地址可能是任意第三方主机,
-                        # API 令牌不得随探测外发(审查修复票 01/Spec 复查)
-                        status, _data = transport.request("GET", url, auth=False)
-                    except TransportError as exc:
-                        note = (f"已记录引用:{published};可达检查未完成"
-                                f"({exc})——不可达/未验证,不宣称可达")
-                    else:
-                        if 200 <= int(status) < 300:
-                            reachable = True
-                            note = (f"已发布引用:{published}(实际检查 HTTP "
-                                    f"{status},远端执行者经此引用访问)")
-                        else:
-                            note = (f"已记录引用:{published};实际检查 HTTP "
-                                    f"{status}——引用不可达,先补发布或修正引用")
-            docs.append({
-                "path": row["path"], "content": row["content"], "role": row["role"],
-                "local_exists": path.is_file(), "version": version,
-                "published_ref": published,
-                "remote_reachable": reachable,
-                "note": note,
-            })
-    ok = all(entry["remote_reachable"] for entry in docs)
-    return {"ok": ok, "docs": docs,
-            "note": ("本地尚未发布的基线可以供本机执行者引用,但必须标明资料"
-                     "位置和版本;不能声称远端执行者已可访问。准备远端交接时"
-                     "确认引用可达,发布资料仍需对应授权。可达性结论只能来自"
-                     "实际执行的检查;未执行检查(含上游不可用)按未验证/"
-                     "不可达回报,引用存在不等于检查通过。")}
-
-
-def plan_backend_switch(project_root: Path | str, *, target: str,
-                        repo: str | None = None, transport=None,
-                        cache_dir: Path | str | None = None) -> dict:
-    """后端切换迁移清单(确认前只读):任务映射、保留方案、需确认项与
-    交接基线可达核对。调用方确认后才执行 apply;apply 不直接改项目文件。
-    """
-
-    if target not in ("github-issues", "local-markdown"):
-        raise GithubRecordsError(f"未知目标后端 {target!r}")
-    root = Path(project_root)
-    config = mgs_records.load_config(root)
-    if config["backend"] == target:
-        raise GithubRecordsError(f"当前后端已是 {target},无需切换")
-    if target == "github-issues":
-        target_repo = parse_repo_location(repo or config["task_root"])
-        tasks = mgs_records.list_tasks(root)
-        task_items = [{
-            "identity": task["identity"], "title": task["title"],
-            "triage": task["triage"], "progress": task["progress"],
-            "request": task["request"],
-            "source_ref": f"local:{config['task_root']}/{task['identity']}/task.md",
-            "target_ref": (f"github:{target_repo['host']}/{target_repo['owner']}/"
-                           f"{target_repo['repo']}/issues(身份保持 {task['identity']})"),
-        } for task in tasks]
-    else:
-        target_repo = None
-        backend = GithubBackend(config, transport, cache_dir)
-        tasks = backend.fetch_tasks()["tasks"]
-        task_items = [{
-            "identity": task["identity"], "title": task["title"],
-            "triage": task["triage"], "progress": task["progress"],
-            "request": task["request"],
-            "source_ref": (f"github:{config['repo']['host']}/{config['repo']['owner']}/"
-                           f"{config['repo']['repo']}/issues/{task['issue_number']}"),
-            "target_ref": (f"local:{mgs_records.DEFAULT_TASK_ROOT}/"
-                           f"{task['identity']}/task.md(身份保持)"),
-        } for task in tasks]
-    if not task_items:
-        raise GithubRecordsError("当前后端没有可迁移的任务;切换空账本前先人工确认")
-    authorized = _authorization_for(
-        {**config, "repo": target_repo}, WRITE_OP)[0] if target_repo else False
-    return {
-        "from": config["backend"], "to": target,
-        # repo = 目标位置(github 目标=仓库坐标;本地目标=本地任务根),与
-        # CONFIG 任务根、文件落点、返回路径共用同一来源(审查修复票 01/S3)
-        "repo": (_repo_str(target_repo) if target_repo
-                 else mgs_records.DEFAULT_TASK_ROOT),
-        # 旧位置 = 迁移源的实际任务位置(github 源=旧仓库坐标;本地源=旧任务根)
-        "old_position": config["task_root"],
-        "project_root": str(root),
-        "old_config_text": (root / config["config_path"]).read_text(encoding="utf-8"),
-        "tasks": task_items,
-        "write_authorized": authorized,
-        "retention": [
-            f"旧记录({config['backend']})全部保留为只读历史,不删除、不改写;",
-            "切换生效后旧位置不再是当前任务来源,不得在其上继续安排工作"
-            "(不形成两套可独立修改的当前任务账本);",
-            "身份映射(本地身份 ↔ Issue 号)随新 CONFIG 留档,追溯旧记录时使用。",
-        ],
-        "confirmations": [
-            "确认切换当前任务来源为新后端(此后唯一当前来源);",
-            "确认对目标仓库的远端写入授权并已按 "
-            "`host/owner/repo:issues-write(说明)` 记入 CONFIG——仅选择后端"
-            "不构成授权" + ("" if authorized else "(当前 CONFIG 尚未记录,apply 前必须补)"),
-            "确认远端交接的基线引用可达性(handover 检查);未发布本地资料"
-            "不得宣称远端已可访问。",
-        ],
-        "baseline_handover": handover_baseline_check(root, transport=transport)["docs"],
-        "labels": config["labels"],
-    }
-
-
-def _emitted_config_text(plan: dict, old_config_text: str) -> str:
-    """切换后的 CONFIG 内容:唯一当前来源指向新后端,旧位置标只读历史,
-    标签映射与文档映射沿用(核心文档位置不随后端切换变化)。
-
-    当前位置取 plan['repo'](目标位置),历史位置取 plan['old_position']
-    (迁移源实际位置)——与新 CONFIG 任务根、文件落点、返回路径同源
-    (审查修复票 01/S3)。
-    """
-
-    lines: list[str] = ["# 协作配置(后端切换)", "",
-                        "维护责任:制作统筹。采用依据:已确认的后端切换迁移清单。", "",
-                        "## 任务来源", "",
-                        f"- 后端:{plan['to']}"]
-    if plan["to"] == "github-issues":
-        lines.append(f"- 当前位置:{plan['repo']}")
-        lines.append("- 任务读取规则:GitHub Issues 后端约定(Issue 正文承载"
-                     "任务说明,评论承载结果)")
-    else:
-        lines.append(f"- 当前位置:{plan['repo']}(每任务一目录,task.md 为"
-                     "工作请求与状态)")
-        lines.append("- 任务读取规则:本地 Markdown 后端约定")
-    # 旧位置兜底:旧清单无 old_position 字段时按方向推断(github 目标的
-    # 旧位置是本地任务根;本地目标的旧位置沿用清单 repo 字段的旧语义)
-    old_position = plan.get("old_position") or (
-        mgs_records.DEFAULT_TASK_ROOT if plan["to"] == "github-issues"
-        else plan["repo"])
-    lines.append("- 历史任务位置(只读历史):" + old_position
-                 + "(切换前账本,只作历史追溯,不再是当前任务来源)")
-    for line in old_config_text.splitlines():
-        if line.startswith("- 外部连接引用及已确认操作范围"):
-            lines.append(line)
-    lines += ["", "## 标签映射", "", "| 语义 | 项目标签 |", "| --- | --- |"]
-    for canon, project in plan["labels"].items():
-        lines.append(f"| {canon} | {project} |")
-    lines += ["", "## 文档映射", "", "| 内容 | 当前权威位置 | 维护角色 |",
-              "| --- | --- | --- |"]
-    section = ""
-    for line in old_config_text.splitlines():
-        if line.startswith("## "):
-            section = line[3:].strip()
-            continue
-        if section == "文档映射" and line.startswith("|") \
-                and not set(line.strip()) <= set("|-: ") \
-                and not line.startswith("| 内容"):
-            lines.append(line)
-    lines += ["", "## 身份映射(切换留档)", "",
-              "本地身份 → Issue 号(或本地路径)见 identity-map.json;身份保持不变。",
-              ""]
-    return "\n".join(lines)
-
-
-def apply_backend_switch(plan_path: Path | str, *, confirmed: bool,
-                         emit_dir: Path | str, project_root: Path | str,
-                         transport=None, cache_dir: Path | str | None = None) -> dict:
-    """执行**已确认**的切换:只做目标侧创建与材料产出。
-
-    - 不删除、不改写旧记录(保留只读历史);
-    - 不直接改写项目 CONFIG:新 CONFIG 内容产出到 emit_dir/CONFIG.md,
-      由经确认的应用步骤(统筹经 mgs-gate 受控通道)写入,保证唯一当前来源;
-    - 目标为 GitHub 时,要求当前项目 CONFIG 已记录目标仓库的 issues-write
-      授权(apply 侧再核对一次,不自我授权)。
-    """
-
-    plan = json.loads(Path(plan_path).read_text(encoding="utf-8"))
-    if not confirmed:
-        raise GithubRecordsError("迁移清单未经确认(confirmed=False),不执行切换")
-    root = Path(project_root)
-    current = mgs_records.load_config(root)
-    emit = Path(emit_dir)
-    emit.mkdir(parents=True, exist_ok=True)
-    created = 0
-    mapping: dict[str, dict] = {}
-    if plan["to"] == "github-issues":
-        target_repo = parse_repo_location(plan["repo"])
-        allowed, _note = _authorization_for({**current, "repo": target_repo},
-                                            WRITE_OP)
-        if not allowed:
-            raise GithubRecordsError(
-                f"项目 CONFIG 尚未对 {plan['repo']} 记录 issues-write 授权;"
-                "迁移清单确认后须先按 `host/owner/repo:issues-write(说明)` 更新"
-                " CONFIG(经确认的应用步骤),apply 不自我授权")
-        backend = GithubBackend({**current, "repo": target_repo,
-                                 "backend": GITHUB_BACKEND},
-                                transport, cache_dir)
-        results = []
-        for item in plan["tasks"]:
-            outcome = backend.create_task(
-                item["identity"], item["title"], item["request"],
-                triage=item["triage"], progress=item["progress"])
-            results.append({"identity": item["identity"], **{
-                key: outcome.get(key)
-                for key in ("created", "adopted", "issue_number", "published")}})
-            if outcome.get("created") or outcome.get("adopted"):
-                created += 1
-                mapping[item["identity"]] = {
-                    "github_issue": outcome.get("issue_number"),
-                    "source_ref": item["source_ref"]}
-        (emit / "identity-map.json").write_text(
-            json.dumps(mapping, ensure_ascii=False, indent=2), encoding="utf-8")
-        result = {"created": created, "results": results, "emit_dir": str(emit)}
-    else:
-        for item in plan["tasks"]:
-            body = build_task_body(item["title"], item["identity"],
-                                   item["triage"], item["progress"],
-                                   item["request"])
-            rel = (f"{mgs_records.DEFAULT_TASK_ROOT}/"
-                   f"{item['identity']}/task.md")
-            path = emit / rel
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(body, encoding="utf-8")
-            mapping[item["identity"]] = {"local_path": rel,
-                                         "source_ref": item["source_ref"]}
-            created += 1
-        (emit / "identity-map.json").write_text(
-            json.dumps(mapping, ensure_ascii=False, indent=2), encoding="utf-8")
-        # 返回的产出目录 = 实际落盘根(任务文件与 CONFIG 都在其下),
-        # 与计划目标、CONFIG 任务根同源(审查修复票 01/S3)
-        result = {"created": created, "emit_dir": str(emit)}
-    (emit / "CONFIG.md").write_text(
-        _emitted_config_text(plan, plan.get("old_config_text", "")),
-        encoding="utf-8")
-    result["config_emitted"] = str(emit / "CONFIG.md")
-    result["note"] = ("apply 只创建目标侧任务并产出新 CONFIG 内容;项目 CONFIG "
-                      "由经确认的应用步骤经 mgs-gate 写入(唯一当前来源),"
-                      "旧记录保留为只读历史,身份映射已留档。")
-    return result
+        return getattr(mgs_github_migration, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -12,9 +12,10 @@ description: Game-Design 设计讨论入口。仅在用户显式调用($game-des
 本技能位于 `<插件根>/skills/game-design/`,包内材料在其上级目录:
 
 - [设计技能合同](../../internal/contracts/design.md)中的 Game-Design 一节:输入、输出、写入与完成条件
-- [共同合同](../../internal/contracts/common.md):业务入口共同约定
+- [共同合同](../../internal/contracts/common.md)**《共同执行规则》《写入与保障》**:业务入口共同约定(显式调用、范围与授权、执行与完成五步、待验收)与外部动作授权(提交/推送/发布不自动)的唯一权威
 - [工作记录合同](../../internal/contracts/records.md):决定与研究记录的结构、出处与版本
-- [受控写入协议](../../internal/protocols/gate-protocol.md):写入通道(需要写入时必读)
+- [受控写入协议](../../internal/protocols/gate-protocol.md)**《受控写入协议》**:两层拦截、`mgs-gate` 工具、越界探针与凭据处理的唯一权威(需要写入时必读)
+- [工作结果模板](../../templates/work/result.md)**《结果字段》**:共同执行规则第 5 步结果记录的字段唯一权威(设计过程记录另按其 records 模板)
 - [writing-for-agents](../../internal/methods/writing-for-agents/SKILL.md):文档写入方法(**所有文档写入步骤必读**)
 
 若当前上下文没有给出技能安装位置,在 `$CODEX_HOME` 下定位 `skills/game-design/SKILL.md`,再取其包根(上级两级)。
@@ -61,6 +62,7 @@ description: Game-Design 设计讨论入口。仅在用户显式调用($game-des
 ### 开发者已作出的决定(仅列实际由开发者给出的;无则如实说明)
 ### 未决项(每项注明对当前工作的影响)
 ### 写入结果(本轮未写入时如实说明)
+### 边界核对(要求核对时的原始输出;未要求时写"本次未执行")
 ```
 
 ## 边界
@@ -68,5 +70,5 @@ description: Game-Design 设计讨论入口。仅在用户显式调用($game-des
 - 助手建议不冒充用户决定;未收到开发者明确回答的内容一律保持未决。
 - 事实与决定分开:调查结论记出处,不自动采纳为产品要求。
 - 只写设计过程与决定记录;越界写入被拒即停止该项并原样记录,不换路径重试。
-- 不把执行凭据写入任何文件或报告正文。
-- 需要人决定的事项原样保留,不用占位内容冒充已确定。
+- 任务说明要求边界核对时,按[受控写入协议](../../internal/protocols/gate-protocol.md)《越界探针》执行直接写探针与越界 `mgs_write` 探针,记录与未要求时的处理均按该节纪律。
+- 凭据处理按[受控写入协议](../../internal/protocols/gate-protocol.md)《执行凭据》一节;需要人决定的事项原样保留,不用占位内容冒充已确定。

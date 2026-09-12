@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""任务票 17 验收用本地 GitHub 替身服务器(不是真实 GitHub)。
+"""验收用本地 GitHub 替身服务器(不是真实 GitHub),票 17/18 共用。
+
+本 module 是**唯一**替身实现(票 17 收口:原 ``acceptance/17-github-issue-workflow/``
+与 ``acceptance/18-complete-package-acceptance/`` 各一份逐字节相同的副本已删除)。
+验收脚本经 ``acceptance/_shared/standin_github.py`` 路径启动本机 HTTP 服务器,
+不增加任何真实远端访问;控制端点与状态回读行为与原副本逐项一致。
 
 实现统一接口所需的 GitHub REST 最小子集,并带故障注入与状态转储:
 
@@ -14,9 +19,10 @@
 测试控制端点(仅本机):
 - POST /_test/control  {"offline": bool, "drop_next_create": bool,
                          "drop_next_comment": bool, "sub_issues": bool}
-  offline:此后所有业务端点拒绝连接语义(HTTP 599,客户端判 offline);
-  drop_next_create/drop_next_comment:**执行状态变更后**返回超时语义
-  (HTTP 598),模拟「已创建/已发布但响应丢失」(超时后结果不确定);
+  offline:此后所有业务端点返回 HTTP 599(客户端判 offline);
+  drop_next_create/drop_next_comment:**执行状态变更后直接断开连接**
+  (不发送状态行,客户端看到连接重置/EOF),模拟「已创建/已发布但响应丢失」
+  (超时后结果不确定);
   sub_issues:启用/禁用原生父子关系端点(禁用时 404,验证回退引用)。
 - GET /_test/state      全量状态转储(issues/comments/sub_issues/调用计数/令牌出现)
 
@@ -55,7 +61,6 @@ def _save() -> None:
 
     if not STATE_FILE:
         return
-    import os
     snapshot = {k: v for k, v in STATE.items() if k != "calls"}
     tmp = STATE_FILE + ".tmp"
     with open(tmp, "w", encoding="utf-8") as fh:

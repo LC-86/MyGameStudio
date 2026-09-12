@@ -7,6 +7,10 @@
   用于核对「模型声称的探针结果」与「真实执行的事件流」一致,防口头通过;
 - clientInfo 名称更新为任务票 03。
 
+本入口的请求响应、事件等待与进程生命周期由共享实现
+`acceptance/_shared/appserver_core.py` 承担(票 14,expand);本文件只保留
+场景身份(clientInfo)、命令参数与事件筛选,行为与迁移前逐项兼容。
+
 用法(HOME/CODEX_HOME 指向隔离环境):
   appserver_client.py skills --cwd <项目目录>
   appserver_client.py turn --cwd <工作目录> [--mention mygamestudio:game-code] \
@@ -15,188 +19,43 @@
 """
 
 import argparse
-import json
-import os
-import subprocess
+import json  # noqa: F401  票 01 基线探针按模块属性替换解码计数器(冻结产物)
 import sys
-import threading
-import time
-from typing import Any
+import time  # noqa: F401  票 01 基线探针按模块属性替换计时器(冻结产物)
+from pathlib import Path
 
-CODEX_BIN = os.environ.get("CODEX_BIN", "codex")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "_shared"))
 
+from appserver_core import run_skills, run_turn  # noqa: E402,F401
 
-class AppServer:
-    def __init__(self) -> None:
-        self.proc = subprocess.Popen(
-            [CODEX_BIN, "app-server"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            env=os.environ.copy(),
-        )
-        self.lines: list[str] = []
-        self._lock = threading.Lock()
-        self._drained: int = 0
-        threading.Thread(target=self._reader, daemon=True).start()
-
-    def _reader(self) -> None:
-        assert self.proc.stdout
-        for line in self.proc.stdout:
-            with self._lock:
-                self.lines.append(line.decode("utf-8", "replace").rstrip())
-
-    def request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        req_id = int(time.time() * 1000) % 100000 + 42
-        payload: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id, "method": method}
-        if params is not None:
-            payload["params"] = params
-        assert self.proc.stdin
-        self.proc.stdin.write((json.dumps(payload) + "\n").encode())
-        self.proc.stdin.flush()
-        deadline = time.time() + 60
-        while time.time() < deadline:
-            with self._lock:
-                snapshot = list(self.lines)
-            for line in snapshot:
-                try:
-                    msg = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if msg.get("id") == req_id and "method" not in msg:
-                    if "error" in msg:
-                        raise RuntimeError(f"{method} failed: {msg['error']}")
-                    return msg.get("result", {})
-            time.sleep(0.2)
-        raise TimeoutError(f"{method} timed out")
-
-    def drain_events(self, events: list[dict[str, Any]]) -> None:
-        """把尚未消费的通知行追加进 events(每行只消费一次,轮询不产生重复)。"""
-        with self._lock:
-            new_lines = self.lines[self._drained:]
-            self._drained = len(self.lines)
-        for line in new_lines:
-            try:
-                msg = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if "method" in msg:
-                events.append(msg)
-
-    def wait_turn_completed(self, timeout: float,
-                            events: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
-        deadline = time.time() + timeout
-        agent_messages: list[str] = []
-        seen: set[str] = set()
-        while time.time() < deadline:
-            if events is not None:
-                self.drain_events(events)
-            with self._lock:
-                snapshot = list(self.lines)
-            for line in snapshot:
-                try:
-                    msg = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if msg.get("method") != "item/completed":
-                    continue
-                item = msg.get("params", {}).get("item", {})
-                key = f"{item.get('id')}:{item.get('type')}"
-                if key in seen:
-                    continue
-                seen.add(key)
-                if item.get("type") == "agentMessage":
-                    text = item.get("text", "")
-                    if text and text not in agent_messages:
-                        agent_messages.append(text)
-            with self._lock:
-                snapshot = list(self.lines)
-            for line in snapshot:
-                try:
-                    msg = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if msg.get("method") == "turn/completed":
-                    return agent_messages
-            time.sleep(1)
-        return agent_messages
-
-    def close(self) -> None:
-        try:
-            if self.proc.stdin:
-                self.proc.stdin.close()
-            self.proc.terminate()
-            self.proc.wait(timeout=10)
-        except Exception:
-            self.proc.kill()
-
-
-def initialize(server: AppServer) -> None:
-    server.request(
-        "initialize",
-        {"clientInfo": {"name": "mgs04-acceptance", "title": "MyGameStudio 04 acceptance", "version": "0.1.0"}},
-    )
+# 场景身份:迁移前 clientInfo 常量,保持逐项兼容。
+CLIENT_INFO = {
+    "name": "mgs04-acceptance",
+    "title": "MyGameStudio 04 acceptance",
+    "version": "0.1.0",
+}
+# 场景自身的证据事件筛选:保留全部 item/completed 类型(无 keep_types 限制),
+# 另保留 turn 生命周期通知(旧实现写 turn/started|turn/completed|turn/failed)。
+EVENT_METHODS = ("turn/started", "turn/completed", "turn/failed")
 
 
 def cmd_skills(args: argparse.Namespace) -> int:
-    server = AppServer()
-    try:
-        initialize(server)
-        result = server.request("skills/list", {"cwd": args.cwd})
-        data = result.get("data", [])
-        groups = data if isinstance(data, list) else [data]
-        for group in groups:
-            for skill in group.get("skills", []):
-                print(json.dumps(
-                    {
-                        "name": skill.get("name"),
-                        "scope": skill.get("scope"),
-                        "pluginId": skill.get("pluginId"),
-                        "path": skill.get("path"),
-                    },
-                    ensure_ascii=False,
-                ))
-        return 0
-    finally:
-        server.close()
+    return run_skills(CLIENT_INFO, args.cwd)
 
 
 def cmd_turn(args: argparse.Namespace) -> int:
-    server = AppServer()
-    try:
-        initialize(server)
-        thread = server.request(
-            "thread/start",
-            {"cwd": args.cwd, "sandbox": args.sandbox, "ephemeral": False},
-        )
-        thread_id = (thread.get("thread") or {}).get("id")
-        if not thread_id:
-            raise RuntimeError(f"thread/start 未返回线程 id:{json.dumps(thread, ensure_ascii=False)[:200]}")
-        prompt = (f"${args.mention} " if args.mention else "") + (args.text or "")
-        server.request(
-            "turn/start",
-            {"threadId": thread_id, "input": [{"type": "text", "text": prompt}]},
-        )
-        events: list[dict[str, Any]] = []
-        messages = server.wait_turn_completed(args.timeout, events)
-        if args.events_out:
-            with open(args.events_out, "w", encoding="utf-8") as fh:
-                for msg in events:
-                    if msg.get("method") == "item/completed":
-                        fh.write(json.dumps(msg, ensure_ascii=False) + "\n")
-                    elif msg.get("method") in ("turn/started", "turn/completed",
-                                               "turn/failed"):
-                        fh.write(json.dumps(msg, ensure_ascii=False) + "\n")
-        report = "\n\n".join(messages)
-        if args.out:
-            with open(args.out, "w", encoding="utf-8") as fh:
-                fh.write(report)
-            print(f"wrote {len(report)} chars to {args.out}")
-        else:
-            print(report)
-        return 0
-    finally:
-        server.close()
+    prompt = (f"${args.mention} " if args.mention else "") + (args.text or "")
+    return run_turn(
+        CLIENT_INFO,
+        cwd=args.cwd,
+        sandbox=args.sandbox,
+        prompt=prompt,
+        timeout=args.timeout,
+        out=args.out,
+        events_out=args.events_out,
+        keep_types=None,
+        event_methods=EVENT_METHODS,
+    )
 
 
 def main() -> int:

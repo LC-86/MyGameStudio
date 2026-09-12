@@ -1,0 +1,453 @@
+{
+  "repository": "LC-86/MyGameStudio",
+  "source_commit": "a325eeb7bd7fbdbb6e90d3be8d14ba095c20648a",
+  "branch": "codex/architecture-optimization",
+  "parent": {
+    "number": 1,
+    "id": 5425700320,
+    "node_id": "I_kwDOUTZsbs8AAAABQ2Wd4A",
+    "url": "https://github.com/LC-86/MyGameStudio/issues/1",
+    "title": "MyGameStudio 全插件分阶段架构重构",
+    "body_sha256": "32165c7f04aa9ee1957303afdd58d4fc053340f526fd382d05650cd6450537f5"
+  },
+  "verification": {
+    "issues": 27,
+    "children": 26,
+    "criteria": 139,
+    "native_blocking_edges": 31,
+    "all_open": true,
+    "label": "ready-for-agent",
+    "source_commit": "a325eeb7bd7fbdbb6e90d3be8d14ba095c20648a"
+  },
+  "tickets": [
+    {
+      "local_id": 1,
+      "local_path": "issues/01-behavior-baseline.md",
+      "github_number": 2,
+      "github_id": 5425706235,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/2",
+      "title": "[架构重构 01] 固定可复跑的兼容与效率基线",
+      "blocked_by_local": [],
+      "blocked_by_github": [],
+      "local_ticket_sha256": "fae2a88729b8906bc95e3fa59d69311bc7216a042ba361b929e393cae0f727aa",
+      "github_body_sha256": "acf17d29a6ff066f53ed6f30a4fcd6a29a0239f9a9e0f0923400efdaa27c68af"
+    },
+    {
+      "local_id": 2,
+      "local_path": "issues/02-record-semantics.md",
+      "github_number": 3,
+      "github_id": 5425707122,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/3",
+      "title": "[架构重构 02] 让双后端共用正文与错误语义",
+      "blocked_by_local": [
+        1
+      ],
+      "blocked_by_github": [
+        2
+      ],
+      "local_ticket_sha256": "d391690c1a49073f9c34fb5c8ca6d99eda19d78c447b772d836e8262e6d40a84",
+      "github_body_sha256": "387026d08ab27ab47266c5bceec828d4589b3b441993dcbf6c8792fd3d9ff744"
+    },
+    {
+      "local_id": 3,
+      "local_path": "issues/03-record-source.md",
+      "github_number": 4,
+      "github_id": 5425708258,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/4",
+      "title": "[架构重构 03] 统一配置与本地来源并解除反向依赖",
+      "blocked_by_local": [
+        2
+      ],
+      "blocked_by_github": [
+        3
+      ],
+      "local_ticket_sha256": "417151e323a86234d4738eeec7b796c41e1d0821f33cd1a97de2e0c6f2e26a75",
+      "github_body_sha256": "3eecf998213b45c7880ecec8762cbe256d3b6540c69068114ab76c8e9ec1ffa0"
+    },
+    {
+      "local_id": 4,
+      "local_path": "issues/04-ready-single-read.md",
+      "github_number": 5,
+      "github_id": 5425709585,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/5",
+      "title": "[架构重构 04] 修正可开工查询的重复读取与混合结果",
+      "blocked_by_local": [
+        3
+      ],
+      "blocked_by_github": [
+        4
+      ],
+      "local_ticket_sha256": "fe8405cfaacccbb034ad883d38085d43be9111d04d5ac2a5fc7175decf671c0d",
+      "github_body_sha256": "1200cacc7d4d589a93465e368528ab7590a2a50bbe2d2e9559486267516fcc7c"
+    },
+    {
+      "local_id": 5,
+      "local_path": "issues/05-list-show-compatible.md",
+      "github_number": 6,
+      "github_id": 5425711134,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/6",
+      "title": "[架构重构 05] 让列表与单任务读取复用配置并保持兼容",
+      "blocked_by_local": [
+        3
+      ],
+      "blocked_by_github": [
+        4
+      ],
+      "local_ticket_sha256": "a6b1e277d98db530813cc076a6f13e3e0b580d98024744cac2638a7abc845c0a",
+      "github_body_sha256": "96d411fec179cde9c0a0ed2803768304224606b394bd0c768f6ddc6466bbf301"
+    },
+    {
+      "local_id": 6,
+      "local_path": "issues/06-baseline-verify.md",
+      "github_number": 7,
+      "github_id": 5425712544,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/7",
+      "title": "[架构重构 06] 让基线与核验复用读取且保留证据含义",
+      "blocked_by_local": [
+        4
+      ],
+      "blocked_by_github": [
+        5
+      ],
+      "local_ticket_sha256": "9b5899c44cf371f8136d70f850ccc602f942edf158b514c3c099476ae52b0d5f",
+      "github_body_sha256": "6a77b0b14559fb03ea7d9a5f458882bb485aa2fda74e9d94e9b9e5b6d7a8cea0"
+    },
+    {
+      "local_id": 7,
+      "local_path": "issues/07-read-stage-closeout.md",
+      "github_number": 8,
+      "github_id": 5425723260,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/8",
+      "title": "[架构重构 07] 完成任务读取的入口与交付兼容验收",
+      "blocked_by_local": [
+        5,
+        6
+      ],
+      "blocked_by_github": [
+        6,
+        7
+      ],
+      "local_ticket_sha256": "a1ae44ca1ff2a0c879a1fb443364aff02de7198607de863b960190ae03583e10",
+      "github_body_sha256": "292efc388e063e53285b544ef8dff5664a20ee7f62604f17b489517719416749"
+    },
+    {
+      "local_id": 8,
+      "local_path": "issues/08-mcp-evidence.md",
+      "github_number": 9,
+      "github_id": 5425724849,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/9",
+      "title": "[架构重构 08] 让工具拒绝判据直接服务运行与测试",
+      "blocked_by_local": [
+        7
+      ],
+      "blocked_by_github": [
+        8
+      ],
+      "local_ticket_sha256": "8d751629a1efa9ce4bd224f72129d046ee849d1a2061f20fc06ff0b4205a59c6",
+      "github_body_sha256": "5980dc555d297115f58c386384aa50fdfc660fcc93a56fb7f0e70c9590bcffee"
+    },
+    {
+      "local_id": 9,
+      "local_path": "issues/09-curl-evidence.md",
+      "github_number": 10,
+      "github_id": 5425726108,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/10",
+      "title": "[架构重构 09] 让直连失败判据通过同一事件入口验证",
+      "blocked_by_local": [
+        8
+      ],
+      "blocked_by_github": [
+        9
+      ],
+      "local_ticket_sha256": "a4dbbff2a79b4b481682fadc03c3ed9be2c73388a6b115f1079cada1c4d8b6c5",
+      "github_body_sha256": "8057c4d8508c3f07dde5337bdaeb3f2b5578be8fa61b350c56541c51be033dad"
+    },
+    {
+      "local_id": 10,
+      "local_path": "issues/10-package-tests.md",
+      "github_number": 11,
+      "github_id": 5425727332,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/11",
+      "title": "[架构重构 10] 按行为组织包与场景验收检查",
+      "blocked_by_local": [
+        9
+      ],
+      "blocked_by_github": [
+        10
+      ],
+      "local_ticket_sha256": "dc0e022e67ec883ec4524aefbad558c1627ce1758114a3ee661c51d88596aa0a",
+      "github_body_sha256": "33270c35beaa882d7de26105f519da87c3d781953c4174b08b5dfc176437ae16"
+    },
+    {
+      "local_id": 11,
+      "local_path": "issues/11-backend-tests.md",
+      "github_number": 12,
+      "github_id": 5425728544,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/12",
+      "title": "[架构重构 11] 按用户行为组织任务后端回归",
+      "blocked_by_local": [
+        7
+      ],
+      "blocked_by_github": [
+        8
+      ],
+      "local_ticket_sha256": "cf28467f7916bae8d9179066a5742db13a7507c14636ebfa1a6c23cbe46f7870",
+      "github_body_sha256": "cc2c522bbdbf87fd25e0e8dd3428cab13a73ed8e446813e6d82d7a5038f015a7"
+    },
+    {
+      "local_id": 12,
+      "local_path": "issues/12-runtime-tests.md",
+      "github_number": 13,
+      "github_id": 5425729839,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/13",
+      "title": "[架构重构 12] 按完整受控操作组织运行保障回归",
+      "blocked_by_local": [
+        7
+      ],
+      "blocked_by_github": [
+        8
+      ],
+      "local_ticket_sha256": "e9875e09ada1710677d1f2655d301090077b2f28e0e7ae38d0c9be27aaa6ff94",
+      "github_body_sha256": "8f3726c94b5361ab1db38b498208da0e309ad67fe90682492873610d53404bb5"
+    },
+    {
+      "local_id": 13,
+      "local_path": "issues/13-shared-client-expand.md",
+      "github_number": 14,
+      "github_id": 5425730857,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/14",
+      "title": "[架构重构 13] 建立共享客户端并接通标准事件场景",
+      "blocked_by_local": [
+        10
+      ],
+      "blocked_by_github": [
+        11
+      ],
+      "local_ticket_sha256": "3caa0148553a68d42a787343275e0cbd976a30141b999d53886a3ff3aaaa3e6f",
+      "github_body_sha256": "d9e92d8771df239a7bdea0fbd7e2b842b990148fcbf266fe308832848588bfa4"
+    },
+    {
+      "local_id": 14,
+      "local_path": "issues/14-shared-client-basic-migrate.md",
+      "github_number": 15,
+      "github_id": 5425732087,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/15",
+      "title": "[架构重构 14] 迁移最小与扩展事件的普通场景",
+      "blocked_by_local": [
+        13
+      ],
+      "blocked_by_github": [
+        14
+      ],
+      "local_ticket_sha256": "642262fc94a4f009633fae9ae882290cc43fffdee5f9110a66649d4a7b93b2ae",
+      "github_body_sha256": "3192cd8d7e49b46aaefbb365a3084ac1ae5c4b800b6982a3e7e33c5768720a05"
+    },
+    {
+      "local_id": 15,
+      "local_path": "issues/15-shared-client-absolute.md",
+      "github_number": 16,
+      "github_id": 5425736198,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/16",
+      "title": "[架构重构 15] 接通并迁移绝对阈值中断场景",
+      "blocked_by_local": [
+        13
+      ],
+      "blocked_by_github": [
+        14
+      ],
+      "local_ticket_sha256": "dd60c21790cdae63eceae1fb5030a8c80ae3541d008db340f6e22c1833f2c60b",
+      "github_body_sha256": "b91c5c5d7bef4229df3f6228f7dbf7142c1d4bc4b114a7b32653b24f613c1a61"
+    },
+    {
+      "local_id": 16,
+      "local_path": "issues/16-shared-client-relative.md",
+      "github_number": 17,
+      "github_id": 5425737320,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/17",
+      "title": "[架构重构 16] 迁移相对阈值与完整闭环场景",
+      "blocked_by_local": [
+        15
+      ],
+      "blocked_by_github": [
+        16
+      ],
+      "local_ticket_sha256": "d0bb25d0e4ceed95f215a862cb7127560b0a9dc0f86be41eacde63331ebe0c10",
+      "github_body_sha256": "bb5604f931973a135ffd4c90112f5c4881e1d5166a08289d47a3e71fc38f8dd4"
+    },
+    {
+      "local_id": 17,
+      "local_path": "issues/17-client-contract.md",
+      "github_number": 18,
+      "github_id": 5425738634,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/18",
+      "title": "[架构重构 17] 完成十八场景共享化并移除旧副本",
+      "blocked_by_local": [
+        14,
+        16
+      ],
+      "blocked_by_github": [
+        15,
+        17
+      ],
+      "local_ticket_sha256": "c4f411a2f88ead8b89320982a8d262dcc297d213cc81c3e348fd5c3b8febabb8",
+      "github_body_sha256": "dfe30e2f8465f4bbac0d6fd658899b640c9b46caa115892f07f37b54df16d63e"
+    },
+    {
+      "local_id": 18,
+      "local_path": "issues/18-result-publication.md",
+      "github_number": 19,
+      "github_id": 5425740046,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/19",
+      "title": "[架构重构 18] 让结果追加通过完整发布恢复职责执行",
+      "blocked_by_local": [
+        9,
+        11
+      ],
+      "blocked_by_github": [
+        10,
+        12
+      ],
+      "local_ticket_sha256": "afcb7abf820b4d51efcb7f3456bf24c20e98f931376bb266ee796c9fb53bda7c",
+      "github_body_sha256": "02b534bb0716e2d9d99664c2469fb08df15950054d0bd10a3b09a5240d258e2b"
+    },
+    {
+      "local_id": 19,
+      "local_path": "issues/19-recovery-ownership.md",
+      "github_number": 20,
+      "github_id": 5425741525,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/20",
+      "title": "[架构重构 19] 集中恢复登记的归属与兼容处理",
+      "blocked_by_local": [
+        18
+      ],
+      "blocked_by_github": [
+        19
+      ],
+      "local_ticket_sha256": "e04aaf488af35d1fdf33a1f03e80dd8c93f24377c66c907c71fec340033411f3",
+      "github_body_sha256": "1e2832f9d5c086d06c811a29807a0278c2ee9b31ae37ff22ab2cc86e18f003d9"
+    },
+    {
+      "local_id": 20,
+      "local_path": "issues/20-recovery-entrypoints.md",
+      "github_number": 21,
+      "github_id": 5425742818,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/21",
+      "title": "[架构重构 20] 统一在线执行与草稿重放的恢复事实",
+      "blocked_by_local": [
+        19
+      ],
+      "blocked_by_github": [
+        20
+      ],
+      "local_ticket_sha256": "1b9081a8e33f3fb1b6ba1570499d4643bb62da73ee4a4c9f8acc5819eec0679f",
+      "github_body_sha256": "20209368f07c92f3a26450ef053e344003285346bdc6ce20143ee4c40e8a3862"
+    },
+    {
+      "local_id": 21,
+      "local_path": "issues/21-controlled-local-write.md",
+      "github_number": 22,
+      "github_id": 5425744025,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/22",
+      "title": "[架构重构 21] 集中本地受控写入的完整事务",
+      "blocked_by_local": [
+        9,
+        12
+      ],
+      "blocked_by_github": [
+        10,
+        13
+      ],
+      "local_ticket_sha256": "0aede7905efa91c204223dcfafb6751b95f355d9fe3078f4d25e903433c62439",
+      "github_body_sha256": "bfaea461353b4e6dd8b1c77cbb5083a24e54b7222bbc85ecade7fbea1ed90020"
+    },
+    {
+      "local_id": 22,
+      "local_path": "issues/22-controlled-remote-write.md",
+      "github_number": 23,
+      "github_id": 5425752858,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/23",
+      "title": "[架构重构 22] 集中受控远端动作与结果审计",
+      "blocked_by_local": [
+        20,
+        21
+      ],
+      "blocked_by_github": [
+        21,
+        22
+      ],
+      "local_ticket_sha256": "ac3c569f6a8a64451a65ee0958f7a3ddd327b812bf466370ccf7f501e652b873",
+      "github_body_sha256": "d2219acd780fef99fcaa041115dcbc31be34b04eef2fd16262da87045b872521"
+    },
+    {
+      "local_id": 23,
+      "local_path": "issues/23-skill-common-expand.md",
+      "github_number": 24,
+      "github_id": 5425754238,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/24",
+      "title": "[架构重构 23] 建立共同约定并迁入制作实现入口",
+      "blocked_by_local": [
+        22
+      ],
+      "blocked_by_github": [
+        23
+      ],
+      "local_ticket_sha256": "ffebd84f909ba101bf3e0d86ce83480fe3bf3ea0a8f238172be1c898b3f75ff7",
+      "github_body_sha256": "199a9707f075cb593ed4a3621d37720d0f47fd643b94f66ce82a085477d53c90"
+    },
+    {
+      "local_id": 24,
+      "local_path": "issues/24-skill-remaining-migrate.md",
+      "github_number": 25,
+      "github_id": 5425755455,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/25",
+      "title": "[架构重构 24] 迁移管理、设计与独立验证入口",
+      "blocked_by_local": [
+        23
+      ],
+      "blocked_by_github": [
+        24
+      ],
+      "local_ticket_sha256": "e1aa7e622946bdeeaa37a46cd617051c9859d48bf241ec10d94eaa2bbae530f7",
+      "github_body_sha256": "a7a33a1b8dd0ad1cb112c1c3a0c7d5e1a7c9df79cfdd74e8b5a425bce9058b93"
+    },
+    {
+      "local_id": 25,
+      "local_path": "issues/25-skill-contract.md",
+      "github_number": 26,
+      "github_id": 5425756563,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/26",
+      "title": "[架构重构 25] 清除重复说明并核对十四入口的交付内容",
+      "blocked_by_local": [
+        24
+      ],
+      "blocked_by_github": [
+        25
+      ],
+      "local_ticket_sha256": "778dbc9a96379860cc07bb708abae8979d5fb33e1fcb8bc7aaca71ac69990914",
+      "github_body_sha256": "1f3065f5c4807c518ced1a64c550143b75dce74e1ab96f15675756b344a0b6a8"
+    },
+    {
+      "local_id": 26,
+      "local_path": "issues/26-integrated-verification.md",
+      "github_number": 27,
+      "github_id": 5425757911,
+      "url": "https://github.com/LC-86/MyGameStudio/issues/27",
+      "title": "[架构重构 26] 完成全插件集成与重构效益核验",
+      "blocked_by_local": [
+        17,
+        25
+      ],
+      "blocked_by_github": [
+        18,
+        26
+      ],
+      "local_ticket_sha256": "42e290a277c945b5c18b1ed1d6ae9a013fcb9f89609760418466b07622d5f9e4",
+      "github_body_sha256": "5b474fbc7b2b716c9e54e97c80c3ab2654f976424af1106ad3b5753a1ce18f40"
+    }
+  ],
+  "authority_note": "本地工单保存已确认内容；此文件记录其 GitHub 对应项与发布回读结果。执行前回读目标 Issue 实际状态。",
+  "api_reference": {
+    "sub_issues": "https://docs.github.com/en/rest/issues/sub-issues",
+    "dependencies": "https://docs.github.com/en/rest/issues/issue-dependencies"
+  }
+}
