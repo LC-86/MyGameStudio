@@ -232,8 +232,8 @@
     },
     {
       "path": "templates/work/result.md",
-      "sha256": "3cc79cff113152264598ac2386aa416147778f81d30ed64a27a10a6b923aecc5",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/work/result.md(逐字节副本)",
+      "sha256": "c5fe7148536bfc465132de8539b6545730781a067bcc6beecb1cba563d18e9d2",
+      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/work/result.md(适配版;任务票 23 复审修复在既有字段列表前增补《结果字段》小节标题,作为五入口引用的权威锚点,字段与结构未改)",
       "license": "本项目自有内容(MIT)"
     },
     {

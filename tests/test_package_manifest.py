@@ -223,17 +223,20 @@ def test_internal_references_resolve() -> None:
 def test_skill_authority_references() -> None:
     """任务票 23:共同执行规则/受控写入协议/结果字段各有唯一权威,五入口引用可达。
 
-    检查:三处权威文件各自带可定位的标注小节;五个制作实现入口同时引用三处
-    权威(引用不悬空);入口指向权威小节而非内联共同规程。未迁入的九个入口
-    在迁移期间继续按旧规则可用(票 24 处理)。
+    校验:(1)被引用的小节名在目标权威文件中有对应标题文本(《共同执行规则》
+    《写入与保障》→ common.md,《越界探针》→ gate-protocol.md,《结果字段》→
+    result.md),锚点失配即失败;(2)五个制作实现入口同时引用三处权威且解析到
+    实文件(引用不悬空);(3)入口文本指向上述权威小节而非内联共同规程;(4)未
+    迁入的九个入口在迁移期间继续按旧规则可用(票 24 处理)。
     """
 
     authority_sections = {
         PLUGIN_ROOT / "internal" / "contracts" / "common.md": (
-            "## 共同规则的权威位置", "## 共同执行规则(唯一权威)"),
+            "## 共同规则的权威位置", "## 共同执行规则", "## 写入与保障"),
         PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md": (
-            "## 越界探针(边界核对)", "## 执行凭据"),
-        PLUGIN_ROOT / "templates" / "work" / "result.md": (),
+            "## 越界探针", "## 执行凭据"),
+        PLUGIN_ROOT / "templates" / "work" / "result.md": (
+            "## 结果字段",),
     }
     for doc, sections in authority_sections.items():
         check(doc.is_file(), f"缺少共同权威文件 {doc.relative_to(PLUGIN_ROOT)}")
@@ -265,7 +268,9 @@ def test_skill_authority_references() -> None:
             check(resolved.is_file(),
                   f"{name} SKILL.md 引用的 {ref} 悬空(解析为 {resolved})")
         check("共同执行规则" in text, f"{name} SKILL.md 应指向《共同执行规则》")
+        check("写入与保障" in text, f"{name} SKILL.md 应指向《写入与保障》(外部动作边界)")
         check("受控写入协议" in text, f"{name} SKILL.md 应指向《受控写入协议》")
+        check("越界探针" in text, f"{name} SKILL.md 应指向《越界探针》")
         check("结果字段" in text, f"{name} SKILL.md 应指向《结果字段》")
 
     # 迁移期间新旧并存:未迁入的九个入口继续可用,不因本票精简而缺席。
@@ -286,7 +291,7 @@ def test_config_template_adaptation() -> None:
     GitHub Issues 写入授权的记录格式说明。其余模板必须仍与设计仓库逐字节一致。
     """
 
-    adapted = {"README.md", "project/CONFIG.md"}
+    adapted = {"README.md", "project/CONFIG.md", "work/result.md"}
     design_root = REPO_ROOT / ".scratch" / "mygamestudio-framework" / "templates"
     if not design_root.is_dir():
         check(False, "缺少设计仓库 templates/(只读对照)")
@@ -313,6 +318,12 @@ def test_config_template_adaptation() -> None:
                   "适配后的 CONFIG 模板应说明 issues-write 授权记录格式")
             check(plugin_file.read_bytes() != design_file.read_bytes(),
                   "CONFIG.md 模板应有 0.18.0 适配差异(供升级行为验证)")
+        elif rel == "work/result.md":
+            text = plugin_file.read_text()
+            check("## 结果字段" in text,
+                  "适配后的 result.md 应含《结果字段》小节(任务票 23 权威锚点)")
+            check(plugin_file.read_bytes() != design_file.read_bytes(),
+                  "result.md 应有任务票 23 权威锚点适配差异")
 
 
 TESTS = (

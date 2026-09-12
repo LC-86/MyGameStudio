@@ -36,5 +36,18 @@
 - 引用闭包：新增 `tests/test_package_manifest.py::test_skill_authority_references`——三处权威文件带可定位小节、五入口同时引用三处且解析到实文件（不悬空）、入口指向权威小节、未迁入九入口 SKILL.md 仍在（新旧并存）。已接入 `test_plugin_package` 聚合主题。
 - 来源与指纹保持：上游 `production.md`、`common.md` 适配版权限与许可未动；`provenance/fingerprints.json` 仅更新 `common.md`/`gate-protocol.md` 两处指纹与 source 说明，`manifest.md` 对应两行更新；`mattpocock-skills` 许可证与固定上游方法(6 个 internal/methods)未改。
 - 检查结果：五套聚合器全绿（`test_plugin_package`+四套 `test_{runtime_gate,runtime_boundaries,records_backend,github_backend}`，退出码 0）；`run_baseline.sh` 五套 PASS（all_existing_checks_green=True），跑后 `git checkout --` 恢复冻结产物；`dist/build-package.sh` 重建 90 文件包。
-- 净行数（物理行）：plugin 生产 +23（internal +17：common +8、协议 +9；skills +6：implement +1、code +1、art +1、audio +1、build +2）；tests +60 −1（新增闭包主题）；dist 交付包重生成（`plugin/` 内容变化）。权威文件职责单一，入口文件未膨胀（五入口 60-69 行）。
+- 净行数（物理行）：plugin 生产 +23（internal +17：common +8、协议 +9；skills +6：implement +1、code +1、art +1、audio +1、build +2）；tests +60 −1（新增闭包主题）；dist 交付包重生成（`plugin/` 内容变化）。权威文件职责单一，入口文件未膨胀（五入口 58-69 行）。
 - 未验证限制：本票为说明/引用重构，未执行真实模型轮；文案通过不等于实际模型行为已验收（spec「阶段 6 不能只靠文本缩短判断完成」）。真实模型行为、安装与发布留待票 26 及另行授权。未迁入的九个入口继续使用旧规则（票 24 处理）。
+
+### 复审修复记录（第一轮）
+
+独立复审发现五处问题，逐条处理如下；修复提交见本轮 commit。
+
+- **F1【残余复制，已改】**删除 game-implement:52、game-art:55、game-audio:56、game-build:55 逐字复制 common.md:39 的「未参与者可独立读取…不依赖对话记忆」句，改为引用[共同合同]《共同执行规则》的该标准（`game-code` 原有干净写法为参照）；删除五入口「边界核对」步骤内联的协议《越界探针》纪律句（原样记录…不尝试绕过），改为「记录与未要求时的处理均按该节纪律」。逐条对照权威处确有对应文本：common.md:39 保有完整「未参与者」句；gate-protocol.md:71（《越界探针》）保有「原样记录…不尝试绕过、不换路径、不换工具重试」「未要求核对时报告中写『本次未执行』」。
+- **F2【锚点名不副实，已改】**采用修法 a：在 `templates/work/result.md` 既有字段列表前加《结果字段》小节标题（字段内容与结构未改），使《结果字段》锚点名副其实，五入口引用不动。五入口把「不自动提交/推送/发布」外部动作边界由误指《共同执行规则》改为 common.md 实际承载该文的《写入与保障》（common.md:45）；并把包内依据行的「外部动作授权」一并标入《写入与保障》。
+- **F3【闭包测试假绿，已改】**`test_skill_authority_references` 增强：对《共同执行规则》《写入与保障》（common.md）、《越界探针》（gate-protocol.md）、《结果字段》（result.md）断言目标文件存在对应标题文本（子串到标题行），并新增五入口须指向《写入与保障》《越界探针》；docstring 改为如实描述四项校验。`/tmp` 副本三次故意错锚点（改坏《越界探针》标题、去掉《结果字段》标题、去掉《写入与保障》标题）均按预期变红，未污染仓库。
+- **F4【expected_sha256 位置，已做】**game-code:35、game-audio:38、game-build:37 的「结果记录」步骤把 `(经 mgs_write 携带 expected_sha256` 改为 `(经 mgs_write 受控写入`，消除「结果记录步骤携带更新哈希」的语义混淆（版本校验语义留待写入步骤/协议）；`expected_sha256` 仍在文件内出现（写入步骤与检查关键词满足），`skill_content` 关键词零回归。game-art、game-implement 的结果步骤本无该串，未动。
+- **F5【行数笔误，已改】**工单执行记录「五入口 60-69 行」更正为 58-69（game-code 实为 58 行）。
+
+验证：`test_plugin_package`（含 skill_content/provenance/新闭包检查）与四套 `test_{runtime_gate,runtime_boundaries,records_backend,github_backend}` 全绿（退出码 0）；`dist/build-package.sh` 重建 90 文件包；指纹同步 `templates/work/result.md`（fingerprints.json + manifest.md）。`dist/verify-reproducible.sh` 需在提交后对 `git archive HEAD` 复跑（其比对基准是已提交内容）。
+
