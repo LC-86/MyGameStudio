@@ -56,7 +56,7 @@
 | 5 | 新增/整理文件有明确职责与长度约束 | `plugin/records/*`、`plugin/runtime/*` 16 文件 | §6 文件清单；>600 行仅 `mgs_records.py` 897（CLI+查询编排，理由见 §6.3） | 已验证（离线） |
 | 6 | 净减量含共享实现与适配成本 | `mgs_record_model/source`、客户端共享核心 | §6 净行数（同范围口径，含新增成本） | 已验证（离线） |
 | 7 | 行为修正与结构调整分别登记 | `task-reading.md#行为修正登记`（R1） | R1 单列；`test_ready_second_call_reflects_changes_without_cross_call_cache` PASS | 已验证（离线） |
-| 8 | 每阶段保留可说明的回退方式 | 各票基点 SHA；`b8cda58`；阶段交付提交见 execution-log | §6.5 回退参照表 | 已验证（离线） |
+| 8 | 每阶段保留可说明的回退方式 | 各票基点 SHA；`b8cda58`；阶段交付提交见 execution-log | §6.6 回退参照表 | 已验证（离线） |
 | 9 | 一次可开工查询只获取一份任务集合 | `mgs_records.py::_read_workspace/_Reading` | `test_ready_reads_config_and_each_task_once`、`test_github_ready_fetches_task_set_once` PASS；探针 CONFIG 1 / task 1 / 集合 1 | 已验证（离线） |
 | 10 | 配置字段与执行条件来自同一份 CONFIG 原文 | `mgs_records.py::_read_workspace` 单次读文本 | `test_(github_)ready_*_config_once*` PASS；基线探针 CONFIG 1 | 已验证（离线） |
 | 11 | 下一次查询重新读取 | `_read_workspace`（无跨调用缓存） | `test_ready_second_call_reflects_changes_without_cross_call_cache` PASS | 已验证（离线） |
@@ -103,12 +103,12 @@
 | 52 | 路径身份/换链/资源占用检查保持 | `mgs_gate_registry.py` | `test_runtime_gate_occupancy`、`test_runtime_gate_concurrency`、`test_runtime_boundary_service` PASS | 已验证（离线） |
 | 53 | 本地写入审计/登记失败按原语义回滚 | `mgs_local_write.py` 事务 | `test_runtime_gate_review_fix`（R3 审计失败回滚）PASS | 已验证（离线） |
 | 54 | 远端已发生结果在审计失败时仍如实披露 | `mgs_remote_write.py` | `test_runtime_gate_review_fix`（R4 远端已发生结果）PASS | 已验证（离线） |
-| 55 | 完整受控操作封装在同一职责 | local_write/remote_write 完整事务 | §6.2 集中归属；调用方不拼装授权与提交步骤（`write`/`record` 单入口） | 已验证（离线） |
+| 55 | 完整受控操作封装在同一职责 | local_write/remote_write 完整事务 | §9 集中归属；调用方不拼装授权与提交步骤（`write`/`record` 单入口） | 已验证（离线） |
 | 56 | 入口说明保留选择条件/输入输出/专业差异 | 14 `SKILL.md` + 三处权威 | `test_skill_authority_references`、`test_package_skill_content_*` PASS（内容存在）；「足以指导正确工作」需真实模型 | 未完成（需授权，行为充分性） |
 | 57 | 共同规则/写入协议/结果字段各有唯一维护位置 | `common.md`/`gate-protocol.md`/`result.md` | `test_skill_authority_references`（锚点标题行匹配 + 悬空检查 + 内联复制清零）PASS | 已验证（离线） |
 | 58 | 十四入口继续仅显式触发 | `agents/openai.yaml: allow_implicit_invocation:false` | `test_explicit_skills` 覆盖 14/14 PASS；真实普通对话不触发需真实模型 | 未完成（需授权，真实触发行为） |
 | 59 | 来源/许可/固定上游方法/引用闭包完整 | `provenance/`、`internal/methods/`、`LICENSE` | `test_internal_material_provenance`、`test_internal_methods_closure`、`test_internal_references_resolve`、`test_provenance_version_consistency`、`test_dist_package_consistent` PASS | 已验证（离线） |
-| 60 | 每阶段报告实际检查/未验证项/匹配交付包 | 各票 Comments + `evidence/stage1-closeout.md` + 本报告 | 阶段收口报告与 execution-log 留档；交付包与当前生产一致（§6.4） | 已验证（离线，报告与匹配包）；真实安装对照未跑 |
+| 60 | 每阶段报告实际检查/未验证项/匹配交付包 | 各票 Comments + `evidence/stage1-closeout.md` + 本报告 | 阶段收口报告与 execution-log 留档；交付包与当前生产一致（§7.2） | 已验证（离线，报告与匹配包）；真实安装对照未跑 |
 
 **统计（60 条）**：已验证（离线）**56**；已验证（真实）**0**；未完成（需授权）**4**（#1、#56、#58 的真实行为，#60 的安装/发布决定）。
 > #1/#56/#58 的**结构性/静态部分已离线验证**（入口存在、显式触发旗标、权威引用可达）；表中类别按「整条故事的最终断言」取最强未满足项，避免以离线通过冒充真实行为。
@@ -140,7 +140,7 @@
 
 ---
 
-## 3. 六方向退出条件核对（design.md 阶段表）
+## 3. 阶段 0-6 退出条件核对（7 项，design.md 阶段表）
 
 | 方向 | 退出条件 | 当前证据（本轮实跑） | 达成 |
 | --- | --- | --- | --- |
@@ -192,7 +192,7 @@
 | acceptance | 20739（44 文件） | **17995（46 文件）** | **−2744** |
 | dist（脚本） | 146（2 文件） | 146（2 文件） | 0 |
 
-- 生产 +1060 构成：新增 11 个承担完整职责的 module（model/source/pending_index/publication/transport/issue/read/migration/gate_registry/local_write/remote_write，共 3417 行）与既有文件拆分，扣除被吸收的重复后为净增；符合 spec 32「拆文件不算净减量」口径，如实计新增共享与适配成本。
+- 生产 +1060 构成：新增 11 个承担完整职责的 module（model/source/pending_index/publication/transport/issue/read/migration/gate_registry/local_write/remote_write，共 3325 行）与既有文件拆分，扣除被吸收的重复后为净增；符合 spec 32「拆文件不算净减量」口径，如实计新增共享与适配成本。
 - 测试 +3992：三大测试文件按主题拆分（票 10/11/12）的入口壳与共享支撑开销 + 覆盖补齐（票 07/17 等），非判定逻辑删减后反增。
 - acceptance −2744：客户端共享化为主因（客户端 4605→1664，−2941），另含 run.sh 去 heredoc。
 
@@ -212,7 +212,7 @@
 
 | 项 | 票 01 基线 | 当前 | 说明 |
 | --- | --- | --- | --- |
-| 最大生产文件 | `mgs_github.py` 1848 | `mgs_records.py` **897** | 897 >600，**职责例外**（CLI 参数分发 + 查询编排同一公开接缝，见 §6.4） |
+| 最大生产文件 | `mgs_github.py` 1848 | `mgs_records.py` **897** | 897 >600，**职责例外**（CLI 参数分发 + 查询编排同一公开接缝，见 §9） |
 | 第二大生产文件 | `mgs_runtime.py` 1119 | `mgs_github.py` 549 | 549 ≤600 |
 | 最大生产函数 | `_cli` 223 / `append_result` 185 / `remote_record` 180 | `_cli` 223、`record` 164、`write` 157 | 均为参数分发或读-执行-审计-回滚**完整事务豁免**（spec 30） |
 | 最大测试文件 | 4024 | **432**（≤500 目标） | 全部 ≤500 |
