@@ -51,13 +51,14 @@
 
 ## runtime/ 与 .mcp.json(运行保障组件,本项目自有内容)
 
-- `runtime/mgs_runtime.py`:受控写入服务核心与门面——执行绑定(令牌哈希登记)、资源策略(角色 ∩ 任务 ∩ 用途 ∩ 实际授权)、路径规范化(含符号链接逃逸拒绝)、预期版本校验、单写入者占用、审计(允许与拒绝均记录);任务票 21 起本文件保留公开接缝与受控远端任务操作,本地事务与执行登记分别委派下面两个职责文件。
+- `runtime/mgs_runtime.py`:受控写入服务核心与门面——执行绑定(令牌哈希登记)、资源策略(角色 ∩ 任务 ∩ 用途 ∩ 实际授权)、路径规范化(含符号链接逃逸拒绝)、预期版本校验、单写入者占用、审计(允许与拒绝均记录);任务票 21 起本文件保留公开接缝,本地事务与执行登记分别委派下面两个职责文件;任务票 22 起受控远端任务操作的完整事务委派 `mgs_remote_write.py`,本文件只保留公开方法与既有私有状态接缝(故障注入点)。
 - `runtime/mgs_gate_registry.py`(任务票 21 新增):执行登记与策略状态——策略读取/结构校验/指纹、实例登记签发与撤销、写入占用读取/释放/回收、审计追加与唯一服务锁。撤销、签发、回收与写入因此共用同一把锁,「锁内重读」与「无审计则无生效写入」只有一处实现。
-- `runtime/mgs_local_write.py`(任务票 21 新增):本地受控写入的完整事务——策略解释(路径模式匹配、角色与用途交集、用途条目缺失的失效闭合)、路径身份(项目根逃逸拒绝、O_NOFOLLOW 逐组件锚定、临时文件落盘、权限位保留、失败回滚)以及锁前预检与锁内最终核对/落盘的完整顺序。既有调用方(mgs-gate 通道、运行保障回归、调度侧自检)不再自行拼接检查与落盘步骤。
+- `runtime/mgs_local_write.py`(任务票 21 新增):本地受控写入的完整事务——策略解释(路径模式匹配、角色与用途交集、用途条目缺失的失效闭合)、路径身份(项目根逃逸拒绝、O_NOFOLLOW 逐组件锚定、临时文件落盘、权限位保留、失败回滚)以及锁前预检与锁内最终核对/落盘的完整顺序。既有调用方(mgs-gate 通道、运行保障回归、调度侧自检)不再自行拼接检查与落盘步骤。任务票 22 起授权交集 `grant_denial` 亦为本地与远端共用(远端资源匹配的 `/**` 子树覆盖差异经 `matcher` 参数保留)。
+- `runtime/mgs_remote_write.py`(任务票 22 新增):受控远端任务操作的完整事务——远端通道配置与项目 CONFIG 核对、授权交集(经共享 `grant_denial` 与远端匹配器)、锁内最终身份/策略/CONFIG/授权复核、写入意图先于执行、远端动作执行与结果审计。既有调用方(mgs-gate 通道经 `GateService.remote_record`)不自行拼接检查、意图、执行与结果审计步骤;锁内重读、网络期间持锁语义、已发生远端结果的如实披露与「不确定/部分成功/未发布草稿」的区分保持不变。
 - `runtime/mcp_gate.py`:MCP stdio 服务器(`mgs-gate`),业务会话内的唯一写入通道;运行根经 `MGS_RUNTIME_ROOT` 环境变量注入,包内不含绝对路径。
 - `runtime/mgsrt_admin.py`:可信调度侧 CLI(策略初始化、实例签发与释放、状态查看),与工作实例通道分离;任务票 13 起实例签发的用途白名单在 production/prototype 之外增加 `review`(独立审查实例签发;实际收窄由策略 `review.restrict` 承担,CLI 只放行策略中已定义的用途名);任务票 15 起 `status` 回读当前写入占用,新增 `reclaim-locks --id`(回收旧实例遗留占用;实例仍活跃时拒绝并退出码 1——须先 release-instance 或等有效期过去)。
 - `runtime/mgs_runtime.py`(任务票 15 增量):`list_locks`/`reclaim_locks` 占用回收接缝——按《运行保障合同》「执行结束释放占用」的顺序约束设计:先撤销旧执行能力(release 或到期)再回收,活跃实例回收被拒且占用保持;同时覆盖 release 流程在登记与占用两次落盘之间中断留下的「已释放但仍持有占用」缺口;逐次写入重校验凭据,持续存活的进程在旧授权失效后不能凭旧令牌或旧占用记录继续写入。确定性接缝检查(含真实多进程并发竞争)见 `tests/test_runtime_gate.py`。
-- `runtime/mgs_runtime.py` + `runtime/mcp_gate.py`(任务票 17 增量):`remote_record`/`mgs_remote` 受控远端任务操作——会话不直连远端,操作经 mgs-gate 逐次校验「凭据 → 通道配置(channel)→ 项目 CONFIG 后端与仓库级 issues-write 授权(remote_scope)→ 任务授权 → 角色范围 → 用途」,资源粒度 `github://<host>/<owner>/<repo>/issues[/<身份>[/comments]]`;上游不可用失效闭合(remote_upstream),缓存目录可用时保存未发布草稿;凭据从运行根 remote.json 指定的环境变量读取(不落盘、不进项目记录),`mgsrt_admin.py set-remote-config` 登记通道配置(只收环境变量名)。
+- `runtime/mgs_remote_write.py`(任务票 17 建立 `remote_record`,任务票 22 集中事务)+ `runtime/mcp_gate.py`(任务票 17 增量):`remote_record`/`mgs_remote` 受控远端任务操作——会话不直连远端,操作经 mgs-gate 逐次校验「凭据 → 通道配置(channel)→ 项目 CONFIG 后端与仓库级 issues-write 授权(remote_scope)→ 任务授权 → 角色范围 → 用途」,资源粒度 `github://<host>/<owner>/<repo>/issues[/<身份>[/comments]]`;上游不可用失效闭合(remote_upstream),缓存目录可用时保存未发布草稿;凭据从运行根 remote.json 指定的环境变量读取(不落盘、不进项目记录),`mgsrt_admin.py set-remote-config` 登记通道配置(只收环境变量名)。
 - `.mcp.json`:`mcpServers` 声明(`cwd: "."` 解析为安装后的插件根;`env_vars` 透传运行根;工具预先批准——拦截由服务端策略承担)。
 - 设计对应:组件职责对照设计《运行保障合同》的接口表;不承诺设计中尚未验收的能力(远端服务、GUI 程序、路径竞态全面覆盖等属后续票)。
 

@@ -4,9 +4,11 @@
 保障回归、调度侧自检)不再自行拼接检查与落盘步骤:
 
 - 策略解释:项目内路径模式匹配、角色的资源模式、用途额外限制,以及
-  「角色 ∩ 任务 ∩ 用途」授权交集的单一实现。用途条目缺失与显式空条目是
-  两种不同语义:前者交集不可计算,失效闭合拒绝(R2);后者为「不额外限制」,
-  是既有合法配置。
+  「角色 ∩ 任务 ∩ 用途」授权交集的单一实现(任务票 22 起本地写入与受控
+  远端操作共用 ``grant_denial``;远端资源匹配差异经 ``matcher``/``noun``
+  参数保留——集合资源 github://…/issues 由 …/issues/** 类授权涵盖)。用途
+  条目缺失与显式空条目是两种不同语义:前者交集不可计算,失效闭合拒绝(R2);
+  后者为「不额外限制」,是既有合法配置。
 - 路径身份:写入目标规范化(字面层与解析后都禁止逃逸项目根)、从项目根用
   O_NOFOLLOW 逐组件锚定父目录、临时文件落盘与既有权限位保留、失败回滚。
 - 完整本地字节事务:锁外快速预检只用于尽早拒绝;最终身份、策略、授权、
@@ -28,6 +30,7 @@ import os
 import re
 import secrets
 import stat
+from collections.abc import Callable
 from pathlib import Path
 
 from mgs_gate_registry import sha256_bytes, valid_restrict
@@ -92,23 +95,30 @@ def role_patterns(policy: dict, role: str) -> list[str]:
     return policy.get("roles", {}).get(role, {}).get("resources", [])
 
 
-def grant_denial(record: dict, policy: dict,
-                 rel: str) -> tuple[str, str] | None:
-    """本地写入的任务 ∩ 角色 ∩ 用途授权核对(R2 收口后单一实现)。
+def grant_denial(record: dict, policy: dict, rel: str, *,
+                 matcher: Callable[[list[str], str], bool] = match_any,
+                 noun: str = "path") -> tuple[str, str] | None:
+    """受控写入的任务 ∩ 角色 ∩ 用途授权核对(R2 收口后单一实现)。
 
     返回 (rule_stage, reason) 或 None(放行)。用途条目缺失时交集
     不可计算:与「显式空条目 = 不额外限制」区分,一律失效闭合拒绝。
+
+    本函数是本地写入与受控远端操作共用的策略解释实现(任务票 22 收口两处
+    重复):``matcher`` 给出资源匹配器(本地为项目内相对路径 ``match_any``;
+    远端资源由 ``mgs_remote_write.remote_match`` 在直接命中外再接受
+    「本资源及其子树」的 ``/**`` 授权覆盖),``noun`` 只影响拒绝说明的措辞
+    (本地 "path" / 远端 "remote resource"),两条路径的规则与拒绝阶段一致。
     """
 
-    if not match_any(record.get("resources", []), rel):
+    if not matcher(record.get("resources", []), rel):
         return ("task_grant",
-                f"path not granted to task {record['task']}: {rel}")
-    if not match_any(role_patterns(policy, record["role"]), rel):
+                f"{noun} not granted to task {record['task']}: {rel}")
+    if not matcher(role_patterns(policy, record["role"]), rel):
         return ("role_scope", f"role {record['role']} may not write: {rel}")
     restrict = purpose_restrict(policy, record["purpose"])
     if restrict is PURPOSE_MISSING:
         return ("purpose", purpose_missing_reason(record["purpose"]))
-    if restrict is not None and not match_any(restrict, rel):
+    if restrict is not None and not matcher(restrict, rel):
         return ("purpose",
                 f"purpose {record['purpose']} restricted to {restrict}: {rel}")
     return None

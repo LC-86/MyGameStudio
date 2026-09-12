@@ -193,14 +193,19 @@ def test_dependency_direction_static() -> None:
 def test_runtime_entrypoint_uses_public_draft_seam() -> None:
     """票 20:受控运行入口不直接依赖后端私有草稿保存细节。
 
-    静态证明 ``plugin/runtime/mgs_runtime.py`` 不再出现私有草稿名
-    ``_save_draft``(含带 noqa 的调用),并实际经后端**公开**草稿接缝
-    ``record_unpublished_draft`` 兜底离线草稿;同时确认该公开接缝在后端
-    存在。行为侧由 test_runtime_gate_remote 的离线草稿回报检查固定。
+    静态证明受控运行入口不再出现私有草稿名 ``_save_draft``(含带 noqa 的
+    调用),并实际经后端**公开**草稿接缝 ``record_unpublished_draft`` 兜底
+    离线草稿;同时确认该公开接缝在后端存在。票 22 起受控远端事务(即运行
+    入口的兜底草稿调用处)集中在 ``runtime/mgs_remote_write.py``,故扫描
+    该文件与门面 ``runtime/mgs_runtime.py``——断言含义与票 20 相同,只是
+    覆盖职责迁移后的实际文件。行为侧由 test_runtime_gate_remote 的离线
+    草稿回报检查固定。
     """
 
-    runtime_path = REPO_ROOT / "plugin" / "runtime" / "mgs_runtime.py"
-    source = runtime_path.read_text(encoding="utf-8")
+    runtime_paths = [REPO_ROOT / "plugin" / "runtime" / "mgs_runtime.py",
+                     REPO_ROOT / "plugin" / "runtime" / "mgs_remote_write.py"]
+    source = "\n".join(path.read_text(encoding="utf-8")
+                       for path in runtime_paths)
     check("_save_draft" not in source,
           "mgs_runtime 不得直接调用后端私有草稿保存细节 _save_draft")
     check("record_unpublished_draft" in source,
