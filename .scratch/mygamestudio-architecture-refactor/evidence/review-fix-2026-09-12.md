@@ -94,8 +94,9 @@ Standards 轴：1 项硬违规 + 8 项判断性意见，处置如下：
   后转绿——顺序为：改源码 → 全量测试 → 重建包 → 提交 → 隔离重建核验。
 - 新交付包 SHA-256：`247fa99579e45c8565a9f7c55993282883a686c3f9f65a73dbeb1a17495cb5e3`
   （91 文件；manifest 与 SHA256SUMS 已随重建更新）。
-- `dist/verify-reproducible.sh`：以 `git archive HEAD` 隔离重建，须在修复
-  提交入库后执行方有意义；结果见提交后记录（执行日志同节）。
+- `dist/verify-reproducible.sh`（修复主提交 `7ff3d36` 入库后实跑）：**全部
+  PASS**——交付包、逐文件清单与 SHA256SUMS 均与 `git archive HEAD` 干净副本
+  隔离重建逐字节一致，tar 成员无 PAX 扩展头。
 - 未执行（与全任务一致的限制）：真实模型轮、真实远端写入、安装与发布。
 
 ## 代码身份
@@ -108,5 +109,6 @@ Standards 轴：1 项硬违规 + 8 项判断性意见，处置如下：
   `acceptance_client_support.py`（SpyServer）、`fake_appserver.py`
   （late-reply 模式）、`test_records_shared_body.py`（方向断言）、
   `test_plugin_package.py`（主题注册）。
-- 记录区变更：26 张工单、execution-log.md、final-integrated-report.md、
-  本文件。
+- 记录区变更：26 张工单、execution-log.md、final-integrated-report.md
+  （§6.3/§9 现势更新 + 第 11 节修复轮增补）、docs/agents/issue-tracker.md
+  （Progress 行约定增补）、本文件。

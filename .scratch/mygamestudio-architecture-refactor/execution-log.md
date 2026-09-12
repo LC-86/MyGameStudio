@@ -287,6 +287,10 @@
   同一物理文件经别名映射写法只实际读取一次，各映射路径分别定位输出；
   回归 `test_baseline_docmap_alias_reuses_one_read`（红：读 2 次、v2/v3 混合、
   幽灵受影响任务 → 绿）。
-- 结果：全量测试套件与 `dist/verify-reproducible.sh` 详见
-  evidence/review-fix-2026-09-12.md；交付包重建后 SHA 以该文件与
-  dist/SHA256SUMS.txt 为准。
+- /code-review 双轴复审（implement 收尾）：Spec 四项 resolved、无越界；
+  Standards 1 硬违规 + 8 判断性意见，H1/J1/J2/J6/J7 已修、J3/J4/J5/J8 留档，
+  处置表见 evidence/review-fix-2026-09-12.md。
+- 结果：全量 35 个测试文件实跑全绿；修复主提交 `7ff3d36`（54 文件）后
+  `dist/verify-reproducible.sh` 全部 PASS（干净副本隔离重建逐字节一致），
+  交付包 SHA-256 `247fa99579e45c8565a9f7c55993282883a686c3f9f65a73dbeb1a17495cb5e3`。
+  未执行（与全任务一致）：真实模型轮、真实远端写入、安装与发布。
