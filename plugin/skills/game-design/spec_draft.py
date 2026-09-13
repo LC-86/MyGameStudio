@@ -23,7 +23,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from decision_records import parse_record, sha256_text
+from decision_records import parse_record
+from gate_commit import commit_path
 from spec_render import (
     ADR_CONDITIONS, SECTION_SPECS, condition_label, render_spec, section_gaps,
 )
@@ -271,43 +272,40 @@ def _commit_file(plan: dict[str, Any], item: dict[str, Any], channel: Any,
 
     path = str(item.get("path") or "")
     expected = str(item.get("expected_sha256") or "absent")
-    current = readback(path)
-    if sha256_text(current) != expected:
+    outcome = commit_path(
+        channel, readback, path=path, content=item.get("content") or "",
+        expected_sha256=expected,
+        note=f"{plan.get('module')} 模块规格交接（{item.get('role')}）")
+    if outcome["ok"]:
+        return None
+    if outcome["outcome"] == "conflict":
         return {**_result(plan, "conflict", False), "written": written,
                 "rule_stage": "version", "path": path,
                 "report": (f"版本冲突：{path} 已被改动"
-                           f"（计划版本 {expected}，实际 {sha256_text(current)}）;"
+                           f"（计划版本 {expected}，"
+                           f"实际 {outcome.get('actual_sha256')}）;"
                            f"本轮交接未完成,剩余文件未写入,"
                            f"先重新读取实际内容再决定,不覆盖旧快照。")}
-    scope = channel.scope()
-    if scope.get("decision") != "allow":
+    if outcome["outcome"] == "denied":
+        if outcome.get("denied_at") == "scope":
+            return {**_result(plan, "denied", False), "written": written,
+                    "rule_stage": outcome.get("rule_stage"), "path": path,
+                    "report": (f"写入前核对当前授权未通过:凭据不可写 {path}"
+                               f"（rule_stage={outcome.get('rule_stage')}）;"
+                               f"本轮交接未完成,所有文件均未保存,"
+                               f"不换通道或路径重试。")}
         return {**_result(plan, "denied", False), "written": written,
-                "rule_stage": str(scope.get("rule_stage") or "identity"),
-                "path": path,
-                "report": (f"写入前核对当前授权未通过:凭据不可写 {path}"
-                           f"（rule_stage={scope.get('rule_stage')}）;"
-                           f"本轮交接未完成,所有文件均未保存,"
-                           f"不换通道或路径重试。")}
-    result = channel.write(path, item.get("content") or "",
-                           expected_sha256=expected,
-                           note=f"{plan.get('module')} 模块规格交接"
-                                f"（{item.get('role')}）")
-    if result.get("decision") != "allow":
-        return {**_result(plan, "denied", False), "written": written,
-                "rule_stage": result.get("rule_stage"), "path": path,
-                "channel_result": result,
+                "rule_stage": outcome.get("rule_stage"), "path": path,
+                "channel_result": outcome.get("channel_result"),
                 "report": (f"受控通道拒绝写入（rule_stage="
-                           f"{result.get('rule_stage')}）："
-                           f"{result.get('reason')};{path} 未保存,"
+                           f"{outcome.get('rule_stage')}）："
+                           f"{outcome.get('reason')};{path} 未保存,"
                            f"本轮交接未完成（已写入文件按实际保留）;"
                            f"不换通道重试。")}
-    back = readback(path)
-    if back is None or back != item.get("content"):
-        return {**_result(plan, "save_unconfirmed", False),
-                "written": written + [path], "path": path,
-                "report": (f"写入后回读核对失败（{path}）:"
-                           f"落盘未确认,不得称为已同步。")}
-    return None
+    return {**_result(plan, "save_unconfirmed", False),
+            "written": written + [path], "path": path,
+            "report": (f"写入后回读核对失败（{path}）:"
+                       f"落盘未确认,不得称为已同步。")}
 
 
 def _handoff_states(plan: dict[str, Any],

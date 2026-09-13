@@ -27,6 +27,7 @@ from decision_records import (
     head_counts, line_counts, mark_superseded, parse_record, round_section,
     sha256_text,
 )
+from gate_commit import commit_path
 
 
 def plan_save(record_text: str | None,
@@ -267,49 +268,19 @@ def _commit(plan: dict[str, Any], channel: Any,
 
     record_path = str(plan.get("record_path") or "")
     expected = str(plan.get("expected_sha256") or "")
-    current_text = readback(record_path)
-    current = sha256_text(current_text)
-    if current != expected:
-        return {**_result(plan, "conflict", False,
-                          mapping.conflict_report(plan, expected, current)),
-                "rule_stage": "version", "target_version": current,
-                "next_round_ready": False}
-
-    scope = channel.scope()
-    if scope.get("decision") != "allow":
-        return {**_result(
-            plan, "denied", False,
-            f"写入前核对当前授权未通过:凭据不可写 {record_path}"
-            f"（rule_stage={scope.get('rule_stage')}）;本轮内容未保存,"
-            f"不换通道或路径重试"),
-            "rule_stage": str(scope.get("rule_stage") or "identity"),
-            "precheck": {"authorization": "denied", "scope": scope},
-            "next_round_ready": False}
-
-    write_result = channel.write(
-        record_path, plan.get("content") or "",
-        expected_sha256=expected, note=plan.get("note"))
-    if write_result.get("decision") != "allow":
-        return {**_result(
-            plan, "denied", False,
-            f"受控通道拒绝写入（rule_stage={write_result.get('rule_stage')}）："
-            f"{write_result.get('reason')};本轮内容未保存,不换通道重试"),
-            "rule_stage": write_result.get("rule_stage"),
-            "channel_result": write_result, "next_round_ready": False}
-
+    outcome = commit_path(channel, readback, path=record_path,
+                          content=plan.get("content") or "",
+                          expected_sha256=expected, note=plan.get("note"))
+    if not outcome["ok"]:
+        return _commit_failure(plan, outcome)
     readback_text = readback(record_path)
-    if readback_text is None:
-        return {**_result(
-            plan, "save_unconfirmed", False,
-            f"写入后回读失败（{record_path}）:落盘未确认,不得称为已保存"),
-            "channel_result": write_result, "next_round_ready": False}
     verdict = verify_saved(plan, readback_text)
     if not verdict["ok"]:
         return {**_result(
             plan, "save_unconfirmed", False,
             "回读内容与本轮最小记录不符,不得称为已保存:"
             + "；".join(verdict["failures"])),
-            "channel_result": write_result, "verify": verdict,
+            "channel_result": outcome["channel_result"], "verify": verdict,
             "next_round_ready": False}
 
     if plan.get("op") == "sync":
@@ -319,16 +290,54 @@ def _commit(plan: dict[str, Any], channel: Any,
                       f"已同步核心基线：{'、'.join(done)}"
                       f"（{plan.get('sync_ref')}）;记录 {record_path} 已回读核对,"
                       f"其余待同步项原样保留。"),
-            "synced": done, "channel_result": write_result, "verify": verdict,
+            "synced": done, "channel_result": outcome["channel_result"],
+            "verify": verdict,
         }
     states = mapping.states(plan)
     to_sync = _unsynced_qids(readback_text, str(plan.get("module") or ""))
     return {
         **_result(plan, "saved", True, mapping.saved_report(plan, to_sync, states)),
         "states": states, "to_sync": to_sync,
-        "next_round_ready": True, "channel_result": write_result,
+        "next_round_ready": True, "channel_result": outcome["channel_result"],
         "verify": verdict,
     }
+
+
+def _commit_failure(plan: dict[str, Any],
+                    outcome: dict[str, Any]) -> dict[str, Any]:
+    """按通道真实依据报告未保存:版本冲突、授权被拒或回读失败。"""
+
+    record_path = str(plan.get("record_path") or "")
+    if outcome["outcome"] == "conflict":
+        return {**_result(plan, "conflict", False, mapping.conflict_report(
+                    plan, str(plan.get("expected_sha256") or ""),
+                    str(outcome.get("actual_sha256") or ""))),
+                "rule_stage": "version",
+                "target_version": outcome.get("actual_sha256"),
+                "next_round_ready": False}
+    if outcome["outcome"] == "denied":
+        if outcome.get("denied_at") == "scope":
+            return {**_result(
+                plan, "denied", False,
+                f"写入前核对当前授权未通过:凭据不可写 {record_path}"
+                f"（rule_stage={outcome.get('rule_stage')}）;本轮内容未保存,"
+                f"不换通道或路径重试"),
+                "rule_stage": outcome.get("rule_stage"),
+                "precheck": {"authorization": "denied",
+                             "scope": outcome.get("scope")},
+                "next_round_ready": False}
+        return {**_result(
+            plan, "denied", False,
+            f"受控通道拒绝写入（rule_stage={outcome.get('rule_stage')}）："
+            f"{outcome.get('reason')};本轮内容未保存,不换通道重试"),
+            "rule_stage": outcome.get("rule_stage"),
+            "channel_result": outcome.get("channel_result"),
+            "next_round_ready": False}
+    return {**_result(
+        plan, "save_unconfirmed", False,
+        f"写入后回读失败（{record_path}）:落盘未确认,不得称为已保存"),
+        "channel_result": outcome.get("channel_result"),
+        "next_round_ready": False}
 
 
 def verify_saved(plan: dict[str, Any], record_text: str | None) -> dict[str, Any]:

@@ -92,7 +92,7 @@ def section_gaps(meta: dict[str, Any],
         content = _section_content(key, item)
         note = str(item.get("not_applicable") or "").strip()
         if content:
-            if _too_vague(content):
+            if text_is_vague(content):
                 missing.append({"field": key, "detail":
                                 f"{title}以「合理、适中」类形容词代替关键行为,"
                                 f"不可检查;须给出可判定规则或边界"})
@@ -292,7 +292,7 @@ def _section_content(key: str, item: dict[str, Any]) -> str:
     return ""
 
 
-def _too_vague(text: str) -> bool:
+def text_is_vague(text: str) -> bool:
     """关键行为是否被「合理、适中」类形容词代替而不可检查。"""
 
     stripped = re.sub(r"[\s。；;,、]", "", text)

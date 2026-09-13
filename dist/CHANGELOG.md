@@ -11,7 +11,7 @@
 
 | 文件 | 内容 |
 | --- | --- |
-| `mygamestudio-0.18.1.tar.gz` | 安装包(plugin/ 全量,101 个文件) |
+| `mygamestudio-0.18.1.tar.gz` | 安装包(plugin/ 全量,108 个文件) |
 | `package-manifest.txt` | 包内逐文件 SHA-256 清单 |
 | `SHA256SUMS.txt` | 上两项的校验和 |
 | `CHANGELOG.md` | 本文件:版本历史与当前变更说明 |
