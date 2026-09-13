@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 import change_input as material_input
+import checks as checks_seam
 from change_impact import analyze, organize, stage_check
 from change_render import render_baseline, render_change_record, update_spec
 from change_report import (
@@ -132,8 +133,14 @@ def _plan_base(meta: dict[str, Any], material: dict[str, Any],
 
 
 def apply_change(plan: dict[str, Any], channel: Any,
-                 readback: Callable[[str], str | None]) -> dict[str, Any]:
-    """经同一受控通道逐个提交受影响文件;每个文件提交后回读核对。"""
+                 readback: Callable[[str], str | None],
+                 *, session: dict[str, Any] | None = None) -> dict[str, Any]:
+    """经同一受控通道逐个提交受影响文件;每个文件提交后回读核对。
+
+    传入 ``session``(票 08 ``checks.begin`` 建立的会话)时,按同一检查时机
+    约定:落盘前做一次收敛统一核对,每个文件单独计数写入并逐次经通道核对
+    授权与版本,落盘后回读核对新改引用;不传时保持原有行为不变。
+    """
 
     status = plan.get("status")
     if status in STATUSES_WITHOUT_WRITE:
@@ -141,12 +148,13 @@ def apply_change(plan: dict[str, Any], channel: Any,
                 "questions": plan.get("questions") or [],
                 "to_sync": plan.get("to_sync") or [],
                 "unresolved": plan.get("unresolved") or [],
-                "handoff_ready": False,
+                "handoff_ready": False, "session": session, "checks": None,
                 "report": blocked_report(plan)}
     if status != "planned":
         return {**_result(plan, "invalid", False), "written": [],
-                "handoff_ready": False,
+                "handoff_ready": False, "session": session, "checks": None,
                 "report": f"计划状态 {status} 不可执行"}
+    session = checks_seam.converge_plan(session, plan)
     written: list[str] = []
     for item in plan.get("files") or []:
         outcome = commit_path(
@@ -155,8 +163,18 @@ def apply_change(plan: dict[str, Any], channel: Any,
             expected_sha256=str(item.get("expected_sha256") or "absent"),
             note=f"{plan.get('module')} 设计变更（{item.get('role')}）")
         if not outcome["ok"]:
-            return _failure(plan, outcome, written)
+            return {**_failure(plan, outcome, written),
+                    "session": checks_seam.invalidate_outcome(
+                        session, outcome), "checks": None}
         written.append(str(item.get("path") or ""))
+        session = checks_seam.write_item(
+            session, item, label="变更写入")
+    record_path = str(plan.get("change_record_path") or "")
+    session, checks = checks_seam.after_write(
+        session, module=str(plan.get("module") or ""), path=record_path,
+        readback=readback,
+        known_paths=[str(item.get("path") or "")
+                     for item in plan.get("files") or []])
     states = _states_after(plan, written)
     return {**_result(plan, "saved", True), "written": written,
             "states": states, "questions": plan.get("questions") or [],
@@ -164,6 +182,7 @@ def apply_change(plan: dict[str, Any], channel: Any,
             "untouched": plan.get("untouched") or [],
             "handoff_ready": True,
             "channel_result": {"decision": "allow"},
+            "session": session, "checks": checks,
             "report": saved_report(plan, written, states),
             "next_round_ready": True}
 

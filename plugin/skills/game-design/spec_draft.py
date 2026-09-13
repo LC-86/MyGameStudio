@@ -25,6 +25,7 @@ from typing import Any, Callable
 
 from decision_records import parse_record
 from gate_commit import commit_path
+import checks as checks_seam
 from spec_render import (
     ADR_CONDITIONS, SECTION_SPECS, condition_label, render_spec, section_gaps,
 )
@@ -231,8 +232,14 @@ def _producer_handoff(meta: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def apply_handoff(plan: dict[str, Any], channel: Any,
-                  readback: Callable[[str], str | None]) -> dict[str, Any]:
-    """经同一受控通道逐个提交受影响文件;每个文件提交后回读核对。"""
+                  readback: Callable[[str], str | None],
+                  *, session: dict[str, Any] | None = None) -> dict[str, Any]:
+    """经同一受控通道逐个提交受影响文件;每个文件提交后回读核对。
+
+    传入 ``session``(票 08 ``checks.begin`` 建立的会话)时,按同一检查时机
+    约定:模块收敛的此次交接先做一次统一核对,每个文件单独计数写入并逐次
+    经通道核对授权与版本;不传时保持原有行为不变。
+    """
 
     status = plan.get("status")
     if status in {"incomplete", "read_only", "unauthorized"}:
@@ -241,18 +248,33 @@ def apply_handoff(plan: dict[str, Any], channel: Any,
                 "to_sync": plan.get("to_sync") or [],
                 "blocking_verification":
                     plan.get("blocking_verification") or [],
+                "session": session, "checks": None,
                 "report": plan.get("report") or blocked_report(plan)}
     if status != "planned":
         return {**_result(plan, "invalid", False), "written": [],
                 "report": f"计划状态 {status} 不可执行",
-                "next_round_ready": False}
+                "next_round_ready": False, "session": session, "checks": None}
+    session = checks_seam.converge_plan(
+        session, plan, module=str(plan.get("module") or ""),
+        impact={"must_sync": [{"id": qid} for qid in
+                              (plan.get("to_sync") or [])]})
     written: list[str] = []
     for item in plan.get("files") or []:
         outcome = _commit_file(plan, item, channel, readback, written)
         if outcome is not None:
+            session = _blocked(session, item)
+            outcome["session"], outcome["checks"] = session, None
             return outcome
         written.append(str(item.get("path") or ""))
+        session = checks_seam.write_item(
+            session, item, label="规格交接写入")
     state = _handoff_states(plan, readback)
+    record_path = str(plan.get("record_path") or "")
+    session, checks = checks_seam.after_write(
+        session, module=str(plan.get("module") or ""), path=record_path,
+        readback=readback,
+        known_paths=[str(item.get("path") or "")
+                     for item in plan.get("files") or []])
     return {**_result(plan, "saved", True), "written": written,
             "channel_result": {"decision": "allow"},
             "decision_states": plan.get("decision_states") or {},
@@ -261,8 +283,20 @@ def apply_handoff(plan: dict[str, Any], channel: Any,
             "blocking_verification": plan.get("blocking_verification") or [],
             "producer_handoff": plan.get("producer_handoff"),
             "untouched": plan.get("untouched") or [],
-            "next_round_ready": True,
+            "next_round_ready": True, "session": session, "checks": checks,
             "report": saved_report(plan, written, state)}
+
+
+def _blocked(session: dict[str, Any] | None,
+             item: dict[str, Any]) -> dict[str, Any] | None:
+    """交接受阻滞时作废相关旧结果(票 08):无会话时保持原有行为不变。"""
+
+    if session is None:
+        return None
+    invalidated = checks_seam.invalidate(
+        session, "write_failed", paths=[str(item.get("path") or "")],
+        detail="规格交接受阻")
+    return invalidated["session"]
 
 
 def _commit_file(plan: dict[str, Any], item: dict[str, Any], channel: Any,

@@ -53,10 +53,15 @@ def plan_removal(existing: dict[str, str | None], meta: dict[str, Any],
 
 
 def apply_removal(plan: dict[str, Any], channel: Any,
-                  readback: Callable[[str], str | None]) -> dict[str, Any]:
-    """经同一受控通道提交受影响文件;变更记录最后写并回读核对。"""
+                  readback: Callable[[str], str | None],
+                  *, session: dict[str, Any] | None = None) -> dict[str, Any]:
+    """经同一受控通道提交受影响文件;变更记录最后写并回读核对。
 
-    result = apply_change(plan, channel, readback)
+    传 ``session`` 时沿用票 08 的同一检查时机约定(落盘前收敛统一核对、
+    逐文件计数写入、落盘后回读),不传时保持原有行为不变。
+    """
+
+    result = apply_change(plan, channel, readback, session=session)
     result["op"] = "removal"
     if plan.get("removal"):
         result["removal"] = plan["removal"]

@@ -2,9 +2,9 @@
 """Game-Design 决定即时保存与恢复接缝(统一设计问答框架票 03)。
 
 公开 interface:
-  plan_save(record_text, round_result, meta) -> dict
+  plan_save(record_text, round_result, meta, *, session=None) -> dict
   plan_sync(record_text, meta) -> dict
-  apply_save(plan, channel, readback) -> dict
+  apply_save(plan, channel, readback, *, session=None) -> dict
   verify_saved(plan, readback_text) -> dict
   restore_from_records(texts, module) -> dict
 
@@ -15,6 +15,12 @@
 已定、未决与待同步内容,供下一轮沿用而不重问。本接缝不自行落盘、不缓存
 权限或版本校验,也不以助手建议冒充用户决定。记录文本格式见
 ``decision_records.py``;命令行入口见 ``decisions_cli.py``。
+
+传入 ``session``(票 08 ``checks.begin`` 建立的会话)时,保存前经
+``checks.before_save`` 核对实际答案、采纳范围、来源、矛盾、当前可写范围与
+目标版本,保存后经 ``checks.after_save`` 回读核对本轮完整、无重复、历史、
+同步状态与新改引用;输入未变或未改核心基线时复用既有读取结果并跳过无关的
+全局检查。不传 ``session`` 时保持原行为不变。
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 import decision_mapping as mapping
+import checks as checks_seam
 from decision_records import (
     SYNC_PENDING, apply_sync, compose, decision_head, empty_parse,
     head_counts, line_counts, mark_superseded, parse_record, round_section,
@@ -32,7 +39,8 @@ from gate_commit import commit_path
 
 def plan_save(record_text: str | None,
               round_result: dict[str, Any],
-              meta: dict[str, Any]) -> dict[str, Any]:
+              meta: dict[str, Any],
+              *, session: dict[str, Any] | None = None) -> dict[str, Any]:
     """整理本轮最小决定记录;不写入,只给出内容与写入前核对。"""
 
     record_path = str(meta.get("record_path") or "")
@@ -45,6 +53,18 @@ def plan_save(record_text: str | None,
     existing = parse_record(record_text, module) if record_text else empty_parse()
     base = _save_base(record_text, record_path, module, round_no, date, reply,
                       meta, authorization, existing)
+    checks = _before_checks(session, record_text, reply, round_result, meta,
+                            existing)
+    base = {**base, **checks}
+    if session is not None:
+        session = checks.get("session") or session
+    if not base["checks_ok"]:
+        return {**base, "status": "invalid", "saved": False,
+                "next_round_ready": False, "content": None,
+                "reason": "保存前核对未通过:" + "；".join(
+                    base["checks"]["gaps"]),
+                "report": "保存前核对未通过,未写入:" + "；".join(
+                    base["checks"]["gaps"])}
     if not record_path:
         return {**base, "status": "unauthorized", "saved": False,
                 "next_round_ready": False,
@@ -73,7 +93,7 @@ def plan_save(record_text: str | None,
     return {**base, "status": "planned", "saved": False, "content": content,
             "entries": entries, "duplicates": duplicates,
             "protected": protected, "superseded": superseded,
-            "pending": pending,
+            "pending": pending, "session": session,
             "adopted": mapping.raw_adopted(round_result),
             "note": f"保存第 {round_no} 轮决定记录（{module}）"}
 
@@ -104,6 +124,33 @@ def _save_base(record_text: str | None, record_path: str, module: str,
             },
         },
     }
+
+
+def _before_checks(session: dict[str, Any] | None, record_text: str | None,
+                   reply: str, round_result: dict[str, Any],
+                   meta: dict[str, Any],
+                   existing: dict[str, Any]) -> dict[str, Any]:
+    """保存前时机核对(票 08):无会话时保持原有行为不变。"""
+
+    if session is None:
+        return {"checks_ok": True, "checks": None}
+    scope = list(dict(meta.get("authorization") or {}).get("scope") or [])
+    history = {qid: item for qid, item in existing["decisions"].items()
+               if not item.get("superseded")}
+    catalog = mapping.catalog_index(round_result)
+    adopted = {
+        str(qid): {**(item or {}),
+                   "value": mapping.render_value((item or {}).get("value"),
+                                                 catalog.get(str(qid), {}))}
+        for qid, item in (round_result.get("adopted") or {}).items()}
+    checks = checks_seam.before_save(
+        session, reply=reply,
+        shown=round_result.get("shown_ids")
+        or [str(item) for item in (meta.get("shown") or [])],
+        adopted=adopted, history=history, scope=scope,
+        path=str(meta.get("record_path") or ""), target=record_text)
+    return {"checks_ok": checks["ok"], "checks": checks,
+            "session": checks["session"]}
 
 
 def _save_entries(round_result: dict[str, Any],
@@ -221,18 +268,30 @@ def plan_sync(record_text: str | None, meta: dict[str, Any]) -> dict[str, Any]:
 
 def apply_save(plan: dict[str, Any],
                channel: Any,
-               readback: Callable[[str], str | None]) -> dict[str, Any]:
-    """经受控通道提交计划内容并回读核对;只按实际结果报告状态。"""
+               readback: Callable[[str], str | None],
+               *, session: dict[str, Any] | None = None) -> dict[str, Any]:
+    """经受控通道提交计划内容并回读核对;只按实际结果报告状态。
+
+    传入 ``session`` 时,保存后经 ``checks.after_save`` 回读核对本轮完整性、
+    无重复、历史、同步状态与新改引用;冲突、被拒与写入失败时作废相关旧结果
+    (``checks.invalidate``),只重查受影响部分,不重跑无关模块。
+    """
 
     status = plan.get("status")
     if status in {"no_new", "read_only", "unauthorized", "invalid",
                   "conflict", "denied", "save_unconfirmed"}:
-        return _short_circuit(plan, status)
+        result = _short_circuit(plan, status)
+        result["checks"] = plan.get("checks")
+        result["session"] = checks_seam.invalidate_blocked(
+            session, plan, path=str(plan.get("record_path") or ""),
+            status=status)
+        return result
     if status != "planned":
         return {**_result(plan, "invalid", False,
                           f"计划状态 {status} 不可执行"),
-                "next_round_ready": False}
-    return _commit(plan, channel, readback)
+                "next_round_ready": False, "checks": plan.get("checks"),
+                "session": session}
+    return _commit(plan, channel, readback, session=session)
 
 
 def _short_circuit(plan: dict[str, Any], status: str) -> dict[str, Any]:
@@ -263,7 +322,8 @@ def _short_circuit(plan: dict[str, Any], status: str) -> dict[str, Any]:
 
 
 def _commit(plan: dict[str, Any], channel: Any,
-            readback: Callable[[str], str | None]) -> dict[str, Any]:
+            readback: Callable[[str], str | None],
+            *, session: dict[str, Any] | None = None) -> dict[str, Any]:
     """提交计划内容:核对实际版本与当前授权,写入后回读核对。"""
 
     record_path = str(plan.get("record_path") or "")
@@ -272,17 +332,44 @@ def _commit(plan: dict[str, Any], channel: Any,
                           content=plan.get("content") or "",
                           expected_sha256=expected, note=plan.get("note"))
     if not outcome["ok"]:
-        return _commit_failure(plan, outcome)
+        result = _commit_failure(plan, outcome)
+        result["checks"] = plan.get("checks")
+        result["session"] = checks_seam.invalidate_outcome(
+            session, outcome, detail=str(result.get("report") or ""))
+        if result["session"] is not None and outcome["outcome"] == "denied" \
+                and outcome.get("denied_at") != "scope":
+            result["session"]["authorization"] = {
+                **dict(result["session"].get("authorization") or {}),
+                "write": False}
+        return result
     readback_text = readback(record_path)
     verdict = verify_saved(plan, readback_text)
     if not verdict["ok"]:
-        return {**_result(
+        result = {**_result(
             plan, "save_unconfirmed", False,
             "回读内容与本轮最小记录不符,不得称为已保存:"
             + "；".join(verdict["failures"])),
             "channel_result": outcome["channel_result"], "verify": verdict,
-            "next_round_ready": False}
+            "next_round_ready": False, "checks": plan.get("checks"),
+            "session": session}
+        result["session"] = checks_seam.invalidate_blocked(
+            session, result, path=record_path, status="save_unconfirmed",
+            detail="回读未确认")
+        return result
 
+    if session is not None:
+        session = checks_seam.record_write(
+            session, [record_path],
+            call=str(plan.get("note") or "保存决定记录"),
+            contents={record_path: plan.get("content") or ""})["session"]
+    session_out, checks = checks_seam.after_write(
+        session, module=str(plan.get("module") or ""), path=record_path,
+        readback=lambda _path: readback_text,
+        entries=plan.get("entries") or [],
+        pending=plan.get("pending") or [],
+        content=plan.get("content"),
+        known_paths=[record_path],
+        history=plan.get("superseded") or [])
     if plan.get("op") == "sync":
         done = plan.get("synced") or []
         return {
@@ -291,7 +378,7 @@ def _commit(plan: dict[str, Any], channel: Any,
                       f"（{plan.get('sync_ref')}）;记录 {record_path} 已回读核对,"
                       f"其余待同步项原样保留。"),
             "synced": done, "channel_result": outcome["channel_result"],
-            "verify": verdict,
+            "verify": verdict, "checks": checks, "session": session_out,
         }
     states = mapping.states(plan)
     to_sync = _unsynced_qids(readback_text, str(plan.get("module") or ""))
@@ -299,7 +386,7 @@ def _commit(plan: dict[str, Any], channel: Any,
         **_result(plan, "saved", True, mapping.saved_report(plan, to_sync, states)),
         "states": states, "to_sync": to_sync,
         "next_round_ready": True, "channel_result": outcome["channel_result"],
-        "verify": verdict,
+        "verify": verdict, "checks": checks, "session": session_out,
     }
 
 

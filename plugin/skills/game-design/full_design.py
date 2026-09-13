@@ -27,6 +27,7 @@ from typing import Any, Callable
 
 from coverage_map import build_map
 from gate_commit import commit_path
+import checks as checks_seam
 from decision_records import sha256_text
 from journey import walkthrough
 from spec_render import text_is_vague
@@ -259,8 +260,14 @@ def _files(existing: dict[str, str | None], meta: dict[str, Any],
 
 
 def apply_delivery(plan: dict[str, Any], channel: Any,
-                   readback: Callable[[str], str | None]) -> dict[str, Any]:
-    """经同一受控通道逐个提交交付文件;每个文件提交后回读核对。"""
+                   readback: Callable[[str], str | None],
+                   *, session: dict[str, Any] | None = None) -> dict[str, Any]:
+    """经同一受控通道逐个提交交付文件;每个文件提交后回读核对。
+
+    传入 ``session``(票 08 ``checks.begin`` 建立的会话)时,按同一检查时机
+    约定:落盘前做一次收敛统一核对,每个文件单独计数写入并逐次经通道核对
+    授权与版本,落盘后回读核对新改引用;不传时保持原有行为不变。
+    """
 
     status = plan.get("status")
     if status in {"incomplete", "read_only", "unauthorized"}:
@@ -269,10 +276,14 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
                 "outputs": plan.get("outputs") or [],
                 "contradictions": plan.get("contradictions") or [],
                 "missing": plan.get("missing") or [],
-                "report": report}
+                "report": report,
+                "session": session, "checks": None}
     if status != "planned":
         return {**_result(plan, "invalid", False), "written": [],
-                "report": f"计划状态 {status} 不可执行", "handoff_ready": False}
+                "report": f"计划状态 {status} 不可执行", "handoff_ready": False,
+                "session": session, "checks": None}
+    session = checks_seam.converge_plan(session, plan,
+                                        impact=plan.get("impact"))
     written: list[str] = []
     for item in plan.get("files") or []:
         outcome = commit_path(
@@ -286,8 +297,19 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
             return {**_result(plan, failed_status, False),
                     "written": written, "path": outcome.get("path"),
                     "rule_stage": outcome.get("rule_stage"),
-                    "report": failure_report(plan, outcome, written)}
+                    "report": failure_report(plan, outcome, written),
+                    "session": checks_seam.invalidate_outcome(
+                        session, outcome),
+                    "checks": None}
         written.append(str(item.get("path") or ""))
+        session = checks_seam.write_item(
+            session, item, label="交付写入")
+    entry_path = str(plan.get("entry") or "")
+    session, checks = checks_seam.after_write(
+        session, module=str(session.get("module") or "") if session else "",
+        path=entry_path, readback=readback,
+        known_paths=[str(item.get("path") or "")
+                     for item in plan.get("files") or []])
     states = {"adopted": True, "saved": True,
               "synced": not (plan.get("to_sync") or []),
               "implemented": False, "verified": False}
@@ -297,6 +319,7 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
             "handoff_ready": True,
             "states": states, "to_sync": plan.get("to_sync") or [],
             "untouched": plan.get("untouched") or [],
+            "session": session, "checks": checks,
             "report": saved_report(plan, written, states)}
 
 
