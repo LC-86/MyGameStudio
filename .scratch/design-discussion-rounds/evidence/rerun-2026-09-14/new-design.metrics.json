@@ -1,0 +1,100 @@
+{
+  "status": "incomplete",
+  "exceptions": [
+    {
+      "kind": "external_fault",
+      "detail": "宿主工具未能启动(如 code-mode-host 缺失),读取/写入未执行"
+    },
+    {
+      "kind": "incomparable",
+      "detail": "未完成最终规格同步,成果范围与约定不一致"
+    }
+  ],
+  "rounds": [
+    {
+      "user_answer_at_ms": 1789333045942,
+      "result_presented_at_ms": 1789333114942,
+      "turn_completed_at_ms": 1789333114988,
+      "decision_save_ms": "not_applicable",
+      "continue_wait_ms": 69000,
+      "has_adopted_content": false,
+      "retried": false,
+      "adopted_paths": [],
+      "sync_paths": [],
+      "reread_paths": [],
+      "index": 1
+    },
+    {
+      "user_answer_at_ms": 1789333120424,
+      "result_presented_at_ms": 1789333147386,
+      "turn_completed_at_ms": 1789333147444,
+      "decision_save_ms": "not_applicable",
+      "continue_wait_ms": 26962,
+      "has_adopted_content": false,
+      "retried": false,
+      "adopted_paths": [],
+      "sync_paths": [],
+      "reread_paths": [],
+      "index": 2
+    },
+    {
+      "user_answer_at_ms": 1789333153650,
+      "result_presented_at_ms": 1789333180906,
+      "turn_completed_at_ms": 1789333180940,
+      "decision_save_ms": "not_applicable",
+      "continue_wait_ms": 27256,
+      "has_adopted_content": false,
+      "retried": false,
+      "adopted_paths": [],
+      "sync_paths": [],
+      "reread_paths": [],
+      "index": 3
+    },
+    {
+      "user_answer_at_ms": 1789333188020,
+      "result_presented_at_ms": 1789333223593,
+      "turn_completed_at_ms": 1789333223633,
+      "decision_save_ms": "not_applicable",
+      "continue_wait_ms": 35573,
+      "has_adopted_content": false,
+      "retried": false,
+      "adopted_paths": [],
+      "sync_paths": [],
+      "reread_paths": [],
+      "index": 4
+    }
+  ],
+  "module": {
+    "processing_ms": "incomplete",
+    "cumulative_decision_save_ms": "not_applicable",
+    "request_at_ms": 1789333045942,
+    "finished_at_ms": 1789333223633,
+    "user_wait_ms_deducted": 18722
+  },
+  "steps": {
+    "discussion_rounds": 4,
+    "reads": {
+      "count": 0,
+      "bytes": 0,
+      "necessary": 0,
+      "repeat": 0
+    },
+    "writes": {
+      "count": 0,
+      "files": 0
+    },
+    "checks": {
+      "count": 0,
+      "repeat": 0,
+      "necessary": 0
+    },
+    "tool_calls": {
+      "count": 0
+    },
+    "tokens": "unknown"
+  },
+  "comparability": {
+    "comparable": false,
+    "reason": "未完成最终规格同步,成果范围与约定不一致"
+  }
+}
