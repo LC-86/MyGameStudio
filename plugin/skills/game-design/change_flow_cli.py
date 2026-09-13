@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Game-Design 已有设计变更的命令行入口(统一设计问答框架票 06)。
 
+``payload_paths`` / ``read_all`` 也供删减入口(票 07)复用,避免两处各自
+从 payload 推断待读文件集合。
+
 与 mgs-gate 的 ``mgs_write`` 提交同一条受控通道(``GateService``):逐次核对
 当前授权与目标版本,写入后回读。用法:
 
@@ -26,7 +29,7 @@ from change_flow import apply_change, plan_change, verify_change
 from decisions import GateChannel, load_gate_service
 
 
-def _paths(payload: dict[str, Any]) -> list[str]:
+def payload_paths(payload: dict[str, Any]) -> list[str]:
     meta = dict(payload.get("meta") or {})
     material = dict(payload.get("material") or {})
     paths: set[str] = set()
@@ -44,7 +47,7 @@ def _paths(payload: dict[str, Any]) -> list[str]:
     return sorted(paths)
 
 
-def _read_all(project_root: Path, paths: list[str]) -> dict[str, str | None]:
+def read_all(project_root: Path, paths: list[str]) -> dict[str, str | None]:
     texts: dict[str, str | None] = {}
     for rel in paths:
         target = project_root / rel
@@ -66,7 +69,7 @@ def main(argv: list[str]) -> int:
     payload = json.loads(sys.stdin.read() or "{}")
     meta = dict(payload.get("meta") or {})
     material = dict(payload.get("material") or {})
-    existing = _read_all(project_root, _paths(payload))
+    existing = read_all(project_root, payload_paths(payload))
 
     def readback(path: str):
         target = project_root / path

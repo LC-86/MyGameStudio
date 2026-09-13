@@ -196,8 +196,16 @@ def _impact_lines(record: dict[str, Any]) -> list[str]:
 
 
 def _disposition_lines(record: dict[str, Any]) -> list[str]:
-    """被删减功能原作用的处理(取消/转移/简化保留);第 07 票深化。"""
+    """被删减功能原作用的处理:取消/转移/简化保留;未标注的项不列出。
 
+    删减入口(第 07 票)提供 ``record['removal']`` 时,本段一并渲染八个方面的
+    原作用盘点、残留依赖、数据与权益处理和取消范围;否则只渲染透传的
+    ``dispositions``,保持既有变更流程的输出不变。
+    """
+
+    removal = record.get("removal") or {}
+    if removal:
+        return _removal_lines(removal)
     items = record.get("dispositions") or []
     if not items:
         return []
@@ -205,6 +213,51 @@ def _disposition_lines(record: dict[str, Any]) -> list[str]:
     for item in items:
         detail = f"（{item['detail']}）" if item.get("detail") else ""
         lines.append(f"- {item['title']}：{item['label']}{detail}")
+    return lines
+
+
+def _removal_lines(removal: dict[str, Any]) -> list[str]:
+    """作用处理、原作用盘点、残留依赖与数据权益的唯一渲染。"""
+
+    lines = ["", "## 被删减功能的作用处理", ""]
+    for role in removal["roles"]:
+        label = role["label"] or "待明确"
+        lines.append(f"- {role['title']}：{label}（处理：{role['detail_text']}）；"
+                     f"取消范围 {role['scope_label']}")
+    lines.extend(["", "### 原作用盘点与关联", ""])
+    for lane in removal["lanes"]:
+        lines.append(f"- {lane['lane_label']}：{lane['conclusion']}")
+    residual_map = removal["residual"]
+    lines.extend(["", "### 残留依赖检查", ""])
+    lines.append(
+        "- 一起取消："
+        + ("、".join(residual_map["cancel"]) or "无")
+        + "；需要重新配置："
+        + ("、".join(residual_map["reconfigure"]) or "无")
+        + "；待明确："
+        + ("、".join(residual_map["pending"]) or "无")
+        + "；不受影响："
+        + ("、".join(item["id"] for item in residual_map["unaffected"]) or "无")
+        + "。")
+    for item_id, entry in residual_map["trace"].items():
+        lines.append(f"- {item_id}：{entry['relation']}"
+                     f"（{' → '.join(entry['path'])}）")
+    lines.extend(_data_lines(removal["data"]))
+    lines.extend(["", "- 完成边界：设计完成不代表实现或效果完成,"
+                       "实际迁移、代码删除与效果证据另行判断。"])
+    return lines
+
+
+def _data_lines(data: dict[str, Any]) -> list[str]:
+    lines = ["", "### 数据与权益处理", ""]
+    if not data["entries"]:
+        lines.append("- 当前项目阶段没有适用对象,不机械讨论不存在的数据。")
+    for entry in data["entries"]:
+        related = f"；相关：{'、'.join(entry['item_ids'])}" \
+            if entry["item_ids"] else ""
+        lines.append(f"- {entry['label']}：{entry['detail']}{related}。")
+    for action in data["pending_actions"]:
+        lines.append(f"- 待授权动作：{action['action']}（{action['note']}）")
     return lines
 
 
