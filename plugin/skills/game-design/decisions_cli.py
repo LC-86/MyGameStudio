@@ -22,9 +22,9 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
-from decisions import GateChannel, apply_save, plan_save, plan_sync, restore_from_records
+from decisions import (GateChannel, apply_save, load_gate_service,
+                       plan_save, plan_sync, restore_from_records)
 
 
 def main(argv: list[str]) -> int:
@@ -82,7 +82,7 @@ def main(argv: list[str]) -> int:
         print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0
 
-    service = _load_service(args.runtime_root)
+    service = load_gate_service(args.runtime_root)
 
     def readback(path: str):
         target = project_root / path
@@ -91,15 +91,6 @@ def main(argv: list[str]) -> int:
     result = apply_save(plan, GateChannel(service, args.token), readback)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result.get("saved") else 1
-
-
-def _load_service(runtime_root: str) -> Any:
-    runtime_dir = Path(__file__).resolve().parents[2] / "runtime"
-    if str(runtime_dir) not in sys.path:
-        sys.path.insert(0, str(runtime_dir))
-    from mgs_runtime import GateService  # noqa: E402
-
-    return GateService(runtime_root)
 
 
 if __name__ == "__main__":

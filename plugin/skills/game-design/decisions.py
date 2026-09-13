@@ -490,3 +490,16 @@ class GateChannel:
               note: str | None = None) -> dict[str, Any]:
         return self.service.write(self.token, path, content,
                                   expected_sha256=expected_sha256, note=note)
+
+
+def load_gate_service(runtime_root: str) -> Any:
+    """从运行根装载 GateService:命令行入口共用的唯一装载位置。"""
+
+    import sys
+    from pathlib import Path
+    runtime_dir = Path(__file__).resolve().parents[2] / "runtime"
+    if str(runtime_dir) not in sys.path:
+        sys.path.insert(0, str(runtime_dir))
+    from mgs_runtime import GateService  # noqa: PLC0415
+
+    return GateService(runtime_root)

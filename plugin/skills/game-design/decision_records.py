@@ -85,6 +85,18 @@ def parse_record(text: str, module: str) -> dict[str, Any]:
             current_qid = _add_decision(parsed, decision, current_date,
                                         current_round)
             continue
+        if current_qid and stripped.startswith("- 来源："):
+            parsed["decisions"][current_qid]["source_label"] = \
+                stripped.split("：", 1)[1].strip()
+            continue
+        if current_qid and stripped.startswith("- 建议出处："):
+            parsed["decisions"][current_qid]["provenance"] = \
+                stripped.split("：", 1)[1].strip()
+            continue
+        if current_qid and stripped.startswith("- 影响："):
+            parsed["decisions"][current_qid]["impact"] = \
+                stripped.split("：", 1)[1].strip()
+            continue
         if current_qid and stripped.startswith("- 同步状态："):
             if SYNC_DONE in stripped:
                 mark_synced(parsed, current_qid)
@@ -102,7 +114,12 @@ def parse_record(text: str, module: str) -> dict[str, Any]:
 
 def _add_decision(parsed: dict[str, Any], decision: "re.Match[str]",
                   date: str, round_no: int | None) -> str:
-    """登记一条决定头;同一问题的新决定把旧决定转入历史。"""
+    """登记一条决定头;同一问题的新决定把旧决定转入历史。
+
+    同步状态按文件顺序就地标记:决定被后来轮次替代时,旧决定的同步标记
+    随替代一起退出 ``sync_done``(它属于已失效的旧要求),新决定从"待同步"
+    重新开始——不把旧要求的已同步状态继承给新要求。
+    """
 
     parsed["found"] = True
     qid = decision.group("qid")
@@ -114,11 +131,12 @@ def _add_decision(parsed: dict[str, Any], decision: "re.Match[str]",
         "round": round_no,
         "date": date,
         "superseded": False,
-        "synced": qid in parsed["sync_done"],
+        "synced": False,
     }
     previous = parsed["decisions"].get(qid)
     if previous and not previous.get("superseded"):
         previous["superseded"] = True
+        parsed["sync_done"].pop(qid, None)
         parsed["superseded"].append({
             "qid": qid, "value": previous["value"],
             "round": previous.get("round"), "replaced_round": round_no})
@@ -286,15 +304,28 @@ def apply_sync(record_text: str, module: str, qids: list[str], date: str,
     updated: dict[str, bool] = {}
     lines: list[str] = []
     current_qid = None
+    current_superseded = False
     for line in record_text.splitlines():
         stripped = line.strip()
         matched = DECISION_HEAD.match(stripped)
-        if matched and matched.group("module").strip() == module:
-            current_qid = matched.group("qid")
+        if matched:
+            history = "（已被替代）" in line
+            current_superseded = history and (
+                matched.group("module").strip() == module)
+            current_qid = None if history or (
+                matched.group("module").strip() != module) \
+                else matched.group("qid")
             lines.append(line)
             continue
         if stripped.startswith("### "):
             current_qid = None
+            current_superseded = False
+        if current_superseded and stripped.startswith("- 同步状态：") \
+                and SYNC_PENDING in stripped:
+            indent = line[: len(line) - len(line.lstrip())]
+            lines.append(f"{indent}- 同步状态：不适用（已被替代；"
+                         f"同步状态由当前决定承接）")
+            continue
         if current_qid and current_qid in qids \
                 and stripped.startswith("- 同步状态："):
             if SYNC_DONE in stripped:
