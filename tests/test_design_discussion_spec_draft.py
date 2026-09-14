@@ -2562,6 +2562,74 @@ def test_round17_duplicate_strip_keeps_padded_rules() -> None:
             check(verdict["ok"], f"{name}: 保留规则后回读应通过,实际 {verdict}")
 
 
+def _exact_literal_migrate_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 正文：{SPEC_REL}（当前 v3）。\n"
+           "- 规则明确要求迁移标识为 `A  B`（两个空格，不得改为一个）；"
+           f"见 {SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _exact_literal_slot_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 正文：{SPEC_REL}（当前 v3）。\n"
+           "- 存档键固定为 `slot  1`（两个空格），不可改变；"
+           f"{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _exact_literal_printf_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 正文：{SPEC_REL}（当前 v3）。\n"
+           '- 验收：执行 `printf "A  B"`；依据 '
+           f"{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_round18_duplicate_strip_keeps_code_literals() -> None:
+    """r18:去重只整理引用缺口,不得压缩代码字面量中的原始空格。"""
+
+    cases = (
+        ("migrate-spaces", _exact_literal_migrate_layout,
+         ["`A  B`", "两个空格，不得改为一个",
+          f"- 正文：{SPEC_REL}（当前 v4）。"],
+         ["`A B`"]),
+        ("slot-key", _exact_literal_slot_layout,
+         ["`slot  1`", "不可改变"],
+         ["`slot 1`"]),
+        ("printf-cmd", _exact_literal_printf_layout,
+         ['`printf "A  B"`'],
+         ['`printf "A B"`']),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 去重须保留精确字面量,期望含 {needle!r},"
+                      f"实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得压缩代码字面量 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 保留字面量后回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -2590,6 +2658,7 @@ TESTS = (
     test_round15_code_span_identity_keeps_commands_rules_and_suffixes,
     test_round16_same_line_citations_and_code_span_dot,
     test_round17_duplicate_strip_keeps_padded_rules,
+    test_round18_duplicate_strip_keeps_code_literals,
 )
 
 
