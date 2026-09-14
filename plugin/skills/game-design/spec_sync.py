@@ -307,12 +307,21 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
 
 
 _CURRENT_VERSION_RE = re.compile(r"当前\s*(v\d+)")
-# 完整路径身份:出现位置两侧不能再是路径字符,否则只是更长文件名的
-# 一部分(如 ``<PATH>.backup``),不能当作本规格的引用。
-_PATH_CHAR_RE = re.compile(r"[A-Za-z0-9_.\-/]|[\u4e00-\u9fff]")
-# Markdown 链接目标:``](PATH)`` 与 ``](<PATH>)`` 两种形式,版本只
-# 能附着在链接闭括号之后,不进入目标。
-_LINK_BEFORE_RE = re.compile(r"\]\((?:<)?$")
+# 本引用的版本片段:附着括号内容**顶层开头**的"当前 vN"(允许前导空白)。
+# 版本前有其他文字(如"参照章节模块当前 v8")时,版本属于说明提到的
+# 其他对象,不算本引用的版本。
+_LEADING_VERSION_RE = re.compile(r"[ \t]*当前\s*(v\d+)")
+# 完整路径身份,两个方向独立判定:
+# 前一侧仍是 ASCII 路径字符(不含 "/")时,路径是更长文件名的中段
+# ("./<PATH>"、中文动词紧邻 "<PATH>" 都是同一文件的合法引用写法);
+# 后一侧只允许引用语法字符(空白、括号、链接与表格符号、常见中英
+# 标点),其余字符(如 "~" 编辑器备份、"."、路径延续)说明是更长文件名。
+_PATH_HEAD_RE = re.compile(r"[A-Za-z0-9_.\-~]")
+_PATH_TAIL_OK_RE = re.compile(
+    r"[\s（）()\[\]{}<>|，,。．;；:：、！？“”‘’'\"`]")
+# Markdown 内联链接目标:``](PATH)``、``](<PATH>)``、``]( PATH )``
+# 与 ``]( <PATH> )``;版本只能附着在链接闭括号之后,不进入目标或标题。
+_LINK_BEFORE_RE = re.compile(r"\]\([ \t]*(?:<)?[ \t]*$")
 _BARE_VERSION_AFTER_RE = re.compile(
     r"[ \t]*(?:[，,、：:；;][ \t]*)?当前\s*(v\d+)")
 _CITATION_LEAD_RE = re.compile(
@@ -321,7 +330,7 @@ _CITATION_LEAD_RE = re.compile(
 
 def _find_path(text: str, spec_path: str,
                from_pos: int = 0) -> tuple[int, int] | None:
-    """完整路径身份的出现区间;更长文件名里的子串不算本路径。"""
+    """完整路径身份的出现区间;更长文件名与链接显示文字里的子串不算。"""
 
     pos = from_pos
     while True:
@@ -331,10 +340,16 @@ def _find_path(text: str, spec_path: str,
         end = start + len(spec_path)
         before = text[start - 1] if start > 0 else ""
         after = text[end] if end < len(text) else ""
-        if not _PATH_CHAR_RE.fullmatch(before) \
-                and not _PATH_CHAR_RE.fullmatch(after):
-            return start, end
-        pos = start + 1
+        if _PATH_HEAD_RE.fullmatch(before):
+            pos = start + 1
+            continue
+        if after and not _PATH_TAIL_OK_RE.fullmatch(after):
+            pos = start + 1
+            continue
+        if before == "[" and after.startswith("]"):
+            pos = start + 1  # ``[<PATH>](…)`` 的显示文字,目标里的才是引用
+            continue
+        return start, end
 
 
 def _has_path(text: str, spec_path: str) -> bool:
@@ -342,12 +357,49 @@ def _has_path(text: str, spec_path: str) -> bool:
 
 
 def _link_close(line: str, start: int, end: int) -> int | None:
-    """路径在 Markdown 链接目标内时,返回目标闭括号的位置。"""
+    """路径在内联链接目标内时,返回链接闭括号的位置;解析不出返回 None。
 
-    if not _LINK_BEFORE_RE.search(line[:start]):
+    目标可以是 ``<…>`` 包裹或裸形式(裸目标到空白或平衡括号外闭括号
+    为止),其后允许可选空白与 ``"标题"``(标题里的括号不结束链接),
+    最后才是链接闭括号。
+    """
+
+    prefix = _LINK_BEFORE_RE.search(line[:start])
+    if not prefix:
         return None
-    close = line.find(")", end)
-    return close if close >= 0 else None
+    pos = end
+    if "<" in prefix.group(0):
+        gt = line.find(">", pos)
+        if gt < 0:
+            return None
+        pos = gt + 1
+    else:
+        depth = 0
+        while pos < len(line):
+            ch = line[pos]
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            elif ch in " \t":
+                break
+            pos += 1
+        if pos >= len(line):
+            return None
+    while pos < len(line) and line[pos] in " \t":
+        pos += 1
+    if pos < len(line) and line[pos] in "\"'":
+        quote = line.find(line[pos], pos + 1)
+        if quote < 0:
+            return None
+        pos = quote + 1
+        while pos < len(line) and line[pos] in " \t":
+            pos += 1
+    if pos < len(line) and line[pos] == ")":
+        return pos
+    return None
 
 
 def _match_bracket(line: str, pos: int) -> tuple[str, str, str, int] | None:
@@ -374,34 +426,22 @@ def _match_bracket(line: str, pos: int) -> tuple[str, str, str, int] | None:
     return None
 
 
-def _top_level_spans(inner: str) -> list[tuple[int, int]]:
-    """括号内容中不在嵌套括号内的顶层片段区间。"""
+def _top_level_version(inner: str) -> tuple[str, int, int] | None:
+    """本引用的版本:附着括号内容**顶层开头**的"当前 vN"。
 
-    spans: list[tuple[int, int]] = []
-    depth = 0
-    seg_start: int | None = None
+    版本前有其他文字(如"参照章节模块当前 v8 的规则")时,版本属于
+    说明提到的其他对象;嵌套括号里的版本属于嵌套内容。两种情况都
+    不算本引用的版本,由调用方原样保留、不改不删。
+    """
+
+    cut = len(inner)
     for i, ch in enumerate(inner):
         if ch in "（(":
-            if depth == 0 and seg_start is not None:
-                spans.append((seg_start, i))
-                seg_start = None
-            depth += 1
-        elif ch in "）)" and depth:
-            depth -= 1
-        elif not depth and seg_start is None:
-            seg_start = i
-    if seg_start is not None:
-        spans.append((seg_start, len(inner)))
-    return spans
-
-
-def _top_level_version(inner: str) -> tuple[str, int, int] | None:
-    """本引用的版本:只认括号顶层;嵌套层里是其他模块或业务条件的版本。"""
-
-    for a, b in _top_level_spans(inner):
-        found = _CURRENT_VERSION_RE.search(inner, a, b)
-        if found:
-            return found.group(1), found.start(), found.end()
+            cut = i
+            break
+    found = _LEADING_VERSION_RE.match(inner, 0, cut)
+    if found:
+        return found.group(1), found.start(), found.end()
     return None
 
 
@@ -451,8 +491,11 @@ def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
     if not found or not version_to:
         return line
     start, end = found
-    anchors = [end]
+    in_link = bool(_LINK_BEFORE_RE.search(line[:start]))
     close = _link_close(line, start, end)
+    if in_link and close is None:
+        return line  # 链接目标解析不出闭括号:保持内容,由回读判定未完成
+    anchors = [end]
     if close is not None:
         anchors.append(close + 1)
     for after in anchors:
@@ -533,6 +576,8 @@ def _strip_line_citation(line: str, spec_path: str) -> str:
         return line
     start, end = found
     close = _link_close(line, start, end)
+    if _LINK_BEFORE_RE.search(line[:start]) and close is None:
+        return line  # 链接目标解析不出闭括号:保持内容,由回读判定未完成
     if close is not None:
         label_start = line.rfind("[", 0, start)
         label_close = line.rfind("]", 0, start)

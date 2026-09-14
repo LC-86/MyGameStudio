@@ -1844,6 +1844,137 @@ def test_citation_identity_keeps_link_targets_longer_names_and_nested_versions()
             check(verdict["ok"], f"{name}: 身份保留后回读应通过,实际 {verdict}")
 
 
+def _spaced_link_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 每日挑战入口：[挑战说明]( {SPEC_REL} )"
+           "（当前 v3；规则）。")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _spaced_angled_link_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 每日挑战入口：[挑战说明]( <{SPEC_REL}> )"
+           " 优先复用既有内容。")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _titled_link_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 每日挑战规则：[规则]({SPEC_REL} \"每日挑战(离线)\")"
+           "（当前 v3）。")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _tilde_backup_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}~（当前 v9）。\n"
+           f"- 目标引用：{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _dot_slash_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：./{SPEC_REL}（当前 v3）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _cjk_adjacent_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：详见{SPEC_REL}（当前 v3）的规则。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _self_link_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：[{SPEC_REL}]({SPEC_REL})（当前 v3）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _mid_text_version_update_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：{SPEC_REL}（参照章节模块当前 v8 的规则）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _mid_text_version_strip_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}（当前 v2）。\n"
+           f"- 参照说明：{SPEC_REL}（参照章节模块当前 v8 的规则）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_link_target_parsing_and_version_ownership_keep_valid_citations() -> None:
+    """链接目标完整解析与版本归属:空白目标、标题、备份文件、紧邻引用。"""
+
+    cases = (
+        ("spaced-link", _spaced_link_layout,
+         [f"[挑战说明]( {SPEC_REL} )（当前 v4；规则）"],
+         [f"]( {SPEC_REL}（当前", "（当前 v4）（当前 v3"]),
+        ("spaced-angled", _spaced_angled_link_layout,
+         [f"[挑战说明]( <{SPEC_REL}> )（当前 v4）"],
+         [f"<{SPEC_REL}（当前"]),
+        ("titled-link", _titled_link_layout,
+         [f"[规则]({SPEC_REL} \"每日挑战(离线)\")（当前 v4）"],
+         ["每日挑战(离线（当前", "（当前 v4）（当前 v3"]),
+        ("tilde-backup", _tilde_backup_layout,
+         [f"{SPEC_REL}~（当前 v9）",
+          f"目标引用：{SPEC_REL}（当前 v4）"],
+         ["（当前 v4）~", "目标引用：。"]),
+        ("dot-slash", _dot_slash_layout,
+         [f"./{SPEC_REL}（当前 v4）"], []),
+        ("cjk-adjacent", _cjk_adjacent_layout,
+         [f"详见{SPEC_REL}（当前 v4）的规则"], []),
+        ("self-link", _self_link_layout,
+         [f"[{SPEC_REL}]({SPEC_REL})（当前 v4）"],
+         [f"（当前 v4）]({SPEC_REL})", "（当前 v4）（当前 v3"]),
+        ("mid-text-update", _mid_text_version_update_layout,
+         [f"主引用：{SPEC_REL}（当前 v4；参照章节模块当前 v8 的规则）"],
+         ["章节模块当前 v4"]),
+        ("mid-text-strip", _mid_text_version_strip_layout,
+         ["参照说明：（参照章节模块当前 v8 的规则）。"],
+         ["章节模块；的规则", "章节模块当前 v4"]),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 须按引用语法原位更新,期望含 "
+                      f"{needle!r},实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得出现越界改动 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 引用保留后回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -1865,6 +1996,7 @@ TESTS = (
     test_same_line_citation_layouts_keep_rules,
     test_reference_boundary_keeps_links_other_modules_and_rules,
     test_citation_identity_keeps_link_targets_longer_names_and_nested_versions,
+    test_link_target_parsing_and_version_ownership_keep_valid_citations,
 )
 
 
