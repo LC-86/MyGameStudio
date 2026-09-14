@@ -320,6 +320,9 @@ _PATH_TOKEN_RE = re.compile(r"[A-Za-z0-9_.\-~/]+")
 # Markdown 内联链接目标:``](PATH)``、``](<PATH>)``、``]( PATH )``、
 # ``](./<PATH>)`` 等;版本只能附着在链接闭括号之后,不进入目标或标题。
 _LINK_BEFORE_RE = re.compile(r"\]\([ \t]*(?:[^\s()]*[ \t]*)?$")
+# 引用式链接定义 ``[label]: <PATH> "标题"``:目标后紧跟可选标题,没有
+# 能安全附着版本的位置——无既有附着版本时保持该行不动。
+_LINKDEF_BEFORE_RE = re.compile(r"\]:[ \t]*(?:<)?[ \t]*$")
 _BARE_VERSION_AFTER_RE = re.compile(
     r"[ \t]*(?:[，,、：:；;][ \t]*)?当前\s*(v\d+)")
 _CITATION_LEAD_RE = re.compile(
@@ -345,9 +348,70 @@ def _ascii_paren_span(text: str, pos: int) -> int | None:
     return None
 
 
+def _target_identity(raw: str) -> str:
+    """归一化的引用身份:去首尾空白、``./`` 前缀、``#锚点`` 与句末点号。"""
+
+    token = raw.strip()
+    while token.startswith("./"):
+        token = token[2:]
+    return token.split("#", 1)[0].rstrip(".")
+
+
+def _in_link_label(text: str, start: int, end: int) -> bool:
+    """路径出现是否处于链接显示文字 ``[…](…)`` 内(不要求紧邻括号)。"""
+
+    open_at = text.rfind("[", 0, start)
+    if open_at < 0 or open_at < text.rfind("]", 0, start):
+        return False
+    close_at = text.find("]", end)
+    return close_at >= 0 and text[close_at + 1:close_at + 2] == "("
+
+
+def _linkdef_target(line: str, start: int, end: int) -> tuple[str, int] | None:
+    """引用式链接定义 ``[label]: 目标 "标题"``:完整目标与可附着锚点。
+
+    锚点是目标及可选标题之后的位置;定义行没有能安全插入新版本的
+    地方,调用方只在该处已有附着版本时原位更新,否则保持不动。
+    """
+
+    prefix = _LINKDEF_BEFORE_RE.search(line[:start])
+    if not prefix:
+        return None
+    pos = end
+    if "<" in prefix.group(0):
+        gt = line.find(">", pos)
+        if gt < 0:
+            return None
+        target = line[start:gt]
+        pos = gt + 1
+    else:
+        depth = 0
+        while pos < len(line):
+            ch = line[pos]
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            elif ch in " \t":
+                break
+            pos += 1
+        target = line[start:pos]
+    while pos < len(line) and line[pos] in " \t":
+        pos += 1
+    if pos < len(line) and line[pos] in "\"'":
+        quote = line.find(line[pos], pos + 1)
+        if quote >= 0:
+            pos = quote + 1
+    while pos < len(line) and line[pos] in " \t":
+        pos += 1
+    return target, pos
+
+
 def _find_path(text: str, spec_path: str,
                from_pos: int = 0) -> tuple[int, int] | None:
-    """完整路径身份的出现区间;更长文件名与链接显示文字里的子串不算。"""
+    """完整路径身份的出现区间;更长文件名、显示文字与其他链接目标不算。"""
 
     pos = from_pos
     while True:
@@ -355,8 +419,8 @@ def _find_path(text: str, spec_path: str,
         if start < 0:
             return None
         end = start + len(spec_path)
-        if text[end:end + 2] == "](":
-            pos = start + 1  # ``[查看 <PATH>](…)`` 的显示文字,目标里才是引用
+        if _in_link_label(text, start, end):
+            pos = start + 1  # 显示文字里的路径,目标里的才是引用
             continue
         tok_start = start
         while tok_start > 0 and _PATH_TOKEN_RE.fullmatch(text[tok_start - 1]):
@@ -370,10 +434,19 @@ def _find_path(text: str, spec_path: str,
             if span is None:
                 break
             tok_end = span
-        token = text[tok_start:tok_end].rstrip(".")
-        while token.startswith("./"):
-            token = token[2:]
-        if token == spec_path:
+        target_parts = _link_target_identity(text, tok_start, tok_end) \
+            if _LINK_BEFORE_RE.search(text[:tok_start]) else None
+        if target_parts is None:
+            target_parts = _linkdef_target(text, tok_start, tok_end) \
+                if _LINKDEF_BEFORE_RE.search(text[:tok_start]) else None
+        if target_parts is not None:
+            target = target_parts[0]
+            if target is not None \
+                    and _target_identity(target) != spec_path:
+                pos = start + 1  # 完整目标指向其他文件(PATH副本/PATH（备份）)
+                continue
+            return tok_start, tok_end  # 目标解析不出时按命中,交调用方保守处理
+        if _target_identity(text[tok_start:tok_end]) == spec_path:
             return tok_start, tok_end
         pos = start + 1
 
@@ -382,8 +455,9 @@ def _has_path(text: str, spec_path: str) -> bool:
     return _find_path(text, spec_path) is not None
 
 
-def _link_close(line: str, start: int, end: int) -> int | None:
-    """路径在内联链接目标内时,返回链接闭括号的位置;解析不出返回 None。
+def _link_target_identity(line: str,
+                          start: int, end: int) -> tuple[str, int] | None:
+    """内联链接目标的完整内容与链接闭括号位置;解析不出返回 None。
 
     目标可以是 ``<…>`` 包裹或裸形式(裸目标到空白或平衡括号外闭括号
     为止),其后允许可选空白与 ``"标题"``(标题里的括号不结束链接),
@@ -398,6 +472,7 @@ def _link_close(line: str, start: int, end: int) -> int | None:
         gt = line.find(">", pos)
         if gt < 0:
             return None
+        target = line[start:gt]
         pos = gt + 1
     else:
         depth = 0
@@ -414,6 +489,7 @@ def _link_close(line: str, start: int, end: int) -> int | None:
             pos += 1
         if pos >= len(line):
             return None
+        target = line[start:pos]
     while pos < len(line) and line[pos] in " \t":
         pos += 1
     if pos < len(line) and line[pos] in "\"'":
@@ -424,8 +500,15 @@ def _link_close(line: str, start: int, end: int) -> int | None:
         while pos < len(line) and line[pos] in " \t":
             pos += 1
     if pos < len(line) and line[pos] == ")":
-        return pos
+        return target, pos
     return None
+
+
+def _link_close(line: str, start: int, end: int) -> int | None:
+    """路径在内联链接目标内时,返回链接闭括号的位置。"""
+
+    parts = _link_target_identity(line, start, end)
+    return parts[1] if parts else None
 
 
 def _match_bracket(line: str, pos: int) -> tuple[str, str, str, int] | None:
@@ -471,6 +554,30 @@ def _top_level_version(inner: str) -> tuple[str, int, int] | None:
     return None
 
 
+def _code_span(line: str, start: int,
+               end: int) -> tuple[str, int, int]:
+    """行内代码片段包裹状态:返回 (状态, 闭反引号串之后, 开反引号串起点)。
+
+    状态 ``ok`` 为成对包裹(单/双/多反引号,闭串在路径后);``broken``
+    为开串存在但无等长闭串,无法安全定位版本位置,调用方保持不动;
+    ``none`` 为未被反引号包裹。
+    """
+
+    opens = 0
+    i = start - 1
+    while i >= 0 and line[i] == "`":
+        opens += 1
+        i -= 1
+    closes = 0
+    while end + closes < len(line) and line[end + closes] == "`":
+        closes += 1
+    if not opens:
+        return "none", end, start
+    if opens == closes:
+        return "ok", end + closes, start - opens
+    return "broken", end, start - opens
+
+
 def _attached_version(line: str, spec_path: str) -> str:
     """直接附着在路径上的当前版本号;不属于本引用的版本不匹配。
 
@@ -484,13 +591,23 @@ def _attached_version(line: str, spec_path: str) -> str:
     if not found:
         return ""
     start, end = found
-    if start > 0 and line[start - 1] == "`" and line[end:end + 1] == "`":
-        anchors = [end + 1]  # 行内代码片段:版本附着在闭反引号之后
+    code_status, code_after, _ = _code_span(line, start, end)
+    if code_status == "broken":
+        return ""  # 反引号不配对:没有可安全认定的版本位置
+    if code_status == "ok":
+        anchors = [code_after]  # 行内代码片段:版本附着在闭反引号串之后
+    elif _LINKDEF_BEFORE_RE.search(line[:start]):
+        parts = _linkdef_target(line, start, end)
+        if parts is None:
+            return ""
+        bracket = _match_bracket(line, parts[1])
+        top = _top_level_version(bracket[1]) if bracket else None
+        return top[0] if top else ""
     else:
         anchors = [end]
         close = _link_close(line, start, end)
         if close is not None:
-            anchors.append(close + 1)
+            anchors = [close + 1]  # 目标内不认附着,版本只在闭括号之后
     for after in anchors:
         bracket = _match_bracket(line, after)
         if bracket:
@@ -520,17 +637,31 @@ def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
     if not found or not version_to:
         return line
     start, end = found
-    if start > 0 and line[start - 1] == "`" and line[end:end + 1] == "`":
-        anchors = [end + 1]  # 行内代码片段:版本插在闭反引号之后
-        insert_at = end + 1
+    code_status, code_after, _ = _code_span(line, start, end)
+    if code_status == "broken":
+        return line  # 反引号不配对:保持内容,由回读判定未完成
+    if code_status == "ok":
+        anchors = [code_after]  # 行内代码片段:版本插在闭反引号串之后
+        insert_at = code_after
+    elif _LINKDEF_BEFORE_RE.search(line[:start]):
+        parts = _linkdef_target(line, start, end)
+        if parts is None:
+            return line
+        bracket = _match_bracket(line, parts[1])
+        top = _top_level_version(bracket[1]) if bracket else None
+        if not top:
+            return line  # 定义行无既有附着版本:没有安全位置,保持不动
+        _, a, b = top
+        open_ch, inner, close_ch, stop = bracket
+        return (line[:parts[1]] + open_ch
+                + inner[:a] + f"当前 {version_to}" + inner[b:]
+                + close_ch + line[stop:])
     else:
         in_link = bool(_LINK_BEFORE_RE.search(line[:start]))
         close = _link_close(line, start, end)
         if in_link and close is None:
             return line  # 链接目标解析不出闭括号:保持内容,由回读判定未完成
-        anchors = [end]
-        if close is not None:
-            anchors.append(close + 1)
+        anchors = [close + 1] if close is not None else [end]
         insert_at = close + 1 if close is not None else end
     for after in anchors:
         bracket = _match_bracket(line, after)
@@ -608,9 +739,14 @@ def _strip_line_citation(line: str, spec_path: str) -> str:
     if not found:
         return line
     start, end = found
-    if start > 0 and line[start - 1] == "`" and line[end:end + 1] == "`":
+    code_status, code_after, code_open = _code_span(line, start, end)
+    if code_status == "broken":
+        return line  # 反引号不配对:保持内容,由回读判定未完成
+    if code_status == "ok":
         return _clean_citation_remainder(
-            line[:start - 1], _strip_attached(line, end + 1))
+            line[:code_open], _strip_attached(line, code_after))
+    if _LINKDEF_BEFORE_RE.search(line[:start]):
+        return line  # 引用式链接定义:保持不动,由回读判定未完成
     close = _link_close(line, start, end)
     if _LINK_BEFORE_RE.search(line[:start]) and close is None:
         return line  # 链接目标解析不出闭括号:保持内容,由回读判定未完成
