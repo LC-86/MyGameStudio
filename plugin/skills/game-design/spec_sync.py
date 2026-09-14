@@ -89,8 +89,8 @@ def baseline_cites_spec(baseline_text: str | None, spec_path: str,
     """核心基线对该规格的引用是否指向当前版本。
 
     只认**直接附着**在路径上的版本(紧随的括号或紧邻片段),不跨分隔符、
-    表格列或链接目标去匹配其他模块的版本;引用缺失或仍指旧版本时,
-    本轮修订不能当作已同步。
+    表格列或链接目标去匹配其他模块的版本;引用缺失、或任一处仍附着旧
+    版本时,本轮修订不能当作已同步。
     """
 
     text = baseline_text or ""
@@ -98,10 +98,16 @@ def baseline_cites_spec(baseline_text: str | None, spec_path: str,
         return False
     if not version_to:
         return True
+    found_current = False
     for line in text.split("\n"):
-        if _attached_version(line, spec_path) == version_to:
-            return True
-    return False
+        if not _has_path(line, spec_path):
+            continue
+        attached = _attached_version(line, spec_path)
+        if attached == version_to:
+            found_current = True
+        elif attached:
+            return False  # 仍有本规格的旧版本引用,不能当作已同步
+    return found_current
 
 
 def version_warnings(meta: dict[str, Any],
@@ -364,13 +370,13 @@ def _target_identity(raw: str, strip_dot: bool = True) -> str:
 
 
 def _extends_filename(ch: str) -> bool:
-    """紧邻路径后的非 ASCII 字母属于更长文件名(``PATH副本``),不是自然语言。
+    """紧邻路径后的非 ASCII 字母或数字属于更长文件名,不是自然语言。
 
     路径前的中文是自然语言引导(``详见PATH``),不参与身份;路径后直接相连
-    的中文/字母是文件名的一部分(``PATH副本``、``PATH草稿`` 是别的文件)。
+    的中文/字母/数字是文件名的一部分(``PATH副本``、``PATH②`` 是别的文件)。
     """
 
-    return ord(ch) > 127 and unicodedata.category(ch)[0] == "L"
+    return ord(ch) > 127 and unicodedata.category(ch)[0] in "LN"
 
 
 def _in_link_label(text: str, start: int, end: int) -> bool:
@@ -437,6 +443,9 @@ def _find_path(text: str, spec_path: str,
         end = start + len(spec_path)
         if _in_link_label(text, start, end):
             pos = start + 1  # 显示文字里的路径,目标里的才是引用
+            continue
+        if _code_span_other_identity(text, start, end, spec_path):
+            pos = start + 1  # 片段是命令/规则/其他文件,不是本引用
             continue
         tok_start = start
         while tok_start > 0 and _PATH_TOKEN_RE.fullmatch(text[tok_start - 1]):
@@ -572,28 +581,21 @@ def _top_level_version(inner: str) -> tuple[str, int, int] | None:
     return None
 
 
-def _code_span(line: str, start: int,
-               end: int) -> tuple[str, int, int]:
-    """行内代码片段包裹状态:返回 (状态, 闭反引号串之后, 开反引号串起点)。
-
-    状态 ``ok`` 为成对包裹(单/双/多反引号,允许反引号与路径间有空白,
-    闭串在路径后);``broken`` 为紧邻路径的开串存在但无等长闭串,无法安全
-    定位版本位置,调用方保持不动;``none`` 为未被反引号包裹。
-    """
+def _paired_code_spans(text: str) -> list[tuple[int, int, int, int]]:
+    """CommonMark 成对代码片段:(开串起点, 开串长, 闭串起点, 闭串长)。"""
 
     runs: list[tuple[int, int]] = []
-    i, n = 0, len(line)
+    i, n = 0, len(text)
     while i < n:
-        if line[i] == "`":
+        if text[i] == "`":
             j = i
-            while j < n and line[j] == "`":
+            while j < n and text[j] == "`":
                 j += 1
             runs.append((i, j - i))
             i = j
         else:
             i += 1
-    # 成对代码片段:开串与下一个等长闭串配对(CommonMark),路径须落在其间。
-    # 反引号与路径间可有空格(`` ` PATH ` ``),故按完整片段而非紧邻判断。
+    pairs: list[tuple[int, int, int, int]] = []
     k = 0
     while k < len(runs):
         op_pos, op_len = runs[k]
@@ -603,9 +605,59 @@ def _code_span(line: str, start: int,
         if m >= len(runs):
             break
         cl_pos, cl_len = runs[m]
+        pairs.append((op_pos, op_len, cl_pos, cl_len))
+        k = m + 1
+    return pairs
+
+
+def _code_span_inner(text: str, open_at: int, after: int) -> str:
+    """成对代码片段去掉开闭反引号串后的内容。"""
+
+    i = open_at
+    while i < after and text[i] == "`":
+        i += 1
+    j = after
+    while j > i and text[j - 1] == "`":
+        j -= 1
+    return text[i:j]
+
+
+def _code_span_is_spec_path(text: str, open_at: int, after: int,
+                            spec_path: str) -> bool:
+    """单行成对片段的完整内容(去空白)是否就是本规格路径。"""
+
+    inner = _code_span_inner(text, open_at, after)
+    return "\n" not in inner and _target_identity(inner.strip()) == spec_path
+
+
+def _code_span_other_identity(text: str, start: int, end: int,
+                              spec_path: str) -> bool:
+    """成对代码片段按完整内容认身份;命令/规则/其他文件名不是本引用。
+
+    跨行片段不在这里截断,交给 ``_in_multiline_code_span`` 整段保守不动。
+    """
+
+    status, after, open_at = _code_span(text, start, end)
+    if status != "ok":
+        return False
+    if "\n" in _code_span_inner(text, open_at, after):
+        return False
+    return not _code_span_is_spec_path(text, open_at, after, spec_path)
+
+
+def _code_span(line: str, start: int,
+               end: int) -> tuple[str, int, int]:
+    """行内代码片段包裹状态:返回 (状态, 闭反引号串之后, 开反引号串起点)。
+
+    状态 ``ok`` 为成对包裹(单/双/多反引号,允许反引号与路径间有空白,
+    闭串在路径后);``broken`` 为紧邻路径的开串存在但无等长闭串,无法安全
+    定位版本位置,调用方保持不动;``none`` 为未被反引号包裹。
+    """
+
+    n = len(line)
+    for op_pos, op_len, cl_pos, cl_len in _paired_code_spans(line):
         if op_pos + op_len <= start and end <= cl_pos:
             return "ok", cl_pos + cl_len, op_pos
-        k = m + 1
     # 未落在成对片段内:仅当开串紧邻路径(无空白)才算 broken——
     # 远处散落的反引号是正文,不影响本路径。
     opens = 0
@@ -636,10 +688,12 @@ def _attached_version(line: str, spec_path: str) -> str:
     if not found:
         return ""
     start, end = found
-    code_status, code_after, _ = _code_span(line, start, end)
+    code_status, code_after, code_open = _code_span(line, start, end)
     if code_status == "broken":
         return ""  # 反引号不配对:没有可安全认定的版本位置
     if code_status == "ok":
+        if not _code_span_is_spec_path(line, code_open, code_after, spec_path):
+            return ""  # 片段不是本引用的路径包裹
         anchors = [code_after]  # 行内代码片段:版本附着在闭反引号串之后
     elif _LINKDEF_BEFORE_RE.search(line[:start]):
         parts = _linkdef_target(line, start, end)
@@ -682,10 +736,12 @@ def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
     if not found or not version_to:
         return line
     start, end = found
-    code_status, code_after, _ = _code_span(line, start, end)
+    code_status, code_after, code_open = _code_span(line, start, end)
     if code_status == "broken":
         return line  # 反引号不配对:保持内容,由回读判定未完成
     if code_status == "ok":
+        if not _code_span_is_spec_path(line, code_open, code_after, spec_path):
+            return line  # 片段含命令/规则/其他身份:不能当引用包裹
         anchors = [code_after]  # 行内代码片段:版本插在闭反引号串之后
         insert_at = code_after
     elif _LINKDEF_BEFORE_RE.search(line[:start]):
@@ -788,6 +844,8 @@ def _strip_line_citation(line: str, spec_path: str) -> str:
     if code_status == "broken":
         return line  # 反引号不配对:保持内容,由回读判定未完成
     if code_status == "ok":
+        if not _code_span_is_spec_path(line, code_open, code_after, spec_path):
+            return line  # 不能安全分离时保留整个片段
         return _clean_citation_remainder(
             line[:code_open], _strip_attached(line, code_after))
     if _LINKDEF_BEFORE_RE.search(line[:start]):
@@ -827,6 +885,20 @@ def _line_has_business_text(line: str) -> bool:
     return bool(re.sub(r"[\s，,。．.；;：:、（）()]+", "", text))
 
 
+def _in_multiline_code_span(body: str, spec_path: str) -> bool:
+    """body 中 spec_path 是否落在跨行的成对代码片段内。
+
+    反引号、路径、闭反引号分多行时,逐行处理会把版本插进代码内容,
+    故检测到即整段保守不动,由回读判定未完成。
+    """
+
+    for op_pos, op_len, cl_pos, _cl_len in _paired_code_spans(body):
+        inner = body[op_pos + op_len:cl_pos]
+        if "\n" in inner and _has_path(inner, spec_path):
+            return True
+    return False
+
+
 def _in_multiline_link(body: str, spec_path: str) -> bool:
     """body 中 spec_path 是否落在跨行的内联链接目标 ``]( … )`` 内。
 
@@ -862,8 +934,9 @@ def _replace_reference_lines(body: str, spec_path: str,
                              ref_line: str, version_to: str = "") -> str:
     """行内更新引用:只改路径与版本片段,同行其余内容原样保留。"""
 
-    if _in_multiline_link(body, spec_path):
-        # 跨行链接目标无法逐行安全更新:保持原文,由回读判定未完成。
+    if _in_multiline_link(body, spec_path) \
+            or _in_multiline_code_span(body, spec_path):
+        # 跨行链接/代码片段无法逐行安全更新:保持原文,由回读判定未完成。
         return body
     updated: list[str] = []
     placed = False       # 已找到引用(更新或保守保留)→ 不再追加生成引用
@@ -879,7 +952,10 @@ def _replace_reference_lines(body: str, spec_path: str,
                         if target else line)
             updated.append(new_line)
             placed = True
-            updated_ok = bool(target) and new_line != line
+            # 已更新到目标版本,或首条本来就是目标版本:其后视为重复引用。
+            updated_ok = bool(target) and (
+                new_line != line
+                or _attached_version(new_line, spec_path) == target)
             continue
         if updated_ok:
             # 目标引用已确认更新:其后是重复引用,去重但保留同行业务正文。

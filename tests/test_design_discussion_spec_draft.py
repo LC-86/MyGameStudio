@@ -37,6 +37,7 @@ from spec_draft import apply_handoff, plan_handoff, verify_handoff  # noqa: E402
 RECORD_REL = "docs/mygamestudio/records/decisions-每日挑战.md"
 OTHER_RECORD_REL = "docs/mygamestudio/records/decisions-商业化.md"
 SPEC_REL = "docs/mygamestudio/records/spec-每日挑战.md"
+CHAPTER_REL = "docs/mygamestudio/records/spec-章节.md"
 GLOSSARY_REL = "docs/mygamestudio/records/glossary.md"
 DESIGN_REL = "docs/mygamestudio/GAME_DESIGN.md"
 PROJECT_REL = "docs/mygamestudio/PROJECT.md"
@@ -2274,6 +2275,116 @@ def test_round14_cross_line_links_complete_identity_and_code_spans() -> None:
               f"multiline-link: 未完成的同步回读必须失败,实际 {verdict}")
 
 
+def _span_rule_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}（当前 v3）。\n"
+           f"- 存档兼容：`{SPEC_REL} | daily_best 字段必须保留；"
+           f"{CHAPTER_REL}`。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _span_command_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}（当前 v3）。\n"
+           f"- 离线校验指令：`python scripts/check.py --spec {SPEC_REL}"
+           " --offline`。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _circled_suffix_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 历史规格：`{SPEC_REL}②`（当前 v8）。\n"
+           f"- 当前：{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _multiline_code_span_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：`\n{SPEC_REL}\n`（当前 v3）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _stale_second_citation_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}（当前 v4）。\n"
+           f"- 第二条：{SPEC_REL}（当前 v3）也用于说明"
+           "主线第 10 关通过后解锁章节选择。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_round15_code_span_identity_keeps_commands_rules_and_suffixes() -> None:
+    """r15:代码片段按完整身份识别,不去掉命令/规则,不截断数字后缀。"""
+
+    cases = (
+        ("span-rule", _span_rule_layout,
+         [f"- 主引用：{SPEC_REL}（当前 v4）。",
+          f"- 存档兼容：`{SPEC_REL} | daily_best 字段必须保留；"
+          f"{CHAPTER_REL}`。"],
+         ["存档兼容：。"]),
+        ("span-command", _span_command_layout,
+         [f"- 主引用：{SPEC_REL}（当前 v4）。",
+          f"- 离线校验指令：`python scripts/check.py --spec {SPEC_REL}"
+          " --offline`。"],
+         ["离线校验指令：。"]),
+        ("circled-suffix", _circled_suffix_layout,
+         [f"`{SPEC_REL}②`（当前 v8）",
+          f"- 当前：{SPEC_REL}（当前 v4）"],
+         [f"{SPEC_REL}（当前 v4）②", "当前：。"]),
+        ("stale-second", _stale_second_citation_layout,
+         [f"- 主引用：{SPEC_REL}（当前 v4）。",
+          "主线第 10 关通过后解锁章节选择。"],
+         [f"第二条：{SPEC_REL}（当前 v3）", "第二条：。"]),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 须按完整代码片段身份保留有效内容,期望含 "
+                      f"{needle!r},实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得出现越界改动 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 身份保留后回读应通过,实际 {verdict}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        applied, design, retry, read = _recover_stale_custom_citation(
+            tmp, _multiline_code_span_layout)
+        check(f"- 主引用：`\n{SPEC_REL}\n`（当前 v3）。" in design,
+              f"multiline-code-span: 跨行代码片段须原样保留,实际 {design!r}")
+        check(f"{SPEC_REL}（当前 v4）" not in design,
+              f"multiline-code-span: 不得把版本插进代码内容,实际 {design!r}")
+        check(not (applied.get("states", {}).get("synced") is True
+                   and applied.get("to_sync") in ([], None)),
+              f"multiline-code-span: 无法安全更新时不得宣称同步完成,实际 {applied}")
+        verdict = verify_handoff(retry, {
+            SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+            GLOSSARY_REL: read(GLOSSARY_REL),
+            RECORD_REL: read(RECORD_REL)})
+        check(not verdict["ok"],
+              f"multiline-code-span: 未完成的同步回读必须失败,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -2299,6 +2410,7 @@ TESTS = (
     test_path_identity_and_markdown_boundaries_keep_other_files_and_targets,
     test_link_structure_identity_keeps_labels_targets_and_code_spans,
     test_round14_cross_line_links_complete_identity_and_code_spans,
+    test_round15_code_span_identity_keeps_commands_rules_and_suffixes,
 )
 
 
