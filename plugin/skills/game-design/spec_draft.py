@@ -142,8 +142,12 @@ def _handoff_plan_files(meta: dict[str, Any], parsed: dict[str, Any],
                             decision)
     compare = compare_existing(existing.get(spec_path), spec_text,
                                bool(existing.get(spec_path)))
-    version = version_plan(meta, compare)
-    warnings = version_warnings(meta, compare)
+    version = version_plan(
+        meta, compare,
+        baseline_text=existing.get(str(meta.get("design_path") or "")),
+        spec_path=spec_path,
+        to_sync=list(decision.get("to_sync") or []))
+    warnings = version_warnings(meta, compare, version)
     if version["change"] == "conflict":
         return {"spec": {"path": spec_path, "content": spec_text},
                 "compare": compare, "version": version, "files": [],
@@ -370,6 +374,11 @@ def _handoff_states(plan: dict[str, Any],
                if kind_is_sync_file(plan, qid)]
     synced = (all(qid in parsed["sync_done"] for qid in targets)
               if targets else not (plan.get("to_sync") or []))
+    spec_path = str(plan.get("spec_path") or "")
+    design = readback(str(plan.get("design_path") or "")) or ""
+    if synced and spec_path and spec_path not in design \
+            and plan.get("to_sync") and plan.get("sync_authorized", True):
+        synced = False
     return {"adopted": True, "saved": True, "synced": synced,
             "implemented": False, "verified": False}
 
@@ -399,7 +408,9 @@ def verify_handoff(plan: dict[str, Any],
             if f"## {title}" not in spec_text:
                 failures.append(f"规格缺少类别:{title}")
     version = plan.get("version") or {}
-    if version.get("change") == "substantive":
+    needs_baseline = version.get("change") == "substantive" or (
+        bool(plan.get("to_sync")) and plan.get("sync_authorized", True))
+    if needs_baseline:
         failures.extend(_baseline_failures(plan, readback_map, spec_path,
                                            version))
     record = readback_map.get(str(plan.get("record_path") or ""))
@@ -407,7 +418,7 @@ def verify_handoff(plan: dict[str, Any],
         failures.append("决定记录不存在")
     else:
         parsed = parse_record(record, str(plan.get("module") or ""))
-        if plan.get("to_sync") and version.get("change") == "substantive" \
+        if plan.get("to_sync") and needs_baseline \
                 and plan.get("sync_authorized", True):
             for qid in plan["to_sync"]:
                 if qid not in parsed["sync_done"]:

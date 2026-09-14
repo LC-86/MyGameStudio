@@ -54,11 +54,12 @@ INVALIDATION = {
 ANSWER_SOURCES = {"user", "recommendation", "custom", "revision"}
 OVERALL_RE = re.compile(r"整体按建议|全部按建议|都按建议")
 REJECT_OVERALL_RE = re.compile(
-    r"(不要|别|先不|不能|不可|拒绝|不准).{0,10}(整体|全部|都)?按建议")
+    r"(不要|别|先不|不能|不可|拒绝|不准|不是|并非).{0,10}(整体|全部|都)?按建议")
 CHOICE_RE = re.compile(r"(Q\d+)\s*选\s*([A-Za-z])")
 ADJUST_RE = re.compile(
     r"(Q\d+)\s*(?:调整为|改为|：|:)\s*(.+?)(?:[，。；\n]|$)")
-UNKNOWN_VALUE_RE = re.compile(r"不知道|不清楚|先不确定")
+UNKNOWN_VALUE_RE = re.compile(
+    r"不知道|不清楚|先不确定|还没决定|尚未决定")
 
 
 def snapshot(state: dict[str, Any]) -> dict[str, Any]:
@@ -249,18 +250,45 @@ def is_unknown_value(value: str) -> bool:
     return bool(UNKNOWN_VALUE_RE.fullmatch(str(value or "").strip()))
 
 
+def is_ambiguous_value(value: str) -> bool:
+    text = str(value or "").strip()
+    if is_unknown_value(text):
+        return True
+    return bool(re.search(r"还是|不确定", text))
+
+
+def _choice_clause(text: str, match: re.Match[str]) -> tuple[str, str]:
+    rest = text[match.end():]
+    next_q = re.search(r"Q\d+", rest)
+    clause = rest[: next_q.start()] if next_q else rest
+    return rest, re.split(r"[。；\n]", clause, maxsplit=1)[0]
+
+
+def _clause_is_ambiguous(rest: str, clause: str) -> bool:
+    return bool(re.match(r"\s*还是", rest)
+                or re.search(r"还是|还没决定|不确定", clause))
+
+
 def definite_choices(text: str) -> list[tuple[str, str]]:
     """明确的逐题选项;『选 A 还是 B』或尚未决定不算作答。"""
 
     items: list[tuple[str, str]] = []
     for match in CHOICE_RE.finditer(text):
-        rest = text[match.end():]
-        next_q = re.search(r"Q\d+", rest)
-        clause = rest[: next_q.start()] if next_q else rest
-        clause = re.split(r"[。；\n]", clause, maxsplit=1)[0]
-        if re.match(r"\s*还是", rest) or re.search(r"还是|还没决定|不确定", clause):
+        rest, clause = _choice_clause(text, match)
+        if _clause_is_ambiguous(rest, clause):
             continue
         items.append((match.group(1), match.group(2).upper()))
+    return items
+
+
+def ambiguous_choice_ids(text: str) -> list[str]:
+    """含糊的逐题选择:覆盖整体采纳,不得写成已回答。"""
+
+    items: list[str] = []
+    for match in CHOICE_RE.finditer(text):
+        rest, clause = _choice_clause(text, match)
+        if _clause_is_ambiguous(rest, clause):
+            items.append(match.group(1))
     return items
 
 
@@ -278,12 +306,14 @@ def answers_from_reply(reply: str,
             answers.setdefault(qid, "recommendation")
     for qid, letter in definite_choices(text):
         answers[qid] = letter
+    for qid in ambiguous_choice_ids(text):
+        answers.pop(qid, None)
     for match in ADJUST_RE.finditer(text):
         value = match.group(2).strip()
         qid = match.group(1)
         if re.fullmatch(r"选\s*[A-Za-z]", value):
             continue
-        if is_unknown_value(value):
+        if is_unknown_value(value) or is_ambiguous_value(value):
             answers.pop(qid, None)
             continue
         answers[qid] = value

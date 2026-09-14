@@ -39,6 +39,8 @@ from spec_draft import apply_handoff, plan_handoff  # noqa: E402
 
 RECORD_REL = "docs/mygamestudio/records/decisions-每日挑战.md"
 SPEC_REL = "docs/mygamestudio/records/spec-每日挑战.md"
+EXIT_SPEC_REL = "docs/mygamestudio/records/spec-退出重进.md"
+PENDING_REL = "docs/mygamestudio/records/delivery-pending.md"
 GLOSSARY_REL = "docs/mygamestudio/records/glossary.md"
 DESIGN_REL = "docs/mygamestudio/GAME_DESIGN.md"
 CONTENT_REL = "docs/mygamestudio/CONTENT_PRODUCTION.md"
@@ -70,7 +72,8 @@ def _service(root: Path):
         "# 齿轮谜城:内容与视听制作需求\n\n"
         "既有说明：音效全部沿用现有素材,不新增录音。\n", encoding="utf-8")
     (project / "docs/mygamestudio/CONFIG.md").write_text(
-        "# 齿轮谜城:协作配置\n\n## 文档映射\n\n"
+        "# 齿轮谜城:协作配置\n\n## 任务来源\n\n- 后端：local-markdown\n"
+        "- 当前位置：work/\n\n## 文档映射\n\n"
         "| 内容 | 当前权威位置 | 维护角色 |\n| --- | --- | --- |\n"
         f"| 项目目标与范围 | {PROJECT_REL} | 制作统筹 |\n"
         f"| 游戏需求与设计 | {DESIGN_REL} | 方案设计 |\n"
@@ -458,7 +461,7 @@ def _existing(project: Path):
 
     return {path: read(path) for path in (
         DESIGN_REL, CONTENT_REL, VERSION_REL, PROJECT_REL, TECH_REL,
-        SPEC_REL, RECORD_REL, GLOSSARY_REL)}
+        SPEC_REL, RECORD_REL, GLOSSARY_REL, PENDING_REL, EXIT_SPEC_REL)}
 
 
 def _stub_existing():
@@ -1118,6 +1121,145 @@ def test_missing_spec_file_keeps_delivery_incomplete() -> None:
           f"缺权威规格时回读不得通过,实际 {verdict}")
 
 
+def test_delivery_keeps_official_baseline_version_field() -> None:
+    """完整成稿须保留正式接口能识别的基线版本字段。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project, read, material, _applied = _run_full_flow(
+            Path(tmp), material=_blocked_material())
+        fixed = _resolved(material)
+        plan = plan_delivery(_existing(project), _full_meta(fixed), fixed)
+        applied = apply_delivery(plan, _Channel(svc, _handoff_token(svc)), read)
+        check(applied.get("saved") is True,
+              f"完整成稿应落盘,实际 {applied}")
+        design = read(DESIGN_REL) or ""
+        check("基线版本" in design,
+              f"主文档须保留基线版本字段,实际 {design}")
+        records_dir = PLUGIN_ROOT / "records"
+        if str(records_dir) not in sys.path:
+            sys.path.insert(0, str(records_dir))
+        import mgs_records  # noqa: PLC0415
+        entry = next(item for item in mgs_records.baseline_report(project)["docs"]
+                     if item["path"] == DESIGN_REL)
+        check(entry.get("declared_version") == "v4",
+              f"正式接口须读到基线版本 v4,实际 {entry}")
+
+
+def test_delivery_verify_failure_sets_checks_ok_false() -> None:
+    """完整交付核验失败时,结构化 checks 不得仍显示通过。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project, read, material, _applied = _run_full_flow(
+            Path(tmp), material=_blocked_material())
+        fixed = _resolved(material)
+        plan = plan_delivery(_existing(project), _full_meta(fixed), fixed)
+        check(plan["status"] == "planned",
+              f"规划时应可整理,实际 {plan.get('status')}")
+        (project / SPEC_REL).unlink()
+        session = begin({
+            "mode": "new_design", "stage": "只有设计，尚未实现",
+            "goal": "完成每日挑战完整设计", "module": "每日挑战",
+            "deps": [], "entry": DESIGN_REL,
+            "authorization": {"write": True, "sync": True},
+            "baseline": {DESIGN_REL: sha256_text(read(DESIGN_REL))},
+        })["session"]
+        applied = apply_delivery(plan, _Channel(svc, _handoff_token(svc)),
+                                 read, session=session)
+        check(applied.get("saved") is not True
+              and applied.get("status") == "check_failed",
+              f"规格被移除后不得标已保存,实际 {applied}")
+        check(applied.get("checks") and applied["checks"].get("ok") is False,
+              f"结构化 checks 须为失败,实际 {applied.get('checks')}")
+        failures = "；".join(applied["checks"].get("failures") or [])
+        check(SPEC_REL in failures or "不存在" in failures,
+              f"失败原因须可定位缺失规格,实际 {failures}")
+
+
+def test_second_required_module_spec_missing_keeps_delivery_incomplete() -> None:
+    """第二个必要模块的规格缺失时,不得宣布完整交付。"""
+
+    material = _resolved(_material())
+    meta = _full_meta(material)
+    meta["module_specs"] = [
+        {"module": "每日挑战", "spec_path": SPEC_REL,
+         "status": "handoffable", "gaps": []},
+        {"module": "退出重进", "spec_path": EXIT_SPEC_REL,
+         "status": "handoffable", "gaps": []},
+    ]
+    existing = {**_stub_existing(), EXIT_SPEC_REL: None}
+    plan = plan_delivery(existing, meta, material)
+    check(plan["status"] == "incomplete",
+          f"第二份规格缺失须保持草案,实际 {plan['status']}")
+    check(plan.get("handoff_ready") is not True,
+          "缺少第二份权威规格不得标可交接")
+    applied = apply_delivery(plan, object(), lambda path: None)
+    check(applied["saved"] is not True
+          and applied.get("written") in (None, []),
+          f"缺第二份规格不得写入,实际 {applied}")
+    verdict = verify_delivery(plan, {**existing, EXIT_SPEC_REL: None})
+    check(verdict["ok"] is False,
+          f"缺第二份规格时回读不得通过,实际 {verdict}")
+    both = {**_stub_existing(), EXIT_SPEC_REL: "# 退出重进:模块规格\n"}
+    ready = plan_delivery(both, meta, material)
+    check(ready["status"] == "planned",
+          f"两份规格都在时应可规划,实际 {ready.get('status')}:{ready.get('missing')}")
+    paths = {item["path"] for item in ready["outputs"]}
+    check(SPEC_REL in paths and EXIT_SPEC_REL in paths,
+          f"交付入口须列出全部必要模块规格,实际 {ready['outputs']}")
+    blank = _full_meta(material)
+    blank["module_specs"] = [
+        {"module": "每日挑战", "spec_path": SPEC_REL,
+         "status": "handoffable", "gaps": []},
+        {"module": "退出重进", "spec_path": "",
+         "status": "handoffable", "gaps": []},
+    ]
+    missing_path = plan_delivery(_stub_existing(), blank, material)
+    check(missing_path["status"] == "incomplete",
+          f"第二模块缺少规格路径须保持草案,实际 {missing_path['status']}")
+
+
+def test_cli_pending_sync_record_continues_and_updates() -> None:
+    """待同步记录须纳入读取与续写,完成同步后状态也要更新。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        svc, project, read, material, _applied = _run_full_flow(
+            root, material=_blocked_material())
+        token = _handoff_token(svc)
+        cli = str(SKILL_DIR / "full_design_cli.py")
+        fixed = _resolved(material)
+
+        def run_cli(payload):
+            return subprocess.run(
+                [sys.executable, "-B", cli, "apply", "--project-root",
+                 str(project), "--runtime-root", str(root / "runtime"),
+                 "--token", token],
+                input=json.dumps(payload, ensure_ascii=False),
+                capture_output=True, text=True)
+
+        no_sync = {"meta": {**_full_meta(fixed),
+                            "authorization": {"write": True, "sync": False}},
+                   "material": fixed}
+        first = run_cli(no_sync)
+        first_result = json.loads(first.stdout)
+        check(first.returncode == 0 and first_result.get("saved") is True,
+              f"缺同步授权仍应留下待同步记录,实际 {first.stdout}{first.stderr}")
+        check(read(PENDING_REL) and "缺同步授权" in read(PENDING_REL),
+              "首次须写入待同步记录")
+
+        second = run_cli(no_sync)
+        second_result = json.loads(second.stdout)
+        check(second_result.get("status") != "conflict",
+              f"已有待同步记录须续写,不得误报版本冲突,实际 {second.stdout}")
+
+        synced = run_cli({"meta": _full_meta(fixed), "material": fixed})
+        check(synced.returncode == 0,
+              f"获准同步后应成功,实际 {synced.stderr or synced.stdout}")
+        pending = read(PENDING_REL) or ""
+        check("已同步" in pending and "缺同步授权" not in pending,
+              f"完成同步后待同步记录须更新状态,实际 {pending}")
+
+
 TESTS = (
     test_extracts_known_material_and_builds_coverage_map,
     test_scope_layers_and_template_fill_guard,
@@ -1131,6 +1273,10 @@ TESTS = (
     test_missing_delivery_locations_keep_draft,
     test_after_write_check_failure_does_not_complete_delivery,
     test_missing_spec_file_keeps_delivery_incomplete,
+    test_delivery_keeps_official_baseline_version_field,
+    test_delivery_verify_failure_sets_checks_ok_false,
+    test_second_required_module_spec_missing_keeps_delivery_incomplete,
+    test_cli_pending_sync_record_continues_and_updates,
 )
 
 

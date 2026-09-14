@@ -1153,6 +1153,65 @@ def test_english_colon_fingerprints_stay_consistent_after_sync() -> None:
         check(verdict["ok"], f"接缝回读仍应通过,实际 {verdict}")
 
 
+def test_partial_spec_write_replans_remaining_baseline_sync() -> None:
+    """规格已写入但基线因版本冲突未同步时,重新规划不得跳过核心基线。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        read, meta, channel = _handoff_fixture(project, svc)
+        first = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta,
+                             _existing(project))
+        check(first["status"] == "planned",
+              f"首次交接应可规划,实际 {first.get('status')}:{first.get('gaps')}")
+        check(any(item.get("path") == DESIGN_REL for item in first["files"]),
+              f"首次实质变化须包含核心基线,实际 {first['files']}")
+
+        class _ConflictAfterSpec(_Channel):
+            def write(self, path, content, expected_sha256=None, note=None):
+                result = super().write(path, content,
+                                       expected_sha256=expected_sha256,
+                                       note=note)
+                if path == SPEC_REL:
+                    current = read(DESIGN_REL)
+                    (project / DESIGN_REL).write_text(
+                        current.rstrip() + "\n\n外部并发修改。\n",
+                        encoding="utf-8")
+                return result
+
+        conflicted = apply_handoff(
+            first, _ConflictAfterSpec(svc, channel.token), read)
+        check(conflicted.get("status") == "conflict",
+              f"基线被外部改动后须报版本冲突,实际 {conflicted}")
+        check(SPEC_REL in (conflicted.get("written") or []),
+              f"已写入的规格须保留,实际 {conflicted.get('written')}")
+        check(SPEC_REL not in (read(DESIGN_REL) or ""),
+              "冲突后核心基线不得假装已引用规格")
+
+        retry = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta,
+                             _existing(project))
+        check(retry["status"] == "planned",
+              f"按实际文件重新规划应继续,实际 {retry.get('status')}")
+        check(retry["version"]["change"] == "substantive",
+              f"基线尚未引用规格时不得改判为格式修正,实际 {retry['version']}")
+        check(any(item.get("path") == DESIGN_REL for item in retry["files"]),
+              f"重新规划必须仍包含核心基线,实际 {retry['files']}")
+
+        applied = apply_handoff(retry, channel, read)
+        check(applied.get("saved") is True,
+              f"冲突解除后应能完成剩余同步,实际 {applied}")
+        design = read(DESIGN_REL)
+        check(SPEC_REL in (design or ""),
+              f"完成同步后基线必须引用模块规格,实际 {design}")
+        check(applied.get("states", {}).get("synced") is True,
+              f"基线引用就位后才可标已同步,实际 {applied.get('states')}")
+        check(applied.get("to_sync") in ([], None),
+              f"完成同步后待同步应清空,实际 {applied.get('to_sync')}")
+        verdict = verify_handoff(retry, {
+            SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+            GLOSSARY_REL: read(GLOSSARY_REL), RECORD_REL: read(RECORD_REL)})
+        check(verdict["ok"], f"基线引用就位后回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -1167,6 +1226,7 @@ TESTS = (
     test_format_claim_blocks_when_semantics_changed,
     test_after_write_check_failure_does_not_complete_handoff,
     test_english_colon_fingerprints_stay_consistent_after_sync,
+    test_partial_spec_write_replans_remaining_baseline_sync,
 )
 
 

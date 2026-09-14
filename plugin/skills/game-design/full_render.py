@@ -49,7 +49,7 @@ def render_design(meta: dict[str, Any], material: dict[str, Any],
     version = _version_label(meta)
     design = dict(material.get("design") or {})
     lines = [f"# {game}：游戏设计主文档", "",
-             f"维护责任：方案设计。版本：{version}。日期：{date}。",
+             f"维护责任：方案设计。基线版本：{version}。日期：{date}。",
              f"本文件是全游戏的交付入口;现行规则集中在模块规格,本文件只引用,"
              f"不重复规则正文。", "",
              "## 总体概述", "", str(design.get("overview") or ""), "",
@@ -198,12 +198,12 @@ def deliverable_outputs(meta: dict[str, Any]) -> list[tuple[str, str]]:
     """四类交付物路径与角色:主文档为入口,其余三类为配套附表或权威位置。"""
 
     doc_map = dict(meta.get("doc_map") or {})
-    spec_paths = [str(item.get("spec_path") or "")
-                  for item in meta.get("module_specs") or []
-                  if item.get("spec_path")]
+    spec_entries = [(str(item.get("spec_path") or ""), ROLE_SPECS)
+                    for item in meta.get("module_specs") or []] \
+        or [("", ROLE_SPECS)]
     return [
         (str(doc_map.get("design") or ""), ROLE_DESIGN),
-        (spec_paths[0] if spec_paths else "", ROLE_SPECS),
+        *spec_entries,
         (str(doc_map.get("content") or ""), ROLE_CONTENT),
         (str(doc_map.get("version") or ""), ROLE_VERSION),
     ]

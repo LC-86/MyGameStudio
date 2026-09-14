@@ -64,6 +64,10 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
         pending = _pending_sync_file(existing, meta, to_sync)
         if pending:
             files = [pending]
+    else:
+        completed = _completed_pending_file(existing, meta)
+        if completed:
+            files = planned_files + [completed]
     base = {
         "op": "delivery",
         "game": str(meta.get("game") or material.get("game") or ""),
@@ -380,14 +384,14 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
                   "implemented": False, "verified": False}
         failures = list((checks or {}).get("failures") or []) + list(
             verdict.get("failures") or [])
-        payload = {"ok": False, "failures": failures}
+        payload = {**(checks or {}), "ok": False, "failures": failures}
         return {**_result(plan, "check_failed", False), "written": written,
                 "outputs": plan.get("outputs") or [],
                 "contradictions": [], "missing": [],
                 "handoff_ready": False, "states": failed,
                 "to_sync": plan.get("to_sync") or known_paths,
                 "untouched": plan.get("untouched") or [],
-                "session": session, "checks": checks or payload,
+                "session": session, "checks": payload,
                 "report": check_failed_report(plan, written, payload)}
     states = {"adopted": True, "saved": True,
               "synced": sync_authorized and not (plan.get("to_sync") or []),
@@ -447,20 +451,43 @@ def verify_delivery(plan: dict[str, Any],
     return {"ok": not failures, "failures": failures, "entry": entry}
 
 
-def _pending_sync_file(existing: dict[str, str | None], meta: dict[str, Any],
-                       to_sync: list[str]) -> dict[str, Any] | None:
-    """缺同步授权时留下可恢复的待同步记录,不原位替换当前有效设计。"""
+def pending_record_path(meta: dict[str, Any]) -> str | None:
+    """缺同步授权时留下的待同步记录位置,供读取、续写与完成状态更新共用。"""
 
     records = str((meta.get("doc_map") or {}).get("records") or "").rstrip("/")
     if not records:
         return None
-    path = f"{records}/delivery-pending.md"
+    return f"{records}/delivery-pending.md"
+
+
+def _pending_sync_file(existing: dict[str, str | None], meta: dict[str, Any],
+                       to_sync: list[str]) -> dict[str, Any] | None:
+    """缺同步授权时留下可恢复的待同步记录,不原位替换当前有效设计。"""
+
+    path = pending_record_path(meta)
+    if not path:
+        return None
     pending = "、".join(to_sync) or "当前有效设计"
     content = (
         f"# 待同步完整设计（{meta.get('date') or ''}）\n\n"
         "缺同步授权,未改写当前有效设计。获准同步前失效规则、引用和验收"
         "要求不得退出当前有效版本。\n\n"
         f"待同步：{pending}\n")
+    return {"path": path, "role": "待同步记录", "content": content,
+            "expected_sha256": sha256_text(existing.get(path))}
+
+
+def _completed_pending_file(existing: dict[str, str | None],
+                            meta: dict[str, Any]) -> dict[str, Any] | None:
+    """获准同步后更新既有待同步记录,避免旧状态继续声明缺授权。"""
+
+    path = pending_record_path(meta)
+    if not path or existing.get(path) is None:
+        return None
+    content = (
+        f"# 完整设计同步记录（{meta.get('date') or ''}）\n\n"
+        "已获准同步并写入当前有效设计。此前留下的待办已经完成。\n\n"
+        "已同步：当前有效设计\n")
     return {"path": path, "role": "待同步记录", "content": content,
             "expected_sha256": sha256_text(existing.get(path))}
 
@@ -490,4 +517,5 @@ def _result(plan: dict[str, Any], status: str, saved: bool) -> dict[str, Any]:
     }
 
 
-__all__ = ["plan_delivery", "apply_delivery", "verify_delivery"]
+__all__ = ["plan_delivery", "apply_delivery", "verify_delivery",
+           "pending_record_path"]

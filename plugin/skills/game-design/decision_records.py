@@ -101,6 +101,7 @@ def parse_record(text: str, module: str) -> dict[str, Any]:
     parsed = empty_parse()
     if not text:
         return parsed
+    title_ok = bool(re.search(rf"^#\s*{re.escape(module)}\s*[:：]", text, re.M))
     current_round = None
     current_date = ""
     current_qid = None
@@ -153,7 +154,7 @@ def parse_record(text: str, module: str) -> dict[str, Any]:
                 mark_synced(parsed, qid)
             continue
         if in_pending:
-            _add_pending(parsed, stripped, current_round)
+            _add_pending(parsed, stripped, current_round, title_ok)
             continue
         _add_replacement(parsed, stripped, current_round)
     return parsed
@@ -192,12 +193,15 @@ def _add_decision(parsed: dict[str, Any], decision: "re.Match[str]",
 
 
 def _add_pending(parsed: dict[str, Any], stripped: str,
-                 round_no: int | None) -> None:
+                 round_no: int | None, title_ok: bool = False) -> None:
     item = PENDING_LINE.match(stripped)
     if not item:
         return
+    if not title_ok and not parsed["decisions"]:
+        return
     reason = item.group("reason").strip()
     qid = item.group("qid")
+    parsed["found"] = True
     parsed["pending"].append({
         "qid": qid, "title": item.group("title").strip(), "reason": reason,
         "status": pending_status(reason), "round": round_no})

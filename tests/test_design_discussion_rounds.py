@@ -723,6 +723,42 @@ def test_later_ambiguity_does_not_drop_earlier_answers() -> None:
           "未回答的 Q3 不得被后题歧义连带默认")
 
 
+def test_combined_reservations_override_overall_adopt() -> None:
+    """整体采纳中的含糊例外,以及「不是整体按建议」,都不得写成已采纳。"""
+
+    questions = _daily_questions()[:3]
+    turn = {
+        "request": "每日挑战",
+        "goal": "形成每日挑战核心模块",
+        "module": "每日挑战",
+        "current_design": {"exists": True, "covers_request": False},
+        "questions": questions,
+        "shown": ["Q1", "Q2", "Q3"],
+    }
+    mixed = run_round({
+        **turn, "user_reply": "整体按建议，Q2 选 A 还是 B，我还没决定"})
+    check("Q2" not in mixed["adopted"],
+          f"整体采纳中的 Q2 含糊例外不得采纳,实际 {mixed['adopted']}")
+    check("Q2" in mixed["pending"],
+          f"Q2 含糊例外须保持待讨论,实际 {mixed['pending']}")
+    check("Q1" in mixed["adopted"] and "Q3" in mixed["adopted"],
+          f"未声明例外的题目仍可整体采纳,实际 {mixed['adopted']}")
+
+    negated = run_round({**turn, "user_reply": "不是整体按建议，先讨论"})
+    check(negated["adopted"] == {},
+          f"「不是整体按建议」不得保存推荐,实际 {negated['adopted']}")
+    check("Q1" in negated["pending"] and "Q2" in negated["pending"]
+          and "Q3" in negated["pending"],
+          f"否定后三题须保持待讨论,实际 {negated['pending']}")
+
+    colon = run_round({
+        **turn, "user_reply": "整体按建议，Q2：选 A 还是 B，我还没决定"})
+    check("Q2" not in colon["adopted"],
+          f"冒号后的含糊选择不得写成自定采纳,实际 {colon['adopted']}")
+    check("Q2" in colon["pending"],
+          f"Q2 冒号含糊例外须保持待讨论,实际 {colon['pending']}")
+
+
 def main() -> int:
     return run_theme("设计问答模块识别与成组交互", (
         test_classifies_new_design_for_missing_module,
@@ -746,6 +782,7 @@ def main() -> int:
         test_optional_status_icons_only_when_present,
         test_negated_or_ambiguous_replies_stay_pending,
         test_later_ambiguity_does_not_drop_earlier_answers,
+        test_combined_reservations_override_overall_adopt,
     ), FAILURES)
 
 

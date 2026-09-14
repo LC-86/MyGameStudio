@@ -18,7 +18,8 @@ import re
 from typing import Any
 
 from check_state import (
-    ADJUST_RE, adopts_all_recommendations, definite_choices, is_unknown_value,
+    ADJUST_RE, adopts_all_recommendations, ambiguous_choice_ids,
+    definite_choices, is_ambiguous_value, is_unknown_value,
 )
 
 KIND_LABELS = {
@@ -310,10 +311,11 @@ def _map_answers(
         if 0 <= index < len(shown_ids):
             qid = shown_ids[index]
             value = match.group(2).strip()
-            if is_unknown_value(value):
+            if is_unknown_value(value) or is_ambiguous_value(value):
                 adopted.pop(qid, None)
                 settled.pop(qid, None)
-                pending[qid] = {"reason": "unknown"}
+                pending[qid] = {"reason": "unknown" if is_unknown_value(value)
+                                else "ambiguous"}
                 continue
             adopted[qid] = {"value": value, "source": "custom"}
             settled[qid] = value
@@ -328,14 +330,20 @@ def _map_answers(
         value = match.group(2).strip()
         if re.fullmatch(r"选\s*[A-Za-z]", value):
             continue
-        if is_unknown_value(value):
+        if is_unknown_value(value) or is_ambiguous_value(value):
             adopted.pop(qid, None)
             settled.pop(qid, None)
-            pending[qid] = {"reason": "unknown"}
+            pending[qid] = {"reason": "unknown" if is_unknown_value(value)
+                            else "ambiguous"}
             continue
         adopted[qid] = {"value": value, "source": "custom"}
         settled[qid] = value
         pending.pop(qid, None)
+
+    for qid in ambiguous_choice_ids(text):
+        adopted.pop(qid, None)
+        settled.pop(qid, None)
+        pending[qid] = {"reason": "ambiguous"}
 
     for qid in shown_ids:
         if qid in settled or qid in pending:

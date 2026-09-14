@@ -891,6 +891,76 @@ def test_rejected_or_unknown_replies_are_not_saved_as_adopted() -> None:
               f"其余题目恢复为已定,实际 {state['settled']}")
 
 
+def test_pending_only_records_restore_pending_items() -> None:
+    """只有未决项的记录,恢复后仍须能定位未决,不得变成没有记录。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        channel = _Channel(svc, _instance(svc).token)
+        read = _reader(project)
+        reply = "不能整体按建议，先讨论"
+        turn = run_round(_turn(reply))
+        plan = plan_save(None, turn, _meta(reply=reply))
+        check(plan.get("status") == "planned",
+              f"未决项仍应形成可保存记录,实际 {plan.get('status')}")
+        applied = apply_save(plan, channel, read)
+        check(applied.get("saved") is True,
+              f"未决记录应实际落盘,实际 {applied}")
+        text = read(RECORD_REL) or ""
+        check("：采纳" not in text,
+              f"否定整体建议不得写入采纳决定,实际 {text}")
+        check("### 未决项" in text and "Q1" in text and "Q2" in text
+              and "Q3" in text,
+              f"须写入三条未决,实际 {text}")
+        restored = restore_from_records({RECORD_REL: text}, "每日挑战")
+        pending_ids = {item["qid"] for item in restored.get("pending") or []}
+        check({"Q1", "Q2", "Q3"} <= pending_ids,
+              f"恢复后须保留三条未决,实际 {restored.get('pending')}")
+        check(restored.get("records"),
+              f"只有未决的模块记录仍须可定位,实际 {restored.get('records')}")
+        check((restored.get("rounds") or 0) >= 1,
+              f"恢复后轮次不得清零,实际 {restored.get('rounds')}")
+        check("未决：无" not in restored["report"],
+              f"报告不得把未决写成无,实际 {restored['report']}")
+        other = text.replace("每日挑战", "商业化").replace("关卡来源", "商店定价")
+        mixed = restore_from_records(
+            {RECORD_REL: text, "docs/other.md": other}, "每日挑战")
+        mixed_ids = {item["qid"] for item in mixed.get("pending") or []}
+        check("Q1" in mixed_ids and "Q2" in mixed_ids and "Q3" in mixed_ids,
+              f"本模块未决仍须保留,实际 {mixed.get('pending')}")
+        check(all(item.get("title") != "商店定价"
+                  for item in mixed.get("pending") or []),
+              f"其它模块的未决不得串入,实际 {mixed.get('pending')}")
+
+
+def test_combined_reservation_is_not_saved_as_adopted() -> None:
+    """组合回答中的保留意见不得保存为已采纳。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        channel = _Channel(svc, _instance(svc).token)
+        read = _reader(project)
+        reply = "整体按建议，Q2 选 A 还是 B，我还没决定"
+        turn = run_round(_turn(reply))
+        check("Q2" not in turn["adopted"],
+              f"Q2 含糊例外不得进入采纳,实际 {turn['adopted']}")
+        plan = plan_save(None, turn, _meta(reply=reply))
+        check("Q2" not in {item.get("qid") for item in plan.get("entries") or []},
+              f"保存计划不得把 Q2 写成已采纳,实际 {plan.get('entries')}")
+        if plan.get("status") == "planned":
+            apply_save(plan, channel, read)
+        saved = read(RECORD_REL) or ""
+        check("·Q2 与章节关系：采纳" not in saved,
+              f"Q2 含糊例外不得写成已采纳,实际 {saved}")
+        state = restore_from_records(
+            {RECORD_REL: saved} if saved else {}, "每日挑战")
+        check("Q2" not in (state.get("settled") or {}),
+              f"恢复后 Q2 不得成为已定,实际 {state.get('settled')}")
+        pending_ids = {item["qid"] for item in state.get("pending") or []}
+        check("Q2" in pending_ids,
+              f"恢复后 Q2 须保持未决,实际 {state.get('pending')}")
+
+
 def main() -> int:
     return run_theme("设计问答决定保存与恢复", (
         test_normal_save_matches_shown_questions_and_reads_back,
@@ -905,6 +975,8 @@ def main() -> int:
         test_cli_smoke_and_entry_points_to_seam,
         test_restore_merges_by_revision_not_filename,
         test_rejected_or_unknown_replies_are_not_saved_as_adopted,
+        test_pending_only_records_restore_pending_items,
+        test_combined_reservation_is_not_saved_as_adopted,
     ), FAILURES)
 
 

@@ -36,8 +36,14 @@ def compare_existing(existing: str | None, spec_text: str,
             "spec_fingerprint": fingerprint(spec_text)}
 
 
-def version_plan(meta: dict[str, Any], compare: dict[str, Any]) -> dict:
-    """版本纪律:实质变化才递增;语义未变的调整按格式修正处理。"""
+def version_plan(meta: dict[str, Any], compare: dict[str, Any],
+                 *, baseline_text: str | None = None, spec_path: str = "",
+                 to_sync: list[str] | None = None) -> dict:
+    """版本纪律:实质变化才递增;语义未变的调整按格式修正处理。
+
+    规格正文相同不能证明核心基线已同步:仍有未同步决定且基线尚未引用
+    该规格时,保持实质变化,继续规划基线写入。
+    """
 
     announced = str(meta.get("change") or "").strip()
     from_v = str(meta.get("version_from") or "")
@@ -49,6 +55,10 @@ def version_plan(meta: dict[str, Any], compare: dict[str, Any]) -> dict:
                         "先解决声明与实际内容的矛盾,再允许同步。"}
     if announced == "format" or (compare["previous_present"]
                                  and compare["semantic_equal"]):
+        if _baseline_still_needs_spec(baseline_text, spec_path, to_sync):
+            return {"from": from_v, "to": to_v, "change": "substantive",
+                    "note": f"规格正文未变,但核心基线尚未引用该规格;"
+                            f"仍按实质变化同步基线:{from_v} → {to_v}。"}
         return {"from": from_v, "to": from_v, "change": "format",
                 "note": f"本次仅为格式修正或语义一致的整理:版本保持 {from_v},"
                         f"不触发新版本,不算新产品要求。"}
@@ -57,17 +67,31 @@ def version_plan(meta: dict[str, Any], compare: dict[str, Any]) -> dict:
                     f"更新基线版本与双指纹并登记采纳依据。"}
 
 
+def _baseline_still_needs_spec(baseline_text: str | None, spec_path: str,
+                               to_sync: list[str] | None) -> bool:
+    if not spec_path or not to_sync:
+        return False
+    return spec_path not in (baseline_text or "")
+
+
 def version_warnings(meta: dict[str, Any],
-                     compare: dict[str, Any]) -> list[str]:
+                     compare: dict[str, Any],
+                     version: dict[str, Any] | None = None) -> list[str]:
     """声明与回读核对不一致时如实提示,不静默按声明执行。"""
 
     warnings: list[str] = []
     announced = str(meta.get("change") or "").strip()
+    decided = str((version or {}).get("change") or "")
     if announced == "substantive" and compare["previous_present"] \
             and compare["semantic_equal"]:
-        warnings.append(
-            "计划按实质变化递增版本,但回读核对显示新旧规则语义一致;"
-            "已按格式修正处理,版本保持不变。")
+        if decided == "substantive":
+            warnings.append(
+                "规格正文未变,但核心基线尚未引用该规格;"
+                "仍按实质变化同步基线,不把未完成同步当成格式修正。")
+        else:
+            warnings.append(
+                "计划按实质变化递增版本,但回读核对显示新旧规则语义一致;"
+                "已按格式修正处理,版本保持不变。")
     elif announced == "format" and compare["previous_present"] \
             and not compare["semantic_equal"]:
         warnings.append(
@@ -90,8 +114,11 @@ def sync_files(meta: dict[str, Any], parsed: dict[str, Any],
     files.append({"path": spec_path, "role": "模块规格",
                   "content": spec_text,
                   "expected_sha256": sha256_text(existing.get(spec_path))})
-    if version["change"] == "substantive" and baseline_authorized(
-            authorization):
+    needs_baseline = version["change"] == "substantive" or (
+        _baseline_still_needs_spec(
+            existing.get(design_path), spec_path,
+            list(decision.get("to_sync") or [])))
+    if needs_baseline and baseline_authorized(authorization):
         design_text = design_document(existing.get(design_path), meta, version,
                                       spec_path, decision)
         files.append({"path": design_path, "role": "核心基线",
@@ -105,8 +132,10 @@ def sync_files(meta: dict[str, Any], parsed: dict[str, Any],
                           existing.get(glossary_path), glossary),
                       "expected_sha256": sha256_text(
                           existing.get(glossary_path))})
+    baseline_ready = spec_path in (existing.get(design_path) or "") \
+        or any(item.get("role") == "核心基线" for item in files)
     if authorization.get("write") and authorization.get("sync") \
-            and decision["to_sync"] and record_path:
+            and decision["to_sync"] and record_path and baseline_ready:
         content, updated = apply_sync(existing.get(record_path) or "",
                                       str(meta.get("module") or ""),
                                       list(decision["to_sync"]),

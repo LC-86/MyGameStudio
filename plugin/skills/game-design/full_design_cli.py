@@ -23,7 +23,9 @@ from pathlib import Path
 from typing import Any
 
 from decisions import GateChannel, load_gate_service
-from full_design import apply_delivery, plan_delivery, verify_delivery
+from full_design import (
+    apply_delivery, pending_record_path, plan_delivery, verify_delivery,
+)
 
 
 def _paths(payload: dict[str, Any]) -> list[str]:
@@ -37,6 +39,9 @@ def _paths(payload: dict[str, Any]) -> list[str]:
         paths.add(str(value))
     for value in meta.get("records") or []:
         paths.add(str(value))
+    pending = pending_record_path(meta)
+    if pending:
+        paths.add(pending)
     return sorted(paths)
 
 
