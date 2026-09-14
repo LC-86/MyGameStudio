@@ -1,0 +1,6 @@
+{
+  "must_sync_spec": true,
+  "required_paths": [
+    "docs/mygamestudio/GAME_DESIGN.md"
+  ]
+}

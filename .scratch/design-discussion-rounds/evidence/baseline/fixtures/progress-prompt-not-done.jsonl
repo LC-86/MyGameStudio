@@ -1,0 +1,4 @@
+{"method": "item/completed", "emittedAtMs": 1000, "params": {"item": {"content": [{"type": "text", "text": "Q1 选 A"}], "type": "userMessage"}, "completedAtMs": 1000}}
+{"method": "item/completed", "emittedAtMs": 1300, "params": {"item": {"text": "先核对", "phase": "commentary", "type": "agentMessage"}, "completedAtMs": 1300}}
+{"method": "item/completed", "emittedAtMs": 5000, "params": {"item": {"text": "❓ Q4", "phase": "final_answer", "type": "agentMessage"}, "completedAtMs": 5000}}
+{"method": "turn/completed", "emittedAtMs": 5100, "params": {"turn": {"status": "completed"}}}
