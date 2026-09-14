@@ -277,9 +277,10 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
                      module: str, version_to: str = "") -> str:
     """引用就位:只更新目标引用,保留仍适用的既有内容。
 
-    生成器标准标题节原位替换;自定义标题的节做行级更新——只替换含该
-    规格路径的行,同节其他规则、引用与说明保持原样。规格路径已出现
-    不能证明引用指向当前版本;引用位置保持唯一。
+    生成器标准标题节原位替换;自定义标题的节做行内更新——只改规格
+    路径旁的当前版本,同行其他字段、表格列与说明保持原样。重复引用
+    只去掉路径与版本片段,不得删掉整行业务内容。规格路径已出现不能
+    证明引用指向当前版本;引用位置保持唯一。
     """
 
     pattern = re.compile(
@@ -294,7 +295,7 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
         if spec_path not in body:
             continue
         return text[:section.start()] + _replace_reference_lines(
-            body, spec_path, ref_line) + text[section.end():]
+            body, spec_path, ref_line, version_to) + text[section.end():]
     if version_to and baseline_cites_spec(text, spec_path, version_to):
         return text
     if "## 变更索引" in text:
@@ -303,22 +304,84 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
     return text.rstrip() + "\n\n" + citation
 
 
+_CURRENT_VERSION_RE = re.compile(r"当前\s*v\d+")
+_CITATION_PAREN_RE = re.compile(
+    r"[ \t]*[（(][^）\n)]*当前\s*v\d+[^）\n)]*[）)]")
+_CITATION_LEAD_RE = re.compile(
+    r"(?:行为规则、边界、数值与验收\s*[：:]\s*)?(?:见模块规格|详见)\s*$")
+
+
+def _version_in_ref_line(ref_line: str) -> str:
+    match = re.search(r"当前\s*(v\d+)", ref_line)
+    return match.group(1) if match else ""
+
+
+def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
+    """只改路径旁的当前版本,同行其他字段与说明原样保留。"""
+
+    start = line.find(spec_path)
+    if start < 0 or not version_to:
+        return line
+    after = start + len(spec_path)
+    match = _CURRENT_VERSION_RE.search(line[after:after + 80])
+    if not match:
+        return f"{line[:after]}（当前 {version_to}）{line[after:]}"
+    abs_start = after + match.start()
+    abs_end = after + match.end()
+    return f"{line[:abs_start]}当前 {version_to}{line[abs_end:]}"
+
+
+def _strip_line_citation(line: str, spec_path: str) -> str:
+    """去掉本行重复引用片段,保留其余业务内容。"""
+
+    start = line.find(spec_path)
+    if start < 0:
+        return line
+    after = start + len(spec_path)
+    paren = _CITATION_PAREN_RE.match(line[after:])
+    if paren:
+        end = after + paren.end()
+    else:
+        match = _CURRENT_VERSION_RE.search(line[after:after + 80])
+        end = after + match.end() if match else after
+    remainder = _CITATION_LEAD_RE.sub("", line[:start]) + line[end:]
+    remainder = re.sub(r"[ \t]{2,}", " ", remainder)
+    remainder = re.sub(r"[；;]{2,}", "；", remainder)
+    return remainder.rstrip()
+
+
+def _line_has_business_text(line: str) -> bool:
+    """去掉 Markdown 结构后是否还有业务正文。"""
+
+    text = re.sub(r"^[-*+]+\s+", "", line.strip())
+    text = re.sub(r"^\d+[.)、]\s+", "", text)
+    text = re.sub(r"\|", "", text)
+    text = re.sub(r"^[-:\s]+$", "", text.strip())
+    return bool(re.sub(r"[\s，,。．.；;：:、（）()]+", "", text))
+
+
 def _replace_reference_lines(body: str, spec_path: str,
-                             ref_line: str) -> str:
-    """行级更新引用:只替换含该规格路径的行,同节其余内容原样保留。"""
+                             ref_line: str, version_to: str = "") -> str:
+    """行内更新引用:只改路径与版本片段,同行其余内容原样保留。"""
 
     updated: list[str] = []
     replaced = False
+    target = version_to or _version_in_ref_line(ref_line)
     for line in body.split("\n"):
         if spec_path not in line:
             updated.append(line)
             continue
-        if replaced:
-            continue  # 旧版本引用行去重,引用位置保持唯一
-        updated.append(ref_line)
-        replaced = True
+        if not replaced:
+            # 无版本时也不得整行换成生成引用,以免删掉同行仍有效的规则。
+            updated.append(_update_line_citation(line, spec_path, target)
+                           if target else line)
+            replaced = True
+            continue
+        remainder = _strip_line_citation(line, spec_path)
+        if _line_has_business_text(remainder):
+            updated.append(remainder)
     if not replaced:
-        updated.append(ref_line)  # 路径跨行断开等罕见形态:追加,不删内容
+        updated.append(ref_line)
     return "\n".join(updated)
 
 
