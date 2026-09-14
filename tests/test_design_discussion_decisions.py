@@ -847,6 +847,50 @@ def test_restore_merges_by_revision_not_filename() -> None:
               f"{label}待同步须绑定新修订,实际 {state['to_sync']}")
 
 
+def test_rejected_or_unknown_replies_are_not_saved_as_adopted() -> None:
+    """否定整体建议或局部不知道不得落成已采纳决定。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        channel = _Channel(svc, _instance(svc).token)
+        read = _reader(project)
+        refused = "不能整体按建议，先讨论"
+        refused_turn = run_round(_turn(refused))
+        refused_plan = plan_save(None, refused_turn, _meta(reply=refused))
+        if refused_plan.get("status") == "planned":
+            apply_save(refused_plan, channel, read)
+        text = read(RECORD_REL) or ""
+        check("：采纳" not in text,
+              f"否定整体建议不得写入采纳决定,实际 {text}")
+        restored = restore_from_records(
+            {RECORD_REL: text} if text else {}, "每日挑战")
+        check(restored.get("settled") in ({}, None),
+              f"恢复后不得把否定回答当成已定,实际 {restored.get('settled')}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        channel = _Channel(svc, _instance(svc).token)
+        read = _reader(project)
+        unknown_reply = "整体按建议，Q1：不知道"
+        unknown_turn = run_round(_turn(unknown_reply))
+        unknown_plan = plan_save(None, unknown_turn, _meta(reply=unknown_reply))
+        check("Q1" not in unknown_turn["adopted"],
+              f"Q1 不知道不得进入采纳,实际 {unknown_turn['adopted']}")
+        applied = apply_save(unknown_plan, channel, read)
+        check(applied.get("saved") is True, f"其余明确项仍可保存,实际 {applied}")
+        saved = read(RECORD_REL)
+        check("·Q1 关卡来源：采纳" not in saved,
+              f"Q1 不知道不得写成已采纳,实际 {saved}")
+        check("·Q2 与章节关系：采纳" in saved
+              and "·Q3 每日身份：采纳" in saved,
+              f"未声明例外的题目仍应保存,实际 {saved}")
+        state = restore_from_records({RECORD_REL: saved}, "每日挑战")
+        check("Q1" not in state["settled"],
+              f"恢复后 Q1 不得成为已定,实际 {state['settled']}")
+        check("Q2" in state["settled"] and "Q3" in state["settled"],
+              f"其余题目恢复为已定,实际 {state['settled']}")
+
+
 def main() -> int:
     return run_theme("设计问答决定保存与恢复", (
         test_normal_save_matches_shown_questions_and_reads_back,
@@ -860,6 +904,7 @@ def main() -> int:
         test_mcp_gate_tool_entry_saves_and_denies,
         test_cli_smoke_and_entry_points_to_seam,
         test_restore_merges_by_revision_not_filename,
+        test_rejected_or_unknown_replies_are_not_saved_as_adopted,
     ), FAILURES)
 
 

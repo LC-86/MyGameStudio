@@ -310,12 +310,18 @@ def _map_answers(
         if 0 <= index < len(shown_ids):
             qid = shown_ids[index]
             value = match.group(2).strip()
+            if is_unknown_value(value):
+                adopted.pop(qid, None)
+                settled.pop(qid, None)
+                pending[qid] = {"reason": "unknown"}
+                continue
             adopted[qid] = {"value": value, "source": "custom"}
             settled[qid] = value
 
     for qid, value in definite_choices(text):
         adopted[qid] = {"value": value, "source": "user"}
         settled[qid] = value
+        pending.pop(qid, None)
 
     for match in ADJUST_RE.finditer(text):
         qid = match.group(1)
@@ -323,11 +329,13 @@ def _map_answers(
         if re.fullmatch(r"选\s*[A-Za-z]", value):
             continue
         if is_unknown_value(value):
-            if qid not in settled:
-                pending[qid] = {"reason": "unknown"}
+            adopted.pop(qid, None)
+            settled.pop(qid, None)
+            pending[qid] = {"reason": "unknown"}
             continue
         adopted[qid] = {"value": value, "source": "custom"}
         settled[qid] = value
+        pending.pop(qid, None)
 
     for qid in shown_ids:
         if qid in settled or qid in pending:

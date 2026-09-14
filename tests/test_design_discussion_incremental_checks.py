@@ -825,6 +825,8 @@ def _existing_for(read, meta: dict) -> dict:
     doc_map = dict(meta.get("doc_map") or {})
     paths = [str(doc_map.get(key) or "") for key in ("design", "content",
                                                      "version")]
+    for item in meta.get("module_specs") or []:
+        paths.append(str(item.get("spec_path") or ""))
     return {path: read(path) for path in paths if path}
 
 

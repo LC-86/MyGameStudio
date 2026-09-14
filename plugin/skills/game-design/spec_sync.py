@@ -128,7 +128,10 @@ def baseline_authorized(authorization: dict[str, Any]) -> bool:
 
 
 _VERSION_HEADER_RE = re.compile(r"(基线版本\s*[:：]\s*)v\d+")
-_FP_LINE_RE = re.compile(r"^(内容指纹|归一指纹)：sha256:[0-9a-f]{64}\s*$")
+_FP_LINE_RE = re.compile(
+    r"^(内容指纹|归一指纹)\s*[:：]\s*sha256:[0-9a-f]{64}\s*$")
+_FP_TOKEN_RE = re.compile(
+    r"(内容指纹|归一指纹)\s*[:：]\s*sha256:[0-9a-f]{64}[。.]?")
 
 
 def design_document(existing: str | None, meta: dict[str, Any],
@@ -140,12 +143,13 @@ def design_document(existing: str | None, meta: dict[str, Any],
     if not (existing or "").strip():
         return register_fingerprints(
             _new_baseline(meta, version, citation, decision))
+    colon = _fingerprint_colon(existing)
     text = _strip_fingerprints(existing)
     text = _VERSION_HEADER_RE.sub(rf"\g<1>{version['to']}", text, count=1)
     text = _upsert_citation(text, spec_path, citation,
                             str(meta.get("module") or ""))
     text = _append_index(text, meta, version, decision)
-    return register_fingerprints(_ensure_fingerprint_slots(text))
+    return register_fingerprints(_ensure_fingerprint_slots(text, colon))
 
 
 def _module_citation(meta: dict[str, Any], version: dict[str, Any],
@@ -182,9 +186,25 @@ def _new_baseline(meta: dict[str, Any], version: dict[str, Any],
     return "\n".join(lines) + "\n"
 
 
+def _fingerprint_colon(text: str) -> str:
+    """沿用已有登记的冒号形式;没有登记时用中文冒号。"""
+
+    if re.search(r"(内容指纹|归一指纹):sha256:", text or ""):
+        return ":"
+    return "："
+
+
 def _strip_fingerprints(text: str) -> str:
-    kept = [line for line in text.splitlines()
-            if not _FP_LINE_RE.match(line.strip())]
+    stripped = _FP_TOKEN_RE.sub("", text)
+    kept: list[str] = []
+    for line in stripped.splitlines():
+        if _FP_LINE_RE.match(line.strip()):
+            continue
+        if not line.strip():
+            if kept and kept[-1] != "":
+                kept.append("")
+            continue
+        kept.append(line.rstrip())
     return "\n".join(kept).rstrip() + "\n"
 
 
@@ -220,25 +240,30 @@ def _index_line(meta: dict[str, Any], version: dict[str, Any],
             f"模块规格引用,采纳依据 {adoption_basis(decision)}。")
 
 
-def _ensure_fingerprint_slots(text: str) -> str:
+def _ensure_fingerprint_slots(text: str, colon: str = "：") -> str:
     body = text.rstrip()
-    if "内容指纹：sha256:" not in body:
-        body += "\n\n内容指纹：sha256:" + "0" * 64
-    if "归一指纹：sha256:" not in body:
-        body += "\n归一指纹：sha256:" + "0" * 64
+    if not re.search(r"内容指纹\s*[:：]\s*sha256:", body):
+        body += f"\n\n内容指纹{colon}sha256:" + "0" * 64
+    if not re.search(r"归一指纹\s*[:：]\s*sha256:", body):
+        body += f"\n归一指纹{colon}sha256:" + "0" * 64
     return body + "\n"
 
 
 def register_fingerprints(text: str) -> str:
     """按既有双指纹规则登记:槽位占位后分别按原样与去空白计算。"""
 
+    if not re.search(r"内容指纹\s*[:：]\s*sha256:", text):
+        text = _ensure_fingerprint_slots(text)
     canonical = _FP_SLOT_RE.sub("sha256:<FP>", text)
     strict = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     norm = hashlib.sha256(
         "".join(canonical.split()).encode("utf-8")).hexdigest()
-    return re.sub(r"内容指纹：sha256:[0-9a-f]{64}",
-                  f"内容指纹：sha256:{strict}", text).replace(
-        "归一指纹：sha256:" + "0" * 64, f"归一指纹：sha256:{norm}")
+    text = re.sub(r"内容指纹(\s*[:：]\s*)sha256:[0-9a-f]{64}",
+                  lambda match: f"内容指纹{match.group(1)}sha256:{strict}",
+                  text, count=1)
+    return re.sub(r"归一指纹(\s*[:：]\s*)sha256:[0-9a-f]{64}",
+                  lambda match: f"归一指纹{match.group(1)}sha256:{norm}",
+                  text, count=1)
 
 
 def glossary_document(existing: str | None, entries: list[dict]) -> str:

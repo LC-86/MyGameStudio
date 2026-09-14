@@ -67,6 +67,33 @@ def read_only_report(plan: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def check_failed_report(plan: dict[str, Any], written: list[str],
+                        checks: dict[str, Any]) -> str:
+    """写入已发生,但保存后检查失败:保留事实,不得称为完整设计已交付。"""
+
+    failures = "；".join(checks.get("failures") or []) or "未列出"
+    return "\n".join([
+        f"完整设计已写入但检查失败（{plan.get('game') or ''}）:交付未完成。",
+        f"已写入：{'、'.join(written) or '无'}。",
+        f"检查失败：{failures}。",
+        "已写入事实保留;不得称为已交付或已同步。"
+        "待同步项按实际记录保留,先解决检查缺口再继续。",
+    ])
+
+
+def pending_sync_report(plan: dict[str, Any], to_sync: list[str]) -> str:
+    """有写入授权但缺同步授权:草稿可整理,不得改写当前有效设计。"""
+
+    pending = "、".join(to_sync) or "当前有效设计"
+    return "\n".join([
+        f"已整理{plan.get('game') or ''}完整设计草稿,缺同步授权,"
+        "未改写当前有效设计。",
+        f"待同步：{pending}；获准同步前不能把失效规则退出当前有效版本。",
+        "状态：已采纳、未保存当前有效设计、未同步核心基线;"
+        "实现状态：未实现;验证状态：未验证。",
+    ])
+
+
 def saved_report(plan: dict[str, Any], written: list[str],
                  states: dict[str, bool]) -> str:
     """完成报告:列出实际写入范围与入口,实现与验证状态分开。"""

@@ -29,6 +29,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable
 
 import change_input as material_input
@@ -59,11 +60,12 @@ def plan_change(existing: dict[str, str | None], meta: dict[str, Any],
                                          str(meta.get("module") or ""))
     record = material_input.record(material, meta, change, impact, stage,
                                    organization, questions)
-    specs = _spec_plans(existing, meta, impact)
+    authorization = dict(meta.get("authorization") or {})
+    specs = _spec_plans(existing, meta, impact) if authorization.get("sync") \
+        else []
     files = specs + _baseline_files(existing, meta, record, impact)
     unresolved = impact["unresolved"] + organization["directions"]["missing"] \
         + _unlocated(specs) + list(stage.get("missing") or [])
-    authorization = dict(meta.get("authorization") or {})
     base = _plan_base(meta, material, change, impact, stage, organization,
                       questions, unresolved, record, specs, files)
     if unresolved:
@@ -85,7 +87,8 @@ def plan_change(existing: dict[str, str | None], meta: dict[str, Any],
                 "reason": "只读讨论:未获写入授权,变更内容保留待授权后同步",
                 "report": read_only_report(base)}
     return {**base, "status": "planned", "saved": False,
-            "content": _content(files), "handoff_ready": True,
+            "content": _content(files),
+            "handoff_ready": bool(authorization.get("sync")),
             "note": f"同步 {base['module']} 变更（{len(files)} 个文件）",
             "report": plan_report(base)}
 
@@ -156,27 +159,37 @@ def apply_change(plan: dict[str, Any], channel: Any,
                 "report": f"计划状态 {status} 不可执行"}
     session = checks_seam.converge_plan(session, plan)
     written: list[str] = []
-    for item in plan.get("files") or []:
-        outcome = commit_path(
-            channel, readback, path=str(item.get("path") or ""),
-            content=_content_at_write(plan, item, written),
-            expected_sha256=str(item.get("expected_sha256") or "absent"),
-            note=f"{plan.get('module')} 设计变更（{item.get('role')}）")
-        if not outcome["ok"]:
-            return {**_failure(plan, outcome, written),
-                    "session": checks_seam.invalidate_outcome(
-                        session, outcome), "checks": None}
-        written.append(str(item.get("path") or ""))
+    record_role = "变更记录"
+    main_files = [item for item in (plan.get("files") or [])
+                  if item.get("role") != record_role]
+    record_files = [item for item in (plan.get("files") or [])
+                    if item.get("role") == record_role]
+    for item in main_files:
+        failed, gate = _write_change_item(plan, item, channel, readback,
+                                          written)
+        if failed is not None:
+            return {**failed, "session": checks_seam.invalidate_outcome(
+                session, gate or {}), "checks": None}
         session = checks_seam.write_item(
             session, item, label="变更写入")
-    record_path = str(plan.get("change_record_path") or "")
+    probe = written[0] if written else str(plan.get("change_record_path") or "")
     session, checks = checks_seam.after_write(
-        session, module=str(plan.get("module") or ""), path=record_path,
+        session, module=str(plan.get("module") or ""), path=probe,
         readback=readback,
         known_paths=[str(item.get("path") or "")
                      for item in plan.get("files") or []])
+    force_pending = checks is not None and not checks.get("ok")
+    for item in record_files:
+        failed, gate = _write_change_item(
+            plan, item, channel, readback, written,
+            synced=False if force_pending else None)
+        if failed is not None:
+            return {**failed, "session": checks_seam.invalidate_outcome(
+                session, gate or {}), "checks": None}
+        session = checks_seam.write_item(
+            session, item, label="变更写入")
     states = _states_after(plan, written)
-    if checks is not None and not checks.get("ok"):
+    if force_pending:
         failed = {**states, "synced": False}
         return {**_result(plan, "check_failed", False), "written": written,
                 "states": failed, "questions": plan.get("questions") or [],
@@ -198,13 +211,34 @@ def apply_change(plan: dict[str, Any], channel: Any,
             "next_round_ready": True}
 
 
+def _write_change_item(plan: dict[str, Any], item: dict[str, Any],
+                       channel: Any, readback: Callable[[str], str | None],
+                       written: list[str],
+                       *, synced: bool | None = None
+                       ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """提交一个变更文件;失败时返回 (结果, 通道依据),成功时追加 written。"""
+
+    content = _content_at_write(plan, item, written, synced=synced)
+    outcome = commit_path(
+        channel, readback, path=str(item.get("path") or ""),
+        content=content,
+        expected_sha256=str(item.get("expected_sha256") or "absent"),
+        note=f"{plan.get('module')} 设计变更（{item.get('role')}）")
+    if not outcome["ok"]:
+        return _failure(plan, outcome, written), outcome
+    written.append(str(item.get("path") or ""))
+    return None, outcome
+
+
 def _content_at_write(plan: dict[str, Any], item: dict[str, Any],
-                      written: list[str]) -> str:
+                      written: list[str], *, synced: bool | None = None) -> str:
     """变更记录最后写:状态段按此前实际写入结果渲染,不先落状态声明。"""
 
     if str(item.get("role") or "") != "变更记录":
         return str(item.get("content") or "")
     states = _states_after(plan, written + [str(item.get("path") or "")])
+    if synced is False:
+        states = {**states, "synced": False}
     return render_change_record(dict(plan.get("meta") or {}),
                                 plan.get("record") or {}, states)
 
@@ -237,8 +271,8 @@ def _design_failures(plan: dict[str, Any], design: str | None,
     version = plan.get("version") or {}
     if version.get("to") and version["to"] not in design:
         failures.append(f"当前设计未登记新版本:{version.get('to')}")
-    if "内容指纹：sha256:" not in design \
-            or "归一指纹：sha256:" not in design:
+    if not re.search(r"内容指纹\s*[:：]\s*sha256:", design) \
+            or not re.search(r"归一指纹\s*[:：]\s*sha256:", design):
         failures.append("当前设计缺内容指纹或归一指纹登记")
     change_path = str(plan.get("change_record_path") or "")
     if change_path and change_path not in design:

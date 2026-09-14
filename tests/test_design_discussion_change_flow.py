@@ -1057,6 +1057,15 @@ def test_missing_sync_authorization_does_not_write_baseline() -> None:
               f"须留下可定位的待同步项,实际 {result.get('to_sync')}")
         check((project / DESIGN_REL).read_text(encoding="utf-8") == before,
               "缺同步授权不得改写 GAME_DESIGN")
+        daily = (project / SPEC_DAILY_REL).read_text(encoding="utf-8")
+        check("每天一关,当日仅一次结算" in daily,
+              f"缺同步授权不得把每日规则退出当前规格,实际 {daily}")
+        check("每周一关,当周仅一次结算" not in daily,
+              "缺同步授权不得原位改成每周规则")
+        check(SPEC_DAILY_REL not in {item["path"] for item in plan["files"]},
+              f"缺同步授权不得把权威模块规格列入写入计划,实际 {plan['files']}")
+        check(result.get("handoff_ready") is not True,
+              "缺同步授权不得宣称可交接当前有效设计")
 
 
 def test_unverified_stage_blocks_change_plan() -> None:

@@ -11,6 +11,7 @@
 """
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -487,7 +488,7 @@ def test_missing_key_content_reports_incomplete_without_defaults() -> None:
         applied = apply_handoff(plan, _Channel(svc, _handoff_token(svc)), read)
         check(applied["saved"] is False and applied["written"] == [],
               f"未完成模块不得写入任何文件,实际 {applied}")
-        check(read(SPEC_REL) is None and read(DESIGN_REL) == 
+        check(read(SPEC_REL) is None and read(DESIGN_REL) ==
               _service_design_text(), "未完成交接不得改动规格或基线")
 
         vague = _sections()
@@ -1089,6 +1090,67 @@ def test_after_write_check_failure_does_not_complete_handoff() -> None:
         check(applied.get("to_sync") not in ([], None)
               or applied.get("states", {}).get("synced") is not True,
               "检查失败时不得把待同步清成无")
+        restored = restore_from_records({RECORD_REL: read(RECORD_REL)}, "每日挑战")
+        check(restored.get("baseline_synced") is not True,
+              f"检查失败后恢复不得把基线标成已同步,实际 {restored}")
+        check(restored.get("to_sync"),
+              f"未完成同步须留在可恢复记录中,实际 {restored.get('to_sync')}")
+        check("同步状态：待同步" in (read(RECORD_REL) or ""),
+              "检查失败不得把决定记录写成已同步")
+
+
+def _ascii_fingerprint_baseline() -> str:
+    """有效 v2 基线:使用统一接口认可的英文冒号指纹登记。"""
+
+    zeros = "0" * 64
+    body = (
+        "# 齿轮谜城：当前游戏需求与设计\n\n"
+        "维护责任：方案设计。基线版本：v2。适用范围：全游戏。\n\n"
+        "## 章节模式\n\n"
+        "- 章节按关卡顺序解锁。\n\n"
+        f"内容指纹:sha256:{zeros}\n"
+        f"归一指纹:sha256:{zeros}\n")
+    records_dir = PLUGIN_ROOT / "records"
+    if str(records_dir) not in sys.path:
+        sys.path.insert(0, str(records_dir))
+    import mgs_records  # noqa: PLC0415
+
+    strict = mgs_records._canonical_fingerprint(body)
+    norm = mgs_records._normalized_fingerprint(body)
+    return body.replace(f"内容指纹:sha256:{zeros}",
+                        f"内容指纹:sha256:{strict}").replace(
+        f"归一指纹:sha256:{zeros}", f"归一指纹:sha256:{norm}")
+
+
+def test_english_colon_fingerprints_stay_consistent_after_sync() -> None:
+    """已有英文冒号指纹须被兼容更新,正式统一检查不得变成实质变更。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        (project / DESIGN_REL).write_text(_ascii_fingerprint_baseline(),
+                                          encoding="utf-8")
+        before = _design_entry(_baseline_check(project))
+        check(before["status"] == "一致",
+              f"夹具须先登记为一致,实际 {before}")
+        read, meta, channel = _handoff_fixture(project, svc)
+        plan = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta,
+                            _existing(project))
+        check(plan["status"] == "planned",
+              f"可交接模块应进入计划,实际 {plan.get('status')}:{plan.get('gaps')}")
+        applied = apply_handoff(plan, channel, read)
+        check(applied["status"] == "saved", f"获准交接应落盘,实际 {applied}")
+        design = read(DESIGN_REL)
+        check(len(re.findall(r"内容指纹\s*[:：]\s*sha256:", design)) == 1,
+              f"同步后只能保留一处内容指纹,实际 {design}")
+        check(len(re.findall(r"归一指纹\s*[:：]\s*sha256:", design)) == 1,
+              f"同步后只能保留一处归一指纹,实际 {design}")
+        entry = _design_entry(_baseline_check(project))
+        check(entry["status"] == "一致",
+              f"正式统一检查须保持一致,实际 {entry}")
+        verdict = verify_handoff(plan, {
+            SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+            GLOSSARY_REL: read(GLOSSARY_REL), RECORD_REL: read(RECORD_REL)})
+        check(verdict["ok"], f"接缝回读仍应通过,实际 {verdict}")
 
 
 TESTS = (
@@ -1104,6 +1166,7 @@ TESTS = (
     test_module_sync_keeps_unrelated_baseline_rules,
     test_format_claim_blocks_when_semantics_changed,
     test_after_write_check_failure_does_not_complete_handoff,
+    test_english_colon_fingerprints_stay_consistent_after_sync,
 )
 
 

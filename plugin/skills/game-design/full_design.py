@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from check_state import references
 from coverage_map import build_map
 from gate_commit import commit_path
 import checks as checks_seam
@@ -36,7 +37,8 @@ from full_render import (
     render_content, render_design, render_version,
 )
 from full_report import (
-    blocked_report, failure_report, plan_report, read_only_report, saved_report,
+    blocked_report, check_failed_report, failure_report, pending_sync_report,
+    plan_report, read_only_report, saved_report,
 )
 
 
@@ -48,10 +50,20 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
     journey = walkthrough(material)
     contradictions = list(journey["contradictions"])
     missing = _missing(coverage, journey, material, meta)
-    missing.extend(_location_gaps(meta))
+    missing.extend(_location_gaps(meta, existing))
     outputs = [(path, role) for path, role in deliverable_outputs(meta) if path]
-    files = _files(existing, meta, material, coverage, journey, outputs)
+    planned_files = _files(existing, meta, material, coverage, journey,
+                           outputs)
     authorization = dict(meta.get("authorization") or {})
+    to_sync = list(meta.get("to_sync") or [])
+    sync_authorized = bool(authorization.get("sync"))
+    files = planned_files if sync_authorized else []
+    if not sync_authorized:
+        to_sync = to_sync or [path for path, role in outputs
+                              if path and role != ROLE_SPECS]
+        pending = _pending_sync_file(existing, meta, to_sync)
+        if pending:
+            files = [pending]
     base = {
         "op": "delivery",
         "game": str(meta.get("game") or material.get("game") or ""),
@@ -66,13 +78,13 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
         "blocking_qids": [str(qid) for qid in (meta.get("blocking_qids")
                                                or [])],
         "files": files,
-        "to_sync": list(meta.get("to_sync") or []),
+        "to_sync": to_sync,
         "untouched": [str(path) for path in (meta.get("untouched") or [])],
-        "handoff_ready": not missing and not contradictions,
+        "handoff_ready": not missing and not contradictions and sync_authorized,
         "states": {"adopted": True, "saved": False,
-                   "synced": not (meta.get("to_sync") or []),
+                   "synced": sync_authorized and not to_sync,
                    "implemented": False, "verified": False},
-        "sync_authorized": bool(authorization.get("sync")),
+        "sync_authorized": sync_authorized,
     }
     if missing or contradictions:
         return {**base, "status": "incomplete", "saved": False, "content": None,
@@ -82,7 +94,7 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
                 "content": None, "reason": "缺少游戏设计主文档位置,无法定位入口",
                 "report": "缺少游戏设计主文档位置:不自行另建一套文档;"
                           "先按 CONFIG 文档映射确认落点。"}
-    content = {"design": _design_content(files)}
+    content = {"design": _design_content(planned_files)}
     if not authorization.get("write"):
         return {**base, "status": "read_only", "saved": False,
                 "content": content,
@@ -116,18 +128,26 @@ def _missing(coverage: dict[str, Any], journey: dict[str, Any],
     return missing
 
 
-def _location_gaps(meta: dict[str, Any]) -> list[dict[str, Any]]:
-    """四类交付必须有可定位的权威位置;缺路径不得静默丢掉该类。"""
+def _location_gaps(meta: dict[str, Any],
+                   existing: dict[str, str | None]) -> list[dict[str, Any]]:
+    """四类交付必须有可定位的权威位置;缺路径或权威规格不存在不得静默丢掉。"""
 
     gaps: list[dict[str, Any]] = []
     for path, role in deliverable_outputs(meta):
-        if path:
+        if not path:
+            gaps.append({"needle": f"位置:{role}", "kind": "交付位置缺失",
+                         "detail": f"{role}没有可定位的权威位置",
+                         "gap": "四类交付的权威位置不可定位",
+                         "method": "按 CONFIG 文档映射确认落点",
+                         "impact": "残缺交付不能交接", "blocks": True})
             continue
-        gaps.append({"needle": f"位置:{role}", "kind": "交付位置缺失",
-                     "detail": f"{role}没有可定位的权威位置",
-                     "gap": "四类交付的权威位置不可定位",
-                     "method": "按 CONFIG 文档映射确认落点",
-                     "impact": "残缺交付不能交接", "blocks": True})
+        if role == ROLE_SPECS and existing.get(path) is None:
+            gaps.append({"needle": f"位置:{role}", "kind": "交付位置缺失",
+                         "detail": f"{role}权威文件不存在:{path}",
+                         "gap": "系统规则与数值没有可回读的权威规格",
+                         "method": "先完成该模块规格交接或确认落点",
+                         "impact": "不能因目录齐全宣称全游戏设计完成",
+                         "blocks": True})
     return gaps
 
 
@@ -300,6 +320,7 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
                 "session": session, "checks": None}
     session = checks_seam.converge_plan(session, plan,
                                         impact=plan.get("impact"))
+    sync_authorized = bool(plan.get("sync_authorized"))
     written: list[str] = []
     for item in plan.get("files") or []:
         outcome = commit_path(
@@ -320,19 +341,61 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
         written.append(str(item.get("path") or ""))
         session = checks_seam.write_item(
             session, item, label="交付写入")
+    if not sync_authorized:
+        states = {"adopted": True, "saved": bool(written), "synced": False,
+                  "implemented": False, "verified": False}
+        return {**_result(plan, "pending_sync", bool(written)),
+                "written": written, "outputs": plan.get("outputs") or [],
+                "contradictions": plan.get("contradictions") or [],
+                "missing": plan.get("missing") or [],
+                "handoff_ready": False, "states": states,
+                "to_sync": plan.get("to_sync") or [],
+                "untouched": plan.get("untouched") or [],
+                "session": session, "checks": None,
+                "report": pending_sync_report(
+                    plan, list(plan.get("to_sync") or []))}
     entry_path = str(plan.get("entry") or "")
+    known_paths = _known_paths(plan)
     session, checks = checks_seam.after_write(
         session, module=str(session.get("module") or "") if session else "",
-        path=entry_path, readback=readback,
-        known_paths=[str(item.get("path") or "")
-                     for item in plan.get("files") or []])
+        path=entry_path, readback=readback, known_paths=known_paths)
+    readback_map = {path: readback(path) for path in known_paths}
+    verdict = verify_delivery(plan, readback_map)
+    checks_ok = checks is None or checks.get("ok")
+    if not written:
+        states = {"adopted": True, "saved": False, "synced": False,
+                  "implemented": False, "verified": False}
+        return {**_result(plan, "pending_sync", False), "written": [],
+                "outputs": plan.get("outputs") or [],
+                "contradictions": plan.get("contradictions") or [],
+                "missing": plan.get("missing") or [],
+                "handoff_ready": False, "states": states,
+                "to_sync": plan.get("to_sync") or [],
+                "untouched": plan.get("untouched") or [],
+                "session": session, "checks": checks,
+                "report": pending_sync_report(
+                    plan, list(plan.get("to_sync") or []))}
+    if not checks_ok or not verdict["ok"]:
+        failed = {"adopted": True, "saved": False, "synced": False,
+                  "implemented": False, "verified": False}
+        failures = list((checks or {}).get("failures") or []) + list(
+            verdict.get("failures") or [])
+        payload = {"ok": False, "failures": failures}
+        return {**_result(plan, "check_failed", False), "written": written,
+                "outputs": plan.get("outputs") or [],
+                "contradictions": [], "missing": [],
+                "handoff_ready": False, "states": failed,
+                "to_sync": plan.get("to_sync") or known_paths,
+                "untouched": plan.get("untouched") or [],
+                "session": session, "checks": checks or payload,
+                "report": check_failed_report(plan, written, payload)}
     states = {"adopted": True, "saved": True,
-              "synced": not (plan.get("to_sync") or []),
+              "synced": sync_authorized and not (plan.get("to_sync") or []),
               "implemented": False, "verified": False}
     return {**_result(plan, "saved", True), "written": written,
             "outputs": plan.get("outputs") or [],
             "contradictions": [], "missing": [],
-            "handoff_ready": True,
+            "handoff_ready": bool(states["synced"]),
             "states": states, "to_sync": plan.get("to_sync") or [],
             "untouched": plan.get("untouched") or [],
             "session": session, "checks": checks,
@@ -371,7 +434,52 @@ def verify_delivery(plan: dict[str, Any],
             if item.get("path")}
     for role in required - have:
         failures.append(f"缺少交付类别:{role}")
+    locatable = {path for path, text in readback_map.items() if text}
+    locatable.update(str(path) for path in (plan.get("untouched") or []))
+    for item in plan.get("files") or []:
+        path = str(item.get("path") or "")
+        text = readback_map.get(path)
+        if not text:
+            continue
+        for ref in references(text):
+            if ref not in locatable:
+                failures.append(f"新改引用不可定位:{ref}")
     return {"ok": not failures, "failures": failures, "entry": entry}
+
+
+def _pending_sync_file(existing: dict[str, str | None], meta: dict[str, Any],
+                       to_sync: list[str]) -> dict[str, Any] | None:
+    """缺同步授权时留下可恢复的待同步记录,不原位替换当前有效设计。"""
+
+    records = str((meta.get("doc_map") or {}).get("records") or "").rstrip("/")
+    if not records:
+        return None
+    path = f"{records}/delivery-pending.md"
+    pending = "、".join(to_sync) or "当前有效设计"
+    content = (
+        f"# 待同步完整设计（{meta.get('date') or ''}）\n\n"
+        "缺同步授权,未改写当前有效设计。获准同步前失效规则、引用和验收"
+        "要求不得退出当前有效版本。\n\n"
+        f"待同步：{pending}\n")
+    return {"path": path, "role": "待同步记录", "content": content,
+            "expected_sha256": sha256_text(existing.get(path))}
+
+
+def _known_paths(plan: dict[str, Any]) -> list[str]:
+    """写入后核对用的可定位路径:本次文件、四类交付物与声明未改动项。"""
+
+    paths: list[str] = []
+    for item in (plan.get("files") or []) + (plan.get("outputs") or []):
+        path = str(item.get("path") or "")
+        if path and path not in paths:
+            paths.append(path)
+    for path in plan.get("untouched") or []:
+        if path and path not in paths:
+            paths.append(str(path))
+    entry = str(plan.get("entry") or "")
+    if entry and entry not in paths:
+        paths.append(entry)
+    return paths
 
 
 def _result(plan: dict[str, Any], status: str, saved: bool) -> dict[str, Any]:

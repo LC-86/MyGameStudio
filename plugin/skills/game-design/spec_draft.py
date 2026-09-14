@@ -21,6 +21,7 @@ parse_record`` 唯一解释),汇总该模块已采纳且未同步的决定,排�
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable
 
 from decision_records import merge_records, parse_record
@@ -249,7 +250,12 @@ def apply_handoff(plan: dict[str, Any], channel: Any,
         impact={"must_sync": [{"id": qid} for qid in
                               (plan.get("to_sync") or [])]})
     written: list[str] = []
-    for item in plan.get("files") or []:
+    sync_role = "决定记录同步状态"
+    main_files = [item for item in (plan.get("files") or [])
+                  if item.get("role") != sync_role]
+    sync_files = [item for item in (plan.get("files") or [])
+                  if item.get("role") == sync_role]
+    for item in main_files:
         outcome = _commit_file(plan, item, channel, readback, written)
         if outcome is not None:
             session = _blocked(session, item)
@@ -258,7 +264,6 @@ def apply_handoff(plan: dict[str, Any], channel: Any,
         written.append(str(item.get("path") or ""))
         session = checks_seam.write_item(
             session, item, label="规格交接写入")
-    state = _handoff_states(plan, readback)
     record_path = str(plan.get("record_path") or "")
     session, checks = checks_seam.after_write(
         session, module=str(plan.get("module") or ""), path=record_path,
@@ -266,11 +271,11 @@ def apply_handoff(plan: dict[str, Any], channel: Any,
         known_paths=[str(item.get("path") or "")
                      for item in plan.get("files") or []])
     if checks is not None and not checks.get("ok"):
-        failed = {**state, "synced": False}
+        state = {**_handoff_states(plan, readback), "synced": False}
         return {**_result(plan, "check_failed", False), "written": written,
                 "channel_result": {"decision": "allow"},
                 "decision_states": plan.get("decision_states") or {},
-                "states": failed, "to_sync": plan.get("to_sync") or [],
+                "states": state, "to_sync": plan.get("to_sync") or [],
                 "blocking_verification":
                     plan.get("blocking_verification") or [],
                 "producer_handoff": plan.get("producer_handoff"),
@@ -278,6 +283,16 @@ def apply_handoff(plan: dict[str, Any], channel: Any,
                 "next_round_ready": False, "handoff_ready": False,
                 "session": session, "checks": checks,
                 "report": check_failed_report(plan, written, checks)}
+    for item in sync_files:
+        outcome = _commit_file(plan, item, channel, readback, written)
+        if outcome is not None:
+            session = _blocked(session, item)
+            outcome["session"], outcome["checks"] = session, checks
+            return outcome
+        written.append(str(item.get("path") or ""))
+        session = checks_seam.write_item(
+            session, item, label="规格交接写入")
+    state = _handoff_states(plan, readback)
     return {**_result(plan, "saved", True), "written": written,
             "channel_result": {"decision": "allow"},
             "decision_states": plan.get("decision_states") or {},
@@ -416,7 +431,8 @@ def _baseline_failures(plan: dict[str, Any],
         failures.append(f"基线未登记新版本:{version.get('to')}")
     if spec_path not in design:
         failures.append("基线未引用模块规格位置")
-    if "内容指纹：sha256:" not in design or "归一指纹：sha256:" not in design:
+    if not re.search(r"内容指纹\s*[:：]\s*sha256:", design) \
+            or not re.search(r"归一指纹\s*[:：]\s*sha256:", design):
         failures.append("基线缺内容指纹或归一指纹登记")
     return failures
 

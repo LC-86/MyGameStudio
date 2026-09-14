@@ -54,7 +54,7 @@ INVALIDATION = {
 ANSWER_SOURCES = {"user", "recommendation", "custom", "revision"}
 OVERALL_RE = re.compile(r"整体按建议|全部按建议|都按建议")
 REJECT_OVERALL_RE = re.compile(
-    r"(不要|别|先不).{0,10}(整体|全部|都)?按建议")
+    r"(不要|别|先不|不能|不可|拒绝|不准).{0,10}(整体|全部|都)?按建议")
 CHOICE_RE = re.compile(r"(Q\d+)\s*选\s*([A-Za-z])")
 ADJUST_RE = re.compile(
     r"(Q\d+)\s*(?:调整为|改为|：|:)\s*(.+?)(?:[，。；\n]|$)")
@@ -255,7 +255,9 @@ def definite_choices(text: str) -> list[tuple[str, str]]:
     items: list[tuple[str, str]] = []
     for match in CHOICE_RE.finditer(text):
         rest = text[match.end():]
-        clause = re.split(r"[。；\n]", rest, maxsplit=1)[0]
+        next_q = re.search(r"Q\d+", rest)
+        clause = rest[: next_q.start()] if next_q else rest
+        clause = re.split(r"[。；\n]", clause, maxsplit=1)[0]
         if re.match(r"\s*还是", rest) or re.search(r"还是|还没决定|不确定", clause):
             continue
         items.append((match.group(1), match.group(2).upper()))
@@ -278,9 +280,13 @@ def answers_from_reply(reply: str,
         answers[qid] = letter
     for match in ADJUST_RE.finditer(text):
         value = match.group(2).strip()
-        if re.fullmatch(r"选\s*[A-Za-z]", value) or is_unknown_value(value):
+        qid = match.group(1)
+        if re.fullmatch(r"选\s*[A-Za-z]", value):
             continue
-        answers[match.group(1)] = value
+        if is_unknown_value(value):
+            answers.pop(qid, None)
+            continue
+        answers[qid] = value
     return answers
 
 

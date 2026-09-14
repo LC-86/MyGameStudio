@@ -684,6 +684,44 @@ def test_negated_or_ambiguous_replies_stay_pending() -> None:
     check(unknown["pending"].get("Q1", {}).get("reason") == "unknown",
           f"Q1 不知道应保持提案待讨论,实际 {unknown['pending']}")
 
+    cannot = run_round({**turn, "user_reply": "不能整体按建议，先讨论"})
+    check(cannot["adopted"] == {},
+          f"「不能整体按建议」不得写成三题采纳,实际 {cannot['adopted']}")
+    check("Q1" in cannot["pending"] and "Q2" in cannot["pending"]
+          and "Q3" in cannot["pending"],
+          f"否定后三题须保持待讨论,实际 {cannot['pending']}")
+
+    local_unknown = run_round({**turn, "user_reply": "整体按建议，Q1：不知道"})
+    check("Q1" not in local_unknown["adopted"],
+          f"整体采纳后的局部不知道须覆盖 Q1,实际 {local_unknown['adopted']}")
+    check(local_unknown["pending"].get("Q1", {}).get("reason") == "unknown",
+          f"Q1 不知道应保持待讨论,实际 {local_unknown['pending']}")
+    check("Q2" in local_unknown["adopted"] and "Q3" in local_unknown["adopted"],
+          f"未声明例外的题目仍可整体采纳,实际 {local_unknown['adopted']}")
+
+
+def test_later_ambiguity_does_not_drop_earlier_answers() -> None:
+    """后题歧义只澄清该题,不得吞掉前题已经明确的答案。"""
+
+    questions = _daily_questions()[:3]
+    result = run_round({
+        "request": "每日挑战",
+        "goal": "形成每日挑战核心模块",
+        "module": "每日挑战",
+        "current_design": {"exists": True, "covers_request": False},
+        "questions": questions,
+        "shown": ["Q1", "Q2", "Q3"],
+        "user_reply": "Q1 选 A，Q2 选 A 还是 B，我还没决定",
+    })
+    check(result["adopted"].get("Q1", {}).get("value") == "A",
+          f"明确的 Q1 选 A 必须保留,实际 {result['adopted']}")
+    check("Q2" not in result["adopted"],
+          f"Q2 二选一未决不得采纳,实际 {result['adopted']}")
+    check("Q2" in result["pending"],
+          f"Q2 须保持待讨论,实际 {result['pending']}")
+    check("Q3" not in result["adopted"],
+          "未回答的 Q3 不得被后题歧义连带默认")
+
 
 def main() -> int:
     return run_theme("设计问答模块识别与成组交互", (
@@ -707,6 +745,7 @@ def main() -> int:
         test_open_question_does_not_invent_options,
         test_optional_status_icons_only_when_present,
         test_negated_or_ambiguous_replies_stay_pending,
+        test_later_ambiguity_does_not_drop_earlier_answers,
     ), FAILURES)
 
 

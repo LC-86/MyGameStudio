@@ -26,7 +26,9 @@ SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
+from checks import begin  # noqa: E402
 from coverage_map import DOMAINS, build_map, stage_status  # noqa: E402
+from decision_records import sha256_text  # noqa: E402
 from decisions import apply_save, plan_save  # noqa: E402
 from full_design import (  # noqa: E402
     apply_delivery, plan_delivery, verify_delivery,
@@ -892,9 +894,29 @@ def test_delivery_writes_only_with_authorization_and_keeps_existing_docs() -> No
         check(unsynced["status"] == "planned"
               and unsynced["sync_authorized"] is False,
               f"缺同步授权仍可整理交付,实际 {unsynced['status']}")
+        before_design = read(DESIGN_REL)
+        before_content = read(CONTENT_REL)
         result = apply_delivery(unsynced,
                                 _Channel(svc, _handoff_token(svc)), read)
-        check(result["saved"] is True, f"应落盘交付物,实际 {result}")
+        check(result.get("states", {}).get("synced") is not True,
+              f"缺同步授权不得宣称已同步,实际 {result.get('states')}")
+        check(result.get("handoff_ready") is not True,
+              "缺同步授权不得宣称完整设计可交接")
+        check(result.get("to_sync"),
+              f"须留下可定位的待同步项,实际 {result.get('to_sync')}")
+        check(DESIGN_REL not in {item["path"] for item in unsynced["files"]},
+              f"缺同步授权不得把当前有效主文档列入写入计划,实际 {unsynced['files']}")
+        pending_path = "docs/mygamestudio/records/delivery-pending.md"
+        check(pending_path in {item["path"] for item in unsynced["files"]},
+              f"缺同步授权须留下待同步记录,实际 {unsynced['files']}")
+        check(read(DESIGN_REL) == before_design,
+              "缺同步授权不得改写 GAME_DESIGN")
+        check(read(pending_path) and "缺同步授权" in read(pending_path),
+              "待同步记录须可回读")
+        check(read(CONTENT_REL) == before_content,
+              "缺同步授权不得改写现行内容需求")
+        check(read(VERSION_REL) is None,
+              "缺同步授权不得新建当前有效版本方案")
         roles = {item["path"]: item["role"] for item in result["outputs"]}
         check(set(roles) == {DESIGN_REL, SPEC_REL, CONTENT_REL, VERSION_REL}
               and roles[VERSION_REL] == "版本与验证方案"
@@ -1022,6 +1044,80 @@ def test_missing_delivery_locations_keep_draft() -> None:
           f"缺三类位置时回读不得通过,实际 {verdict}")
 
 
+def test_after_write_check_failure_does_not_complete_delivery() -> None:
+    """保存后检查失败不得宣布完整设计已交付。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project, read, material, _applied = _run_full_flow(
+            Path(tmp), material=_blocked_material())
+        fixed = _resolved(material)
+        content = dict(fixed.get("content") or {})
+        content["audio"] = [{
+            "text": "新增配乐依据见 docs/missing-audio-source.md",
+            "rules": ["daily-seed"]}]
+        fixed["content"] = content
+        meta = _full_meta(fixed)
+        plan = plan_delivery(_existing(project), meta, fixed)
+        check(plan["status"] == "planned",
+              f"引用缺口在写入后检查,计划仍可整理,实际 {plan.get('status')}")
+        session = begin({
+            "mode": "new_design", "stage": "只有设计，尚未实现",
+            "goal": "完成每日挑战完整设计", "module": "每日挑战",
+            "deps": [], "entry": DESIGN_REL,
+            "authorization": {"write": True, "sync": True},
+            "baseline": {DESIGN_REL: sha256_text(read(DESIGN_REL))},
+        })["session"]
+        applied = apply_delivery(plan, _Channel(svc, _handoff_token(svc)),
+                                 read, session=session)
+        check(applied.get("written"),
+              f"已写入事实须保留,实际 {applied.get('written')}")
+        check(applied["saved"] is not True
+              and applied["status"] == "check_failed",
+              f"检查失败不得标已保存或交付完成,实际 {applied}")
+        check(applied.get("handoff_ready") is not True
+              and applied.get("states", {}).get("synced") is not True,
+              f"检查失败不得宣称已同步或可交接,实际 {applied}")
+        check(applied.get("checks") and applied["checks"]["ok"] is False,
+              f"须暴露 checks.ok=false,实际 {applied.get('checks')}")
+        failures = "；".join(applied["checks"].get("failures") or [])
+        check("docs/missing-audio-source.md" in failures,
+              f"失败原因须可定位,实际 {failures}")
+        check("已交付" not in applied["report"]
+              or "检查失败" in applied["report"]
+              or "未完成" in applied["report"],
+              f"报告不得把检查失败写成已交付,实际 {applied['report']}")
+        verdict = verify_delivery(plan, {
+            DESIGN_REL: read(DESIGN_REL), SPEC_REL: read(SPEC_REL),
+            CONTENT_REL: read(CONTENT_REL), VERSION_REL: read(VERSION_REL)})
+        check(verdict["ok"] is False,
+              f"检查失败后回读不得判交付完成,实际 {verdict}")
+
+
+def test_missing_spec_file_keeps_delivery_incomplete() -> None:
+    """权威模块规格路径有值但文件不存在时,不得宣布完整设计完成。"""
+
+    material = _resolved(_material())
+    meta = _full_meta(material)
+    existing = {**_stub_existing(), SPEC_REL: None}
+    plan = plan_delivery(existing, meta, material)
+    check(plan["status"] == "incomplete",
+          f"规格文件不存在须保持草案,实际 {plan['status']}")
+    check(plan.get("handoff_ready") is not True,
+          "缺少权威规格不得标可交接")
+    needles = {item["needle"] for item in plan["missing"]}
+    check(any("规格" in item or "系统规则" in item or SPEC_REL in item
+              for item in needles),
+          f"须报出缺失的权威规格,实际 {sorted(needles)}")
+    applied = apply_delivery(plan, object(), lambda path: None)
+    check(applied["saved"] is not True and applied.get("written") in (None, []),
+          f"缺权威规格不得写入,实际 {applied}")
+    verdict = verify_delivery(plan, {
+        DESIGN_REL: existing[DESIGN_REL], SPEC_REL: None,
+        CONTENT_REL: existing[CONTENT_REL], VERSION_REL: None})
+    check(verdict["ok"] is False,
+          f"缺权威规格时回读不得通过,实际 {verdict}")
+
+
 TESTS = (
     test_extracts_known_material_and_builds_coverage_map,
     test_scope_layers_and_template_fill_guard,
@@ -1033,6 +1129,8 @@ TESTS = (
     test_cli_smoke_full_design_entry,
     test_skill_entry_documents_full_design_flow,
     test_missing_delivery_locations_keep_draft,
+    test_after_write_check_failure_does_not_complete_delivery,
+    test_missing_spec_file_keeps_delivery_incomplete,
 )
 
 
