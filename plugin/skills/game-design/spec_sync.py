@@ -311,21 +311,38 @@ _CURRENT_VERSION_RE = re.compile(r"当前\s*(v\d+)")
 # 版本前有其他文字(如"参照章节模块当前 v8")时,版本属于说明提到的
 # 其他对象,不算本引用的版本。
 _LEADING_VERSION_RE = re.compile(r"[ \t]*当前\s*(v\d+)")
-# 完整路径身份,两个方向独立判定:
-# 前一侧仍是 ASCII 路径字符(不含 "/")时,路径是更长文件名的中段
-# ("./<PATH>"、中文动词紧邻 "<PATH>" 都是同一文件的合法引用写法);
-# 后一侧只允许引用语法字符(空白、括号、链接与表格符号、常见中英
-# 标点),其余字符(如 "~" 编辑器备份、"."、路径延续)说明是更长文件名。
-_PATH_HEAD_RE = re.compile(r"[A-Za-z0-9_.\-~]")
-_PATH_TAIL_OK_RE = re.compile(
-    r"[\s（）()\[\]{}<>|，,。．;；:：、！？“”‘’'\"`]")
-# Markdown 内联链接目标:``](PATH)``、``](<PATH>)``、``]( PATH )``
-# 与 ``]( <PATH> )``;版本只能附着在链接闭括号之后,不进入目标或标题。
-_LINK_BEFORE_RE = re.compile(r"\]\([ \t]*(?:<)?[ \t]*$")
+# 完整路径身份:从出现位置向两侧扩展路径字符段得到完整 token,再与
+# 规格路径比较——``archive/<PATH>``、``<PATH>.backup``、``<PATH>~``、
+# ``<PATH>(backup)`` 都是不同文件;token 去掉 ``./`` 前缀与句末点号后
+# 相同才算同一文件(``./<PATH>``、``<PATH>#锚点`` 是本规格的引用)。
+# 中文不参与扩展:"详见<PATH>" 是自然语言紧邻,不是更长文件名。
+_PATH_TOKEN_RE = re.compile(r"[A-Za-z0-9_.\-~/]+")
+# Markdown 内联链接目标:``](PATH)``、``](<PATH>)``、``]( PATH )``、
+# ``](./<PATH>)`` 等;版本只能附着在链接闭括号之后,不进入目标或标题。
+_LINK_BEFORE_RE = re.compile(r"\]\([ \t]*(?:[^\s()]*[ \t]*)?$")
 _BARE_VERSION_AFTER_RE = re.compile(
     r"[ \t]*(?:[，,、：:；;][ \t]*)?当前\s*(v\d+)")
 _CITATION_LEAD_RE = re.compile(
     r"(?:行为规则、边界、数值与验收\s*[：:]\s*)?(?:见模块规格|详见)\s*$")
+
+
+def _ascii_paren_span(text: str, pos: int) -> int | None:
+    """pos 处紧邻路径的半角括号文件名段的结束位置。
+
+    内容全为 ASCII 路径字符的 ``(backup)`` 是文件名的一部分;全角括号
+    与带版本等非 ASCII 内容的半角括号(如 ``(当前 v3)``)不算文件名,
+    留给附着版本处理。
+    """
+
+    if pos >= len(text) or text[pos] != "(":
+        return None
+    close = text.find(")", pos + 1)
+    if close < 0:
+        return None
+    inner = text[pos + 1:close]
+    if inner and _PATH_TOKEN_RE.fullmatch(inner):
+        return close + 1
+    return None
 
 
 def _find_path(text: str, spec_path: str,
@@ -338,18 +355,27 @@ def _find_path(text: str, spec_path: str,
         if start < 0:
             return None
         end = start + len(spec_path)
-        before = text[start - 1] if start > 0 else ""
-        after = text[end] if end < len(text) else ""
-        if _PATH_HEAD_RE.fullmatch(before):
-            pos = start + 1
+        if text[end:end + 2] == "](":
+            pos = start + 1  # ``[查看 <PATH>](…)`` 的显示文字,目标里才是引用
             continue
-        if after and not _PATH_TAIL_OK_RE.fullmatch(after):
-            pos = start + 1
-            continue
-        if before == "[" and after.startswith("]"):
-            pos = start + 1  # ``[<PATH>](…)`` 的显示文字,目标里的才是引用
-            continue
-        return start, end
+        tok_start = start
+        while tok_start > 0 and _PATH_TOKEN_RE.fullmatch(text[tok_start - 1]):
+            tok_start -= 1
+        tok_end = end
+        while True:
+            while tok_end < len(text) and _PATH_TOKEN_RE.fullmatch(
+                    text[tok_end]):
+                tok_end += 1
+            span = _ascii_paren_span(text, tok_end)
+            if span is None:
+                break
+            tok_end = span
+        token = text[tok_start:tok_end].rstrip(".")
+        while token.startswith("./"):
+            token = token[2:]
+        if token == spec_path:
+            return tok_start, tok_end
+        pos = start + 1
 
 
 def _has_path(text: str, spec_path: str) -> bool:
@@ -458,10 +484,13 @@ def _attached_version(line: str, spec_path: str) -> str:
     if not found:
         return ""
     start, end = found
-    anchors = [end]
-    close = _link_close(line, start, end)
-    if close is not None:
-        anchors.append(close + 1)
+    if start > 0 and line[start - 1] == "`" and line[end:end + 1] == "`":
+        anchors = [end + 1]  # 行内代码片段:版本附着在闭反引号之后
+    else:
+        anchors = [end]
+        close = _link_close(line, start, end)
+        if close is not None:
+            anchors.append(close + 1)
     for after in anchors:
         bracket = _match_bracket(line, after)
         if bracket:
@@ -491,13 +520,18 @@ def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
     if not found or not version_to:
         return line
     start, end = found
-    in_link = bool(_LINK_BEFORE_RE.search(line[:start]))
-    close = _link_close(line, start, end)
-    if in_link and close is None:
-        return line  # 链接目标解析不出闭括号:保持内容,由回读判定未完成
-    anchors = [end]
-    if close is not None:
-        anchors.append(close + 1)
+    if start > 0 and line[start - 1] == "`" and line[end:end + 1] == "`":
+        anchors = [end + 1]  # 行内代码片段:版本插在闭反引号之后
+        insert_at = end + 1
+    else:
+        in_link = bool(_LINK_BEFORE_RE.search(line[:start]))
+        close = _link_close(line, start, end)
+        if in_link and close is None:
+            return line  # 链接目标解析不出闭括号:保持内容,由回读判定未完成
+        anchors = [end]
+        if close is not None:
+            anchors.append(close + 1)
+        insert_at = close + 1 if close is not None else end
     for after in anchors:
         bracket = _match_bracket(line, after)
         if bracket:
@@ -517,7 +551,6 @@ def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
             old = _CURRENT_VERSION_RE.search(bare.group(0))
             return (line[:after] + bare.group(0)[:old.start()]
                     + f"当前 {version_to}" + line[after + old.end():])
-    insert_at = close + 1 if close is not None else end
     return line[:insert_at] + f"（当前 {version_to}）" + line[insert_at:]
 
 
@@ -575,6 +608,9 @@ def _strip_line_citation(line: str, spec_path: str) -> str:
     if not found:
         return line
     start, end = found
+    if start > 0 and line[start - 1] == "`" and line[end:end + 1] == "`":
+        return _clean_citation_remainder(
+            line[:start - 1], _strip_attached(line, end + 1))
     close = _link_close(line, start, end)
     if _LINK_BEFORE_RE.search(line[:start]) and close is None:
         return line  # 链接目标解析不出闭括号:保持内容,由回读判定未完成
