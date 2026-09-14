@@ -87,7 +87,8 @@ def baseline_cites_spec(baseline_text: str | None, spec_path: str,
                         version_to: str) -> bool:
     """核心基线对该规格的引用是否指向当前版本。
 
-    引用条目在规格路径旁标明「当前 vN」;引用缺失或仍指旧版本时,
+    只认**直接附着**在路径上的版本(紧随的括号或紧邻片段),不跨分隔符、
+    表格列或链接目标去匹配其他模块的版本;引用缺失或仍指旧版本时,
     本轮修订不能当作已同步。
     """
 
@@ -96,9 +97,10 @@ def baseline_cites_spec(baseline_text: str | None, spec_path: str,
         return False
     if not version_to:
         return True
-    return bool(re.search(
-        re.escape(spec_path) + r"[^\n]{0,60}当前\s*" + re.escape(version_to)
-        + r"(?!\d)", text))
+    for line in text.split("\n"):
+        if _attached_version(line, spec_path) == version_to:
+            return True
+    return False
 
 
 def version_warnings(meta: dict[str, Any],
@@ -304,50 +306,142 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
     return text.rstrip() + "\n\n" + citation
 
 
-_CURRENT_VERSION_RE = re.compile(r"当前\s*v\d+")
-_CITATION_PAREN_RE = re.compile(
-    r"[ \t]*[（(][^）\n)]*当前\s*v\d+[^）\n)]*[）)]")
+_CURRENT_VERSION_RE = re.compile(r"当前\s*(v\d+)")
+# 直接附着的引用括号:紧随路径(允许空白),不跨分隔符、表格列或链接目标
+_BRACKET_AFTER_RE = re.compile(r"[ \t]*([（(])([^）\n)]*)([）)])")
+_BARE_VERSION_AFTER_RE = re.compile(
+    r"[ \t]*(?:[，,、：:；;][ \t]*)?当前\s*(v\d+)")
 _CITATION_LEAD_RE = re.compile(
     r"(?:行为规则、边界、数值与验收\s*[：:]\s*)?(?:见模块规格|详见)\s*$")
 
 
+def _attached_version(line: str, spec_path: str) -> str:
+    """直接附着在路径上的当前版本号;不属于本引用的版本不匹配。
+
+    只认紧随路径的括号内的版本,或经至多一个分隔符紧邻的裸版本;
+    路径是链接目标时,版本附着在链接闭括号之后。分隔符之后、表格
+    下一列或链接目标里的版本属于其他引用。
+    """
+
+    start = line.find(spec_path)
+    if start < 0:
+        return ""
+    anchors = [start + len(spec_path)]
+    if line[max(0, start - 2):start] == "](":
+        close = line.find(")", start + len(spec_path))
+        if close >= 0:
+            anchors.append(close + 1)
+    for after in anchors:
+        bracket = _BRACKET_AFTER_RE.match(line, after)
+        if bracket:
+            found = _CURRENT_VERSION_RE.search(bracket.group(2))
+            if found:
+                return found.group(1)
+            continue
+        bare = _BARE_VERSION_AFTER_RE.match(line, after)
+        if bare:
+            return bare.group(1)
+    return ""
+
+
 def _version_in_ref_line(ref_line: str) -> str:
-    match = re.search(r"当前\s*(v\d+)", ref_line)
+    match = _CURRENT_VERSION_RE.search(ref_line)
     return match.group(1) if match else ""
 
 
 def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
-    """只改路径旁的当前版本,同行其他字段与说明原样保留。"""
+    """只更新本引用的版本:范围限于直接附着的括号或紧邻片段。
+
+    版本必须落在链接目标之外;无附着括号时紧接路径插入,
+    不跨分隔符或表格列去改其他模块的版本。
+    """
 
     start = line.find(spec_path)
     if start < 0 or not version_to:
         return line
     after = start + len(spec_path)
-    match = _CURRENT_VERSION_RE.search(line[after:after + 80])
-    if not match:
-        return f"{line[:after]}（当前 {version_to}）{line[after:]}"
-    abs_start = after + match.start()
-    abs_end = after + match.end()
-    return f"{line[:abs_start]}当前 {version_to}{line[abs_end:]}"
+    bracket = _BRACKET_AFTER_RE.match(line, after)
+    if bracket:
+        inner = bracket.group(2)
+        found = _CURRENT_VERSION_RE.search(inner)
+        if found:
+            new_inner = (inner[:found.start()] + f"当前 {version_to}"
+                         + inner[found.end():])
+        elif inner.strip():
+            new_inner = f"当前 {version_to}；{inner.strip()}"
+        else:
+            new_inner = f"当前 {version_to}"
+        return (line[:after] + bracket.group(1) + new_inner
+                + bracket.group(3) + line[bracket.end():])
+    bare = _BARE_VERSION_AFTER_RE.match(line, after)
+    if bare:
+        found = _CURRENT_VERSION_RE.search(bare.group(0))
+        return (line[:after] + bare.group(0)[:found.start()]
+                + f"当前 {version_to}" + line[after + found.end():])
+    if line[max(0, start - 2):start] == "](":
+        close = line.find(")", after)
+        if close >= 0:
+            return (line[:close + 1] + f"（当前 {version_to}）"
+                    + line[close + 1:])
+    return line[:after] + f"（当前 {version_to}）" + line[after:]
+
+
+def _drop_version_fragment(inner: str) -> str:
+    """去掉括号内的版本片段及其紧邻分隔符,保留附带规则等其余内容。"""
+
+    found = _CURRENT_VERSION_RE.search(inner)
+    if not found:
+        return inner.strip()
+    lead = found.start()
+    while lead > 0 and inner[lead - 1] in "；;，, \t":
+        lead -= 1
+    tail = found.end()
+    while tail < len(inner) and inner[tail] in "；;，, \t":
+        tail += 1
+    left, right = inner[:lead], inner[tail:]
+    if left and right:
+        return (left + "；" + right).strip()
+    return (left + right).strip()
+
+
+def _clean_citation_remainder(head: str, tail: str) -> str:
+    remainder = _CITATION_LEAD_RE.sub("", head) + tail
+    remainder = re.sub(r"[ \t]{2,}", " ", remainder)
+    remainder = re.sub(r"[；;]{2,}", "；", remainder)
+    return remainder.rstrip()
 
 
 def _strip_line_citation(line: str, spec_path: str) -> str:
-    """去掉本行重复引用片段,保留其余业务内容。"""
+    """去掉本行的重复引用(路径+附着版本),保留其余业务内容。
+
+    链接形式的重复引用保留链接文字;附着括号内混有规则时只去版本,
+    不吞掉整个括号。
+    """
 
     start = line.find(spec_path)
     if start < 0:
         return line
     after = start + len(spec_path)
-    paren = _CITATION_PAREN_RE.match(line[after:])
-    if paren:
-        end = after + paren.end()
-    else:
-        match = _CURRENT_VERSION_RE.search(line[after:after + 80])
-        end = after + match.end() if match else after
-    remainder = _CITATION_LEAD_RE.sub("", line[:start]) + line[end:]
-    remainder = re.sub(r"[ \t]{2,}", " ", remainder)
-    remainder = re.sub(r"[；;]{2,}", "；", remainder)
-    return remainder.rstrip()
+    if line[max(0, start - 2):start] == "](":
+        label_start = line.rfind("[", 0, start)
+        close = line.find(")", after)
+        if label_start >= 0 and close >= 0:
+            return _clean_citation_remainder(
+                line[:label_start],
+                line[label_start + 1:start - 2] + line[close + 1:])
+    bracket = _BRACKET_AFTER_RE.match(line, after)
+    if bracket:
+        inner = _drop_version_fragment(bracket.group(2))
+        if inner:
+            return _clean_citation_remainder(
+                line[:start],
+                bracket.group(1) + inner + bracket.group(3)
+                + line[bracket.end():])
+        return _clean_citation_remainder(line[:start],
+                                         line[bracket.end():])
+    bare = _BARE_VERSION_AFTER_RE.match(line, after)
+    end = bare.end() if bare else after
+    return _clean_citation_remainder(line[:start], line[end:])
 
 
 def _line_has_business_text(line: str) -> bool:

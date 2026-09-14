@@ -1676,6 +1676,84 @@ def test_same_line_citation_layouts_keep_rules() -> None:
             check(verdict["ok"], f"{name}: 保留规则后回读应通过,实际 {verdict}")
 
 
+def _link_citation_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 每日挑战入口：[每日挑战]({SPEC_REL}) 优先复用既有内容。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _other_module_version_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 每日规则：{SPEC_REL}；章节系统（当前 v7）规则："
+           "每日关不与章节进度冲突。")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _neighbor_table_version_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"| 规格 | 关联 |\n| --- | --- |\n"
+           f"| {SPEC_REL} | docs/mygamestudio/records/spec-章节.md"
+           "（当前 v8） | 每日规则 |\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _bracket_rules_duplicate_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}（当前 v2）。\n"
+           f"- 关联依据：{SPEC_REL}（当前 v2；章节十解锁跳关功能）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_reference_boundary_keeps_links_other_modules_and_rules() -> None:
+    """引用边界:版本不进链接目标,不改其他模块版本,不吞括号内规则。"""
+
+    cases = (
+        ("link", _link_citation_layout,
+         [f"[每日挑战]({SPEC_REL})（当前 v4）"],
+         [f"]({SPEC_REL}（当前"]),
+        ("other-module", _other_module_version_layout,
+         [f"- 每日规则：{SPEC_REL}（当前 v4）；章节系统（当前 v7）规则："
+          "每日关不与章节进度冲突。"],
+         ["章节系统（当前 v4）"]),
+        ("neighbor-table", _neighbor_table_version_layout,
+         [f"| {SPEC_REL}（当前 v4） | docs/mygamestudio/records/spec-章节.md"
+          "（当前 v8） | 每日规则 |"],
+         ["spec-章节.md（当前 v4）"]),
+        ("bracket-rules", _bracket_rules_duplicate_layout,
+         ["- 关联依据：（章节十解锁跳关功能）。"],
+         ["（当前 v2；章节十解锁跳关功能）"]),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 须精确更新本引用并保留其余内容,期望含 "
+                      f"{needle!r},实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得出现越界改动 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 边界保留后回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -1695,6 +1773,7 @@ TESTS = (
     test_custom_titled_citation_updates_on_recovery,
     test_custom_section_mixed_content_preserved,
     test_same_line_citation_layouts_keep_rules,
+    test_reference_boundary_keeps_links_other_modules_and_rules,
 )
 
 
