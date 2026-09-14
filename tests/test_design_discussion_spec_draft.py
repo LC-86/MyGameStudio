@@ -2173,6 +2173,107 @@ def test_link_structure_identity_keeps_labels_targets_and_code_spans() -> None:
               f"linkdef: 未完成的同步回读必须失败,实际 {verdict}")
 
 
+def _multiline_link_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 每日挑战入口：[每日挑战](\n  {SPEC_REL}\n)（当前 v3）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _bare_cjk_suffix_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 历史规格：{SPEC_REL}副本（当前 v8）。\n"
+           f"- 当前：{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _backtick_cjk_copy_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 历史规格：`{SPEC_REL}副本`（当前 v8）。\n"
+           f"- 当前：{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _spaced_code_span_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：` {SPEC_REL} `（当前 v3；保持离线）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _angled_dot_file_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 历史规格：[备份](<{SPEC_REL}.>)（当前 v8）。\n"
+           f"- 当前：{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_round14_cross_line_links_complete_identity_and_code_spans() -> None:
+    """r14:跨行链接保守不动、裸路径完整身份、带空格代码片段、目标尾点。"""
+
+    cases = (
+        ("bare-cjk-suffix", _bare_cjk_suffix_layout,
+         [f"{SPEC_REL}副本（当前 v8）", f"- 当前：{SPEC_REL}（当前 v4）"],
+         [f"{SPEC_REL}（当前 v4）副本", "当前：。"]),
+        ("backtick-cjk-copy", _backtick_cjk_copy_layout,
+         [f"`{SPEC_REL}副本`（当前 v8）", f"- 当前：{SPEC_REL}（当前 v4）"],
+         [f"{SPEC_REL}（当前 v4）副本", "当前：。"]),
+        ("spaced-code-span", _spaced_code_span_layout,
+         [f"` {SPEC_REL} `（当前 v4；保持离线）"],
+         [f"{SPEC_REL}（当前 v4）"]),
+        ("angled-dot-file", _angled_dot_file_layout,
+         [f"[备份](<{SPEC_REL}.>)（当前 v8）",
+          f"- 当前：{SPEC_REL}（当前 v4）"],
+         [f"[备份](<{SPEC_REL}.>)（当前 v4）", "当前：。"]),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 须按完整身份原位更新,期望含 "
+                      f"{needle!r},实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得出现越界改动 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 身份保留后回读应通过,实际 {verdict}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        applied, design, retry, read = _recover_stale_custom_citation(
+            tmp, _multiline_link_layout)
+        check(f"[每日挑战](\n  {SPEC_REL}\n)（当前 v3）" in design,
+              f"multiline-link: 跨行链接结构须原样保留,实际 {design!r}")
+        check(f"{SPEC_REL}（当前" not in design,
+              f"multiline-link: 不得把版本插进链接目标行,实际 {design!r}")
+        check(not (applied.get("states", {}).get("synced") is True
+                   and applied.get("to_sync") in ([], None)),
+              f"multiline-link: 无法安全更新时不得宣称同步完成,实际 {applied}")
+        verdict = verify_handoff(retry, {
+            SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+            GLOSSARY_REL: read(GLOSSARY_REL),
+            RECORD_REL: read(RECORD_REL)})
+        check(not verdict["ok"],
+              f"multiline-link: 未完成的同步回读必须失败,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -2197,6 +2298,7 @@ TESTS = (
     test_link_target_parsing_and_version_ownership_keep_valid_citations,
     test_path_identity_and_markdown_boundaries_keep_other_files_and_targets,
     test_link_structure_identity_keeps_labels_targets_and_code_spans,
+    test_round14_cross_line_links_complete_identity_and_code_spans,
 )
 
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import unicodedata
 from typing import Any
 
 from decision_records import apply_sync, sha256_text
@@ -348,13 +349,28 @@ def _ascii_paren_span(text: str, pos: int) -> int | None:
     return None
 
 
-def _target_identity(raw: str) -> str:
-    """归一化的引用身份:去首尾空白、``./`` 前缀、``#锚点`` 与句末点号。"""
+def _target_identity(raw: str, strip_dot: bool = True) -> str:
+    """归一化的引用身份:去首尾空白、``./`` 前缀、``#锚点`` 与句末点号。
+
+    ``strip_dot=False`` 用于明确的链接目标(``<…>``/``](…)``/引用式定义):
+    目标里的句点属于文件名(``<PATH.>`` 指向另一个文件),不按正文句末剥除。
+    """
 
     token = raw.strip()
     while token.startswith("./"):
         token = token[2:]
-    return token.split("#", 1)[0].rstrip(".")
+    token = token.split("#", 1)[0]
+    return token.rstrip(".") if strip_dot else token
+
+
+def _extends_filename(ch: str) -> bool:
+    """紧邻路径后的非 ASCII 字母属于更长文件名(``PATH副本``),不是自然语言。
+
+    路径前的中文是自然语言引导(``详见PATH``),不参与身份;路径后直接相连
+    的中文/字母是文件名的一部分(``PATH副本``、``PATH草稿`` 是别的文件)。
+    """
+
+    return ord(ch) > 127 and unicodedata.category(ch)[0] == "L"
 
 
 def _in_link_label(text: str, start: int, end: int) -> bool:
@@ -430,6 +446,8 @@ def _find_path(text: str, spec_path: str,
             while tok_end < len(text) and _PATH_TOKEN_RE.fullmatch(
                     text[tok_end]):
                 tok_end += 1
+            while tok_end < len(text) and _extends_filename(text[tok_end]):
+                tok_end += 1  # 紧邻的非 ASCII 字母是更长文件名(PATH副本)
             span = _ascii_paren_span(text, tok_end)
             if span is None:
                 break
@@ -442,7 +460,7 @@ def _find_path(text: str, spec_path: str,
         if target_parts is not None:
             target = target_parts[0]
             if target is not None \
-                    and _target_identity(target) != spec_path:
+                    and _target_identity(target, strip_dot=False) != spec_path:
                 pos = start + 1  # 完整目标指向其他文件(PATH副本/PATH（备份）)
                 continue
             return tok_start, tok_end  # 目标解析不出时按命中,交调用方保守处理
@@ -558,18 +576,45 @@ def _code_span(line: str, start: int,
                end: int) -> tuple[str, int, int]:
     """行内代码片段包裹状态:返回 (状态, 闭反引号串之后, 开反引号串起点)。
 
-    状态 ``ok`` 为成对包裹(单/双/多反引号,闭串在路径后);``broken``
-    为开串存在但无等长闭串,无法安全定位版本位置,调用方保持不动;
-    ``none`` 为未被反引号包裹。
+    状态 ``ok`` 为成对包裹(单/双/多反引号,允许反引号与路径间有空白,
+    闭串在路径后);``broken`` 为紧邻路径的开串存在但无等长闭串,无法安全
+    定位版本位置,调用方保持不动;``none`` 为未被反引号包裹。
     """
 
+    runs: list[tuple[int, int]] = []
+    i, n = 0, len(line)
+    while i < n:
+        if line[i] == "`":
+            j = i
+            while j < n and line[j] == "`":
+                j += 1
+            runs.append((i, j - i))
+            i = j
+        else:
+            i += 1
+    # 成对代码片段:开串与下一个等长闭串配对(CommonMark),路径须落在其间。
+    # 反引号与路径间可有空格(`` ` PATH ` ``),故按完整片段而非紧邻判断。
+    k = 0
+    while k < len(runs):
+        op_pos, op_len = runs[k]
+        m = k + 1
+        while m < len(runs) and runs[m][1] != op_len:
+            m += 1
+        if m >= len(runs):
+            break
+        cl_pos, cl_len = runs[m]
+        if op_pos + op_len <= start and end <= cl_pos:
+            return "ok", cl_pos + cl_len, op_pos
+        k = m + 1
+    # 未落在成对片段内:仅当开串紧邻路径(无空白)才算 broken——
+    # 远处散落的反引号是正文,不影响本路径。
     opens = 0
     i = start - 1
     while i >= 0 and line[i] == "`":
         opens += 1
         i -= 1
     closes = 0
-    while end + closes < len(line) and line[end + closes] == "`":
+    while end + closes < n and line[end + closes] == "`":
         closes += 1
     if not opens:
         return "none", end, start
@@ -782,27 +827,71 @@ def _line_has_business_text(line: str) -> bool:
     return bool(re.sub(r"[\s，,。．.；;：:、（）()]+", "", text))
 
 
+def _in_multiline_link(body: str, spec_path: str) -> bool:
+    """body 中 spec_path 是否落在跨行的内联链接目标 ``]( … )`` 内。
+
+    CommonMark 允许链接目标跨行(``[文字](\\n PATH\\n)``)。逐行处理会把
+    版本插进目标所在行、把有效链接拆成无链接,故检测到即整段保守不动。
+    """
+
+    i, n = 0, len(body)
+    while True:
+        idx = body.find("](", i)
+        if idx < 0:
+            return False
+        open_paren = idx + 1
+        depth, j = 0, open_paren
+        while j < n:
+            ch = body[j]
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        if j >= n:
+            return False  # 括号未闭合:不是可识别的链接
+        inner = body[open_paren + 1:j]
+        if "\n" in inner and spec_path in inner:
+            return True
+        i = j + 1
+
+
 def _replace_reference_lines(body: str, spec_path: str,
                              ref_line: str, version_to: str = "") -> str:
     """行内更新引用:只改路径与版本片段,同行其余内容原样保留。"""
 
+    if _in_multiline_link(body, spec_path):
+        # 跨行链接目标无法逐行安全更新:保持原文,由回读判定未完成。
+        return body
     updated: list[str] = []
-    replaced = False
+    placed = False       # 已找到引用(更新或保守保留)→ 不再追加生成引用
+    updated_ok = False   # 已确实更新到目标版本 → 其后视为重复引用
     target = version_to or _version_in_ref_line(ref_line)
     for line in body.split("\n"):
         if not _has_path(line, spec_path):
             updated.append(line)
             continue
-        if not replaced:
+        if not placed:
             # 无版本时也不得整行换成生成引用,以免删掉同行仍有效的规则。
-            updated.append(_update_line_citation(line, spec_path, target)
-                           if target else line)
-            replaced = True
+            new_line = (_update_line_citation(line, spec_path, target)
+                        if target else line)
+            updated.append(new_line)
+            placed = True
+            updated_ok = bool(target) and new_line != line
             continue
-        remainder = _strip_line_citation(line, spec_path)
-        if _line_has_business_text(remainder):
-            updated.append(remainder)
-    if not replaced:
+        if updated_ok:
+            # 目标引用已确认更新:其后是重复引用,去重但保留同行业务正文。
+            remainder = _strip_line_citation(line, spec_path)
+            if _line_has_business_text(remainder):
+                updated.append(remainder)
+            continue
+        # 首条未能确认更新(引用式定义/不配对反引号/解析不出的链接):
+        # 其后引用既非可确认的重复,就保持原文——不删除也不更新,
+        # 由回读判定未完成,绝不把未确认的同步当成已完成。
+        updated.append(line)
+    if not placed:
         updated.append(ref_line)
     return "\n".join(updated)
 
