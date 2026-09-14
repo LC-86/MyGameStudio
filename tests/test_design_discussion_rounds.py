@@ -759,6 +759,105 @@ def test_combined_reservations_override_overall_adopt() -> None:
           f"Q2 冒号含糊例外须保持待讨论,实际 {colon['pending']}")
 
 
+def test_question_exceptions_override_overall_adoption() -> None:
+    """整体采纳中的逐题否定与「先不决定」例外:该题不得保存为已采纳。"""
+
+    questions = _daily_questions()[:3]
+    turn = {
+        "request": "每日挑战",
+        "goal": "形成每日挑战核心模块",
+        "module": "每日挑战",
+        "current_design": {"exists": True, "covers_request": False},
+        "questions": questions,
+        "shown": ["Q1", "Q2", "Q3"],
+    }
+    refused = run_round({**turn, "user_reply": "整体按建议，但不要 Q2 选 A"})
+    check("Q2" not in refused["adopted"],
+          f"否定的 Q2 选 A 不得保存为采纳,实际 {refused['adopted']}")
+    check(refused["pending"].get("Q2", {}).get("reason") == "deferred",
+          f"被否定的 Q2 须保持待讨论,实际 {refused['pending']}")
+    check("Q1" in refused["adopted"] and "Q3" in refused["adopted"],
+          f"未声明例外的题目仍可整体采纳,实际 {refused['adopted']}")
+
+    deferred = run_round({
+        **turn, "user_reply": "整体按建议，除了 Q2，Q2 先不决定"})
+    check("Q2" not in deferred["adopted"],
+          f"「除了 Q2」的例外不得落回推荐 B,实际 {deferred['adopted']}")
+    check(deferred["pending"].get("Q2", {}).get("reason") == "deferred",
+          f"明确暂不决定的 Q2 须保持待讨论,实际 {deferred['pending']}")
+    check("Q1" in deferred["adopted"] and "Q3" in deferred["adopted"],
+          f"未声明例外的题目仍可整体采纳,实际 {deferred['adopted']}")
+
+
+def test_later_statement_wins_for_same_question() -> None:
+    """同一题先改后选:按作答先后处理修正,最后的明确回答生效。"""
+
+    questions = _daily_questions()[:3]
+    turn = {
+        "request": "每日挑战",
+        "goal": "形成每日挑战核心模块",
+        "module": "每日挑战",
+        "current_design": {"exists": True, "covers_request": False},
+        "questions": questions,
+        "shown": ["Q1", "Q2", "Q3"],
+    }
+    revised = run_round({**turn, "user_reply": "Q1 改为 A；Q1 选 B"})
+    check(revised["adopted"].get("Q1", {}).get("value") == "B",
+          f"后到的「Q1 选 B」须覆盖先前的改为 A,实际 {revised['adopted']}")
+    check(revised["adopted"]["Q1"]["source"] == "user",
+          "最后明确选择的来源是开发者")
+    check(revised["pending"].get("Q2", {}).get("reason") == "unanswered",
+          "未涉及的题目保持未回答")
+
+    decided = run_round({
+        **turn, "user_reply": "Q1 选 A 还是 B？想好了，Q1 选 B"})
+    check(decided["adopted"].get("Q1", {}).get("value") == "B",
+          f"先含糊后明确时,最后的明确 B 不得被吞掉,实际 {decided['adopted']}")
+    check("Q1" not in decided["pending"],
+          f"已有明确答案的 Q1 不得留在待讨论,实际 {decided['pending']}")
+
+
+def test_same_qid_in_other_module_keeps_current_identity() -> None:
+    """其他模块的同编号问题不得覆盖当前模块的展示、采纳与保存身份。"""
+
+    monetization_q1 = {
+        "id": "Q1", "title": "商店定价", "body": "定价多少?",
+        "options": {"A": "6 元", "B": "免费加广告"},
+        "recommendation": "B", "reason": "先免费扩大体量。",
+        "module": "商业化", "depends_on": [],
+        "impact": "决定商业化方式。",
+    }
+    shown = run_round({
+        "request": "每日挑战",
+        "goal": "形成每日挑战核心模块",
+        "module": "每日挑战",
+        "round": 1,
+        "current_design": {"exists": True, "covers_request": False},
+        "questions": [_daily_questions()[0], monetization_q1],
+    })
+    check("❓ Q1｜关卡来源" in shown["reply_text"],
+          "展示的应是当前模块的 Q1")
+    check("商店定价" not in shown["reply_text"],
+          "无关模块的同编号题目不得出现在本轮")
+    result = run_round({
+        "request": "每日挑战",
+        "goal": "形成每日挑战核心模块",
+        "module": "每日挑战",
+        "round": 2,
+        "current_design": {"exists": True, "covers_request": False},
+        "questions": [_daily_questions()[0], monetization_q1],
+        "shown": ["Q1"],
+        "user_reply": "整体按建议",
+    })
+    check(result["adopted"].get("Q1", {}).get("value") == "A",
+          f"整体采纳应落在当前模块 Q1 的建议 A,实际 {result['adopted']}")
+    catalog_titles = [item.get("title") for item in result["catalog"]]
+    check(catalog_titles == ["关卡来源"],
+          f"本轮目录须按当前模块解析同编号问题,实际 {catalog_titles}")
+    check("免费加广告" not in json.dumps(result["adopted"], ensure_ascii=False),
+          "其他模块的选项不得进入本轮采纳")
+
+
 def main() -> int:
     return run_theme("设计问答模块识别与成组交互", (
         test_classifies_new_design_for_missing_module,
@@ -783,6 +882,9 @@ def main() -> int:
         test_negated_or_ambiguous_replies_stay_pending,
         test_later_ambiguity_does_not_drop_earlier_answers,
         test_combined_reservations_override_overall_adopt,
+        test_question_exceptions_override_overall_adoption,
+        test_later_statement_wins_for_same_question,
+        test_same_qid_in_other_module_keeps_current_identity,
     ), FAILURES)
 
 

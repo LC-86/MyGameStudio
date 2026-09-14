@@ -58,6 +58,7 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
     to_sync = list(meta.get("to_sync") or [])
     sync_authorized = bool(authorization.get("sync"))
     files = planned_files if sync_authorized else []
+    completion: dict[str, Any] | None = None
     if not sync_authorized:
         to_sync = to_sync or [path for path, role in outputs
                               if path and role != ROLE_SPECS]
@@ -65,9 +66,9 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
         if pending:
             files = [pending]
     else:
-        completed = _completed_pending_file(existing, meta)
-        if completed:
-            files = planned_files + [completed]
+        # 完成标记不进写入计划:全部必要检查成功后才由 apply_delivery
+        # 写入,检查失败时保留待同步记录的可恢复事实。
+        completion = _completed_pending_file(existing, meta)
     base = {
         "op": "delivery",
         "game": str(meta.get("game") or material.get("game") or ""),
@@ -82,6 +83,7 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
         "blocking_qids": [str(qid) for qid in (meta.get("blocking_qids")
                                                or [])],
         "files": files,
+        "pending_complete_file": completion,
         "to_sync": to_sync,
         "untouched": [str(path) for path in (meta.get("untouched") or [])],
         "handoff_ready": not missing and not contradictions and sync_authorized,
@@ -306,7 +308,10 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
 
     传入 ``session``(票 08 ``checks.begin`` 建立的会话)时,按同一检查时机
     约定:落盘前做一次收敛统一核对,每个文件单独计数写入并逐次经通道核对
-    授权与版本,落盘后回读核对新改引用;不传时保持原有行为不变。
+    授权与版本,落盘后回读核对新改引用;核验失败时按失败对象作废依赖的
+    旧检查结果(断链/证据不足),无关结果保留。不传时保持原有行为不变。
+    待同步记录的完成标记在全部必要检查成功后才写入;失败时该记录保持
+    可恢复的待同步事实,不宣布已同步。
     """
 
     status = plan.get("status")
@@ -385,6 +390,9 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
         failures = list((checks or {}).get("failures") or []) + list(
             verdict.get("failures") or [])
         payload = {**(checks or {}), "ok": False, "failures": failures}
+        session = _invalidate_failed_checks(
+            session, known_paths, readback_map, failures,
+            checks_ok=checks_ok)
         return {**_result(plan, "check_failed", False), "written": written,
                 "outputs": plan.get("outputs") or [],
                 "contradictions": [], "missing": [],
@@ -393,6 +401,30 @@ def apply_delivery(plan: dict[str, Any], channel: Any,
                 "untouched": plan.get("untouched") or [],
                 "session": session, "checks": payload,
                 "report": check_failed_report(plan, written, payload)}
+    completion = plan.get("pending_complete_file")
+    if completion:
+        # 待同步记录的完成标记在全部必要检查成功后写入;此刻之前失败,
+        # 记录保持原有的待同步事实,不宣布已同步。
+        outcome = commit_path(
+            channel, readback, path=str(completion.get("path") or ""),
+            content=completion.get("content") or "",
+            expected_sha256=str(completion.get("expected_sha256")
+                                or "absent"),
+            note=f"{plan.get('game')} 完整设计交付"
+                 f"（{completion.get('role')}）")
+        if not outcome["ok"]:
+            failed_status = ("denied" if outcome["outcome"] == "denied"
+                             else outcome["outcome"])
+            return {**_result(plan, failed_status, False),
+                    "written": written, "path": outcome.get("path"),
+                    "rule_stage": outcome.get("rule_stage"),
+                    "report": failure_report(plan, outcome, written),
+                    "session": checks_seam.invalidate_outcome(
+                        session, outcome, detail="待同步记录的完成标记未更新"),
+                    "checks": checks}
+        written.append(str(completion.get("path") or ""))
+        session = checks_seam.write_item(
+            session, completion, label="交付写入")
     states = {"adopted": True, "saved": True,
               "synced": sync_authorized and not (plan.get("to_sync") or []),
               "implemented": False, "verified": False}
@@ -507,6 +539,36 @@ def _known_paths(plan: dict[str, Any]) -> list[str]:
     if entry and entry not in paths:
         paths.append(entry)
     return paths
+
+
+def _invalidate_failed_checks(
+        session: dict[str, Any] | None, known_paths: list[str],
+        readback_map: dict[str, str | None], failures: list[str],
+        *, checks_ok: bool) -> dict[str, Any] | None:
+    """交付核验失败 → 作废依赖失败对象的旧检查结果;无关结果保留。
+
+    失败对象是回读缺失或新改引用不可定位的路径(断链);没有可定位对象
+    时按证据不足作废,读取结果仍保留,重查只做受影响检查。
+    """
+
+    if session is None:
+        return None
+    failed_paths = [path for path in known_paths
+                    if readback_map.get(path) is None]
+    for failure in failures:
+        if not failure.startswith("新改引用不可定位:"):
+            continue
+        failed_paths.extend(item for item
+                            in failure.split(":", 1)[1].split("、") if item)
+    failed_paths = sorted(set(failed_paths))
+    if failed_paths:
+        return checks_seam.invalidate(
+            session, "broken_link", paths=failed_paths,
+            detail="交付核验失败:回读目标缺失或新改引用不可定位")["session"]
+    detail = "交付核验失败:" + (
+        "保存后检查未通过" if not checks_ok else "；".join(failures))
+    return checks_seam.invalidate(
+        session, "insufficient_evidence", detail=detail)["session"]
 
 
 def _result(plan: dict[str, Any], status: str, saved: bool) -> dict[str, Any]:

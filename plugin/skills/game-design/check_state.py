@@ -58,8 +58,22 @@ REJECT_OVERALL_RE = re.compile(
 CHOICE_RE = re.compile(r"(Q\d+)\s*选\s*([A-Za-z])")
 ADJUST_RE = re.compile(
     r"(Q\d+)\s*(?:调整为|改为|：|:)\s*(.+?)(?:[，。；\n]|$)")
+ITEM_ADJUST_RE = re.compile(
+    r"第\s*(\d+)\s*项\s*调整为\s*(.+?)(?:[，。；\n]|$)")
 UNKNOWN_VALUE_RE = re.compile(
     r"不知道|不清楚|先不确定|还没决定|尚未决定")
+# 逐题例外:题目被否定、排除,或明确表示暂不作答;例外覆盖整体采纳。
+QUESTION_EXCEPTION_RE = re.compile(
+    r"(?:除(?:了)?|排除)\s*(Q\d+)"
+    r"|(Q\d+)\s*(?:除外|先不管|先放着|待定)"
+    r"|(Q\d+)\s*(?:先不|暂不|先别|还没|尚未|不|难以|无法)\s*"
+    r"(?:决定|确定|选定|选择|采纳|回答|作答|定|选|答)")
+PREFIX_EXCEPTION_RE = re.compile(
+    r"(?:不要|不能|不可|拒绝|不准|暂不|先不|先别|无法"
+    r"|(?<![\u4e00-\u9fff])别)\s*(Q\d+)")
+NEGATED_CHOICE_PREFIX_RE = re.compile(
+    r"(?:不要|不能|不可|拒绝|不准|暂不|先不|先别|无法"
+    r"|(?<![\u4e00-\u9fff])别)\s*$")
 
 
 def snapshot(state: dict[str, Any]) -> dict[str, Any]:
@@ -269,13 +283,80 @@ def _clause_is_ambiguous(rest: str, clause: str) -> bool:
                 or re.search(r"还是|还没决定|不确定", clause))
 
 
+def _choice_is_negated(text: str, match: re.Match[str]) -> bool:
+    """选项前直接挂着的否定:「不要 Q2 选 A」不是 Q2 的作答。"""
+
+    window = text[max(0, match.start() - 8):match.start()]
+    return bool(NEGATED_CHOICE_PREFIX_RE.search(window))
+
+
+def question_exceptions(text: str) -> list[tuple[str, int]]:
+    """逐题例外(题目,位置):否定、排除或明确暂不决定,覆盖整体采纳。"""
+
+    items: list[tuple[str, int]] = []
+    for match in PREFIX_EXCEPTION_RE.finditer(text):
+        items.append((match.group(1), match.start()))
+    for match in QUESTION_EXCEPTION_RE.finditer(text):
+        qid = next(group for group in match.groups() if group)
+        items.append((qid, match.start()))
+    return items
+
+
+def reply_statements(text: str) -> list[dict[str, Any]]:
+    """逐题作答语句按原文出现顺序返回;同一题后出现的语句覆盖先出现的。
+
+    语句种类:``choice``(明确选项)、``adjust`` / ``adjust_index``(自定值)、
+    ``ambiguous``(含义不明)与 ``exception``(否定或明确暂不决定)。
+    调用方按序应用,同一题以最后一条语句为准,不按语句种类重排。
+    """
+
+    text = str(text or "")
+    events: list[dict[str, Any]] = []
+    for match in ITEM_ADJUST_RE.finditer(text):
+        events.append({"pos": match.start(), "kind": "adjust_index",
+                       "index": int(match.group(1)) - 1,
+                       "value": match.group(2).strip()})
+    for match in CHOICE_RE.finditer(text):
+        rest, clause = _choice_clause(text, match)
+        if _clause_is_ambiguous(rest, clause):
+            events.append({"pos": match.start(), "kind": "ambiguous",
+                           "qid": match.group(1)})
+        elif not _choice_is_negated(text, match):
+            events.append({"pos": match.start(), "kind": "choice",
+                           "qid": match.group(1),
+                           "value": match.group(2).upper()})
+    for match in ADJUST_RE.finditer(text):
+        value = match.group(2).strip()
+        if re.fullmatch(r"选\s*[A-Za-z]", value):
+            continue
+        events.append({"pos": match.start(), "kind": "adjust",
+                       "qid": match.group(1), "value": value})
+    for qid, pos in question_exceptions(text):
+        events.append({"pos": pos, "kind": "exception", "qid": qid})
+    events.sort(key=lambda item: item["pos"])
+    return events
+
+
+def _statement_qid(event: dict[str, Any],
+                   shown: list[str]) -> str | None:
+    """语句指向的题号:``adjust_index`` 按展示顺序解析,越界不算作答。"""
+
+    if event.get("kind") == "adjust_index":
+        index = int(event.get("index"))
+        if not 0 <= index < len(shown):
+            return None
+        return shown[index]
+    return str(event.get("qid") or "")
+
+
 def definite_choices(text: str) -> list[tuple[str, str]]:
-    """明确的逐题选项;『选 A 还是 B』或尚未决定不算作答。"""
+    """明确的逐题选项;『选 A 还是 B』、尚未决定与被否定的选择不算作答。"""
 
     items: list[tuple[str, str]] = []
     for match in CHOICE_RE.finditer(text):
         rest, clause = _choice_clause(text, match)
-        if _clause_is_ambiguous(rest, clause):
+        if _clause_is_ambiguous(rest, clause) \
+                or _choice_is_negated(text, match):
             continue
         items.append((match.group(1), match.group(2).upper()))
     return items
@@ -287,14 +368,19 @@ def ambiguous_choice_ids(text: str) -> list[str]:
     items: list[str] = []
     for match in CHOICE_RE.finditer(text):
         rest, clause = _choice_clause(text, match)
-        if _clause_is_ambiguous(rest, clause):
+        if _clause_is_ambiguous(rest, clause) \
+                and not _choice_is_negated(text, match):
             items.append(match.group(1))
     return items
 
 
 def answers_from_reply(reply: str,
                        shown: Iterable[str] | None = None) -> dict[str, str]:
-    """本轮实际答案:从用户回复解析 Q 编号与取值,供保存前核对。"""
+    """本轮实际答案:从用户回复解析 Q 编号与取值,供保存前核对。
+
+    逐题语句按原文顺序应用,同一题以最后一条为准;整体采纳只覆盖没有
+    逐题语句的展示题目,例外与含义不明的题不补默认值。
+    """
 
     text = str(reply or "").strip()
     shown_list = [str(item) for item in (shown or [])]
@@ -303,20 +389,23 @@ def answers_from_reply(reply: str,
         return answers
     if adopts_all_recommendations(text):
         for qid in shown_list:
-            answers.setdefault(qid, "recommendation")
-    for qid, letter in definite_choices(text):
-        answers[qid] = letter
-    for qid in ambiguous_choice_ids(text):
-        answers.pop(qid, None)
-    for match in ADJUST_RE.finditer(text):
-        value = match.group(2).strip()
-        qid = match.group(1)
-        if re.fullmatch(r"选\s*[A-Za-z]", value):
+            answers[qid] = "recommendation"
+    for event in reply_statements(text):
+        qid = _statement_qid(event, shown_list)
+        if not qid:
             continue
-        if is_unknown_value(value) or is_ambiguous_value(value):
-            answers.pop(qid, None)
+        kind = str(event.get("kind"))
+        if kind == "choice":
+            answers[qid] = str(event.get("value"))
             continue
-        answers[qid] = value
+        if kind == "adjust":
+            value = str(event.get("value"))
+            if is_unknown_value(value) or is_ambiguous_value(value):
+                answers.pop(qid, None)
+                continue
+            answers[qid] = value
+            continue
+        answers.pop(qid, None)  # ambiguous / exception 不算作答
     return answers
 
 

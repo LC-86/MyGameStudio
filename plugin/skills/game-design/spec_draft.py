@@ -35,7 +35,8 @@ from spec_report import (
     saved_report,
 )
 from spec_sync import (
-    compare_existing, sync_files, version_plan, version_warnings,
+    baseline_cites_spec, compare_existing, sync_files, version_plan,
+    version_warnings,
 )
 
 
@@ -376,8 +377,10 @@ def _handoff_states(plan: dict[str, Any],
               if targets else not (plan.get("to_sync") or []))
     spec_path = str(plan.get("spec_path") or "")
     design = readback(str(plan.get("design_path") or "")) or ""
-    if synced and spec_path and spec_path not in design \
-            and plan.get("to_sync") and plan.get("sync_authorized", True):
+    version_to = str((plan.get("version") or {}).get("to") or "")
+    if synced and spec_path and plan.get("to_sync") \
+            and plan.get("sync_authorized", True) \
+            and not baseline_cites_spec(design, spec_path, version_to):
         synced = False
     return {"adopted": True, "saved": True, "synced": synced,
             "implemented": False, "verified": False}

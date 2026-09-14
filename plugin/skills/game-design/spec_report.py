@@ -154,4 +154,3 @@ def saved_report(plan: dict[str, Any], written: list[str],
             lines.append(f"- {item['content']}；影响：{item['impact']}")
         lines.append(f"建议动作：{producer['action']}")
     return "\n".join(lines)
-

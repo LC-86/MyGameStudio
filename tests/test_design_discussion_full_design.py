@@ -26,7 +26,7 @@ SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
-from checks import begin  # noqa: E402
+from checks import begin, record_read, remember, reuse  # noqa: E402
 from coverage_map import DOMAINS, build_map, stage_status  # noqa: E402
 from decision_records import sha256_text  # noqa: E402
 from decisions import apply_save, plan_save  # noqa: E402
@@ -1260,6 +1260,111 @@ def test_cli_pending_sync_record_continues_and_updates() -> None:
               f"完成同步后待同步记录须更新状态,实际 {pending}")
 
 
+def test_check_failure_invalidates_dependent_recheck_results() -> None:
+    """交付核验失败时,依赖失败对象的旧检查结果须作废;无关结果保留。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project, read, material, _applied = _run_full_flow(
+            Path(tmp), material=_blocked_material())
+        fixed = _resolved(material)
+        plan = plan_delivery(_existing(project), _full_meta(fixed), fixed)
+        check(plan["status"] == "planned",
+              f"规划时应可整理,实际 {plan.get('status')}")
+        (project / SPEC_REL).unlink()
+        session = begin({
+            "mode": "new_design", "stage": "只有设计，尚未实现",
+            "goal": "完成每日挑战完整设计", "module": "每日挑战",
+            "deps": [], "entry": DESIGN_REL,
+            "authorization": {"write": True, "sync": True},
+            "baseline": {DESIGN_REL: sha256_text(read(DESIGN_REL))},
+        })["session"]
+        session = record_read(session, SPEC_REL, "# 每日挑战:模块规格\n",
+                              module="每日挑战", purpose="module",
+                              call="交付前读取规格")["session"]
+        session = record_read(session, PROJECT_REL,
+                              read(PROJECT_REL) or "", module="每日挑战",
+                              purpose="project",
+                              call="交付前读取项目目标")["session"]
+        session = remember(session, "规格完整性", {"ok": True},
+                           depends_on=[SPEC_REL])["session"]
+        session = remember(session, "无关检查", {"ok": True},
+                           depends_on=[PROJECT_REL])["session"]
+        applied = apply_delivery(plan, _Channel(svc, _handoff_token(svc)),
+                                 read, session=session)
+        check(applied.get("status") == "check_failed",
+              f"规格被移除后不得标已保存,实际 {applied.get('status')}")
+        result_session = applied.get("session") or {}
+        check(reuse(result_session, "规格完整性") is None,
+              "依赖被移除规格的旧检查结果须作废,不得继续报 ok=true")
+        check(reuse(result_session, "无关检查") is not None,
+              "不依赖失败对象的旧检查结果须保留,无需重查")
+        ledger = [item for item in result_session.get("ledger") or []
+                  if item.get("timing") == "invalidate"]
+        check(any("断链" in str(item.get("check") or "") for item in ledger),
+              f"台账须记录按失败对象作废,实际 {ledger}")
+
+
+def test_cli_pending_completion_waits_for_checks() -> None:
+    """检查失败时待同步记录不得提前写成已完成;检查通过后才更新。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        svc, project, read, material, _applied = _run_full_flow(
+            root, material=_blocked_material())
+        token = _handoff_token(svc)
+        cli = str(SKILL_DIR / "full_design_cli.py")
+        fixed = _resolved(material)
+
+        def run_cli(meta, mat):
+            return subprocess.run(
+                [sys.executable, "-B", cli, "apply", "--project-root",
+                 str(project), "--runtime-root", str(root / "runtime"),
+                 "--token", token],
+                input=json.dumps({"meta": meta, "material": mat},
+                                 ensure_ascii=False),
+                capture_output=True, text=True)
+
+        no_sync = {"meta": {**_full_meta(fixed),
+                            "authorization": {"write": True, "sync": False}},
+                   "material": fixed}
+        first = run_cli(no_sync["meta"], no_sync["material"])
+        check(first.returncode == 0
+              and json.loads(first.stdout).get("saved") is True,
+              f"缺同步授权的待同步保存应成功,实际 {first.stdout}{first.stderr}")
+        check("缺同步授权" in (read(PENDING_REL) or ""),
+              "首次须写入待同步记录")
+
+        broken = _resolved(material)
+        content = dict(broken.get("content") or {})
+        content["audio"] = [{
+            "text": "新增配乐依据见 docs/ui-review-source-missing.md",
+            "rules": ["daily-seed"]}]
+        broken["content"] = content
+        content_before_broken = read(CONTENT_REL)
+        failed = run_cli(_full_meta(broken), broken)
+        failed_result = json.loads(failed.stdout or "{}")
+        check(failed.returncode == 1
+              and failed_result.get("status") == "check_failed",
+              f"引用缺失的授权同步须检查失败并非零退出,实际 {failed.stdout}")
+        check(failed_result.get("states", {}).get("synced") is not True,
+              "检查失败不得宣称已同步")
+        pending_text = read(PENDING_REL) or ""
+        check("已经完成" not in pending_text and "已同步" not in pending_text,
+              f"检查失败时待同步记录不得宣布已完成,实际 {pending_text}")
+        check("待同步" in pending_text,
+              "失败时须保留可恢复的待同步事实")
+
+        # 开发者修复内容文件后重试:检查通过,完成标记才更新。
+        (project / CONTENT_REL).write_text(content_before_broken or "",
+                                           encoding="utf-8")
+        saved = run_cli(_full_meta(fixed), fixed)
+        check(saved.returncode == 0,
+              f"修复引用并重试应成功,实际 {saved.stderr or saved.stdout}")
+        pending_text = read(PENDING_REL) or ""
+        check("已同步" in pending_text and "缺同步授权" not in pending_text,
+              f"检查通过后待同步记录须更新为已完成,实际 {pending_text}")
+
+
 TESTS = (
     test_extracts_known_material_and_builds_coverage_map,
     test_scope_layers_and_template_fill_guard,
@@ -1277,6 +1382,8 @@ TESTS = (
     test_delivery_verify_failure_sets_checks_ok_false,
     test_second_required_module_spec_missing_keeps_delivery_incomplete,
     test_cli_pending_sync_record_continues_and_updates,
+    test_check_failure_invalidates_dependent_recheck_results,
+    test_cli_pending_completion_waits_for_checks,
 )
 
 

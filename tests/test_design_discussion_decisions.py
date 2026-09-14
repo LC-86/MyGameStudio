@@ -961,6 +961,87 @@ def test_combined_reservation_is_not_saved_as_adopted() -> None:
               f"恢复后 Q2 须保持未决,实际 {state.get('pending')}")
 
 
+def test_negated_and_deferred_exceptions_not_saved_as_adopted() -> None:
+    """整体采纳中的否定与「先不决定」例外经真实通道保存后不得变成决定。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        read = _reader(project)
+        for reply in ("整体按建议，但不要 Q2 选 A",
+                      "整体按建议，除了 Q2，Q2 先不决定"):
+            owner = _instance(svc)
+            channel = _Channel(svc, owner.token)
+            turn = run_round(_turn(reply))
+            check("Q2" not in turn["adopted"],
+                  f"例外不得进入采纳:{reply},实际 {turn['adopted']}")
+            check(turn["pending"].get("Q2", {}).get("reason") == "deferred",
+                  f"例外题须保持待讨论:{reply},实际 {turn['pending']}")
+            plan = plan_save(None, turn, _meta(reply=reply))
+            check(plan["status"] == "planned",
+                  f"例外轮仍应保存其余明确决定:{reply},实际 {plan['status']}")
+            applied = apply_save(plan, channel, read)
+            check(applied["status"] == "saved",
+                  f"其余明确决定应经真实通道落盘:{reply},实际 {applied}")
+            saved = read(RECORD_REL) or ""
+            check("·Q2 与章节关系：采纳" not in saved,
+                  f"例外题不得写成已采纳:{reply},实际 {saved}")
+            check("Q2 与章节关系：开发者暂不决定本题" in saved,
+                  f"例外题须按暂不决定记为未决:{reply},实际 {saved}")
+            state = restore_from_records({RECORD_REL: saved}, "每日挑战")
+            check("Q2" not in (state.get("settled") or {}),
+                  f"恢复后例外题不得成为已定:{reply},实际 {state.get('settled')}")
+            pending_ids = {item["qid"] for item in state.get("pending") or []}
+            check("Q2" in pending_ids,
+                  f"恢复后例外题须保持未决:{reply},实际 {state.get('pending')}")
+            (project / RECORD_REL).unlink()
+            svc.release_instance(owner.instance_id)
+            svc.reclaim_locks(owner.instance_id)
+
+
+def test_same_qid_in_other_module_saves_current_module_decision() -> None:
+    """其他模块的同编号问题不得顶替当前模块的决定身份(保存与恢复)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        channel = _Channel(svc, _instance(svc).token)
+        read = _reader(project)
+        monetization_q1 = {
+            "id": "Q1", "title": "商店定价", "body": "定价多少?",
+            "options": {"A": "6 元", "B": "免费加广告"},
+            "recommendation": "B", "reason": "先免费扩大体量。",
+            "module": "商业化", "depends_on": [],
+            "impact": "决定商业化方式。",
+        }
+        # 目录里同时有当前模块 Q1 与商业化模块 Q1:展示与采纳须落在当前模块。
+        questions = _questions() + [monetization_q1]
+        result = run_round({
+            **_turn("整体按建议"), "questions": questions,
+            "shown": ["Q1", "Q2", "Q3"],
+        })
+        adopted_q1 = result["adopted"].get("Q1", {})
+        check(adopted_q1.get("value") == "A",
+              f"整体采纳应落在当前模块 Q1 的建议 A,实际 {result['adopted']}")
+        plan = plan_save(None, result, _meta(reply="整体按建议"))
+        check(plan["status"] == "planned", f"应可保存,实际 {plan['status']}")
+        entry_q1 = next((item for item in plan.get("entries") or []
+                         if item["qid"] == "Q1"), None)
+        check(entry_q1 is not None and entry_q1["title"] == "关卡来源",
+              f"保存条目须使用当前模块的题目身份,实际 {entry_q1}")
+        check(entry_q1["value"].startswith("A "),
+              f"保存取值须按当前模块选项渲染,实际 {entry_q1}")
+        applied = apply_save(plan, channel, read)
+        check(applied["status"] == "saved",
+              f"应经真实通道落盘,实际 {applied.get('status')}")
+        saved = read(RECORD_REL) or ""
+        check("- D 每日挑战·Q1 关卡来源：采纳 A 从现有 20 关按日期抽取" in saved,
+              f"落盘须是当前模块的 Q1 决定,实际 {saved}")
+        check("商店定价" not in saved and "免费加广告" not in saved,
+              f"其他模块同编号题不得进入本模块记录,实际 {saved}")
+        state = restore_from_records({RECORD_REL: saved}, "每日挑战")
+        check(state["settled"].get("Q1") == "A 从现有 20 关按日期抽取",
+              f"恢复须回到当前模块的决定,实际 {state['settled']}")
+
+
 def main() -> int:
     return run_theme("设计问答决定保存与恢复", (
         test_normal_save_matches_shown_questions_and_reads_back,
@@ -977,6 +1058,8 @@ def main() -> int:
         test_rejected_or_unknown_replies_are_not_saved_as_adopted,
         test_pending_only_records_restore_pending_items,
         test_combined_reservation_is_not_saved_as_adopted,
+        test_negated_and_deferred_exceptions_not_saved_as_adopted,
+        test_same_qid_in_other_module_saves_current_module_decision,
     ), FAILURES)
 
 

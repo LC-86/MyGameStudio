@@ -18,8 +18,8 @@ import re
 from typing import Any
 
 from check_state import (
-    ADJUST_RE, adopts_all_recommendations, ambiguous_choice_ids,
-    definite_choices, is_ambiguous_value, is_unknown_value,
+    adopts_all_recommendations, is_ambiguous_value, is_unknown_value,
+    reply_statements,
 )
 
 KIND_LABELS = {
@@ -262,10 +262,19 @@ def _with_revision_context(
 
 
 def _catalog(turn: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """本轮题目目录:按当前模块作用域解析题号。
+
+    其他模块可以有同编号问题;它们不进入本轮目录,展示、采纳与保存
+    经同一目录保持一致的模块与问题身份。
+    """
+
+    module = str(turn.get("module") or "")
     items: dict[str, dict[str, Any]] = {}
     for index, raw in enumerate(turn.get("questions") or []):
         item = dict(raw)
         item["id"] = _question_id(item, index)
+        if module and item.get("module") and item["module"] != module:
+            continue
         items[item["id"]] = item
     return items
 
@@ -297,20 +306,45 @@ def _map_answers(
             if qid not in settled:
                 pending[qid] = {"reason": "unknown"}
         return adopted, pending, settled
+
+    # 逐题语句按原文顺序应用,同一题以最后一条为准;
+    # 整体采纳只覆盖没有逐题语句的展示题目,题目例外覆盖整体采纳。
+    statements = reply_statements(text)
+    explicit: set[str] = set()
+    for event in statements:
+        if event.get("kind") == "adjust_index":
+            index = int(event.get("index"))
+            if not 0 <= index < len(shown_ids):
+                continue
+            explicit.add(shown_ids[index])
+        else:
+            explicit.add(str(event.get("qid") or ""))
     if adopts_all_recommendations(text):
         for qid in shown_ids:
+            if qid in explicit:
+                continue
             rec = (catalog.get(qid) or {}).get("recommendation")
             if rec is None:
                 continue
             adopted[qid] = {"value": rec, "source": "recommendation"}
             settled[qid] = rec
-
-    for match in re.finditer(
-            r"第\s*(\d+)\s*项\s*调整为\s*(.+?)(?:[，。；\n]|$)", text):
-        index = int(match.group(1)) - 1
-        if 0 <= index < len(shown_ids):
+    for event in statements:
+        if event.get("kind") == "adjust_index":
+            index = int(event.get("index"))
+            if not 0 <= index < len(shown_ids):
+                continue
             qid = shown_ids[index]
-            value = match.group(2).strip()
+            kind = "adjust"
+        else:
+            qid = str(event.get("qid") or "")
+            kind = str(event.get("kind"))
+        if kind == "choice":
+            adopted[qid] = {"value": event.get("value"), "source": "user"}
+            settled[qid] = event.get("value")
+            pending.pop(qid, None)
+            continue
+        if kind == "adjust":
+            value = str(event.get("value"))
             if is_unknown_value(value) or is_ambiguous_value(value):
                 adopted.pop(qid, None)
                 settled.pop(qid, None)
@@ -319,31 +353,13 @@ def _map_answers(
                 continue
             adopted[qid] = {"value": value, "source": "custom"}
             settled[qid] = value
-
-    for qid, value in definite_choices(text):
-        adopted[qid] = {"value": value, "source": "user"}
-        settled[qid] = value
-        pending.pop(qid, None)
-
-    for match in ADJUST_RE.finditer(text):
-        qid = match.group(1)
-        value = match.group(2).strip()
-        if re.fullmatch(r"选\s*[A-Za-z]", value):
+            pending.pop(qid, None)
             continue
-        if is_unknown_value(value) or is_ambiguous_value(value):
-            adopted.pop(qid, None)
-            settled.pop(qid, None)
-            pending[qid] = {"reason": "unknown" if is_unknown_value(value)
-                            else "ambiguous"}
-            continue
-        adopted[qid] = {"value": value, "source": "custom"}
-        settled[qid] = value
-        pending.pop(qid, None)
-
-    for qid in ambiguous_choice_ids(text):
+        # ambiguous / exception:该题本轮不作答,覆盖此前的任何采纳
         adopted.pop(qid, None)
         settled.pop(qid, None)
-        pending[qid] = {"reason": "ambiguous"}
+        pending[qid] = {"reason": "ambiguous" if kind == "ambiguous"
+                        else "deferred"}
 
     for qid in shown_ids:
         if qid in settled or qid in pending:
@@ -383,6 +399,7 @@ def _format_status(
             "unshown": "尚未展示,不自动采纳",
             "missing_fact": "缺少可查事实",
             "unknown": "开发者表示不知道,保持提案",
+            "deferred": "开发者明确暂不决定本题",
         }
         for qid, item in pending.items():
             lines.append(

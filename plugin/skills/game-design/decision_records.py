@@ -30,6 +30,7 @@ PENDING_LABELS = {
     "unknown": "开发者表示不知道",
     "missing_fact": "缺少可查事实",
     "unshown": "尚未展示",
+    "deferred": "开发者暂不决定本题",
 }
 DEFERRED_LABEL = "依赖未满足"
 

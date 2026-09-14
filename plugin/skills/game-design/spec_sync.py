@@ -41,8 +41,8 @@ def version_plan(meta: dict[str, Any], compare: dict[str, Any],
                  to_sync: list[str] | None = None) -> dict:
     """版本纪律:实质变化才递增;语义未变的调整按格式修正处理。
 
-    规格正文相同不能证明核心基线已同步:仍有未同步决定且基线尚未引用
-    该规格时,保持实质变化,继续规划基线写入。
+    规格正文相同不能证明核心基线已同步:仍有未同步决定且基线引用未指向
+    当前版本(含从未引用)时,保持实质变化,继续规划基线写入。
     """
 
     announced = str(meta.get("change") or "").strip()
@@ -55,10 +55,12 @@ def version_plan(meta: dict[str, Any], compare: dict[str, Any],
                         "先解决声明与实际内容的矛盾,再允许同步。"}
     if announced == "format" or (compare["previous_present"]
                                  and compare["semantic_equal"]):
-        if _baseline_still_needs_spec(baseline_text, spec_path, to_sync):
+        if _baseline_still_needs_spec(baseline_text, spec_path, to_sync,
+                                      to_v):
             return {"from": from_v, "to": to_v, "change": "substantive",
-                    "note": f"规格正文未变,但核心基线尚未引用该规格;"
-                            f"仍按实质变化同步基线:{from_v} → {to_v}。"}
+                    "note": f"规格正文未变,但核心基线未引用该规格的"
+                            f"当前版本 {to_v};仍按实质变化同步基线:"
+                            f"{from_v} → {to_v}。"}
         return {"from": from_v, "to": from_v, "change": "format",
                 "note": f"本次仅为格式修正或语义一致的整理:版本保持 {from_v},"
                         f"不触发新版本,不算新产品要求。"}
@@ -68,10 +70,35 @@ def version_plan(meta: dict[str, Any], compare: dict[str, Any],
 
 
 def _baseline_still_needs_spec(baseline_text: str | None, spec_path: str,
-                               to_sync: list[str] | None) -> bool:
+                               to_sync: list[str] | None,
+                               version_to: str = "") -> bool:
+    """仍有未同步决定时,基线引用是否还欠一次同步。
+
+    判断依据是基线对**当前版本**的引用(旧版本引用不算新修订已同步),
+    不能只看规格路径是否出现过。
+    """
+
     if not spec_path or not to_sync:
         return False
-    return spec_path not in (baseline_text or "")
+    return not baseline_cites_spec(baseline_text, spec_path, version_to)
+
+
+def baseline_cites_spec(baseline_text: str | None, spec_path: str,
+                        version_to: str) -> bool:
+    """核心基线对该规格的引用是否指向当前版本。
+
+    引用条目在规格路径旁标明「当前 vN」;引用缺失或仍指旧版本时,
+    本轮修订不能当作已同步。
+    """
+
+    text = baseline_text or ""
+    if not spec_path or spec_path not in text:
+        return False
+    if not version_to:
+        return True
+    return bool(re.search(
+        re.escape(spec_path) + r"[^\n]{0,60}当前\s*" + re.escape(version_to)
+        + r"(?!\d)", text))
 
 
 def version_warnings(meta: dict[str, Any],
@@ -86,7 +113,7 @@ def version_warnings(meta: dict[str, Any],
             and compare["semantic_equal"]:
         if decided == "substantive":
             warnings.append(
-                "规格正文未变,但核心基线尚未引用该规格;"
+                "规格正文未变,但核心基线未引用该规格的当前版本;"
                 "仍按实质变化同步基线,不把未完成同步当成格式修正。")
         else:
             warnings.append(
@@ -117,7 +144,8 @@ def sync_files(meta: dict[str, Any], parsed: dict[str, Any],
     needs_baseline = version["change"] == "substantive" or (
         _baseline_still_needs_spec(
             existing.get(design_path), spec_path,
-            list(decision.get("to_sync") or [])))
+            list(decision.get("to_sync") or []),
+            str(version.get("to") or "")))
     if needs_baseline and baseline_authorized(authorization):
         design_text = design_document(existing.get(design_path), meta, version,
                                       spec_path, decision)
@@ -132,7 +160,9 @@ def sync_files(meta: dict[str, Any], parsed: dict[str, Any],
                           existing.get(glossary_path), glossary),
                       "expected_sha256": sha256_text(
                           existing.get(glossary_path))})
-    baseline_ready = spec_path in (existing.get(design_path) or "") \
+    baseline_ready = baseline_cites_spec(
+        existing.get(design_path), spec_path,
+        str(version.get("to") or "")) \
         or any(item.get("role") == "核心基线" for item in files)
     if authorization.get("write") and authorization.get("sync") \
             and decision["to_sync"] and record_path and baseline_ready:
