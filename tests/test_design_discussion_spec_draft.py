@@ -2385,6 +2385,100 @@ def test_round15_code_span_identity_keeps_commands_rules_and_suffixes() -> None:
               f"multiline-code-span: 未完成的同步回读必须失败,实际 {verdict}")
 
 
+def _same_line_roles_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 行为依据：{SPEC_REL}（当前 v3）；验收依据：{SPEC_REL}"
+           "（当前 v3；仍支持离线）。")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _same_line_refer_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 本轮依据：{SPEC_REL}（当前 v3）；离线验收参照 {SPEC_REL}"
+           "（当前 v3）")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _same_line_table_links_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"| 行为 | 验收 |\n| --- | --- |\n"
+           f"| [行为]({SPEC_REL})（当前 v3） | "
+           f"[验收]({SPEC_REL})（当前 v3） |\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _code_span_dot_file_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 历史规格：`{SPEC_REL}.`（当前 v8）。\n"
+           f"- 当前：{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _broken_before_code_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：``说明 ` {SPEC_REL} `（当前 v3）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_round16_same_line_citations_and_code_span_dot() -> None:
+    """r16:同行全部引用更新回读,代码片段尾点是文件名,未配对开串不截断。"""
+
+    cases = (
+        ("same-line-roles", _same_line_roles_layout,
+         [f"- 行为依据：{SPEC_REL}（当前 v4）；验收依据：{SPEC_REL}"
+          "（当前 v4；仍支持离线）。"],
+         [f"验收依据：{SPEC_REL}（当前 v3"]),
+        ("same-line-refer", _same_line_refer_layout,
+         [f"- 本轮依据：{SPEC_REL}（当前 v4）；离线验收参照 {SPEC_REL}"
+          "（当前 v4）"],
+         [f"离线验收参照 {SPEC_REL}（当前 v3）"]),
+        ("same-line-table-links", _same_line_table_links_layout,
+         [f"[行为]({SPEC_REL})（当前 v4）",
+          f"[验收]({SPEC_REL})（当前 v4）"],
+         [f"[验收]({SPEC_REL})（当前 v3）",
+          f"]({SPEC_REL}（当前"]),
+        ("code-span-dot", _code_span_dot_file_layout,
+         [f"`{SPEC_REL}.`（当前 v8）",
+          f"- 当前：{SPEC_REL}（当前 v4）"],
+         [f"`{SPEC_REL}.`（当前 v4）", "当前：。"]),
+        ("broken-before-code", _broken_before_code_layout,
+         [f"` {SPEC_REL} `（当前 v4）"],
+         [f"` {SPEC_REL}（当前 v4） `",
+          f"` {SPEC_REL} `（当前 v3）"]),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 须更新同一行全部目标引用并保留其他身份,"
+                      f"期望含 {needle!r},实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得出现越界改动 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 全部引用回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -2411,6 +2505,7 @@ TESTS = (
     test_link_structure_identity_keeps_labels_targets_and_code_spans,
     test_round14_cross_line_links_complete_identity_and_code_spans,
     test_round15_code_span_identity_keeps_commands_rules_and_suffixes,
+    test_round16_same_line_citations_and_code_span_dot,
 )
 
 

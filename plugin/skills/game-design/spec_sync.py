@@ -100,13 +100,12 @@ def baseline_cites_spec(baseline_text: str | None, spec_path: str,
         return True
     found_current = False
     for line in text.split("\n"):
-        if not _has_path(line, spec_path):
-            continue
-        attached = _attached_version(line, spec_path)
-        if attached == version_to:
-            found_current = True
-        elif attached:
-            return False  # 仍有本规格的旧版本引用,不能当作已同步
+        for start, end in _iter_paths(line, spec_path):
+            attached = _attached_version_at(line, spec_path, start, end)
+            if attached == version_to:
+                found_current = True
+            elif attached:
+                return False  # 仍有本规格的旧版本引用,不能当作已同步
     return found_current
 
 
@@ -358,8 +357,9 @@ def _ascii_paren_span(text: str, pos: int) -> int | None:
 def _target_identity(raw: str, strip_dot: bool = True) -> str:
     """归一化的引用身份:去首尾空白、``./`` 前缀、``#锚点`` 与句末点号。
 
-    ``strip_dot=False`` 用于明确的链接目标(``<…>``/``](…)``/引用式定义):
-    目标里的句点属于文件名(``<PATH.>`` 指向另一个文件),不按正文句末剥除。
+    ``strip_dot=False`` 用于有明确边界的目标(``<…>``/``](…)``/引用式定义/
+    成对代码片段):边界内的句点属于文件名(``<PATH.>``、`` `PATH.` ``
+    指向另一个文件),不按正文句末剥除。
     """
 
     token = raw.strip()
@@ -480,6 +480,18 @@ def _find_path(text: str, spec_path: str,
 
 def _has_path(text: str, spec_path: str) -> bool:
     return _find_path(text, spec_path) is not None
+
+
+def _iter_paths(text: str, spec_path: str):
+    """完整路径身份的每一处出现,从左到右。"""
+
+    pos = 0
+    while True:
+        found = _find_path(text, spec_path, from_pos=pos)
+        if not found:
+            return
+        yield found
+        pos = found[1] if found[1] > found[0] else found[0] + 1
 
 
 def _link_target_identity(line: str,
@@ -603,7 +615,8 @@ def _paired_code_spans(text: str) -> list[tuple[int, int, int, int]]:
         while m < len(runs) and runs[m][1] != op_len:
             m += 1
         if m >= len(runs):
-            break
+            k += 1  # 开串无等长闭串:当正文,继续识别后续片段
+            continue
         cl_pos, cl_len = runs[m]
         pairs.append((op_pos, op_len, cl_pos, cl_len))
         k = m + 1
@@ -624,10 +637,14 @@ def _code_span_inner(text: str, open_at: int, after: int) -> str:
 
 def _code_span_is_spec_path(text: str, open_at: int, after: int,
                             spec_path: str) -> bool:
-    """单行成对片段的完整内容(去空白)是否就是本规格路径。"""
+    """单行成对片段的完整内容(去空白)是否就是本规格路径。
+
+    片段边界内的句点属于文件名,不按正文句末剥除。
+    """
 
     inner = _code_span_inner(text, open_at, after)
-    return "\n" not in inner and _target_identity(inner.strip()) == spec_path
+    return "\n" not in inner and _target_identity(
+        inner.strip(), strip_dot=False) == spec_path
 
 
 def _code_span_other_identity(text: str, start: int, end: int,
@@ -675,8 +692,9 @@ def _code_span(line: str, start: int,
     return "broken", end, start - opens
 
 
-def _attached_version(line: str, spec_path: str) -> str:
-    """直接附着在路径上的当前版本号;不属于本引用的版本不匹配。
+def _attached_version_at(line: str, spec_path: str,
+                         start: int, end: int) -> str:
+    """``start,end`` 这一处路径身份上直接附着的当前版本号。
 
     版本只认完整路径身份上的附着:紧随路径的成对括号**顶层**,或经
     至多一个分隔符紧邻的裸版本;路径在链接目标内时附着在链接闭括号
@@ -684,10 +702,6 @@ def _attached_version(line: str, spec_path: str) -> str:
     不算本引用的版本。
     """
 
-    found = _find_path(line, spec_path)
-    if not found:
-        return ""
-    start, end = found
     code_status, code_after, code_open = _code_span(line, start, end)
     if code_status == "broken":
         return ""  # 反引号不配对:没有可安全认定的版本位置
@@ -726,16 +740,24 @@ def _version_in_ref_line(ref_line: str) -> str:
 
 
 def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
-    """只更新本引用的版本:范围限于附着括号顶层或紧邻的裸版本片段。
+    """更新本行每一处目标引用的版本,从右到左以免位置偏移。"""
+
+    if not version_to:
+        return line
+    result = line
+    for start, end in reversed(list(_iter_paths(line, spec_path))):
+        result = _update_citation_at(result, spec_path, version_to, start, end)
+    return result
+
+
+def _update_citation_at(line: str, spec_path: str, version_to: str,
+                        start: int, end: int) -> str:
+    """只更新这一处引用的版本:范围限于附着括号顶层或紧邻的裸版本。
 
     版本必须落在链接目标之外;链接后已有附着括号时原位更新其中顶层
     版本,不追加第二个当前版本;嵌套括号里其他模块的版本不动。
     """
 
-    found = _find_path(line, spec_path)
-    if not found or not version_to:
-        return line
-    start, end = found
     code_status, code_after, code_open = _code_span(line, start, end)
     if code_status == "broken":
         return line  # 反引号不配对:保持内容,由回读判定未完成
@@ -830,16 +852,18 @@ def _strip_attached(line: str, pos: int) -> str:
 
 
 def _strip_line_citation(line: str, spec_path: str) -> str:
-    """去掉本行的重复引用(路径+附着版本),保留其余业务内容。
+    """去掉本行每一处重复引用(路径+附着版本),保留其余业务内容。"""
 
-    链接形式的重复引用保留链接文字;附着括号内混有规则或其他模块
-    版本时只去本引用的顶层版本,嵌套内容不吞。
-    """
+    result = line
+    for start, end in reversed(list(_iter_paths(line, spec_path))):
+        result = _strip_citation_at(result, spec_path, start, end)
+    return result
 
-    found = _find_path(line, spec_path)
-    if not found:
-        return line
-    start, end = found
+
+def _strip_citation_at(line: str, spec_path: str,
+                       start: int, end: int) -> str:
+    """去掉这一处重复引用,保留链接文字与附着括号内的业务条件。"""
+
     code_status, code_after, code_open = _code_span(line, start, end)
     if code_status == "broken":
         return line  # 反引号不配对:保持内容,由回读判定未完成
@@ -953,9 +977,8 @@ def _replace_reference_lines(body: str, spec_path: str,
             updated.append(new_line)
             placed = True
             # 已更新到目标版本,或首条本来就是目标版本:其后视为重复引用。
-            updated_ok = bool(target) and (
-                new_line != line
-                or _attached_version(new_line, spec_path) == target)
+            updated_ok = bool(target) and baseline_cites_spec(
+                new_line, spec_path, target)
             continue
         if updated_ok:
             # 目标引用已确认更新:其后是重复引用,去重但保留同行业务正文。
