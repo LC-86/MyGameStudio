@@ -93,7 +93,7 @@ def baseline_cites_spec(baseline_text: str | None, spec_path: str,
     """
 
     text = baseline_text or ""
-    if not spec_path or spec_path not in text:
+    if not spec_path or not _has_path(text, spec_path):
         return False
     if not version_to:
         return True
@@ -291,10 +291,10 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
     if module and pattern.search(text):
         return pattern.sub(citation.rstrip(), text, count=1)
     ref_line = next((line for line in citation.splitlines()
-                     if spec_path in line), citation.rstrip())
+                     if _has_path(line, spec_path)), citation.rstrip())
     for section in _SECTION_RE.finditer(text):
         body = section.group(0)
-        if spec_path not in body:
+        if not _has_path(body, spec_path):
             continue
         return text[:section.start()] + _replace_reference_lines(
             body, spec_path, ref_line, version_to) + text[section.end():]
@@ -307,36 +307,127 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
 
 
 _CURRENT_VERSION_RE = re.compile(r"当前\s*(v\d+)")
-# 直接附着的引用括号:紧随路径(允许空白),不跨分隔符、表格列或链接目标
-_BRACKET_AFTER_RE = re.compile(r"[ \t]*([（(])([^）\n)]*)([）)])")
+# 完整路径身份:出现位置两侧不能再是路径字符,否则只是更长文件名的
+# 一部分(如 ``<PATH>.backup``),不能当作本规格的引用。
+_PATH_CHAR_RE = re.compile(r"[A-Za-z0-9_.\-/]|[\u4e00-\u9fff]")
+# Markdown 链接目标:``](PATH)`` 与 ``](<PATH>)`` 两种形式,版本只
+# 能附着在链接闭括号之后,不进入目标。
+_LINK_BEFORE_RE = re.compile(r"\]\((?:<)?$")
 _BARE_VERSION_AFTER_RE = re.compile(
     r"[ \t]*(?:[，,、：:；;][ \t]*)?当前\s*(v\d+)")
 _CITATION_LEAD_RE = re.compile(
     r"(?:行为规则、边界、数值与验收\s*[：:]\s*)?(?:见模块规格|详见)\s*$")
 
 
+def _find_path(text: str, spec_path: str,
+               from_pos: int = 0) -> tuple[int, int] | None:
+    """完整路径身份的出现区间;更长文件名里的子串不算本路径。"""
+
+    pos = from_pos
+    while True:
+        start = text.find(spec_path, pos)
+        if start < 0:
+            return None
+        end = start + len(spec_path)
+        before = text[start - 1] if start > 0 else ""
+        after = text[end] if end < len(text) else ""
+        if not _PATH_CHAR_RE.fullmatch(before) \
+                and not _PATH_CHAR_RE.fullmatch(after):
+            return start, end
+        pos = start + 1
+
+
+def _has_path(text: str, spec_path: str) -> bool:
+    return _find_path(text, spec_path) is not None
+
+
+def _link_close(line: str, start: int, end: int) -> int | None:
+    """路径在 Markdown 链接目标内时,返回目标闭括号的位置。"""
+
+    if not _LINK_BEFORE_RE.search(line[:start]):
+        return None
+    close = line.find(")", end)
+    return close if close >= 0 else None
+
+
+def _match_bracket(line: str, pos: int) -> tuple[str, str, str, int] | None:
+    """pos 起(允许空白)的成对括号:开括号、内容、闭括号、结束位置。
+
+    深度计数配对,嵌套括号是内容的一部分;未闭合到行尾不算附着括号。
+    """
+
+    i = pos
+    while i < len(line) and line[i] in " \t":
+        i += 1
+    if i >= len(line) or line[i] not in "（(":
+        return None
+    open_ch = line[i]
+    depth = 1
+    for j in range(i + 1, len(line)):
+        ch = line[j]
+        if ch in "（(":
+            depth += 1
+        elif ch in "）)":
+            depth -= 1
+            if depth == 0:
+                return open_ch, line[i + 1:j], ch, j + 1
+    return None
+
+
+def _top_level_spans(inner: str) -> list[tuple[int, int]]:
+    """括号内容中不在嵌套括号内的顶层片段区间。"""
+
+    spans: list[tuple[int, int]] = []
+    depth = 0
+    seg_start: int | None = None
+    for i, ch in enumerate(inner):
+        if ch in "（(":
+            if depth == 0 and seg_start is not None:
+                spans.append((seg_start, i))
+                seg_start = None
+            depth += 1
+        elif ch in "）)" and depth:
+            depth -= 1
+        elif not depth and seg_start is None:
+            seg_start = i
+    if seg_start is not None:
+        spans.append((seg_start, len(inner)))
+    return spans
+
+
+def _top_level_version(inner: str) -> tuple[str, int, int] | None:
+    """本引用的版本:只认括号顶层;嵌套层里是其他模块或业务条件的版本。"""
+
+    for a, b in _top_level_spans(inner):
+        found = _CURRENT_VERSION_RE.search(inner, a, b)
+        if found:
+            return found.group(1), found.start(), found.end()
+    return None
+
+
 def _attached_version(line: str, spec_path: str) -> str:
     """直接附着在路径上的当前版本号;不属于本引用的版本不匹配。
 
-    只认紧随路径的括号内的版本,或经至多一个分隔符紧邻的裸版本;
-    路径是链接目标时,版本附着在链接闭括号之后。分隔符之后、表格
-    下一列或链接目标里的版本属于其他引用。
+    版本只认完整路径身份上的附着:紧随路径的成对括号**顶层**,或经
+    至多一个分隔符紧邻的裸版本;路径在链接目标内时附着在链接闭括号
+    之后。更长文件名(如 ``.backup``)、嵌套括号里其他模块的版本都
+    不算本引用的版本。
     """
 
-    start = line.find(spec_path)
-    if start < 0:
+    found = _find_path(line, spec_path)
+    if not found:
         return ""
-    anchors = [start + len(spec_path)]
-    if line[max(0, start - 2):start] == "](":
-        close = line.find(")", start + len(spec_path))
-        if close >= 0:
-            anchors.append(close + 1)
+    start, end = found
+    anchors = [end]
+    close = _link_close(line, start, end)
+    if close is not None:
+        anchors.append(close + 1)
     for after in anchors:
-        bracket = _BRACKET_AFTER_RE.match(line, after)
+        bracket = _match_bracket(line, after)
         if bracket:
-            found = _CURRENT_VERSION_RE.search(bracket.group(2))
-            if found:
-                return found.group(1)
+            top = _top_level_version(bracket[1])
+            if top:
+                return top[0]
             continue
         bare = _BARE_VERSION_AFTER_RE.match(line, after)
         if bare:
@@ -350,52 +441,57 @@ def _version_in_ref_line(ref_line: str) -> str:
 
 
 def _update_line_citation(line: str, spec_path: str, version_to: str) -> str:
-    """只更新本引用的版本:范围限于直接附着的括号或紧邻片段。
+    """只更新本引用的版本:范围限于附着括号顶层或紧邻的裸版本片段。
 
-    版本必须落在链接目标之外;无附着括号时紧接路径插入,
-    不跨分隔符或表格列去改其他模块的版本。
+    版本必须落在链接目标之外;链接后已有附着括号时原位更新其中顶层
+    版本,不追加第二个当前版本;嵌套括号里其他模块的版本不动。
     """
 
-    start = line.find(spec_path)
-    if start < 0 or not version_to:
+    found = _find_path(line, spec_path)
+    if not found or not version_to:
         return line
-    after = start + len(spec_path)
-    bracket = _BRACKET_AFTER_RE.match(line, after)
-    if bracket:
-        inner = bracket.group(2)
-        found = _CURRENT_VERSION_RE.search(inner)
-        if found:
-            new_inner = (inner[:found.start()] + f"当前 {version_to}"
-                         + inner[found.end():])
-        elif inner.strip():
-            new_inner = f"当前 {version_to}；{inner.strip()}"
-        else:
-            new_inner = f"当前 {version_to}"
-        return (line[:after] + bracket.group(1) + new_inner
-                + bracket.group(3) + line[bracket.end():])
-    bare = _BARE_VERSION_AFTER_RE.match(line, after)
-    if bare:
-        found = _CURRENT_VERSION_RE.search(bare.group(0))
-        return (line[:after] + bare.group(0)[:found.start()]
-                + f"当前 {version_to}" + line[after + found.end():])
-    if line[max(0, start - 2):start] == "](":
-        close = line.find(")", after)
-        if close >= 0:
-            return (line[:close + 1] + f"（当前 {version_to}）"
-                    + line[close + 1:])
-    return line[:after] + f"（当前 {version_to}）" + line[after:]
+    start, end = found
+    anchors = [end]
+    close = _link_close(line, start, end)
+    if close is not None:
+        anchors.append(close + 1)
+    for after in anchors:
+        bracket = _match_bracket(line, after)
+        if bracket:
+            open_ch, inner, close_ch, stop = bracket
+            top = _top_level_version(inner)
+            if top:
+                new_inner = (inner[:top[1]] + f"当前 {version_to}"
+                             + inner[top[2]:])
+            elif inner.strip():
+                new_inner = f"当前 {version_to}；{inner.strip()}"
+            else:
+                new_inner = f"当前 {version_to}"
+            return (line[:after] + open_ch + new_inner + close_ch
+                    + line[stop:])
+        bare = _BARE_VERSION_AFTER_RE.match(line, after)
+        if bare:
+            old = _CURRENT_VERSION_RE.search(bare.group(0))
+            return (line[:after] + bare.group(0)[:old.start()]
+                    + f"当前 {version_to}" + line[after + old.end():])
+    insert_at = close + 1 if close is not None else end
+    return line[:insert_at] + f"（当前 {version_to}）" + line[insert_at:]
 
 
-def _drop_version_fragment(inner: str) -> str:
-    """去掉括号内的版本片段及其紧邻分隔符,保留附带规则等其余内容。"""
+def _drop_top_version(inner: str) -> str:
+    """去掉括号顶层的版本片段及其紧邻分隔符,保留其余内容。
 
-    found = _CURRENT_VERSION_RE.search(inner)
-    if not found:
+    嵌套括号里的其他模块版本属于业务条件;顶层没有本引用版本时,
+    无法可靠分离就整体保留。
+    """
+
+    top = _top_level_version(inner)
+    if not top:
         return inner.strip()
-    lead = found.start()
+    lead = top[1]
     while lead > 0 and inner[lead - 1] in "；;，, \t":
         lead -= 1
-    tail = found.end()
+    tail = top[2]
     while tail < len(inner) and inner[tail] in "；;，, \t":
         tail += 1
     left, right = inner[:lead], inner[tail:]
@@ -411,37 +507,52 @@ def _clean_citation_remainder(head: str, tail: str) -> str:
     return remainder.rstrip()
 
 
+def _strip_attached(line: str, pos: int) -> str:
+    """链接闭括号后的附着版本:去掉顶层版本片段,保留业务条件。"""
+
+    bracket = _match_bracket(line, pos)
+    if bracket:
+        open_ch, inner, close_ch, stop = bracket
+        remainder = _drop_top_version(inner)
+        if not remainder:
+            return line[stop:]
+        return open_ch + remainder + close_ch + line[stop:]
+    bare = _BARE_VERSION_AFTER_RE.match(line, pos)
+    return line[bare.end():] if bare else line[pos:]
+
+
 def _strip_line_citation(line: str, spec_path: str) -> str:
     """去掉本行的重复引用(路径+附着版本),保留其余业务内容。
 
-    链接形式的重复引用保留链接文字;附着括号内混有规则时只去版本,
-    不吞掉整个括号。
+    链接形式的重复引用保留链接文字;附着括号内混有规则或其他模块
+    版本时只去本引用的顶层版本,嵌套内容不吞。
     """
 
-    start = line.find(spec_path)
-    if start < 0:
+    found = _find_path(line, spec_path)
+    if not found:
         return line
-    after = start + len(spec_path)
-    if line[max(0, start - 2):start] == "](":
+    start, end = found
+    close = _link_close(line, start, end)
+    if close is not None:
         label_start = line.rfind("[", 0, start)
-        close = line.find(")", after)
-        if label_start >= 0 and close >= 0:
+        label_close = line.rfind("]", 0, start)
+        if label_start >= 0 and label_close > label_start:
             return _clean_citation_remainder(
                 line[:label_start],
-                line[label_start + 1:start - 2] + line[close + 1:])
-    bracket = _BRACKET_AFTER_RE.match(line, after)
+                line[label_start + 1:label_close]
+                + _strip_attached(line, close + 1))
+    bracket = _match_bracket(line, end)
     if bracket:
-        inner = _drop_version_fragment(bracket.group(2))
-        if inner:
+        open_ch, inner, close_ch, stop = bracket
+        remainder = _drop_top_version(inner)
+        if remainder:
             return _clean_citation_remainder(
-                line[:start],
-                bracket.group(1) + inner + bracket.group(3)
-                + line[bracket.end():])
-        return _clean_citation_remainder(line[:start],
-                                         line[bracket.end():])
-    bare = _BARE_VERSION_AFTER_RE.match(line, after)
-    end = bare.end() if bare else after
-    return _clean_citation_remainder(line[:start], line[end:])
+                line[:start], open_ch + remainder + close_ch
+                + line[stop:])
+        return _clean_citation_remainder(line[:start], line[stop:])
+    bare = _BARE_VERSION_AFTER_RE.match(line, end)
+    strip_end = bare.end() if bare else end
+    return _clean_citation_remainder(line[:start], line[strip_end:])
 
 
 def _line_has_business_text(line: str) -> bool:
@@ -462,7 +573,7 @@ def _replace_reference_lines(body: str, spec_path: str,
     replaced = False
     target = version_to or _version_in_ref_line(ref_line)
     for line in body.split("\n"):
-        if spec_path not in line:
+        if not _has_path(line, spec_path):
             updated.append(line)
             continue
         if not replaced:

@@ -1754,6 +1754,96 @@ def test_reference_boundary_keeps_links_other_modules_and_rules() -> None:
             check(verdict["ok"], f"{name}: 边界保留后回读应通过,实际 {verdict}")
 
 
+def _angled_link_citation_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 每日挑战入口：[挑战说明](<{SPEC_REL}>)"
+           " 优先复用既有内容。")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _link_with_version_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = (f"- 每日挑战入口：[每日挑战]({SPEC_REL})"
+           "（当前 v3；仍需离线可用）。")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _longer_filename_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}.backup（当前 v9）。\n"
+           f"- 目标引用：{SPEC_REL}（当前 v3）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _nested_bracket_update_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。")
+    new = f"- 主引用：{SPEC_REL}（参照章节模块（当前 v8）的解锁规则）。"
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _nested_bracket_strip_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}（当前 v2）。\n"
+           f"- 参加条件：{SPEC_REL}（章节模式（当前 v8）开启后才能参加"
+           "每日挑战）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_citation_identity_keeps_link_targets_longer_names_and_nested_versions() -> None:
+    """引用身份:尖括号链接目标、链接后已有版本、更长文件名与嵌套版本。"""
+
+    cases = (
+        ("angled-link", _angled_link_citation_layout,
+         [f"[挑战说明](<{SPEC_REL}>)（当前 v4）"],
+         [f"](<{SPEC_REL}（当前"]),
+        ("link-with-version", _link_with_version_layout,
+         [f"[每日挑战]({SPEC_REL})（当前 v4；仍需离线可用）"],
+         ["（当前 v4）（当前 v3"]),
+        ("longer-filename", _longer_filename_layout,
+         [f"{SPEC_REL}.backup（当前 v9）",
+          f"目标引用：{SPEC_REL}（当前 v4）"],
+         ["（当前 v4）.backup", "目标引用：。"]),
+        ("nested-update", _nested_bracket_update_layout,
+         [f"主引用：{SPEC_REL}"
+          "（当前 v4；参照章节模块（当前 v8）的解锁规则）"],
+         ["章节模块（当前 v4）"]),
+        ("nested-strip", _nested_bracket_strip_layout,
+         ["参加条件：（章节模式（当前 v8）开启后才能参加每日挑战）。"],
+         ["章节模式（）"]),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 须按完整引用身份原位更新,期望含 "
+                      f"{needle!r},实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得出现越界改动 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 身份保留后回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -1774,6 +1864,7 @@ TESTS = (
     test_custom_section_mixed_content_preserved,
     test_same_line_citation_layouts_keep_rules,
     test_reference_boundary_keeps_links_other_modules_and_rules,
+    test_citation_identity_keeps_link_targets_longer_names_and_nested_versions,
 )
 
 
