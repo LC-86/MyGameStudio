@@ -788,6 +788,15 @@ def test_question_exceptions_override_overall_adoption() -> None:
     check("Q1" in deferred["adopted"] and "Q3" in deferred["adopted"],
           f"未声明例外的题目仍可整体采纳,实际 {deferred['adopted']}")
 
+    negated_adjust = run_round({
+        **turn, "user_reply": "整体按建议，不要 Q2 改为 B"})
+    check("Q2" not in negated_adjust["adopted"],
+          f"否定的「Q2 改为 B」不得保存为新决定,实际 {negated_adjust['adopted']}")
+    check(negated_adjust["pending"].get("Q2", {}).get("reason") == "deferred",
+          f"被否定的调整语句须保持待讨论,实际 {negated_adjust['pending']}")
+    check("Q1" in negated_adjust["adopted"] and "Q3" in negated_adjust["adopted"],
+          f"未声明例外的题目仍可整体采纳,实际 {negated_adjust['adopted']}")
+
 
 def test_later_statement_wins_for_same_question() -> None:
     """同一题先改后选:按作答先后处理修正,最后的明确回答生效。"""

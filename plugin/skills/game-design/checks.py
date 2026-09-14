@@ -363,12 +363,14 @@ def _written_reference_failures(session: dict[str, Any],
     seen: set[str] = set()
     failures: list[str] = []
     paths = [str(item) for item in (known_paths or [])] or [path]
-    locatable = list(paths)
+    texts = {item: (recorded if item == path else readback(item)) or ""
+             for item in paths}
+    # 可定位性按实际回读核对:声明未改动或本次不改写的文件也可能已被外部删除。
+    locatable = [item for item in paths if texts[item]]
     for item in paths:
         if item.endswith("GAME_DESIGN.md"):
             continue
-        text = recorded if item == path else (readback(item) or "")
-        for failure in reference_failures(text, state, module, locatable):
+        for failure in reference_failures(texts[item], state, module, locatable):
             if failure in seen:
                 continue
             seen.add(failure)

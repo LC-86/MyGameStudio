@@ -57,11 +57,15 @@ def run_round(turn: dict[str, Any]) -> dict[str, Any]:
         turn["settled"] = settled_now
     catalog = _catalog(turn)
     previous_shown = [str(item) for item in (turn.get("shown") or [])]
+    answered_ids: list[str] = []
     adopted: dict[str, Any] = {}
     pending: dict[str, Any] = {}
     if turn.get("user_reply"):
         if not previous_shown:
             previous_shown = [item["id"] for item in _ready_questions(turn)[0]]
+        # 本次回复实际对应到的展示题目:保存前检查用它解析答案,
+        # 与问答映射保持同一解释(shown_ids 是回复后新展示的题)。
+        answered_ids = list(previous_shown)
         adopted, pending, settled = _map_answers(turn, catalog, previous_shown)
         adopted.update(revised)
         for qid, item in revised.items():
@@ -104,6 +108,7 @@ def run_round(turn: dict[str, Any]) -> dict[str, Any]:
         "module": str(turn.get("module") or ""), "round": round_no,
         "user_reply": str(turn.get("user_reply") or ""),
         "catalog": list(catalog.values()),
+        "answered_ids": answered_ids,
         "shown_ids": batches[0]["ids"] if batches else [],
         "deferred_ids": [item["id"] for item in deferred],
         "adopted": adopted,

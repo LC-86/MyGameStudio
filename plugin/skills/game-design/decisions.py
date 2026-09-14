@@ -145,7 +145,8 @@ def _before_checks(session: dict[str, Any] | None, record_text: str | None,
         for qid, item in (round_result.get("adopted") or {}).items()}
     checks = checks_seam.before_save(
         session, reply=reply,
-        shown=round_result.get("shown_ids")
+        shown=round_result.get("answered_ids")
+        or round_result.get("shown_ids")
         or [str(item) for item in (meta.get("shown") or [])],
         adopted=adopted, history=history, scope=scope,
         path=str(meta.get("record_path") or ""), target=record_text)

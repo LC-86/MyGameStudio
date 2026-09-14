@@ -162,8 +162,10 @@ def sync_files(meta: dict[str, Any], parsed: dict[str, Any],
                           existing.get(glossary_path))})
     baseline_ready = baseline_cites_spec(
         existing.get(design_path), spec_path,
-        str(version.get("to") or "")) \
-        or any(item.get("role") == "核心基线" for item in files)
+        str(version.get("to") or "")) or any(
+            baseline_cites_spec(str(item.get("content") or ""), spec_path,
+                                str(version.get("to") or ""))
+            for item in files if item.get("role") == "核心基线")
     if authorization.get("write") and authorization.get("sync") \
             and decision["to_sync"] and record_path and baseline_ready:
         content, updated = apply_sync(existing.get(record_path) or "",
@@ -206,7 +208,8 @@ def design_document(existing: str | None, meta: dict[str, Any],
     text = _strip_fingerprints(existing)
     text = _VERSION_HEADER_RE.sub(rf"\g<1>{version['to']}", text, count=1)
     text = _upsert_citation(text, spec_path, citation,
-                            str(meta.get("module") or ""))
+                            str(meta.get("module") or ""),
+                            str(version.get("to") or ""))
     text = _append_index(text, meta, version, decision)
     return register_fingerprints(_ensure_fingerprint_slots(text, colon))
 
@@ -267,14 +270,27 @@ def _strip_fingerprints(text: str) -> str:
     return "\n".join(kept).rstrip() + "\n"
 
 
+_SECTION_RE = re.compile(r"^## .*$(?:\n(?!## ).*)*", re.M)
+
+
 def _upsert_citation(text: str, spec_path: str, citation: str,
-                     module: str) -> str:
+                     module: str, version_to: str = "") -> str:
+    """引用就位:标准标题节原位替换;自定义标题的引用节整节替换。
+
+    规格路径已出现不能证明引用指向当前版本:旧版本引用(无论标题形式)
+    必须更新,否则本轮修订的同步事实会丢失。引用位置保持唯一。
+    """
+
     pattern = re.compile(
         rf"^## {re.escape(module)}模块规格引用.*$(?:\n(?!## ).*)*",
         re.M)
     if module and pattern.search(text):
         return pattern.sub(citation.rstrip(), text, count=1)
-    if spec_path in text:
+    for section in _SECTION_RE.finditer(text):
+        if spec_path not in section.group(0):
+            continue
+        return text[:section.start()] + citation.rstrip() + text[section.end():]
+    if version_to and baseline_cites_spec(text, spec_path, version_to):
         return text
     if "## 变更索引" in text:
         return text.replace("## 变更索引",

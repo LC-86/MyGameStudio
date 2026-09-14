@@ -471,7 +471,9 @@ def verify_delivery(plan: dict[str, Any],
     for role in required - have:
         failures.append(f"缺少交付类别:{role}")
     locatable = {path for path, text in readback_map.items() if text}
-    locatable.update(str(path) for path in (plan.get("untouched") or []))
+    # 声明未改动不证明仍存在:按实际回读核对,外部删除的引用目标算断链。
+    locatable.update(str(path) for path in (plan.get("untouched") or [])
+                     if readback_map.get(str(path)))
     for item in plan.get("files") or []:
         path = str(item.get("path") or "")
         text = readback_map.get(path)

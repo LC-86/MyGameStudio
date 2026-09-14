@@ -326,6 +326,9 @@ def reply_statements(text: str) -> list[dict[str, Any]]:
                            "qid": match.group(1),
                            "value": match.group(2).upper()})
     for match in ADJUST_RE.finditer(text):
+        if _choice_is_negated(text, match):
+            # 否定约束整个调整语句:「不要 Q8 改为 B」不是 Q8 的作答
+            continue
         value = match.group(2).strip()
         if re.fullmatch(r"选\s*[A-Za-z]", value):
             continue
@@ -395,6 +398,8 @@ def answers_from_reply(reply: str,
         if not qid:
             continue
         kind = str(event.get("kind"))
+        if kind == "adjust_index":
+            kind = "adjust"  # 序号修改与逐题修改同一解释,供保存前核对
         if kind == "choice":
             answers[qid] = str(event.get("value"))
             continue

@@ -26,6 +26,7 @@ SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
+from checks import begin  # noqa: E402
 from decisions import (  # noqa: E402
     apply_save, plan_save, plan_sync, restore_from_records, verify_saved,
 )
@@ -1042,6 +1043,79 @@ def test_same_qid_in_other_module_saves_current_module_decision() -> None:
               f"恢复须回到当前模块的决定,实际 {state['settled']}")
 
 
+def test_negated_adjust_reply_not_saved_as_decision() -> None:
+    """被否定的「改为」语句经真实通道保存后不得变成新决定。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        owner = _instance(svc)
+        channel = _Channel(svc, owner.token)
+        read = _reader(project)
+        reply = "整体按建议，不要 Q2 改为 B"
+        turn = run_round(_turn(reply))
+        check("Q2" not in turn["adopted"],
+              f"否定的调整语句不得进入采纳,实际 {turn['adopted']}")
+        check(turn["pending"].get("Q2", {}).get("reason") == "deferred",
+              f"被否定的 Q2 须保持待讨论,实际 {turn['pending']}")
+        plan = plan_save(None, turn, _meta(reply=reply))
+        check(plan["status"] == "planned",
+              f"其余明确决定应可保存,实际 {plan['status']}")
+        applied = apply_save(plan, channel, read)
+        check(applied["status"] == "saved",
+              f"应经真实通道落盘,实际 {applied}")
+        saved = read(RECORD_REL) or ""
+        check("·Q2 与章节关系：采纳" not in saved,
+              f"被否定的调整不得写成已采纳,实际 {saved}")
+        check("Q2 与章节关系：开发者暂不决定本题" in saved,
+              f"被否定的调整须按暂不决定记为未决,实际 {saved}")
+        state = restore_from_records({RECORD_REL: saved}, "每日挑战")
+        check("Q2" not in (state.get("settled") or {}),
+              f"恢复后 Q2 不得成为已定,实际 {state.get('settled')}")
+        pending_ids = {item["qid"] for item in state.get("pending") or []}
+        check("Q2" in pending_ids,
+              f"恢复后 Q2 须保持未决,实际 {state.get('pending')}")
+        svc.release_instance(owner.instance_id)
+        svc.reclaim_locks(owner.instance_id)
+
+
+def test_item_adjust_passes_session_precheck_and_saves() -> None:
+    """按序号修改题目的明确答案,保存前检查与问答采用同一解释。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        owner = _instance(svc)
+        channel = _Channel(svc, owner.token)
+        read = _reader(project)
+        for reply in ("整体按建议，第 2 项调整为保留完整章节",
+                      "整体按建议，Q2 调整为保留完整章节"):
+            (project / RECORD_REL).unlink(missing_ok=True)
+            turn = run_round(_turn(reply))
+            check(turn["adopted"].get("Q2", {}).get("value") == "保留完整章节",
+                  f"问答应把第 2 项映射为 Q2 的自定答案:{reply},"
+                  f"实际 {turn['adopted']}")
+            session = begin({
+                "mode": "new_design", "stage": "只有设计，尚未实现",
+                "goal": "形成每日挑战核心模块", "module": "每日挑战",
+                "deps": [], "entry": "docs/mygamestudio/GAME_DESIGN.md",
+                "authorization": {"write": True},
+            })["session"]
+            plan = plan_save(read(RECORD_REL), turn, _meta(reply=reply),
+                             session=session)
+            check(plan["status"] == "planned",
+                  f"会话检查后序号修改应可保存:{reply},实际 {plan['status']},"
+                  f"原因 {plan.get('reason')}")
+            applied = apply_save(plan, channel, read)
+            check(applied["status"] == "saved",
+                  f"应经真实通道落盘:{reply},实际 {applied.get('status')}")
+            saved = read(RECORD_REL) or ""
+            check("- D 每日挑战·Q2 与章节关系：采纳 保留完整章节" in saved,
+                  f"落盘须含第 2 题自定答案:{reply},实际 {saved}")
+            state = restore_from_records({RECORD_REL: saved}, "每日挑战")
+            check(state["settled"].get("Q2") == "保留完整章节"
+                  and state["settled"].get("Q1") == "A 从现有 20 关按日期抽取",
+                  f"恢复须回到序号修改的解释:{reply},实际 {state['settled']}")
+
+
 def main() -> int:
     return run_theme("设计问答决定保存与恢复", (
         test_normal_save_matches_shown_questions_and_reads_back,
@@ -1060,6 +1134,8 @@ def main() -> int:
         test_combined_reservation_is_not_saved_as_adopted,
         test_negated_and_deferred_exceptions_not_saved_as_adopted,
         test_same_qid_in_other_module_saves_current_module_decision,
+        test_negated_adjust_reply_not_saved_as_decision,
+        test_item_adjust_passes_session_precheck_and_saves,
     ), FAILURES)
 
 

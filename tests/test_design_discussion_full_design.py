@@ -1304,6 +1304,66 @@ def test_check_failure_invalidates_dependent_recheck_results() -> None:
               f"台账须记录按失败对象作废,实际 {ledger}")
 
 
+def test_deleted_untouched_reference_breaks_delivery() -> None:
+    """声明未改动的引用文件被外部删除:不得当作仍存在,须失败并作废缓存。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project, read, material, _applied = _run_full_flow(
+            Path(tmp), material=_blocked_material())
+        fixed = _resolved(material)
+        basis_rel = "docs/mygamestudio/records/audio-basis.md"
+        (project / basis_rel).write_text("# 配乐依据\n\n沿用既有音频素材。\n",
+                                         encoding="utf-8")
+        content = dict(fixed.get("content") or {})
+        content["audio"] = [{
+            "text": "新增配乐依据见 docs/mygamestudio/records/audio-basis.md",
+            "rules": ["daily-seed"]}]
+        fixed["content"] = content
+        meta = {**_full_meta(fixed), "untouched": [PROJECT_REL, TECH_REL,
+                                                   RECORD_REL, basis_rel]}
+        plan = plan_delivery(_existing(project), meta, fixed)
+        check(plan["status"] == "planned",
+              f"规划时引用文件仍存在,应可整理,实际 {plan.get('status')}")
+        (project / basis_rel).unlink()  # 规划与检查之间被外部删除
+        session = begin({
+            "mode": "new_design", "stage": "只有设计，尚未实现",
+            "goal": "完成每日挑战完整设计", "module": "每日挑战",
+            "deps": [], "entry": DESIGN_REL,
+            "authorization": {"write": True, "sync": True},
+            "baseline": {DESIGN_REL: sha256_text(read(DESIGN_REL))},
+        })["session"]
+        session = record_read(session, basis_rel, "# 配乐依据\n",
+                              module="每日挑战", purpose="audio",
+                              call="交付前读取配乐依据")["session"]
+        session = record_read(session, PROJECT_REL, read(PROJECT_REL) or "",
+                              module="每日挑战", purpose="project",
+                              call="交付前读取项目目标")["session"]
+        session = remember(session, "配乐依据完整性", {"ok": True},
+                           depends_on=[basis_rel])["session"]
+        session = remember(session, "无关检查", {"ok": True},
+                           depends_on=[PROJECT_REL])["session"]
+        applied = apply_delivery(plan, _Channel(svc, _handoff_token(svc)),
+                                 read, session=session)
+        check(applied.get("status") == "check_failed",
+              f"引用文件被删除后不得标已保存,实际 {applied.get('status')}")
+        check(applied.get("states", {}).get("synced") is not True,
+              "引用断链不得宣称已同步")
+        failures = "；".join((applied.get("checks") or {}).get("failures")
+                            or [])
+        check(basis_rel in failures,
+              f"失败原因须定位被删除的引用文件,实际 {failures}")
+        result_session = applied.get("session") or {}
+        check(reuse(result_session, "配乐依据完整性") is None,
+              "依赖被删除文件的旧检查结果须作废")
+        check(reuse(result_session, "无关检查") is not None,
+              "无关的旧检查结果须保留")
+        ledger = [item for item in result_session.get("ledger") or []
+                  if item.get("timing") == "invalidate"]
+        check(any(basis_rel in str(item.get("detail") or "")
+                  or "断链" in str(item.get("check") or "") for item in ledger),
+              f"台账须记录按失败对象作废,实际 {ledger}")
+
+
 def test_cli_pending_completion_waits_for_checks() -> None:
     """检查失败时待同步记录不得提前写成已完成;检查通过后才更新。"""
 
@@ -1383,6 +1443,7 @@ TESTS = (
     test_second_required_module_spec_missing_keeps_delivery_incomplete,
     test_cli_pending_sync_record_continues_and_updates,
     test_check_failure_invalidates_dependent_recheck_results,
+    test_deleted_untouched_reference_breaks_delivery,
     test_cli_pending_completion_waits_for_checks,
 )
 
