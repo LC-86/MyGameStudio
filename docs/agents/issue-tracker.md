@@ -1,30 +1,46 @@
-# Issue tracker: Local Markdown
+# Issue tracker: GitHub
 
-Issues and specs for this repo live as markdown files in `.scratch/`.
+Issues, specs, and Wayfinder maps for this repository default to GitHub Issues in [LC-86/MyGameStudio](https://github.com/LC-86/MyGameStudio/issues). Use the `gh` CLI; scope commands with `--repo LC-86/MyGameStudio` and API paths with `repos/LC-86/MyGameStudio`.
 
 ## Conventions
 
-- One feature per directory: `.scratch/<feature-slug>/`
-- The spec is `.scratch/<feature-slug>/spec.md`
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, never a single combined tickets file
-- Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings); when a filed issue is completed, record that separately as a `**Progress:**` line instead of changing `Status:` to a non-triage value
-- Comments and conversation history append to the bottom of the file under a `## Comments` heading
+- **Create**: `gh issue create --repo LC-86/MyGameStudio --title "..." --body-file <draft.md>`.
+- **Read**: `gh issue view <number> --repo LC-86/MyGameStudio --comments`. Fetch labels, assignees, and state with `--json` when needed.
+- **List**: `gh issue list --repo LC-86/MyGameStudio --state open --json number,title,labels,assignees`; apply the relevant filters and paginate when the result may exceed the limit.
+- **Update body**: `gh issue edit <number> --repo LC-86/MyGameStudio --body-file <draft.md>`.
+- **Comment**: `gh issue comment <number> --repo LC-86/MyGameStudio --body-file <answer.md>`.
+- **Labels**: `gh issue edit <number> --repo LC-86/MyGameStudio --add-label "..."` or `--remove-label "..."`. The role mapping is in [triage-labels.md](triage-labels.md); verify needed labels exist before publication.
+- **Close**: `gh issue close <number> --repo LC-86/MyGameStudio` after recording the resolution and its evidence.
 
-## When a skill says "publish to the issue tracker"
+Keep multiline bodies in draft files, then use `--body-file`. Read back each external write; after an uncertain result, inspect actual state before retrying. Repository/user authorization governs remote writes, commits, and pushes; choosing this tracker does not publish existing material.
 
-Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).
+Triage labels describe routing. Record execution progress and acceptance separately in the issue and its result comments; closing an issue alone is not proof of validation.
 
-## When a skill says "fetch the relevant ticket"
+## Pull requests as a triage surface
 
-Read the file at the referenced path. The user will normally pass the path or the issue number directly.
+**PRs as a request surface: no.** `/triage` uses this flag. When a supplied number could refer to either an issue or a PR, resolve its type before operating on it.
+
+## Publish and fetch
+
+When a skill says **publish to the issue tracker**, create or update the corresponding GitHub issue within the authorized scope. Search for an existing matching issue first.
+
+When a skill says **fetch the relevant ticket**, read the GitHub issue, comments, labels, assignees, state, and relevant relationships. An explicitly supplied legacy local path can still be read as source material.
 
 ## Wayfinding operations
 
-Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
+The map is a GitHub issue; decision tickets are its child issues. Refer to each by its linked title.
 
-- **Map**: `.scratch/<effort>/map.md` (the Notes / Decisions-so-far / Fog body).
-- **Child ticket**: `.scratch/<effort>/issues/NN-<slug>.md`, numbered from `01`, with the question in the body. A `Type:` line records the ticket type (`research`/`prototype`/`grilling`/`task`); a `Status:` line records `claimed`/`resolved`.
-- **Blocking**: a `Blocked by: NN, NN` line near the top. A ticket is unblocked when every file it lists is `resolved`.
-- **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
-- **Claim**: set `Status: claimed` and save before any work.
-- **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.
+- **Map**: label `wayfinder:map`; retain Destination, Notes, Decisions so far, Not yet specified, and Out of scope. The map indexes resolved decisions; their full answers live in their tickets.
+- **Children**: create issues with `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling`, or `wayfinder:task`, then attach them using GitHub's sub-issues API. Create all identities before wiring relationships.
+- **Blocking**: use native issue dependencies. Add a blocker with `gh api --method POST repos/LC-86/MyGameStudio/issues/<child-number>/dependencies/blocked_by -F issue_id=<blocker-database-id>`. Fetch the numeric database id with `gh api repos/LC-86/MyGameStudio/issues/<blocker-number> --jq .id`; it is neither the issue number nor `node_id`.
+- **Frontier**: list the map's children with pagination, retain open tickets without assignees and without open blockers, then select the first in the map's child order. `issue_dependencies_summary.blocked_by` reports open blockers; fetch relationships when needed rather than inferring them from titles.
+- **Claim**: before work, assign the ticket to the driving developer with `gh issue edit <number> --repo LC-86/MyGameStudio --add-assignee @me`.
+- **Resolve**: post the answer as a comment, close the child, then append its linked title and one-line gist to the map's Decisions so far. Read back the comment, state, and map update.
+
+Only if the relevant native relationship is confirmed unavailable, use a body convention: child links in a map task list plus a parent link in each child, or a `Blocked by:` line with linked blocker titles. Preserve the same frontier semantics and state the fallback. A transient API failure is not proof that the feature is unavailable.
+
+## Existing local material and domain docs
+
+Existing `.scratch/` files remain readable history or unpublished drafts. They do not become GitHub issues merely because this default changed. On an authorized migration, retain source-to-issue links and designate the GitHub copy as current; keep one authority for subsequent updates.
+
+Research, prototypes, and supporting artifacts may remain in repository files, linked from their issues. Use reachable commit links for published material; local paths are not remotely accessible evidence. Domain vocabulary and ADR layout remain governed by [domain.md](domain.md).
