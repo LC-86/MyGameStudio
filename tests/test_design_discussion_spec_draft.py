@@ -1431,6 +1431,107 @@ def test_custom_titled_citation_updates_on_recovery() -> None:
         check(verdict["ok"], f"自定义标题恢复后回读应通过,实际 {verdict}")
 
 
+def test_custom_section_mixed_content_preserved() -> None:
+    """自定义节混有未受影响规则时,更新引用不得删掉同节其他要求。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        save_owner = _instance(svc)
+        save_channel = _Channel(svc, save_owner.token)
+        read = _reader(project)
+        _seed_glossary(project)
+        _save_record(save_channel, read,
+                     (("Q1 选 B, Q2 选 B", ["Q1", "Q2", "Q3"]),),
+                     sync_qids=("Q1", "Q2"), owner=save_owner)
+        meta = _meta(pending_impacts={"Q3": "等待补充;", "Q4": "影响存档结构;"},
+                     blocking_qids=[])
+        channel = _Channel(svc, _handoff_token(svc))
+        first = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta,
+                             _existing(project))
+        applied_first = apply_handoff(first, channel, read)
+        check(applied_first["status"] == "saved"
+              and applied_first.get("states", {}).get("synced") is True,
+              f"首次交接应完成同步,实际 {applied_first}")
+        design_after_first = read(DESIGN_REL) or ""
+        check("当前 v3" in design_after_first,
+              "夹具须先让基线引用指向 v3")
+        # 外部把引用节改为自定义标题,并混入一条与本次修改无关的有效规则。
+        (project / DESIGN_REL).write_text(
+            design_after_first
+            .replace("## 每日挑战模块规格引用", "## 系统设计依据")
+            .replace("- 技术约定：引用技术设计,不代写。\n",
+                     "- 技术约定：引用技术设计,不代写。\n"
+                     "- 主线第 10 关通过后解锁章节选择。\n"),
+            encoding="utf-8")
+
+        owner2 = _instance(svc)
+        save2 = _Channel(svc, owner2.token)
+        revised = run_round(_turn("Q1 调整为 从现有 20 关按日期抽取",
+                                  round_no=2,
+                                  settled={"Q1": "B 每日生成新关",
+                                           "Q2": "B 与章节并存"},
+                                  shown=["Q4"]))
+        applied_revision = apply_save(
+            plan_save(read(RECORD_REL), revised,
+                      _record_meta(round_no=2,
+                                   reply="Q1 调整为 从现有 20 关按日期抽取")),
+            save2, read)
+        check(applied_revision["status"] == "saved",
+              f"修改决定应先经真实通道保存,实际 {applied_revision['status']}")
+        save2.svc.release_instance(owner2.instance_id)
+        save2.svc.reclaim_locks(owner2.instance_id)
+
+        sections_v4 = _sections()
+        sections_v4["rules"] = {
+            "content": "按 Q1 修订:选择本机日期对应关卡(从现有 20 关按日期"
+                       "抽取) → 完成一局 → 按步数结算 → 更新当日最佳;每日只"
+                       "保留一个最佳值。",
+            "sources": ["Q1", "Q4"]}
+        meta_v4 = _meta(sections=sections_v4,
+                        pending_impacts={"Q3": "等待补充;",
+                                         "Q4": "影响存档结构;"},
+                        blocking_qids=[], version_from="v3", version_to="v4",
+                        sync_ref="GAME_DESIGN v4 / spec-每日挑战 v2")
+
+        class _ConflictAfterSpec(_Channel):
+            def write(self, path, content, expected_sha256=None, note=None):
+                result = super().write(path, content,
+                                       expected_sha256=expected_sha256,
+                                       note=note)
+                if path == SPEC_REL:
+                    current = read(DESIGN_REL)
+                    (project / DESIGN_REL).write_text(
+                        current.rstrip() + "\n\n外部并发修改。\n",
+                        encoding="utf-8")
+                return result
+
+        second = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta_v4,
+                              _existing(project))
+        conflicted = apply_handoff(second, _ConflictAfterSpec(svc,
+                                                              channel.token),
+                                   read)
+        check(conflicted.get("status") == "conflict",
+              f"基线被外部改动后须报版本冲突,实际 {conflicted}")
+
+        retry = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta_v4,
+                             _existing(project))
+        applied_retry = apply_handoff(retry, channel, read)
+        check(applied_retry.get("saved") is True,
+              f"重试应完成剩余同步,实际 {applied_retry}")
+        design = read(DESIGN_REL) or ""
+        check("当前 v4" in design,
+              f"混合节中的目标引用须更新到当前版本,实际 {design}")
+        check("主线第 10 关通过后解锁章节选择" in design,
+              f"同节未受影响的规则不得被删除,实际 {design}")
+        check(applied_retry.get("states", {}).get("synced") is True
+              and applied_retry.get("to_sync") in ([], None),
+              f"同步状态须一致收口,实际 {applied_retry.get('states')}")
+        verdict = verify_handoff(retry, {
+            SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+            GLOSSARY_REL: read(GLOSSARY_REL), RECORD_REL: read(RECORD_REL)})
+        check(verdict["ok"], f"混合节保留后回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -1448,6 +1549,7 @@ TESTS = (
     test_partial_spec_write_replans_remaining_baseline_sync,
     test_stale_baseline_citation_recovery_keeps_substantive,
     test_custom_titled_citation_updates_on_recovery,
+    test_custom_section_mixed_content_preserved,
 )
 
 

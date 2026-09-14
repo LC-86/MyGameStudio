@@ -275,10 +275,11 @@ _SECTION_RE = re.compile(r"^## .*$(?:\n(?!## ).*)*", re.M)
 
 def _upsert_citation(text: str, spec_path: str, citation: str,
                      module: str, version_to: str = "") -> str:
-    """引用就位:标准标题节原位替换;自定义标题的引用节整节替换。
+    """引用就位:只更新目标引用,保留仍适用的既有内容。
 
-    规格路径已出现不能证明引用指向当前版本:旧版本引用(无论标题形式)
-    必须更新,否则本轮修订的同步事实会丢失。引用位置保持唯一。
+    生成器标准标题节原位替换;自定义标题的节做行级更新——只替换含该
+    规格路径的行,同节其他规则、引用与说明保持原样。规格路径已出现
+    不能证明引用指向当前版本;引用位置保持唯一。
     """
 
     pattern = re.compile(
@@ -286,16 +287,39 @@ def _upsert_citation(text: str, spec_path: str, citation: str,
         re.M)
     if module and pattern.search(text):
         return pattern.sub(citation.rstrip(), text, count=1)
+    ref_line = next((line for line in citation.splitlines()
+                     if spec_path in line), citation.rstrip())
     for section in _SECTION_RE.finditer(text):
-        if spec_path not in section.group(0):
+        body = section.group(0)
+        if spec_path not in body:
             continue
-        return text[:section.start()] + citation.rstrip() + text[section.end():]
+        return text[:section.start()] + _replace_reference_lines(
+            body, spec_path, ref_line) + text[section.end():]
     if version_to and baseline_cites_spec(text, spec_path, version_to):
         return text
     if "## 变更索引" in text:
         return text.replace("## 变更索引",
                             citation.rstrip() + "\n\n## 变更索引", 1)
     return text.rstrip() + "\n\n" + citation
+
+
+def _replace_reference_lines(body: str, spec_path: str,
+                             ref_line: str) -> str:
+    """行级更新引用:只替换含该规格路径的行,同节其余内容原样保留。"""
+
+    updated: list[str] = []
+    replaced = False
+    for line in body.split("\n"):
+        if spec_path not in line:
+            updated.append(line)
+            continue
+        if replaced:
+            continue  # 旧版本引用行去重,引用位置保持唯一
+        updated.append(ref_line)
+        replaced = True
+    if not replaced:
+        updated.append(ref_line)  # 路径跨行断开等罕见形态:追加,不删内容
+    return "\n".join(updated)
 
 
 def _append_index(text: str, meta: dict[str, Any], version: dict[str, Any],
