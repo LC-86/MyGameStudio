@@ -996,6 +996,32 @@ def test_skill_entry_documents_full_design_flow() -> None:
         check(needle in text, f"Game-Design 入口须说明 {needle}")
 
 
+def test_missing_delivery_locations_keep_draft() -> None:
+    """四类交付缺权威位置时保持草案,不得过滤后宣称可交接。"""
+
+    material = _resolved(_material())
+    meta = _full_meta(material)
+    meta["doc_map"] = {"design": DESIGN_REL, "content": "", "version": "",
+                       "records": "docs/mygamestudio/records/",
+                       "project": PROJECT_REL, "tech": TECH_REL}
+    meta["module_specs"] = [{"module": "每日挑战", "spec_path": "",
+                             "status": "handoffable", "gaps": []}]
+    plan = plan_delivery(_stub_existing(), meta, material)
+    check(plan["status"] == "incomplete",
+          f"缺少交付位置须保持草案,实际 {plan['status']}")
+    check(plan.get("handoff_ready") is not True,
+          "残缺交付不得标可交接")
+    needles = {item["needle"] for item in plan["missing"]}
+    check(any(item.startswith("位置:") for item in needles),
+          f"须报出缺失的交付位置,实际 {sorted(needles)}")
+    applied = apply_delivery(plan, object(), lambda path: None)
+    check(applied["saved"] is not True and applied.get("written") in (None, []),
+          f"残缺交付不得写入,实际 {applied}")
+    verdict = verify_delivery(plan, {DESIGN_REL: _stub_existing()[DESIGN_REL]})
+    check(verdict["ok"] is False,
+          f"缺三类位置时回读不得通过,实际 {verdict}")
+
+
 TESTS = (
     test_extracts_known_material_and_builds_coverage_map,
     test_scope_layers_and_template_fill_guard,
@@ -1006,6 +1032,7 @@ TESTS = (
     test_delivery_writes_only_with_authorization_and_keeps_existing_docs,
     test_cli_smoke_full_design_entry,
     test_skill_entry_documents_full_design_flow,
+    test_missing_delivery_locations_keep_draft,
 )
 
 

@@ -17,6 +17,10 @@ import sys
 import re
 from typing import Any
 
+from check_state import (
+    ADJUST_RE, adopts_all_recommendations, definite_choices, is_unknown_value,
+)
+
 KIND_LABELS = {
     "new_design": "新设计",
     "spec_gap": "补充规格",
@@ -292,7 +296,7 @@ def _map_answers(
             if qid not in settled:
                 pending[qid] = {"reason": "unknown"}
         return adopted, pending, settled
-    if re.search(r"整体按建议|全部按建议|都按建议", text):
+    if adopts_all_recommendations(text):
         for qid in shown_ids:
             rec = (catalog.get(qid) or {}).get("recommendation")
             if rec is None:
@@ -309,22 +313,24 @@ def _map_answers(
             adopted[qid] = {"value": value, "source": "custom"}
             settled[qid] = value
 
-    for match in re.finditer(r"(Q\d+)\s*选\s*([A-Za-z])", text):
-        qid, value = match.group(1), match.group(2).upper()
+    for qid, value in definite_choices(text):
         adopted[qid] = {"value": value, "source": "user"}
         settled[qid] = value
 
-    for match in re.finditer(
-            r"(Q\d+)\s*(?:调整为|改为|：|:)\s*(.+?)(?:[，。；\n]|$)", text):
+    for match in ADJUST_RE.finditer(text):
         qid = match.group(1)
         value = match.group(2).strip()
         if re.fullmatch(r"选\s*[A-Za-z]", value):
+            continue
+        if is_unknown_value(value):
+            if qid not in settled:
+                pending[qid] = {"reason": "unknown"}
             continue
         adopted[qid] = {"value": value, "source": "custom"}
         settled[qid] = value
 
     for qid in shown_ids:
-        if qid in settled:
+        if qid in settled or qid in pending:
             continue
         pending[qid] = {"reason": "ambiguous" if vague else "unanswered"}
 

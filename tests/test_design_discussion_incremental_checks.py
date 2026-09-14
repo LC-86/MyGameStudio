@@ -839,6 +839,15 @@ def _change_material():
         "change": {"targets": ["loop"], "target_labels": ["每日循环"],
                    "reason": "规则不清", "improvement": "明确结算",
                    "keep": ["20 关内容"], "answers": []},
+        "stage": "design_only",
+        "stage_basis": "只有设计，尚未实现",
+        "objects": {
+            "rules": {"exists": True, "evidence": "模块规格已有独立规则"},
+            "flow": {"exists": True, "evidence": "流程已写清"},
+            "numbers": {"exists": True, "evidence": "数值已给出"},
+            "content_list": {"exists": True, "evidence": "内容清单已有"},
+            "acceptance": {"exists": True, "evidence": "验收已写"},
+        },
         "design_items": design_items,
         "impact": {
             "must_sync": [{"id": "loop", "title": "每日循环", "relation": "direct",

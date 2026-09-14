@@ -23,14 +23,15 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from decision_records import parse_record
+from decision_records import merge_records, parse_record
 from gate_commit import commit_path
 import checks as checks_seam
 from spec_render import (
     ADR_CONDITIONS, SECTION_SPECS, condition_label, render_spec, section_gaps,
 )
 from spec_report import (
-    blocked_report, component_report, incomplete_report, saved_report,
+    blocked_report, check_failed_report, component_report, incomplete_report,
+    saved_report,
 )
 from spec_sync import (
     compare_existing, sync_files, version_plan, version_warnings,
@@ -65,6 +66,15 @@ def plan_handoff(records: dict[str, str], meta: dict[str, Any],
                 "reason": "缺少模块规格或决定记录位置,无法定位交付位置"}
     base = {**base, **_handoff_plan_files(meta, parsed, decision, spec_path,
                                           existing, authorization)}
+    if (base.get("version") or {}).get("change") == "conflict":
+        conflict = [{"field": "change",
+                     "detail": (base.get("version") or {}).get("note")
+                     or "声明与实际内容矛盾"}]
+        return {**base, "status": "incomplete", "saved": False,
+                "handoffable": False, "content": None, "files": [],
+                "missing": missing + conflict, "gaps": missing + conflict,
+                "report": incomplete_report(module, missing + conflict,
+                                            blocking, blocking_verification)}
     if missing:
         return {**base, "status": "incomplete", "saved": False,
                 "handoffable": False, "content": None,
@@ -132,42 +142,22 @@ def _handoff_plan_files(meta: dict[str, Any], parsed: dict[str, Any],
     compare = compare_existing(existing.get(spec_path), spec_text,
                                bool(existing.get(spec_path)))
     version = version_plan(meta, compare)
+    warnings = version_warnings(meta, compare)
+    if version["change"] == "conflict":
+        return {"spec": {"path": spec_path, "content": spec_text},
+                "compare": compare, "version": version, "files": [],
+                "warnings": warnings}
     files = sync_files(meta, parsed, decision, version, spec_text,
                        existing, authorization)
     return {"spec": {"path": spec_path, "content": spec_text},
             "compare": compare, "version": version, "files": files,
-            "warnings": version_warnings(meta, compare)}
+            "warnings": warnings}
 
 
 def _merged_records(records: dict[str, str], module: str) -> dict[str, Any]:
     """合并本模块的已采纳决定记录;格式由 decision_records 唯一解释。"""
 
-    merged: dict[str, Any] = {"decisions": {}, "pending": [],
-                              "pending_qids": set(), "superseded": [],
-                              "sync_done": {}, "rounds": 0, "found": False}
-    for path in sorted(records or {}):
-        text = (records or {})[path]
-        if text is None:
-            continue
-        parsed = parse_record(text, module)
-        if not parsed["found"]:
-            continue
-        merged["found"] = True
-        merged["decisions"].update(parsed["decisions"])
-        merged["superseded"].extend(parsed["superseded"])
-        merged["pending"].extend(parsed["pending"])
-        merged["pending_qids"].update(parsed["pending_qids"])
-        merged["sync_done"].update(parsed["sync_done"])
-        merged["rounds"] += parsed["rounds"]
-    latest: dict[str, dict[str, Any]] = {}
-    for item in merged["pending"]:
-        qid = item["qid"]
-        if qid not in latest or (item.get("round") or 0) >= (
-                latest[qid].get("round") or 0):
-            latest[qid] = item
-    merged["pending"] = [latest[qid] for qid in sorted(latest)]
-    merged["pending_qids"] = {item["qid"] for item in merged["pending"]}
-    return merged
+    return merge_records(records, module)
 
 
 def _decision_summary(parsed: dict[str, Any],
@@ -275,6 +265,19 @@ def apply_handoff(plan: dict[str, Any], channel: Any,
         readback=readback,
         known_paths=[str(item.get("path") or "")
                      for item in plan.get("files") or []])
+    if checks is not None and not checks.get("ok"):
+        failed = {**state, "synced": False}
+        return {**_result(plan, "check_failed", False), "written": written,
+                "channel_result": {"decision": "allow"},
+                "decision_states": plan.get("decision_states") or {},
+                "states": failed, "to_sync": plan.get("to_sync") or [],
+                "blocking_verification":
+                    plan.get("blocking_verification") or [],
+                "producer_handoff": plan.get("producer_handoff"),
+                "untouched": plan.get("untouched") or [],
+                "next_round_ready": False, "handoff_ready": False,
+                "session": session, "checks": checks,
+                "report": check_failed_report(plan, written, checks)}
     return {**_result(plan, "saved", True), "written": written,
             "channel_result": {"decision": "allow"},
             "decision_states": plan.get("decision_states") or {},

@@ -815,6 +815,38 @@ def test_cli_smoke_and_entry_points_to_seam() -> None:
         check(needle in text, f"Game-Design 入口须说明 {needle}")
 
 
+def _record(round_no, date, value, *, synced):
+    status = (f"已同步（{date}，GAME_DESIGN v2）" if synced else "待同步")
+    return (
+        f"# 每日挑战：决定记录\n\n"
+        f"## 第 {round_no} 轮 {date}\n"
+        f"- 决定者：开发者。日期：{date}。\n"
+        f"- 用户回复：「Q1 选 A」\n"
+        f"- D 每日挑战·Q1 频率：采纳 {value}\n"
+        f"  - 来源：开发者第 {round_no} 轮作答\n"
+        f"  - 建议出处：Q1 推荐 A\n"
+        f"  - 影响：决定挑战周期。\n"
+        f"  - 同步状态：{status}\n")
+
+
+def test_restore_merges_by_revision_not_filename() -> None:
+    """跨记录恢复按决定身份与修订合并,同步状态不得串到新修订。"""
+
+    older = _record(1, "2026-09-01", "每天一次", synced=True)
+    newer = _record(2, "2026-09-14", "每周一次", synced=False)
+    first = restore_from_records({
+        "docs/z-round1.md": older, "docs/a-round2.md": newer}, "每日挑战")
+    swapped = restore_from_records({
+        "docs/a-round1.md": older, "docs/z-round2.md": newer}, "每日挑战")
+    for state, label in ((first, "旧文件名靠后"), (swapped, "新文件名靠后")):
+        check(state["settled"].get("Q1") == "每周一次",
+              f"{label}应恢复较新修订,实际 {state['settled']}")
+        check(state["decisions"]["Q1"]["synced"] is False,
+              f"{label}新修订不得继承旧同步状态,实际 {state['decisions']}")
+        check(state["to_sync"] == ["Q1"],
+              f"{label}待同步须绑定新修订,实际 {state['to_sync']}")
+
+
 def main() -> int:
     return run_theme("设计问答决定保存与恢复", (
         test_normal_save_matches_shown_questions_and_reads_back,
@@ -827,6 +859,7 @@ def main() -> int:
         test_states_do_not_conflate_saved_synced_implemented_verified,
         test_mcp_gate_tool_entry_saves_and_denies,
         test_cli_smoke_and_entry_points_to_seam,
+        test_restore_merges_by_revision_not_filename,
     ), FAILURES)
 
 

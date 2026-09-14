@@ -1039,6 +1039,46 @@ def test_stale_rule_not_found_blocks_sync() -> None:
               "定位失败时不产出可写入内容")
 
 
+def test_missing_sync_authorization_does_not_write_baseline() -> None:
+    """写入授权不能替代同步授权:缺同步授权时不得写核心基线。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        before = (project / DESIGN_REL).read_text(encoding="utf-8")
+        plan = _plan(project, material_over=_decided(), write=True, sync=False)
+        check(plan["status"] == "planned",
+              f"有写入授权仍可整理变更,实际 {plan['status']}")
+        check(DESIGN_REL not in {item["path"] for item in plan["files"]},
+              f"缺同步授权不得把核心基线列入计划,实际 {plan['files']}")
+        result, _channel = _commit(svc, plan, project)
+        check(result.get("states", {}).get("synced") is not True,
+              f"缺同步授权不得宣称已同步,实际 {result.get('states')}")
+        check(result.get("to_sync"),
+              f"须留下可定位的待同步项,实际 {result.get('to_sync')}")
+        check((project / DESIGN_REL).read_text(encoding="utf-8") == before,
+              "缺同步授权不得改写 GAME_DESIGN")
+
+
+def test_unverified_stage_blocks_change_plan() -> None:
+    """阶段或对象未核实不得报告变更完成或进入同步。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        _svc, project = _service(Path(tmp))
+        unknown = _plan(project, material_over={**_decided(), "stage": "",
+                                                "objects": {}})
+        check(unknown["status"] == "incomplete",
+              f"阶段为空须阻断,实际 {unknown['status']}")
+        check(unknown["unresolved"],
+              f"阶段缺口须进入阻断集,实际 {unknown['unresolved']}")
+        released = _plan(project, material_over={
+            **_decided(), "stage": "released", "objects": {}})
+        check(released["status"] == "incomplete",
+              f"已发布但对象未核实须阻断,实际 {released['status']}")
+        check(released.get("saved") is not True
+              and released.get("handoff_ready") is not True,
+              "未核实对象不得宣称已保存或可交接")
+
+
 def main() -> int:
     return run_theme("已有设计变更:影响、阶段与同步", (
         test_extracts_change_statements_and_does_not_reask_decided,
@@ -1057,6 +1097,8 @@ def main() -> int:
         test_stale_rule_not_found_blocks_sync,
         test_cli_runs_through_real_gate_channel,
         test_game_design_entry_points_to_change_seam,
+        test_missing_sync_authorization_does_not_write_baseline,
+        test_unverified_stage_blocks_change_plan,
     ), FAILURES)
 
 

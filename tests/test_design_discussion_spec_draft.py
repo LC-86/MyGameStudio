@@ -25,6 +25,8 @@ SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
+from checks import begin  # noqa: E402
+from decision_records import sha256_text  # noqa: E402
 from decisions import (  # noqa: E402
     apply_save, plan_save, plan_sync, restore_from_records,
 )
@@ -954,6 +956,141 @@ def test_revised_decision_is_not_inherited_as_synced() -> None:
               f"历史决定的同步状态不得留成待同步,实际 {final}")
 
 
+def _rich_baseline() -> str:
+    """现行基线含其他模块规则与引用,交接每日挑战时必须保留。"""
+
+    return (
+        "# 齿轮谜城：当前游戏需求与设计\n\n"
+        "维护责任：方案设计。基线版本：v2。适用范围：全游戏。\n\n"
+        "## 章节模式\n\n"
+        "- 章节按关卡顺序解锁。\n"
+        "- 规则引用：docs/mygamestudio/records/spec-章节.md\n\n"
+        "## 商业化\n\n"
+        "- 只做广告变现，禁止付费入口。\n\n"
+        "内容指纹：sha256:" + "0" * 64 + "\n"
+        "归一指纹：sha256:" + "0" * 64 + "\n")
+
+
+def _handoff_fixture(project, svc, *, sections=None, change="substantive"):
+    save_owner = _instance(svc)
+    save_channel = _Channel(svc, save_owner.token)
+    read = _reader(project)
+    _seed_glossary(project)
+    _save_record(save_channel, read,
+                 (("Q1 选 B, Q2 选 B", ["Q1", "Q2", "Q3"]),),
+                 owner=save_owner)
+    meta = _meta(sections=sections or _sections(), change=change,
+                 pending_impacts={"Q3": "等待补充;", "Q4": "影响存档结构;"},
+                 blocking_qids=[])
+    return read, meta, _Channel(svc, _handoff_token(svc))
+
+
+def test_module_sync_keeps_unrelated_baseline_rules() -> None:
+    """同步一个模块时,其他模块现行规则与引用必须保留。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        (project / DESIGN_REL).write_text(_rich_baseline(), encoding="utf-8")
+        read, meta, channel = _handoff_fixture(project, svc)
+        plan = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta,
+                            _existing(project))
+        check(plan["status"] == "planned",
+              f"可交接模块应进入计划,实际 {plan.get('status')}:{plan.get('gaps')}")
+        applied = apply_handoff(plan, channel, read)
+        check(applied["status"] == "saved", f"获准交接应落盘,实际 {applied}")
+        design = read(DESIGN_REL)
+        check("章节按关卡顺序解锁" in design,
+              f"章节规则须保留,实际 {design}")
+        check("docs/mygamestudio/records/spec-章节.md" in design,
+              "其他模块规格引用不得随本次交接消失")
+        check("只做广告变现，禁止付费入口" in design,
+              "商业化现行规则不得随本次交接消失")
+        check(SPEC_REL in design and "v3" in design,
+              f"本次模块规格引用与新版本须写入,实际 {design}")
+        verdict = verify_handoff(plan, {
+            SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+            GLOSSARY_REL: read(GLOSSARY_REL), RECORD_REL: read(RECORD_REL)})
+        check(verdict["ok"], f"保留既有基线后回读仍应通过,实际 {verdict}")
+
+
+def test_format_claim_blocks_when_semantics_changed() -> None:
+    """声明格式修正但规则实质变化时,不得按格式修正保存。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        read, meta, channel = _handoff_fixture(project, svc)
+        first = plan_handoff({RECORD_REL: read(RECORD_REL)}, meta,
+                             _existing(project))
+        check(first["status"] == "planned", f"首次整理应产出规格,实际 {first}")
+        (project / SPEC_REL).write_text(first["spec"]["content"],
+                                        encoding="utf-8")
+        before_design = read(DESIGN_REL)
+        mutated = _sections()
+        mutated["rules"] = {
+            "content": "选择本机日期对应关卡 → 完成一局 → 按步数结算 → "
+                       "更新当日最佳;每日保留三个最佳值。",
+            "sources": ["Q1", "Q4"]}
+        plan = plan_handoff(
+            {RECORD_REL: read(RECORD_REL)},
+            {**meta, "change": "format", "sections": mutated},
+            _existing(project))
+        check(plan["status"] != "planned" and plan.get("saved") is not True,
+              f"声明与实质内容矛盾时不得进入同步,实际 {plan.get('status')}")
+        check(plan["compare"]["semantic_equal"] is False,
+              f"回读须检出实质变化,实际 {plan.get('compare')}")
+        applied = apply_handoff(plan, channel, read)
+        check(applied["saved"] is not True and applied.get("written") in (None, []),
+              f"矛盾未解决前不得写入,实际 {applied}")
+        check(read(DESIGN_REL) == before_design,
+              "格式声明与实质变化冲突时不得改写核心基线")
+        check("v2" in read(DESIGN_REL), "基线版本不得在矛盾未解决时递增")
+
+
+def test_after_write_check_failure_does_not_complete_handoff() -> None:
+    """保存后检查失败时保留已写入事实,不得宣布交接完成。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        svc, project = _service(Path(tmp))
+        read, meta, channel = _handoff_fixture(project, svc)
+        sections = _sections()
+        sections["purpose"] = {
+            "content": "让玩家每天用一次短局回到游戏;依据见 "
+                       "docs/missing-source.md。",
+            "sources": ["Q1", "Q3"]}
+        plan = plan_handoff({RECORD_REL: read(RECORD_REL)},
+                            {**meta, "sections": sections},
+                            _existing(project))
+        check(plan["status"] == "planned",
+              f"引用缺口在写入后检查,计划仍可整理,实际 {plan.get('status')}")
+        session = begin({
+            "mode": "new_design", "stage": "只有设计，尚未实现",
+            "goal": "完成每日挑战核心模块", "module": "每日挑战",
+            "deps": [], "entry": DESIGN_REL,
+            "authorization": {"write": True, "sync": True},
+            "baseline": {DESIGN_REL: sha256_text(read(DESIGN_REL))},
+        })["session"]
+        applied = apply_handoff(plan, channel, read, session=session)
+        check(applied.get("written"),
+              f"已写入事实须保留,实际 {applied.get('written')}")
+        check(applied["saved"] is not True
+              and applied["status"] == "check_failed",
+              f"检查失败不得标已保存或交接完成,实际 {applied}")
+        check(applied.get("next_round_ready") is not True,
+              "检查失败后不得宣称下一轮可继续交接")
+        check(applied.get("checks") and applied["checks"]["ok"] is False,
+              f"须暴露 checks.ok=false,实际 {applied.get('checks')}")
+        failures = "；".join(applied["checks"].get("failures") or [])
+        check("新改引用不可定位:docs/missing-source.md" in failures,
+              f"失败原因须可定位,实际 {failures}")
+        check("已交接" not in applied["report"]
+              or "检查失败" in applied["report"]
+              or "未完成" in applied["report"],
+              f"报告不得把检查失败写成已交接完成,实际 {applied['report']}")
+        check(applied.get("to_sync") not in ([], None)
+              or applied.get("states", {}).get("synced") is not True,
+              "检查失败时不得把待同步清成无")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -964,6 +1101,9 @@ TESTS = (
     test_scope_change_hands_off_without_writing_management_docs,
     test_revised_decision_is_not_inherited_as_synced,
     test_cli_smoke_handoff_entry,
+    test_module_sync_keeps_unrelated_baseline_rules,
+    test_format_claim_blocks_when_semantics_changed,
+    test_after_write_check_failure_does_not_complete_handoff,
 )
 
 

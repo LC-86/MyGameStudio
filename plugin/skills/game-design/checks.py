@@ -334,15 +334,46 @@ def after_write(session: dict[str, Any] | None, *, module: str, path: str,
 
     if session is None:
         return None, None
-    checks = after_save(session, recorded=readback(path), module=module,
+    recorded = readback(path)
+    checks = after_save(session, recorded=recorded, module=module,
                         entries=entries, pending=pending, content=content,
                         known_paths=known_paths, history=history)
+    extra = _written_reference_failures(
+        checks["session"], readback, module, path, recorded, known_paths)
+    already = set(checks.get("failures") or [])
+    extra = [item for item in extra if item not in already]
+    if extra:
+        checks["ok"] = False
+        checks["failures"] = list(checks.get("failures") or []) + extra
     if not checks["ok"]:
         checks["session"] = invalidate(
             checks["session"], "write_failed", paths=[str(path)],
             detail="落盘后回读发现缺口:" + "；".join(checks["failures"])
         )["session"]
     return checks["session"], checks
+
+
+def _written_reference_failures(session: dict[str, Any],
+                                readback: Callable[[str], str | None],
+                                module: str, path: str, recorded: str | None,
+                                known_paths: Iterable[str] | None) -> list[str]:
+    """写入后的新改引用:核对规格与记录等新写正文,不把既有基线旧引用当新改。"""
+
+    state = snapshot(session)
+    seen: set[str] = set()
+    failures: list[str] = []
+    paths = [str(item) for item in (known_paths or [])] or [path]
+    locatable = list(paths)
+    for item in paths:
+        if item.endswith("GAME_DESIGN.md"):
+            continue
+        text = recorded if item == path else (readback(item) or "")
+        for failure in reference_failures(text, state, module, locatable):
+            if failure in seen:
+                continue
+            seen.add(failure)
+            failures.append(failure)
+    return failures
 
 
 def converge(session: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:

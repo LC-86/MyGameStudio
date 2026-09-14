@@ -4,7 +4,8 @@
 本报告是票 09 的可追溯总报告,按工单 11 条验收框组织;结论分三层:
 **行为通过情况 / 两种模式的步骤与耗时结果 / 限制与尚待解决事项**。
 
-**总判定:25 个行为场景在本候选版本上均有实际复跑行为证据、全部通过;
+**总判定:25 个行为场景的结构化接缝测试在本候选版本上均有实际复跑证据;
+该结论只覆盖公共接缝函数测试,不等于真实宿主端到端交互验收已完成。
 效率部分因优化前基线不可比,结论为「效率尚未验证」,不报告统一框架效率验收通过。**
 
 ---
@@ -15,16 +16,17 @@
 
 | 项 | 值 |
 | --- | --- |
-| HEAD 提交 | `de8a87ea46c26c5500f0d76f8a1319a23677759d`(票 08 提交,2026-09-14 04:50:21 +0800) |
+| HEAD 提交 | 票 09 收口时为 `de8a87ea46c26c5500f0d76f8a1319a23677759d`；PR #38 审查修订后以本分支最新 HEAD 为准 |
 | 插件版本 | `0.18.1`(未升版本) |
 | `plugin/` 树 SHA-256 | `ad4f88ecb8e4db59b5739c4c8dbea6b86a32d12206a98832601e519519674d4b` |
 | `dist/` 内容身份 | `2730df50a6121b453e37bb5467e48e8f4ddf268deea3745638f8a035000cc364`(对 `find dist -type f \| sort` 的逐文件 SHA-256 列表再取 SHA-256;发行包内 120 个文件) |
 | 优化前基线树哈希(票 01) | `9e8ee19858cadd246a56212a173d12c39873bca8f2e165be531de8b657b44eb7` |
 
 候选树哈希由 `acceptance/_shared/design_discussion_metrics.py identity --plugin plugin` 生成
-(与票 01 同一 interface);dist 身份与 `python3 -B tests/test_package_dist.py` 复跑的
-「交付物一致性与可复现构建」核对同时取得。本票未修改 `plugin/`,**未重建 dist**
-(票 08 构建的 dist 与 `plugin/` 逐文件一致,复跑通过)。
+(与票 01 同一 interface)。上表 plugin/dist 身份是票 09 收口冻结值。PR #38 审查修订已改
+`plugin/` 并按 `sh dist/build-package.sh` 重建 dist(仍为 0.18.1、120 个文件);
+当前身份以本分支 HEAD 与重建后的 `dist/SHA256SUMS.txt` 为准,见
+`evidence/review-38-fix.md`。
 
 ### 1.2 前置工单成果与测试证据
 
@@ -32,11 +34,11 @@
 
 | 票 | 接缝(存在性已核对) | 测试文件 | 实跑结果 |
 | --- | --- | --- | --- |
-| 02 | `plugin/skills/game-design/rounds.py` | `tests/test_design_discussion_rounds.py`(19 函数) | OK |
-| 03 | `decisions.py`/`decision_records.py`/`decision_mapping.py`/`decisions_cli.py` | `tests/test_design_discussion_decisions.py`(10) | OK |
-| 04 | `spec_draft.py`/`spec_render.py`/`spec_sync.py`/`spec_report.py`/`spec_draft_cli.py` | `tests/test_design_discussion_spec_draft.py`(9) | OK |
-| 05 | `coverage_map.py`/`journey.py`/`full_design.py`/`full_render.py`/`full_report.py`/`gate_commit.py`/`full_design_cli.py` | `tests/test_design_discussion_full_design.py`(9) | OK |
-| 06 | `change_flow.py`/`change_impact.py`/`change_input.py`/`change_render.py`/`change_report.py`/`change_flow_cli.py` | `tests/test_design_discussion_change_flow.py`(16) | OK |
+| 02 | `plugin/skills/game-design/rounds.py` | `tests/test_design_discussion_rounds.py`(20 函数) | OK |
+| 03 | `decisions.py`/`decision_records.py`/`decision_mapping.py`/`decisions_cli.py` | `tests/test_design_discussion_decisions.py`(11) | OK |
+| 04 | `spec_draft.py`/`spec_render.py`/`spec_sync.py`/`spec_report.py`/`spec_draft_cli.py` | `tests/test_design_discussion_spec_draft.py`(12) | OK |
+| 05 | `coverage_map.py`/`journey.py`/`full_design.py`/`full_render.py`/`full_report.py`/`gate_commit.py`/`full_design_cli.py` | `tests/test_design_discussion_full_design.py`(10) | OK |
+| 06 | `change_flow.py`/`change_impact.py`/`change_input.py`/`change_render.py`/`change_report.py`/`change_flow_cli.py` | `tests/test_design_discussion_change_flow.py`(18) | OK |
 | 07 | `removal.py`/`removal_impact.py`/`removal_cli.py` | `tests/test_design_discussion_feature_removal.py`(13) | OK |
 | 08 | `checks.py`/`check_state.py`/`check_evidence.py` | `tests/test_design_discussion_incremental_checks.py`(17) | OK |
 | 01 | `acceptance/_shared/design_discussion_metrics.py` | `tests/test_design_discussion_metrics.py`(15) | OK |
@@ -44,14 +46,16 @@
 复跑方式:本次新增只读取证脚本
 `.scratch/design-discussion-rounds/evidence/verify_scenario_tests.py`,逐 `test_*`
 函数调度既有测试文件并读取各文件自身收集的失败项(不重写断言),输出见
-`evidence/scenario-test-results.json`。**108/108 个测试函数通过**(命令:
-`python3 -B .scratch/design-discussion-rounds/evidence/verify_scenario_tests.py`)。
+`evidence/scenario-test-results.json`。票 09 当时为 108/108;PR #38 审查修订后
+主题入口新增 8 个反例函数,当前为 **116 个测试函数**(命令:
+`python3 -B tests/test_design_discussion_*.py`)。原 108 项取证结果仍可核验,
+但不能覆盖本轮新增反例。
 受影响的旧结果不作为当前已通过:上表全部为本次实跑,而非复用历史输出。
 
 ## 2. 25 个行为场景逐项核对
 
 场景编号取自规格「验收场景」1～25。每行给出覆盖它的实际测试函数;
-全部结果为本次实跑(上表中的 108 个函数之一),运行命令同上。
+全部结果为接缝测试实跑(票 09 为 108 个函数;审查修订后主题入口为 116 个),运行命令见第 1.2 节。
 「引用未受影响且可核验的旧结果」一律未采用:全部重跑。
 
 | # | 场景 | 覆盖的实际测试(文件::函数) |
@@ -59,11 +63,11 @@
 | 1 | 成组与依赖 | `rounds::test_first_round_asks_ready_questions_and_defers_dependency` |
 | 2 | 阅读结构 | `rounds::test_round_uses_fixed_question_layout` |
 | 3 | 完整与自由回答 | `rounds::test_maps_per_question_and_adopt_all_only_shown`;`rounds::test_open_question_does_not_invent_options`;`decisions::test_normal_save_matches_shown_questions_and_reads_back`(落盘与用户回复一致、被拒选项不作要求) |
-| 4 | 部分与模糊回答 | `rounds::test_maps_partial_override_freeform_and_vague` |
+| 4 | 部分与模糊回答 | `rounds::test_maps_partial_override_freeform_and_vague`;`rounds::test_negated_or_ambiguous_replies_stay_pending` |
 | 5 | 边界场景 | `rounds::test_boundary_revision_updates_later_questions`;`decisions::test_changed_decision_keeps_history_and_replacement` |
-| 6 | 及时保存与恢复 | `decisions::test_read_only_unsaved_and_restore_prevents_reasking`;`decisions::test_resume_after_interruption_keeps_valid_parts`;`decisions::test_repeated_same_answer_creates_no_duplicate` |
-| 7 | 轻量同步 | `spec_draft::test_full_module_handoff_from_adopted_decisions`;`spec_draft::test_history_pending_and_unrelated_content_preserved` |
-| 8 | 未同步与失败 | `decisions::test_conflict_denied_and_unconfirmed_report_true_state`;`decisions::test_states_do_not_conflate_saved_synced_implemented_verified`;`spec_draft::test_read_only_and_missing_sync_authorization_keep_pending` |
+| 6 | 及时保存与恢复 | `decisions::test_read_only_unsaved_and_restore_prevents_reasking`;`decisions::test_resume_after_interruption_keeps_valid_parts`;`decisions::test_repeated_same_answer_creates_no_duplicate`;`decisions::test_restore_merges_by_revision_not_filename` |
+| 7 | 轻量同步 | `spec_draft::test_full_module_handoff_from_adopted_decisions`;`spec_draft::test_history_pending_and_unrelated_content_preserved`;`spec_draft::test_module_sync_keeps_unrelated_baseline_rules` |
+| 8 | 未同步与失败 | `decisions::test_conflict_denied_and_unconfirmed_report_true_state`;`decisions::test_states_do_not_conflate_saved_synced_implemented_verified`;`spec_draft::test_read_only_and_missing_sync_authorization_keep_pending`;`spec_draft::test_format_claim_blocks_when_semantics_changed`;`spec_draft::test_after_write_check_failure_does_not_complete_handoff`;`change_flow::test_missing_sync_authorization_does_not_write_baseline` |
 | 9 | 长问题组 | `rounds::test_long_group_batches_complete_questions` |
 | 10 | 事实与权限 | `rounds::test_missing_fact_waits_only_dependent_question`;`decisions::test_mcp_gate_tool_entry_saves_and_denies`;`change_flow::test_read_only_and_scope_keep_product_untouched` |
 | 11 | 文档用途 | `spec_draft::test_full_module_handoff_from_adopted_decisions`(ADR 三项条件同时成立才单列 + `adr_rejected`;术语表只承载术语) |
@@ -72,11 +76,11 @@
 | 14 | 新设计入口与覆盖 | `full_design::test_extracts_known_material_and_builds_coverage_map`;`full_design::test_scope_layers_and_template_fill_guard` |
 | 15 | AI 参与设计 | `rounds::test_unknown_and_experience_stay_proposals` |
 | 16 | 模块规格完整性 | `spec_draft::test_missing_key_content_reports_incomplete_without_defaults`;`spec_draft::test_full_module_handoff_from_adopted_decisions`(九类标题 + 单位/范围/计算/取整/依据 + 验收三要素) |
-| 17 | 整体流程与文档交付 | `full_design::test_full_flow_delivers_four_outputs_and_detects_planted_contradiction`;`full_design::test_journey_walkthrough_finds_existing_contradiction` |
+| 17 | 整体流程与文档交付 | `full_design::test_full_flow_delivers_four_outputs_and_detects_planted_contradiction`;`full_design::test_journey_walkthrough_finds_existing_contradiction`;`full_design::test_missing_delivery_locations_keep_draft` |
 | 18 | 阶段与证据 | `full_design::test_stage_boundaries_follow_required_outcomes_not_round_count`;`spec_draft::test_handoff_states_stay_separate_from_implementation_and_playtest` |
 | 19 | 变更识别 | `rounds::test_classifies_new_design_for_missing_module`;`test_classifies_spec_gap_without_reasking`;`test_classifies_design_change_for_existing_feature`;`test_classifies_implementation_deviation_without_rewriting_design`;`test_classifies_mixed_request_separately`;`test_classifies_covered_request_details_as_spec_gap` |
 | 20 | 变更目标与影响 | `change_flow::test_extracts_change_statements_and_does_not_reask_decided`;`change_flow::test_traces_direct_and_indirect_impact_by_real_dependency` |
-| 21 | 阶段适配 | `change_flow::test_stage_adapts_checked_objects_for_three_project_stages`;`change_flow::test_three_stages_and_directional_fixture_cover_contract`;`feature_removal::test_data_and_entitlements_follow_stage_with_authorization_split` |
+| 21 | 阶段适配 | `change_flow::test_stage_adapts_checked_objects_for_three_project_stages`;`change_flow::test_three_stages_and_directional_fixture_cover_contract`;`change_flow::test_unverified_stage_blocks_change_plan`;`feature_removal::test_data_and_entitlements_follow_stage_with_authorization_split` |
 | 22 | 删减闭合 | `feature_removal::test_lists_original_roles_and_only_asks_undecided_handling`;`test_dispositions_cover_three_kinds_without_forced_replacement`;`test_residual_dependencies_trace_indirect_and_classify`;`test_scope_separates_permanent_deferral_and_promise`;`test_sync_retires_rules_references_and_acceptance`;`test_record_reports_removal_dispositions_and_scope` |
 | 23 | 局部微调 | `rounds::test_authorized_local_tweak_skips_questions`;`change_flow::test_depth_organizes_work_and_keeps_valid_decisions`(局部微调分支) |
 | 24 | 方向变化与旧证据 | `change_flow::test_depth_organizes_work_and_keeps_valid_decisions`;`change_flow::test_old_validation_result_keeps_original_version` |
@@ -84,13 +88,16 @@
 
 **核对口径说明。** 这些场景均由测试直接调用公共接缝并断言行为结果
 (落盘文件内容回读、受控通道写入/拒绝、台账与状态),不是 Skill 文本关键词
-检查;一个场景的所有覆盖函数在本次 108/108 实跑中通过。
+检查。该表只证明接缝函数测试有证据,不能扩大为真实宿主交互验收无缺口。
 
-**缺口:无。** 25 个场景在当前树上均有实际行为证据。需要指出的边界:
-所有场景的输入材料为调用方给出的结构化材料(讨论产出的结构化结果),测试
-覆盖的是从结构化材料到可见回复/记录/交付的行为链,不覆盖"从自由文本自动
-抽取规则"的语义解析能力(该能力不在本框架工单范围内,票 04～08 已在
-Comments 的「例外」中逐票声明,本票沿用同一边界,不重复扩大)。
+**接缝测试缺口:无;高层真实交互验收:未完成。** 25 个场景在当前树上均有
+结构化接缝测试证据。规格第 226 行要求高层入口贯穿 Game-Design 提问、
+开发者回答、决定落盘与 Game-Spec 同步;本系列未在真实宿主会话中实跑该
+完整链路(见第 5 节第 2 条)。需要指出的边界:所有场景的输入材料为调用方
+给出的结构化材料(讨论产出的结构化结果),测试覆盖的是从结构化材料到可见
+回复/记录/交付的行为链,不覆盖"从自由文本自动抽取规则"的语义解析能力
+(该能力不在本框架工单范围内,票 04～08 已在 Comments 的「例外」中逐票声明,
+本票沿用同一边界,不重复扩大)。
 
 ## 3. 效率验收:结论「效率尚未验证」
 
@@ -183,10 +190,12 @@ Comments 的「例外」中逐票声明,本票沿用同一边界,不重复扩大
    `codex-cli 0.154.0` 下持续存在(票 01 首采与票 09 复跑两次独立观察),
    优化前基线 `comparable=false`,缺少可比较样本。要完成效率验收,需要
    修复宿主/更换可启动工具宿主的版本,重采优化前与候选两侧配对。
-2. **未在真实宿主会话端到端实跑**:本系列票 02～08 与本票均以受控通道
+2. **高层真实交互验收未完成**:本系列票 02～08 与本票均以受控通道
    (`GateService` 路径)+ 会话内进程验证;宿主 MCP 连接由
-   `tests/test_runtime_gate*.py` 既有主题覆盖。行为场景证据均在高层入口
-   的真实落盘/回读上取得,但非交互式终端会话。
+   `tests/test_runtime_gate*.py` 既有主题覆盖。接缝测试覆盖提问结构、回答
+   解析、决定落盘与规格同步的函数行为,但未在真实宿主会话中贯穿 Game-Design
+   提问、开发者回答、决定落盘与 Game-Spec 同步的完整链路。该条按规格第 226
+   行保持未完成,不把接缝测试通过写成真实交互验收无缺口。
 3. **dist 版本未升**:`dist/` 为 0.18.1 的当前构建(120 个文件),
    `test_package_dist.py` 通过(dist 与 plugin/ 逐文件一致、可复现构建);
    本票未改 `plugin/`,未重建。版本号保持 0.18.1,未发布。
@@ -198,9 +207,10 @@ Comments 的「例外」中逐票声明,本票沿用同一边界,不重复扩大
 
 ## 6. 总判定
 
-- 行为:25/25 场景有实际复跑行为证据并全部通过(108/108 测试函数)。
+- 接缝行为:25/25 场景有结构化接缝测试证据(审查修订后 116 个主题测试函数)。
+- 高层真实交互验收:未完成(未实跑真实宿主完整链路)。
 - 效率:效率尚未验证(不可比,外部故障持续);步骤/检查行为改善可核实,
   耗时结论未验证。
 - 按规格「只有两种模式均满足规格才能报告统一框架验收通过」与效率通过条件
-  第 4 条:**本总报告不报告统一框架效率验收通过**;行为部分通过,效率部分
-  未完成条件保持未完成。未扩大修复范围,未宣称产品已发布。
+  第 4 条:**本总报告不报告统一框架效率验收通过,也不报告真实宿主交互验收通过**;
+  接缝行为部分通过,高层交互与效率部分保持未完成。未扩大修复范围,未宣称产品已发布。

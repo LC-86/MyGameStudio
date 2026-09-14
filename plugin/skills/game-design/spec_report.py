@@ -99,6 +99,20 @@ def incomplete_report(module: str, missing: list[dict],
     return "\n".join(lines)
 
 
+def check_failed_report(plan: dict[str, Any], written: list[str],
+                        checks: dict[str, Any]) -> str:
+    """写入已发生,但保存后检查失败:保留事实,不得称为交接完成。"""
+
+    failures = "；".join(checks.get("failures") or []) or "未列出"
+    return "\n".join([
+        f"模块规格已写入但检查失败（{plan.get('module')}）:交接未完成。",
+        f"已写入：{'、'.join(written) or '无'}。",
+        f"检查失败：{failures}。",
+        "已写入事实保留;不得称为已交接或已完成核对。"
+        "待同步项按实际记录保留,先解决检查缺口再继续。",
+    ])
+
+
 def saved_report(plan: dict[str, Any], written: list[str],
                   state: dict[str, Any]) -> str:
     version = plan.get("version") or {}

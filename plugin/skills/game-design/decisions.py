@@ -31,8 +31,8 @@ import decision_mapping as mapping
 import checks as checks_seam
 from decision_records import (
     SYNC_PENDING, apply_sync, compose, decision_head, empty_parse,
-    head_counts, line_counts, mark_superseded, parse_record, round_section,
-    sha256_text,
+    head_counts, line_counts, mark_superseded, merge_records, parse_record,
+    round_section, sha256_text,
 )
 from gate_commit import commit_path
 
@@ -473,25 +473,9 @@ def verify_saved(plan: dict[str, Any], record_text: str | None) -> dict[str, Any
 def restore_from_records(texts: dict[str, str], module: str) -> dict[str, Any]:
     """从实际记录恢复已定、未决与待同步内容;不读旧快照,不重问已定问题。"""
 
-    merged = empty_parse()
-    sources: list[str] = []
-    for path in sorted(texts):
-        text = texts[path]
-        if text is None:
-            continue
-        parsed = parse_record(text, module)
-        if not parsed["found"]:
-            continue
-        sources.append(path)
-        for qid, item in parsed["decisions"].items():
-            merged["decisions"][qid] = item
-        merged["superseded"].extend(parsed["superseded"])
-        merged["pending_by_qid"].update(
-            {item["qid"]: item for item in parsed["pending"]})
-        merged["pending_qids"].update(parsed["pending_qids"])
-        merged["sync_done"].update(parsed["sync_done"])
-        merged["rounds"] += parsed["rounds"]
-
+    merged = merge_records(texts, module)
+    sources = [path for path, text in (texts or {}).items()
+               if text and parse_record(text, module)["found"]]
     settled: dict[str, str] = {}
     states: dict[str, dict[str, bool]] = {}
     decisions: dict[str, dict[str, Any]] = {}
@@ -499,7 +483,7 @@ def restore_from_records(texts: dict[str, str], module: str) -> dict[str, Any]:
     for qid, item in merged["decisions"].items():
         if item["superseded"]:
             continue
-        synced = bool(item["synced"] or qid in merged["sync_done"])
+        synced = bool(item["synced"])
         settled[qid] = item["value"]
         states[qid] = {"adopted": True, "saved": True, "synced": synced,
                        "implemented": bool(item.get("implemented")),

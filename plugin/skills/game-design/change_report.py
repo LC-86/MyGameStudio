@@ -56,6 +56,14 @@ def read_only_report(plan: dict[str, Any]) -> str:
             f"基线;已采纳的修改决定与影响分析保留待授权后同步。")
 
 
+def check_failed_report(plan: dict[str, Any], written: list[str],
+                        checks: dict[str, Any]) -> str:
+    failures = "；".join(checks.get("failures") or []) or "未列出"
+    return (f"{plan.get('module')} 变更已写入但检查失败:未完成同步。"
+            f"已写入：{'、'.join(written) or '无'}。"
+            f"检查失败：{failures}。已写入事实保留,不得称为已同步。")
+
+
 def saved_report(plan: dict[str, Any], written: list[str],
                  states: dict[str, bool]) -> str:
     return (f"已保存 {plan['module']} 变更：写入 " + "、".join(written)

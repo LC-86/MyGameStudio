@@ -36,8 +36,8 @@ import checks as checks_seam
 from change_impact import analyze, organize, stage_check
 from change_render import render_baseline, render_change_record, update_spec
 from change_report import (
-    blocked_report, failure_report, incomplete_report, plan_report,
-    questions_report, read_only_report, saved_report,
+    blocked_report, check_failed_report, failure_report, incomplete_report,
+    plan_report, questions_report, read_only_report, saved_report,
 )
 from decision_records import sha256_text
 from gate_commit import commit_path
@@ -62,7 +62,7 @@ def plan_change(existing: dict[str, str | None], meta: dict[str, Any],
     specs = _spec_plans(existing, meta, impact)
     files = specs + _baseline_files(existing, meta, record, impact)
     unresolved = impact["unresolved"] + organization["directions"]["missing"] \
-        + _unlocated(specs)
+        + _unlocated(specs) + list(stage.get("missing") or [])
     authorization = dict(meta.get("authorization") or {})
     base = _plan_base(meta, material, change, impact, stage, organization,
                       questions, unresolved, record, specs, files)
@@ -123,7 +123,7 @@ def _plan_base(meta: dict[str, Any], material: dict[str, Any],
         "change_record_path": str(meta.get("change_record_path") or ""),
         "design_path": str(meta.get("design_path") or ""),
         "untouched": [str(path) for path in (meta.get("untouched") or [])],
-        "to_sync": [str(item["id"]) for item in impact["needs_tradeoff"]],
+        "to_sync": _pending_sync(meta, impact),
         "version": _version(meta),
         "states": {"adopted": True, "saved": False, "synced": False,
                    "implemented": False, "verified": False},
@@ -176,11 +176,22 @@ def apply_change(plan: dict[str, Any], channel: Any,
         known_paths=[str(item.get("path") or "")
                      for item in plan.get("files") or []])
     states = _states_after(plan, written)
+    if checks is not None and not checks.get("ok"):
+        failed = {**states, "synced": False}
+        return {**_result(plan, "check_failed", False), "written": written,
+                "states": failed, "questions": plan.get("questions") or [],
+                "to_sync": plan.get("to_sync") or [],
+                "untouched": plan.get("untouched") or [],
+                "handoff_ready": False,
+                "channel_result": {"decision": "allow"},
+                "session": session, "checks": checks,
+                "report": check_failed_report(plan, written, checks),
+                "next_round_ready": False}
     return {**_result(plan, "saved", True), "written": written,
             "states": states, "questions": plan.get("questions") or [],
             "to_sync": [] if states["synced"] else plan.get("to_sync") or [],
             "untouched": plan.get("untouched") or [],
-            "handoff_ready": True,
+            "handoff_ready": bool(states["synced"]),
             "channel_result": {"decision": "allow"},
             "session": session, "checks": checks,
             "report": saved_report(plan, written, states),
@@ -336,18 +347,21 @@ def _baseline_files(existing: dict[str, str | None], meta: dict[str, Any],
 
     design_path = str(meta.get("design_path") or "")
     record_path = str(meta.get("change_record_path") or "")
-    if not design_path or not record_path:
+    if not record_path:
         return []
     plan = {"change": record, "impact": impact, "version": _version(meta)}
-    return [
-        {"path": design_path, "role": "当前有效设计",
-         "content": render_baseline(existing.get(design_path), meta, plan),
-         "expected_sha256": sha256_text(existing.get(design_path))},
-        {"path": record_path, "role": "变更记录",
-         "content": render_change_record(meta, record, _initial_states(),
+    files: list[dict[str, Any]] = []
+    if design_path and dict(meta.get("authorization") or {}).get("sync"):
+        files.append({
+            "path": design_path, "role": "当前有效设计",
+            "content": render_baseline(existing.get(design_path), meta, plan),
+            "expected_sha256": sha256_text(existing.get(design_path))})
+    files.append({
+        "path": record_path, "role": "变更记录",
+        "content": render_change_record(meta, record, _initial_states(),
                                          planned=True),
-         "expected_sha256": sha256_text(existing.get(record_path))},
-    ]
+        "expected_sha256": sha256_text(existing.get(record_path))})
+    return files
 
 
 def _unlocated(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -358,6 +372,15 @@ def _unlocated(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         for missing in spec.get("missing_old") or []:
             items.append({**missing, "location": spec["path"]})
     return items
+
+
+def _pending_sync(meta: dict[str, Any], impact: dict[str, Any]) -> list[str]:
+    """待同步项:缺同步授权时留下必须同步的对象,不能用写入授权代替。"""
+
+    if dict(meta.get("authorization") or {}).get("sync"):
+        return [str(item["id"]) for item in impact["needs_tradeoff"]]
+    return [str(item["id"]) for item in impact["must_sync"]] or [
+        str(meta.get("design_path") or "核心基线")]
 
 
 def _version(meta: dict[str, Any]) -> dict[str, Any]:

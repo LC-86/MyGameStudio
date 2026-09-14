@@ -48,6 +48,53 @@ def empty_parse() -> dict[str, Any]:
             "pending_by_qid": {}}
 
 
+def merge_records(texts: dict[str, str | None], module: str) -> dict[str, Any]:
+    """按决定身份与修订合并多份记录;同步状态绑定当前修订,不按文件名覆盖。"""
+
+    merged = empty_parse()
+    winners: dict[str, dict[str, Any]] = {}
+    pending_winners: dict[str, dict[str, Any]] = {}
+    for text in (texts or {}).values():
+        if not text:
+            continue
+        parsed = parse_record(text, module)
+        if not parsed["found"]:
+            continue
+        merged["found"] = True
+        merged["rounds"] += parsed["rounds"]
+        merged["superseded"].extend(parsed["superseded"])
+        for qid, item in parsed["decisions"].items():
+            if _newer_revision(item, winners.get(qid)):
+                winners[qid] = dict(item)
+        for item in parsed["pending"]:
+            qid = item["qid"]
+            if _newer_revision(item, pending_winners.get(qid)):
+                pending_winners[qid] = dict(item)
+    merged["decisions"] = winners
+    merged["sync_done"] = {
+        qid: True for qid, item in winners.items()
+        if item.get("synced") and not item.get("superseded")}
+    merged["pending"] = [
+        pending_winners[qid] for qid in sorted(pending_winners)
+        if qid not in winners or winners[qid].get("superseded")]
+    merged["pending_qids"] = {item["qid"] for item in merged["pending"]}
+    merged["pending_by_qid"] = {item["qid"]: item for item in merged["pending"]}
+    return merged
+
+
+def _newer_revision(item: dict[str, Any],
+                    previous: dict[str, Any] | None) -> bool:
+    if previous is None:
+        return True
+    current_round = item.get("round") or 0
+    previous_round = previous.get("round") or 0
+    if current_round != previous_round:
+        return current_round > previous_round
+    if bool(item.get("superseded")) != bool(previous.get("superseded")):
+        return not item.get("superseded")
+    return str(item.get("date") or "") >= str(previous.get("date") or "")
+
+
 def parse_record(text: str, module: str) -> dict[str, Any]:
     """解析本模块记录:决定头、历史（已被替代）、未决项与同步标记。"""
 

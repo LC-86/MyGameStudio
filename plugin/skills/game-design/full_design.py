@@ -32,8 +32,8 @@ from decision_records import sha256_text
 from journey import walkthrough
 from spec_render import text_is_vague
 from full_render import (
-    ROLE_DESIGN, deliverable_outputs, render_content, render_design,
-    render_version,
+    ROLE_CONTENT, ROLE_DESIGN, ROLE_SPECS, ROLE_VERSION, deliverable_outputs,
+    render_content, render_design, render_version,
 )
 from full_report import (
     blocked_report, failure_report, plan_report, read_only_report, saved_report,
@@ -48,6 +48,7 @@ def plan_delivery(existing: dict[str, str | None], meta: dict[str, Any],
     journey = walkthrough(material)
     contradictions = list(journey["contradictions"])
     missing = _missing(coverage, journey, material, meta)
+    missing.extend(_location_gaps(meta))
     outputs = [(path, role) for path, role in deliverable_outputs(meta) if path]
     files = _files(existing, meta, material, coverage, journey, outputs)
     authorization = dict(meta.get("authorization") or {})
@@ -113,6 +114,21 @@ def _missing(coverage: dict[str, Any], journey: dict[str, Any],
     missing.extend(_rule_gaps(material))
     missing.extend(_blocking_gaps(meta.get("blocking_qids") or []))
     return missing
+
+
+def _location_gaps(meta: dict[str, Any]) -> list[dict[str, Any]]:
+    """四类交付必须有可定位的权威位置;缺路径不得静默丢掉该类。"""
+
+    gaps: list[dict[str, Any]] = []
+    for path, role in deliverable_outputs(meta):
+        if path:
+            continue
+        gaps.append({"needle": f"位置:{role}", "kind": "交付位置缺失",
+                     "detail": f"{role}没有可定位的权威位置",
+                     "gap": "四类交付的权威位置不可定位",
+                     "method": "按 CONFIG 文档映射确认落点",
+                     "impact": "残缺交付不能交接", "blocks": True})
+    return gaps
 
 
 def _blocking_gaps(qids: list[Any]) -> list[dict[str, Any]]:
@@ -350,6 +366,11 @@ def verify_delivery(plan: dict[str, Any],
         failures.append("存在未处理的跨模块矛盾,不得判为已交付")
     if plan.get("missing"):
         failures.append("存在阻断交接的关键缺口,不得判为已交付")
+    required = {ROLE_DESIGN, ROLE_SPECS, ROLE_CONTENT, ROLE_VERSION}
+    have = {str(item.get("role") or "") for item in outputs
+            if item.get("path")}
+    for role in required - have:
+        failures.append(f"缺少交付类别:{role}")
     return {"ok": not failures, "failures": failures, "entry": entry}
 
 

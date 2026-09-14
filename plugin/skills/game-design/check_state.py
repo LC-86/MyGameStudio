@@ -53,8 +53,12 @@ INVALIDATION = {
 
 ANSWER_SOURCES = {"user", "recommendation", "custom", "revision"}
 OVERALL_RE = re.compile(r"整体按建议|全部按建议|都按建议")
+REJECT_OVERALL_RE = re.compile(
+    r"(不要|别|先不).{0,10}(整体|全部|都)?按建议")
 CHOICE_RE = re.compile(r"(Q\d+)\s*选\s*([A-Za-z])")
-ADJUST_RE = re.compile(r"(Q\d+)\s*(?:调整为|改为)\s*(.+?)(?:[，。；\n]|$)")
+ADJUST_RE = re.compile(
+    r"(Q\d+)\s*(?:调整为|改为|：|:)\s*(.+?)(?:[，。；\n]|$)")
+UNKNOWN_VALUE_RE = re.compile(r"不知道|不清楚|先不确定")
 
 
 def snapshot(state: dict[str, Any]) -> dict[str, Any]:
@@ -235,6 +239,29 @@ def references(text: str) -> list[str]:
     return refs
 
 
+def adopts_all_recommendations(text: str) -> bool:
+    """整体采纳:出现采纳用语且没有否定或先讨论。"""
+
+    return bool(OVERALL_RE.search(text)) and not REJECT_OVERALL_RE.search(text)
+
+
+def is_unknown_value(value: str) -> bool:
+    return bool(UNKNOWN_VALUE_RE.fullmatch(str(value or "").strip()))
+
+
+def definite_choices(text: str) -> list[tuple[str, str]]:
+    """明确的逐题选项;『选 A 还是 B』或尚未决定不算作答。"""
+
+    items: list[tuple[str, str]] = []
+    for match in CHOICE_RE.finditer(text):
+        rest = text[match.end():]
+        clause = re.split(r"[。；\n]", rest, maxsplit=1)[0]
+        if re.match(r"\s*还是", rest) or re.search(r"还是|还没决定|不确定", clause):
+            continue
+        items.append((match.group(1), match.group(2).upper()))
+    return items
+
+
 def answers_from_reply(reply: str,
                        shown: Iterable[str] | None = None) -> dict[str, str]:
     """本轮实际答案:从用户回复解析 Q 编号与取值,供保存前核对。"""
@@ -244,13 +271,16 @@ def answers_from_reply(reply: str,
     answers: dict[str, str] = {}
     if not text:
         return answers
-    if OVERALL_RE.search(text):
+    if adopts_all_recommendations(text):
         for qid in shown_list:
             answers.setdefault(qid, "recommendation")
-    for match in CHOICE_RE.finditer(text):
-        answers[match.group(1)] = match.group(2).upper()
+    for qid, letter in definite_choices(text):
+        answers[qid] = letter
     for match in ADJUST_RE.finditer(text):
-        answers[match.group(1)] = match.group(2).strip()
+        value = match.group(2).strip()
+        if re.fullmatch(r"选\s*[A-Za-z]", value) or is_unknown_value(value):
+            continue
+        answers[match.group(1)] = value
     return answers
 
 

@@ -653,6 +653,38 @@ def test_optional_status_icons_only_when_present() -> None:
           "没有当前不做项时不输出空类别")
 
 
+def test_negated_or_ambiguous_replies_stay_pending() -> None:
+    """否定、二选一未决和「不知道」不得被当成已采纳。"""
+
+    questions = _daily_questions()[:3]
+    turn = {
+        "request": "每日挑战",
+        "goal": "形成每日挑战核心模块",
+        "module": "每日挑战",
+        "current_design": {"exists": True, "covers_request": False},
+        "questions": questions,
+        "shown": ["Q1", "Q2", "Q3"],
+    }
+    refused = run_round({**turn, "user_reply": "不要整体按建议，先讨论"})
+    check("Q1" not in refused["adopted"],
+          f"否定整体建议不得采纳 Q1,实际 {refused['adopted']}")
+    check(refused["pending"].get("Q1", {}).get("reason") in
+          {"unanswered", "ambiguous"},
+          f"否定后 Q1 须保持待讨论,实际 {refused['pending']}")
+
+    unsure = run_round({**turn, "user_reply": "Q1 选 A 还是 B，我还没决定"})
+    check("Q1" not in unsure["adopted"],
+          f"未决定的二选一不得采纳 Q1,实际 {unsure['adopted']}")
+    check("Q1" in unsure["pending"],
+          f"未决定的 Q1 须保持待讨论,实际 {unsure['pending']}")
+
+    unknown = run_round({**turn, "user_reply": "Q1：不知道"})
+    check("Q1" not in unknown["adopted"],
+          f"「不知道」不得写成自定决定,实际 {unknown['adopted']}")
+    check(unknown["pending"].get("Q1", {}).get("reason") == "unknown",
+          f"Q1 不知道应保持提案待讨论,实际 {unknown['pending']}")
+
+
 def main() -> int:
     return run_theme("设计问答模块识别与成组交互", (
         test_classifies_new_design_for_missing_module,
@@ -674,6 +706,7 @@ def main() -> int:
         test_missing_fact_waits_only_dependent_question,
         test_open_question_does_not_invent_options,
         test_optional_status_icons_only_when_present,
+        test_negated_or_ambiguous_replies_stay_pending,
     ), FAILURES)
 
 

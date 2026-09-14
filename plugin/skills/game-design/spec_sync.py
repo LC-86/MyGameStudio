@@ -42,6 +42,11 @@ def version_plan(meta: dict[str, Any], compare: dict[str, Any]) -> dict:
     announced = str(meta.get("change") or "").strip()
     from_v = str(meta.get("version_from") or "")
     to_v = str(meta.get("version_to") or from_v)
+    if announced == "format" and compare["previous_present"] \
+            and not compare["semantic_equal"]:
+        return {"from": from_v, "to": from_v, "change": "conflict",
+                "note": "声明为格式修正,但回读核对显示规则内容有实质变化;"
+                        "先解决声明与实际内容的矛盾,再允许同步。"}
     if announced == "format" or (compare["previous_present"]
                                  and compare["semantic_equal"]):
         return {"from": from_v, "to": from_v, "change": "format",
@@ -122,43 +127,106 @@ def baseline_authorized(authorization: dict[str, Any]) -> bool:
     return bool(authorization.get("sync"))
 
 
+_VERSION_HEADER_RE = re.compile(r"(基线版本\s*[:：]\s*)v\d+")
+_FP_LINE_RE = re.compile(r"^(内容指纹|归一指纹)：sha256:[0-9a-f]{64}\s*$")
+
+
 def design_document(existing: str | None, meta: dict[str, Any],
                     version: dict[str, Any], spec_path: str,
                     decision: dict[str, Any]) -> str:
-    """核心基线:引用模块规格,不重复具体规则;按既有规则登记双指纹。"""
+    """核心基线:只更新受影响引用与索引,仍适用的既有内容保持原样。"""
 
+    citation = _module_citation(meta, version, spec_path, decision)
+    if not (existing or "").strip():
+        return register_fingerprints(
+            _new_baseline(meta, version, citation, decision))
+    text = _strip_fingerprints(existing)
+    text = _VERSION_HEADER_RE.sub(rf"\g<1>{version['to']}", text, count=1)
+    text = _upsert_citation(text, spec_path, citation,
+                            str(meta.get("module") or ""))
+    text = _append_index(text, meta, version, decision)
+    return register_fingerprints(_ensure_fingerprint_slots(text))
+
+
+def _module_citation(meta: dict[str, Any], version: dict[str, Any],
+                     spec_path: str, decision: dict[str, Any]) -> str:
     module = str(meta.get("module") or "")
     date = str(meta.get("date") or "")
     basis = adoption_basis(decision)
     relations = str(meta.get("system_relations")
                     or f"见模块规格 {spec_path} 的参与对象与前提,本文件不重复")
-    lines = [f"# {module}：当前游戏需求与设计",
-             "",
+    return (f"## {module}模块规格引用（{date}，{version['from']} → "
+            f"{version['to']}）\n\n"
+            f"- 行为规则、边界、数值与验收：见模块规格 {spec_path}"
+            f"（当前 {version['to']}；具体规则集中维护在那里,本文件只引用）。\n"
+            f"- 与已有系统的关系：{relations}。\n"
+            "- 技术约定：引用技术设计,不代写。\n"
+            f"- 采纳依据：{basis}。\n")
+
+
+def _new_baseline(meta: dict[str, Any], version: dict[str, Any],
+                  citation: str, decision: dict[str, Any]) -> str:
+    module = str(meta.get("module") or "")
+    basis = adoption_basis(decision)
+    lines = [f"# {module}：当前游戏需求与设计", "",
              f"维护责任：方案设计。基线版本：{version['to']}。"
-             f"适用范围：{module}模块。采用依据：{basis}。",
-             "",
-             f"## 本轮可执行规格（{date}，{version['from']} → {version['to']}）",
-             "",
-             f"- 行为规则、边界、数值与验收：见模块规格 {spec_path}"
-             f"（当前 {version['to']}；具体规则集中维护在那里,本文件只引用）。",
-             f"- 与已有系统的关系：{relations}。",
-             "- 技术约定：引用技术设计,不代写。",
-             f"- 采纳依据：{basis}。",
-             "",
-             "## 验证与未决项",
-             ""]
+             f"适用范围：{module}模块。采用依据：{basis}。", "",
+             citation.rstrip(), "", "## 验证与未决项", ""]
     pending = list(decision["pending"])
     if pending:
-        for item in pending:
-            lines.append(f"- {item['qid']} {item['title']}：{item['status']}。")
+        lines.extend(f"- {item['qid']} {item['title']}：{item['status']}。"
+                     for item in pending)
     else:
         lines.append("- 无。")
-    lines.extend(["", "## 变更索引", "",
-                  f"- {version['from']} → {version['to']}（{date}）："
-                  f"新增{module}模块规格引用,采纳依据 {basis}。", "",
-                  "内容指纹：sha256:" + "0" * 64,
-                  "归一指纹：sha256:" + "0" * 64])
-    return register_fingerprints("\n".join(lines) + "\n")
+    lines.extend(["", "## 变更索引", "", _index_line(meta, version, decision)])
+    return "\n".join(lines) + "\n"
+
+
+def _strip_fingerprints(text: str) -> str:
+    kept = [line for line in text.splitlines()
+            if not _FP_LINE_RE.match(line.strip())]
+    return "\n".join(kept).rstrip() + "\n"
+
+
+def _upsert_citation(text: str, spec_path: str, citation: str,
+                     module: str) -> str:
+    pattern = re.compile(
+        rf"^## {re.escape(module)}模块规格引用.*$(?:\n(?!## ).*)*",
+        re.M)
+    if module and pattern.search(text):
+        return pattern.sub(citation.rstrip(), text, count=1)
+    if spec_path in text:
+        return text
+    if "## 变更索引" in text:
+        return text.replace("## 变更索引",
+                            citation.rstrip() + "\n\n## 变更索引", 1)
+    return text.rstrip() + "\n\n" + citation
+
+
+def _append_index(text: str, meta: dict[str, Any], version: dict[str, Any],
+                  decision: dict[str, Any]) -> str:
+    line = _index_line(meta, version, decision)
+    if line in text:
+        return text
+    if "## 变更索引" in text:
+        return text.rstrip() + "\n" + line + "\n"
+    return text.rstrip() + "\n\n## 变更索引\n\n" + line + "\n"
+
+
+def _index_line(meta: dict[str, Any], version: dict[str, Any],
+                decision: dict[str, Any]) -> str:
+    return (f"- {version['from']} → {version['to']}"
+            f"（{meta.get('date') or ''}）：新增{meta.get('module') or ''}"
+            f"模块规格引用,采纳依据 {adoption_basis(decision)}。")
+
+
+def _ensure_fingerprint_slots(text: str) -> str:
+    body = text.rstrip()
+    if "内容指纹：sha256:" not in body:
+        body += "\n\n内容指纹：sha256:" + "0" * 64
+    if "归一指纹：sha256:" not in body:
+        body += "\n归一指纹：sha256:" + "0" * 64
+    return body + "\n"
 
 
 def register_fingerprints(text: str) -> str:
