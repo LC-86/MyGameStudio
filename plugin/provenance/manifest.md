@@ -1,10 +1,10 @@
-# mygamestudio 0.18.1 来源与许可追溯
+# mygamestudio 1.0.0 来源与许可追溯
 
 本 manifest 记录最小包随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹的机器可读版本见 [fingerprints.json](fingerprints.json)。各文件的逐版本适配历程不再在本文件逐条累加;当前适配事实见下表,历史见 fingerprints.json 的 source 字段与仓库 acceptance/ 各票证据。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `0.18.1`。十四个业务入口(状态/统筹/初始化/计划/设计讨论/规格整理/隔离原型/制作组织/代码/视觉/音频/构建/独立审查/试玩)均仅显式触发;任务后端支持本地 Markdown 与 GitHub Issues;项目写入统一经 `mgs-gate` 受控通道(角色 ∩ 任务 ∩ 用途 ∩ 实际授权);共同执行规则、受控写入协议与结果字段三处共同权威各有唯一维护位置。交付物见仓库 `dist/`,验收证据见 `acceptance/`。
+- 名称:`mygamestudio`,版本 `1.0.0`。十四个业务入口(状态/统筹/初始化/计划/设计讨论/规格整理/隔离原型/制作组织/代码/视觉/音频/构建/独立审查/试玩)均仅显式触发;任务后端支持本地 Markdown 与 GitHub Issues;项目写入统一经 `mgs-gate` 受控通道(角色 ∩ 任务 ∩ 用途 ∩ 实际授权);共同执行规则、受控写入协议与结果字段三处共同权威各有唯一维护位置。交付物见仓库 `dist/`,验收证据见 `acceptance/`。
 - `skills/`、`runtime/`、`records/`、`templates/`(经适配的 README)、`.mcp.json`、`.codex-plugin/plugin.json`、本 provenance 为本项目自有内容,按本项目 MIT 许可发布。
 - 设计权威依据:插件设计仓库 `.scratch/mygamestudio-framework/spec.md`,设计入口 SHA-256 `c6ccab8eb140fae4bbd77eb8f7ddcf7f323e7f5c9901519d383dd289ae1e222c`(v1,2026-09-08)。
 

@@ -1,17 +1,25 @@
 # MyGameStudio 安装包变更说明(dist/)
 
-本目录当前提供 0.18.1 发布候选；0.18.0 的变更和验收结果保留为历史记录。
+本目录当前提供 1.0.0 发布包；0.18.0 的变更和验收结果保留为历史记录。
 安装包、逐文件清单与校验和由
 `dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致,经
 `dist/verify-reproducible.sh` 干净副本隔离重建验证——平台扩展元数据
 排除系审查修复票 03 的修正);
 `tests/test_plugin_package.py` 持续核对清单、校验和与源目录三方一致。
 
+## 1.0.0（2026-09-15）
+
+- 合入 PR #38：统一游戏设计问答框架，覆盖新设计成稿与已有设计变更、分轮问答、决定保存与恢复、模块规格交接、功能删减及增量检查。
+- 明确保存、同步、实现和验证的状态边界；完善版本冲突恢复、引用更新与有效内容保留。
+- 发布前已有 PR 双轴独立审查通过；本次版本与安装包检查结果随 Release 记录。
+- 真实宿主端到端交互和效率配对仍未验证；不将确定性测试通过等同于实际体验或效率验证。
+- 安装不自动授权项目写入；mgs-gate 仍需项目配置的 MGS_RUNTIME_ROOT。
+
 ## 交付物清单
 
 | 文件 | 内容 |
 | --- | --- |
-| `mygamestudio-0.18.1.tar.gz` | 安装包(plugin/ 全量,120 个文件) |
+| `mygamestudio-1.0.0.tar.gz` | 安装包(plugin/ 全量,120 个文件) |
 | `package-manifest.txt` | 包内逐文件 SHA-256 清单 |
 | `SHA256SUMS.txt` | 上两项的校验和 |
 | `CHANGELOG.md` | 本文件:版本历史与当前变更说明 |
@@ -27,7 +35,7 @@
 ```bash
 # 1) 解包审阅(内容与仓库 plugin/ 逐字节一致,可先核对校验和)
 cd dist && shasum -a 256 -c SHA256SUMS.txt
-tar -xzf mygamestudio-0.18.1.tar.gz
+tar -xzf mygamestudio-1.0.0.tar.gz
 
 # 2) 以本地 marketplace 方式接入(与验收所用方式一致):
 #    把解包出的 plugin/ 放到自选目录,例如 ~/.agents-plugins/mygamestudio,

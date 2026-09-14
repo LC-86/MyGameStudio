@@ -1,6 +1,6 @@
 {
   "name": "mygamestudio",
-  "version": "0.18.1",
+  "version": "1.0.0",
   "description": "MyGameStudio 独立游戏开发工作流插件。十四个业务入口均仅显式触发:Game-Status 只读状态检查;Game-Producer 制作统筹;Game-Init 项目初始化与已有项目接手;Game-Plan 规格拆单;Game-Design/Game-Spec/Game-Prototype 设计讨论、规格整理与隔离原型;Game-Implement/Game-Code/Game-Art/Game-Audio/Game-Build 制作执行组织与代码、视听资源、构建交付;Game-Review/Game-Playtest 独立审查与试玩。任务后端支持本地 Markdown 与 GitHub Issues;项目写入统一经 mgs-gate 受控通道(角色、任务、用途与实际授权取交集);共同执行规则、受控写入协议与结果字段各有唯一权威位置,入口引用不复制。",
   "author": {
     "name": "MyGameStudio"

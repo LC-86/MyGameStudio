@@ -419,7 +419,8 @@ def test_identity_uses_content_hashes_without_git_tag() -> None:
     """优化前内容身份按插件文件指纹记录,不以 Git 标签为前提。"""
 
     identity = record_baseline_identity(REPO_ROOT / "plugin")
-    check(identity.get("plugin_version") == "0.18.1",
+    manifest = json.loads((REPO_ROOT / "plugin/.codex-plugin/plugin.json").read_text())
+    check(identity.get("plugin_version") == manifest["version"],
           f"应记录当前插件版本,实际 {identity.get('plugin_version')}")
     design = identity.get("content_sha256", {}).get("skills/game-design/SKILL.md")
     check(isinstance(design, str) and len(design) == 64,
