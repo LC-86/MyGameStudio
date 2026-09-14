@@ -831,10 +831,19 @@ def _drop_top_version(inner: str) -> str:
 
 
 def _clean_citation_remainder(head: str, tail: str) -> str:
-    remainder = _CITATION_LEAD_RE.sub("", head) + tail
-    remainder = re.sub(r"[ \t]{2,}", " ", remainder)
-    remainder = re.sub(r"[；;]{2,}", "；", remainder)
-    return remainder.rstrip()
+    """拼接去掉这一处引用后的左右片段,不改尚未处理区域的相对位置。
+
+    只剥本处紧邻的引导语。整行空白/分号压缩会让已缓存的左侧位置失效,
+    须等全部局部删除完成后再做。
+    """
+
+    return _CITATION_LEAD_RE.sub("", head) + tail
+
+
+def _tidy_citation_line(line: str) -> str:
+    line = re.sub(r"[ \t]{2,}", " ", line)
+    line = re.sub(r"[；;](?:[ \t]*[；;])+", "；", line)
+    return line.rstrip()
 
 
 def _strip_attached(line: str, pos: int) -> str:
@@ -852,12 +861,18 @@ def _strip_attached(line: str, pos: int) -> str:
 
 
 def _strip_line_citation(line: str, spec_path: str) -> str:
-    """去掉本行每一处重复引用(路径+附着版本),保留其余业务内容。"""
+    """去掉本行每一处重复引用(路径+附着版本),保留其余业务内容。
+
+    先按原文位置从右到左做局部删除,再统一压缩空白;删除过程中不得
+    改写尚未处理区域,否则缓存位置会错位并截断仍有效的规则。
+    """
 
     result = line
     for start, end in reversed(list(_iter_paths(line, spec_path))):
         result = _strip_citation_at(result, spec_path, start, end)
-    return result
+    if result == line:
+        return result
+    return _tidy_citation_line(result)
 
 
 def _strip_citation_at(line: str, spec_path: str,

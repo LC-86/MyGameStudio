@@ -2479,6 +2479,89 @@ def test_round16_same_line_citations_and_code_span_dot() -> None:
             check(verdict["ok"], f"{name}: 全部引用回读应通过,实际 {verdict}")
 
 
+def _padded_duplicate_table_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 正文：{SPEC_REL}（当前 v3）。\n"
+           f"| 存档     |     {SPEC_REL}（当前 v3；不得清除本机存档） | "
+           f"最佳     |     {SPEC_REL}（当前 v3；必须保留最佳记录） |\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _padded_duplicate_list_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 正文：{SPEC_REL}（当前 v3）。\n"
+           f"- 兼容：        {SPEC_REL}（当前 v3；不得清除本机存档）；"
+           f"恢复：    {SPEC_REL}（当前 v3；必须保留最佳记录）。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _padded_duplicate_source_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 主引用：{SPEC_REL}（当前 v3）。\n"
+           f"- 来源：                  {SPEC_REL}"
+           "（当前 v3；每日仅允许参加一次）；"
+           f"{SPEC_REL}（当前 v3）；完成后保存。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def _three_space_duplicate_layout(text: str) -> str:
+    old = (f"- 行为规则、边界、数值与验收：见模块规格 {SPEC_REL}"
+           "（当前 v3；具体规则集中维护在那里,本文件只引用）。\n")
+    new = (f"- 本轮依据：{SPEC_REL}（当前 v3）。\n"
+           f"- 来源：   {SPEC_REL}（当前 v3）；  {SPEC_REL}"
+           "（当前 v3）；离线模式必须保留。\n")
+    return text.replace("## 每日挑战模块规格引用", "## 系统设计依据").replace(
+        old, new)
+
+
+def test_round17_duplicate_strip_keeps_padded_rules() -> None:
+    """r17:去重不因整行压空白错位,对齐空格下仍保留有效规则。"""
+
+    cases = (
+        ("padded-table", _padded_duplicate_table_layout,
+         ["不得清除本机存档", "必须保留最佳记录",
+          f"- 正文：{SPEC_REL}（当前 v4）。"],
+         ["docs/myg得清除", "docs/my不得清除"]),
+        ("padded-list", _padded_duplicate_list_layout,
+         ["不得清除本机存档", "必须保留最佳记录"],
+         ["docs/my不得清除", "docs/myg得清除"]),
+        ("padded-source", _padded_duplicate_source_layout,
+         ["每日仅允许参加一次", "完成后保存。"],
+         ["来源： docs/mygamestudio；完成后保存。",
+          "来源： docs/mygamestudio"]),
+        ("three-space", _three_space_duplicate_layout,
+         ["离线模式必须保留"],
+         ["do前 v3", "来源： do"]),
+    )
+    for name, mutate, expected, forbidden in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            applied, design, retry, read = _recover_stale_custom_citation(
+                tmp, mutate)
+            check(applied.get("saved") is True,
+                  f"{name}: 重试应完成剩余同步,实际 {applied}")
+            for needle in expected:
+                check(needle in design,
+                      f"{name}: 去重须保留仍有效规则,期望含 {needle!r},"
+                      f"实际 {design}")
+            for needle in forbidden:
+                check(needle not in design,
+                      f"{name}: 不得出现错位截断 {needle!r},实际 {design}")
+            check(applied.get("states", {}).get("synced") is True
+                  and applied.get("to_sync") in ([], None),
+                  f"{name}: 同步状态须一致收口,实际 {applied}")
+            verdict = verify_handoff(retry, {
+                SPEC_REL: read(SPEC_REL), DESIGN_REL: design,
+                GLOSSARY_REL: read(GLOSSARY_REL),
+                RECORD_REL: read(RECORD_REL)})
+            check(verdict["ok"], f"{name}: 保留规则后回读应通过,实际 {verdict}")
+
+
 TESTS = (
     test_full_module_handoff_from_adopted_decisions,
     test_missing_key_content_reports_incomplete_without_defaults,
@@ -2506,6 +2589,7 @@ TESTS = (
     test_round14_cross_line_links_complete_identity_and_code_spans,
     test_round15_code_span_identity_keeps_commands_rules_and_suffixes,
     test_round16_same_line_citations_and_code_span_dot,
+    test_round17_duplicate_strip_keeps_padded_rules,
 )
 
 
