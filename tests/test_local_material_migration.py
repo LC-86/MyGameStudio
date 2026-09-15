@@ -649,6 +649,46 @@ def test_deleted_source_during_prep_pauses_migration() -> None:
               f"对应关系不得把已删除任务记成已转换,实际 {mapped}")
 
 
+def test_colliding_version_numbers_keep_separate_snapshots() -> None:
+    """历史规格 v1.0.0 与 v1.1.0 不得共用同一快照身份而互相覆盖。"""
+
+    play_v100 = "v1.0.0 只接白色星星。"
+    play_v110 = "v1.1.0 改为接金色星星。"
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "star-catcher"
+        _write_tree(root, {
+            "README.md": "# star-catcher\n",
+            "src/main.js": "console.log('catch');\n",
+            "docs/mygamestudio/CONFIG.md": _old_config(gate_line=False),
+            "docs/mygamestudio/GAME_DESIGN.md": (
+                "# 现行\n\n维护责任：方案设计。基线版本：v2。\n\n"
+                "现行只接金色星星。\n"
+            ),
+            "docs/mygamestudio/records/GAME_DESIGN-v1.0.0.md": (
+                f"# 历史 v1.0.0\n\n维护责任：方案设计。基线版本：v1.0.0。\n\n"
+                f"{play_v100}\n"
+            ),
+            "docs/mygamestudio/records/GAME_DESIGN-v1.1.0.md": (
+                f"# 历史 v1.1.0\n\n维护责任：方案设计。基线版本：v1.1.0。\n\n"
+                f"{play_v110}\n"
+            ),
+        })
+        applied = mgs_records.apply_local_material_migration(
+            root, mgs_records.plan_local_material_migration(root),
+            confirmed=True)
+        check(applied.get("ok") is True, f"转换应成功:{applied}")
+        staging = Path(applied.get("pending_root") or "")
+        snaps = mgs_records.read_design_snapshots(staging).get("snapshots") or []
+        overalls = [item.get("overall") or "" for item in snaps]
+        check(any(play_v100 in text for text in overalls),
+              "v1.0.0 历史规格必须仍可经快照读取")
+        check(any(play_v110 in text for text in overalls),
+              "v1.1.0 历史规格必须另存,不得覆盖 v1.0.0")
+        ids = [item.get("design_id") for item in snaps]
+        check(len(set(ids)) >= 2,
+              f"两个游戏版本必须有不碰撞的设计身份,实际 {ids}")
+
+
 def main() -> int:
     return run_theme(
         "issue #57 本地旧项目完整资料迁移",
@@ -658,6 +698,7 @@ def main() -> int:
             test_originals_config_gate_and_user_edits,
             test_partial_rerun_conflict_missing_and_unpublished,
             test_deleted_source_during_prep_pauses_migration,
+            test_colliding_version_numbers_keep_separate_snapshots,
             test_github_tracker_is_not_converted_here,
         ),
         FAILURES,

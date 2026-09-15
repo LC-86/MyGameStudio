@@ -155,13 +155,24 @@ def _package_consistency(plugin: Path, dist: Path, name: str, version: str) -> d
             result["mismatches"].append(f"manifest-hash:{rel}")
 
     with tarfile.open(tarball, "r:gz") as tar:
-        names = [
-            member.name[len("plugin/"):]
-            for member in tar.getmembers()
+        members = [
+            member for member in tar.getmembers()
             if member.name.startswith("plugin/") and member.isfile()
         ]
-    if sorted(names) != plugin_files:
-        result["mismatches"].append("tarball-set")
+        names = [member.name[len("plugin/"):] for member in members]
+        if sorted(names) != plugin_files:
+            result["mismatches"].append("tarball-set")
+        for member in members:
+            rel = member.name[len("plugin/"):]
+            source = plugin / rel
+            extracted = tar.extractfile(member)
+            if extracted is None:
+                result["mismatches"].append(f"tarball-hash:{rel}")
+                continue
+            archived = extracted.read()
+            extracted.close()
+            if not source.is_file() or source.read_bytes() != archived:
+                result["mismatches"].append(f"tarball-hash:{rel}")
     result["passed"] = not result["mismatches"]
     return result
 

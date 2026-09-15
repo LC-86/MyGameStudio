@@ -23,6 +23,7 @@ import json
 import shutil
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 from records_backend_support import make_checker, run_cli, run_theme
@@ -375,6 +376,61 @@ def test_no_gate_overlap_cancel_and_interrupt_keep_results() -> None:
               "中断前结果必须仍在")
 
 
+def test_concurrent_same_sha_updates_keep_overlap_artifact() -> None:
+    """T10: 两个会话用同一 expected sha 同时更新时,后到者不得静默覆盖,
+    必须留下重叠成果。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "recover"
+        (root / "src").mkdir(parents=True)
+        (root / "src" / "main.js").write_text("ok\n", encoding="utf-8")
+        mgs_records.apply_local_onboarding(
+            root, mgs_records.plan_local_onboarding(root), confirmed=True)
+        mgs_records.create_task(
+            root, "01-alpha", "甲",
+            {"当前目标": "初始目标", "完成标准": "并发可核对",
+             "执行责任": "Agent(制作实现)"},
+            triage="ready-for-agent")
+        path = root / "docs/mygamestudio/work/01-alpha/task.md"
+        sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        barrier = threading.Barrier(2)
+        outcomes: list[str] = []
+        lock = threading.Lock()
+
+        def worker(goal: str) -> None:
+            barrier.wait()
+            try:
+                mgs_records.update_task(
+                    root, "01-alpha", {"当前目标": goal},
+                    expected_body_sha256=sha)
+                with lock:
+                    outcomes.append("published:" + goal)
+            except mgs_records.RecordsError:
+                with lock:
+                    outcomes.append("overlap")
+
+        threads = [
+            threading.Thread(target=worker, args=("会话甲目标",)),
+            threading.Thread(target=worker, args=("会话乙目标",)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        body = path.read_text(encoding="utf-8")
+        published = [item for item in outcomes if item.startswith("published:")]
+        check(len(published) == 1,
+              f"同一 sha 的并发更新只应有一方落地,实际 {outcomes}")
+        check("overlap" in outcomes or list(
+            (root / "docs/mygamestudio/work/01-alpha").glob("task.md.overlap-*")),
+              f"未落地一方必须保留重叠成果,实际 {outcomes}")
+        check("会话甲目标" in body or "会话乙目标" in body,
+              "落地一方的目标必须可回读")
+        check(not ("会话甲目标" in body and "会话乙目标" in body),
+              "不得把两次更新混写成一份正文")
+
+
 def test_cli_onboard_status_and_create_without_gate() -> None:
     """AC5: 正常接入、记录与只读查询可通过 CLI 外部行为检查。"""
 
@@ -412,6 +468,7 @@ TESTS = (
     test_tracker_keeps_unique_locations_and_lifecycle,
     test_producer_status_is_readonly_and_matt_entries_find_stage_materials,
     test_no_gate_overlap_cancel_and_interrupt_keep_results,
+    test_concurrent_same_sha_updates_keep_overlap_artifact,
     test_cli_onboard_status_and_create_without_gate,
 )
 

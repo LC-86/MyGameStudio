@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -270,6 +271,41 @@ def test_package_matches_source_and_keeps_closed_provenance() -> None:
               "来源必须钉在规格固定提交")
 
 
+def test_stale_tarball_bytes_fail_package_consistency() -> None:
+    """T1: 文件名集合相同但成员字节过期的安装包不得通过一致性检查。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-62-") as tmp:
+        root = Path(tmp)
+        plugin = _plugin_fixture(root)
+        dist = _build_dist(root, plugin)
+        tarball = dist / f"{PACKAGE_NAME}-{PACKAGE_VERSION}.tar.gz"
+        stale = root / "stale-plugin"
+        shutil.copytree(plugin, stale)
+        skill = stale / "skills" / PUBLIC_SKILLS[0] / "SKILL.md"
+        skill.write_text("stale packaged skill, not the source\n", encoding="utf-8")
+        with tarfile.open(tarball, "w:gz") as tar:
+            for path in sorted(stale.rglob("*")):
+                if path.is_file() and "__pycache__" not in path.parts:
+                    tar.add(path, arcname="plugin/" + str(path.relative_to(stale)))
+        manifest = dist / "package-manifest.txt"
+        sums = dist / "SHA256SUMS.txt"
+        sums.write_text(
+            f"{sha256(tarball)}  {tarball.name}\n"
+            f"{sha256(manifest)}  package-manifest.txt\n",
+            encoding="utf-8",
+        )
+        evidence = mgs_release_check.summarize_technical_delivery(
+            root, plugin_root=plugin, dist_root=dist, environment=ENV,
+        )
+        consistency = evidence.get("package_consistency") or {}
+        check(consistency.get("passed") is not True,
+              "同名但内容过期的安装包不得标通过")
+        mismatches = [str(item) for item in (consistency.get("mismatches") or [])]
+        check(any("tarball-hash:" in item or "tarball-bytes" in item
+                  for item in mismatches),
+              f"必须报告安装包成员与源码字节不一致,实际 {mismatches}")
+
+
 def test_local_discovery_is_verified_install_session_is_not() -> None:
     """T2: 包内发现声明与调用合同可本地核验;真实新会话安装态未执行。"""
 
@@ -363,6 +399,7 @@ def test_live_delivery_pack_is_checkable_and_keeps_handover() -> None:
 TESTS = (
     test_versions_recorded_and_unexecuted_release_is_not_passed,
     test_package_matches_source_and_keeps_closed_provenance,
+    test_stale_tarball_bytes_fail_package_consistency,
     test_local_discovery_is_verified_install_session_is_not,
     test_pending_review_covers_delivery_and_keeps_unrelated,
     test_live_delivery_pack_is_checkable_and_keeps_handover,

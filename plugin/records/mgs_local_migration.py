@@ -26,7 +26,8 @@ from mgs_local_backend import render_task_body  # noqa: E402
 from mgs_record_model import RecordsError, parse_task_body, today  # noqa: E402
 from mgs_record_source import (  # noqa: E402
     DEFAULT_CONFIG_REL, DEFAULT_TASK_ROOT, load_config)
-from mgs_snapshot import NO_CLAIM, SNAPSHOT_HEADING, SNAPSHOT_MARK  # noqa: E402
+from mgs_snapshot import (  # noqa: E402
+    NO_CLAIM, SNAPSHOT_HEADING, SNAPSHOT_MARK, design_ids_for_history)
 from mgs_spec import MODULE_DIR, SPEC_MARK, read_current_design  # noqa: E402
 
 PENDING_REL = "docs/mygamestudio/records/pending-switch"
@@ -353,16 +354,8 @@ def _ensure_spec_mark(body: str, identity: str, version: str, kind: str) -> str:
     return insert + "\n\n" + (body or "")
 
 
-def _design_id_for(version: str, fallback: int) -> str:
-    match = re.search(r"(\d+)", str(version or ""))
-    if match:
-        return f"ds-{int(match.group(1))}"
-    return f"ds-{fallback}"
-
-
-def _snapshot_line(item: dict, *, fallback: int) -> str:
+def _snapshot_line(item: dict, *, design_id: str) -> str:
     version = item.get("version") or "v1"
-    design_id = _design_id_for(version, fallback)
     return (
         f"游戏版本 {version}：设计 {design_id} 修订 r1"
         f"（{SNAPSHOT_DIR}/{design_id}/r1；实现:未实现；发布:未发布）"
@@ -387,7 +380,8 @@ def _append_modules_and_snapshots(body: str, *, module_ref: str,
 
 
 def _convert_current_spec(root: Path, staging: Path, item: dict,
-                          historical: list[dict]) -> dict:
+                          historical: list[dict],
+                          design_ids: list[str]) -> dict:
     source = root / item["source"]
     body = _read(source)
     version = item.get("version") or "v1"
@@ -398,7 +392,7 @@ def _convert_current_spec(root: Path, staging: Path, item: dict,
         f"# 规则与数值\n\n## 当前规则与流程\n\n{rules or '见整体规格。'}\n",
         "rules", version, "模块规格")
     snapshot_lines = [
-        _snapshot_line(row, fallback=index + 1)
+        _snapshot_line(row, design_id=design_ids[index])
         for index, row in enumerate(historical)
     ]
     marked = _append_modules_and_snapshots(
@@ -416,11 +410,10 @@ def _convert_current_spec(root: Path, staging: Path, item: dict,
 
 
 def _convert_historical_spec(root: Path, staging: Path, item: dict,
-                             *, fallback: int) -> dict:
+                             *, design_id: str) -> dict:
     body = _read(root / item["source"])
     version = item.get("version") or "v1"
     overall = _ensure_spec_mark(body, "overall", version, "历史规格")
-    design_id = _design_id_for(version, fallback)
     rev = staging / SNAPSHOT_DIR / design_id / "r1"
     meta = "\n".join([
         f"# {SNAPSHOT_HEADING} {design_id} r1",
@@ -622,13 +615,15 @@ def apply_local_material_migration(project_root: Path | str,
     current = [item for item in specs if item.get("role") != "historical"]
     decisions = [item for item in runnable if item.get("kind") == "decision"]
 
+    design_ids = design_ids_for_history(historical)
     for item in current:
-        row = _convert_current_spec(root, staging, item, historical)
+        row = _convert_current_spec(root, staging, item, historical, design_ids)
         converted.append(row)
         created += int(row["wrote"])
         skipped += int(not row["wrote"])
     for index, item in enumerate(historical):
-        row = _convert_historical_spec(root, staging, item, fallback=index + 1)
+        row = _convert_historical_spec(
+            root, staging, item, design_id=design_ids[index])
         converted.append(row)
         created += int(row["wrote"])
         skipped += int(not row["wrote"])

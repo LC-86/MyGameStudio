@@ -409,16 +409,6 @@ def _additive_user_skill_text(user_text: str, pkg_text: str) -> str | None:
     return "\n\n".join(extra_parts)
 
 
-def _restore_extra_skill_files(src_dir: Path, dest_dir: Path,
-                               extra_rels: set[str]) -> None:
-    for rel in extra_rels:
-        src = src_dir / rel
-        dest = dest_dir / rel
-        if src.is_file():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dest)
-
-
 def _ensure_stage_pointer(text: str) -> str:
     pointer = "../../internal/game/stage-requirements.md"
     if "stage-requirements.md" in (text or ""):
@@ -488,16 +478,29 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
                 paused.append(name)
                 decisions.append(name)
                 continue
+            live_extras: dict[str, bytes] = {}
+            for rel in extra_rels:
+                src = user_dir / rel
+                if src.is_file():
+                    live_extras[rel] = src.read_bytes()
             hist = history / name
             if not hist.exists():
                 hist.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(user_dir, hist)
+            else:
+                for rel, data in live_extras.items():
+                    dest = hist / rel
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    dest.write_bytes(data)
             shutil.rmtree(user_dir)
             shutil.copytree(pkg_dir, user_dir)
             installed = _read(user_dir / "SKILL.md")
             if extra_text and extra_text not in installed:
                 _write(user_dir / "SKILL.md", installed.rstrip() + "\n\n" + extra_text)
-            _restore_extra_skill_files(hist, user_dir, extra_rels)
+            for rel, data in live_extras.items():
+                dest = user_dir / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(data)
         else:
             shutil.copytree(pkg_dir, current / name)
     _copy_stage_index(home, package)

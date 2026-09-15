@@ -499,6 +499,42 @@ def test_skill_switch_keeps_ordinary_user_edits_or_pauses() -> None:
             check(kept_note, "自建附件必须留在活动技能来源中")
 
 
+def test_later_skill_extras_survive_second_project_switch() -> None:
+    """AC2: 技能历史目录已存在时,当前树里后加的用户附件仍须保留。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        first = _write_old_local_project(Path(tmp) / "game-a")
+        second = _write_old_local_project(Path(tmp) / "game-b")
+        _convert_local(first)
+        _convert_local(second)
+        home = Path(tmp) / "isolated-codex"
+        skills = _write_isolated_client(home)
+        first_note = skills / "implement" / "notes" / "first-rule.md"
+        first_note.parent.mkdir(parents=True, exist_ok=True)
+        first_note.write_text("第一次切换前的附件\n", encoding="utf-8")
+        package = Path(tmp) / "package-skills"
+        shutil.copytree(PLUGIN_SKILLS, package)
+        mgs_records.apply_safe_switch(
+            first, mgs_records.plan_safe_switch(
+                first, client_home=home, package_root=package),
+            confirmed=True)
+        later = home / "skills" / "implement" / "notes" / "second-rule.md"
+        later.parent.mkdir(parents=True, exist_ok=True)
+        later.write_text("第二次切换前新增的附件\n", encoding="utf-8")
+        applied = mgs_records.apply_safe_switch(
+            second, mgs_records.plan_safe_switch(
+                second, client_home=home, package_root=package),
+            confirmed=True)
+        live = home / "skills" / "implement" / "notes" / "second-rule.md"
+        paused = [str(item) for item in (applied.get("paused") or [])]
+        kept = live.is_file() and "第二次切换前新增的附件" in live.read_text(
+            encoding="utf-8")
+        if "implement" in paused:
+            check(kept, "暂停切换时必须保留后加的用户附件")
+        else:
+            check(kept, "历史目录已存在时不得删掉当前树后加的用户附件")
+
+
 def test_shared_client_unready_keeps_old_environment() -> None:
     """AC3/T12: 共用客户端未就绪项目保留可用旧环境;
     不能仅因某个项目转换完成就宣称全部完成。
@@ -720,6 +756,7 @@ def main() -> int:
             test_complete_check_then_switch_makes_new_current,
             test_same_name_skill_unique_source_and_stage_reads,
             test_skill_switch_keeps_ordinary_user_edits_or_pauses,
+            test_later_skill_extras_survive_second_project_switch,
             test_shared_client_unready_keeps_old_environment,
             test_rollback_preserves_new_additions,
             test_rollback_preserves_edits_to_migrated_tasks,

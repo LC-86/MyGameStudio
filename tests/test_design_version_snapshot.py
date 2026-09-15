@@ -420,6 +420,52 @@ def test_github_archive_issue_holds_full_content_not_a_live_link() -> None:
         check(len(archives) == 2, f"GitHub 修正应新增归档 Issue,实际 {len(archives)}")
 
 
+def test_github_snapshot_keeps_inner_markdown_fences() -> None:
+    """AC4: 整体设计内嵌代码围栏时,归档读取必须拿到当时完整内容。"""
+
+    inner = '```json\n{"score": 1, "lives": 3}\n```'
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "star-catcher")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        adopted = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "reason": "冻结含示例块的设计",
+            "overall": {
+                "title": "star-catcher 整体设计",
+                "version": "v1",
+                "core_play": f"接星星。计分结构如下：\n\n{inner}\n漏接三颗结束。",
+                "rules": ["得分：每颗星星 1 分。"],
+            },
+            "modules": {
+                "规则与数值": {
+                    "title": "规则与数值",
+                    "rules": [f"计分结构：\n{inner}"],
+                },
+            },
+        }, transport=fake, cache_dir=cache)
+        mgs_records.apply_spec_adoption(
+            root, adopted, confirmed=True, transport=fake, cache_dir=cache)
+        plan = mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+        }, transport=fake, cache_dir=cache)
+        applied = mgs_records.apply_design_snapshot(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True and applied.get("complete") is True,
+              f"含内嵌围栏的归档应完整:{applied}")
+        listed = mgs_records.read_design_snapshots(
+            root, transport=fake, cache_dir=cache)
+        snap = (listed.get("snapshots") or [{}])[0]
+        overall = snap.get("overall") or ""
+        check('"score": 1' in overall and '"lives": 3' in overall,
+              "归档读取不得在内嵌围栏处截断整体设计")
+        check("漏接三颗结束" in overall,
+              "内嵌围栏之后的正文必须仍在归档整体设计中")
+
+
 def test_interrupt_and_source_change_do_not_claim_complete_archive() -> None:
     """AC5/T7: 来源中途改变、缺模块或附件、部分保存、响应丢失及重试时,
     未完整不宣称成功;重读只补缺项,不重复快照或覆盖旧修订。
@@ -599,6 +645,7 @@ if __name__ == "__main__":
         test_records_identity_and_reuses_across_game_versions,
         test_current_design_change_keeps_old_snapshot_correction_is_new_revision,
         test_github_archive_issue_holds_full_content_not_a_live_link,
+        test_github_snapshot_keeps_inner_markdown_fences,
         test_interrupt_and_source_change_do_not_claim_complete_archive,
         test_interrupted_snapshot_does_not_mix_source_revisions,
     )

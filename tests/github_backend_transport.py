@@ -12,6 +12,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from urllib.parse import parse_qs
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "plugin" / "records"))
@@ -99,7 +100,10 @@ class FakeTransport:
         self.calls.append((method, path, body))  # 故障注入的调用也已真实发出
         self.auth_flags.append(auth)             # 可达探测应传 auth=False(不带凭据)
         self._guard(method, path)
-        path = path.split("?", 1)[0]  # 查询串不参与路由
+        query: dict[str, str] = {}
+        if "?" in path:
+            path, qs = path.split("?", 1)
+            query = {key: values[-1] for key, values in parse_qs(qs).items()}
         # 绝对 URL(交接可达检查;HTTP 替身转发时会带上前导 /)
         if method == "GET" and re.match(r"^/?https?://", path):
             url = path.lstrip("/")
@@ -108,7 +112,11 @@ class FakeTransport:
             return 404, {"message": f"stand-in has no {url}"}
         base = f"/repos/mygamestudio/issue-accept"
         if method == "GET" and path == base + "/issues":
-            return 200, [self._public_issue(item) for item in self.issues]
+            issues = [self._public_issue(item) for item in self.issues]
+            per_page = max(1, min(int(query.get("per_page") or 30), 100))
+            page = max(1, int(query.get("page") or 1))
+            start = (page - 1) * per_page
+            return 200, issues[start:start + per_page]
         if method == "GET" and path.startswith(base + "/labels"):
             return 200, [{"name": name} for name in self.repo_labels]
         match = re.match(rf"{base}/issues/(\d+)(/.*)?$", path)

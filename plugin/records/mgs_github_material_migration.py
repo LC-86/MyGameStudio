@@ -30,7 +30,8 @@ from mgs_github_transport import TransportError, repo_path  # noqa: E402
 from mgs_record_model import IDENTITY_RE, RecordsError, parse_task_body, today  # noqa: E402
 from mgs_record_model import _parse_dep_ids  # noqa: E402
 from mgs_record_source import DEFAULT_CONFIG_REL, WRITE_OP, load_config  # noqa: E402
-from mgs_snapshot import SNAPSHOT_HEADING, SNAPSHOT_MARK  # noqa: E402
+from mgs_snapshot import (  # noqa: E402
+    SNAPSHOT_HEADING, SNAPSHOT_MARK, _wrap_markdown_fence, design_ids_for_history)
 from mgs_spec import DISCUSSION_MARK, SPEC_MARK  # noqa: E402
 
 PENDING_REL = "docs/mygamestudio/records/pending-switch"
@@ -130,11 +131,19 @@ def _config_or_github(root: Path) -> dict:
 
 
 def _list_issues(backend) -> list[dict]:
-    status, data = backend.transport.request(
-        "GET", f"{repo_path(backend.repo)}/issues?state=all&per_page=100")
-    if status != 200 or not isinstance(data, list):
-        raise TransportError("bad_response", f"list issues HTTP {status}")
-    return [item for item in data if "pull_request" not in item]
+    items: list[dict] = []
+    page = 1
+    while True:
+        status, data = backend.transport.request(
+            "GET",
+            f"{repo_path(backend.repo)}/issues?state=all&per_page=100&page={page}")
+        if status != 200 or not isinstance(data, list):
+            raise TransportError("bad_response", f"list issues HTTP {status}")
+        items.extend(item for item in data if "pull_request" not in item)
+        if len(data) < 100:
+            break
+        page += 1
+    return items
 
 
 def _list_comments(backend, number: int) -> list[dict]:
@@ -357,13 +366,6 @@ def _ensure_spec_mark(body: str, identity: str, version: str, kind: str) -> str:
     return _with_pending(marked)
 
 
-def _design_id_for(version: str, fallback: int) -> str:
-    match = re.search(r"(\d+)", str(version or ""))
-    if match:
-        return f"ds-{int(match.group(1))}"
-    return f"ds-{fallback}"
-
-
 def _parent_identity(value: str) -> str:
     found = IDENTITY_RE.findall(value or "")
     return found[0] if found else ""
@@ -583,9 +585,8 @@ def _convert_gate(root: Path, staging: Path) -> dict:
             "text": text}
 
 
-def _snapshot_body(item: dict, body: str, *, fallback: int) -> str:
+def _snapshot_body(item: dict, body: str, *, design_id: str) -> str:
     version = item.get("version") or "v1"
-    design_id = _design_id_for(version, fallback)
     overall = _ensure_spec_mark(body, "overall", version, "历史规格")
     return "\n".join([
         f"# {SNAPSHOT_HEADING} {design_id} r1",
@@ -601,9 +602,7 @@ def _snapshot_body(item: dict, body: str, *, fallback: int) -> str:
         "",
         "## 整体设计(当时完整内容)",
         "",
-        "```markdown",
-        overall.strip(),
-        "```",
+        _wrap_markdown_fence(overall),
         "",
     ])
 
@@ -678,6 +677,7 @@ def apply_github_material_migration(project_root: Path | str,
     evidence_items = [item for item in runnable if item.get("kind") == "evidence"]
 
     overall_issue = None
+    design_ids = design_ids_for_history(historical)
     if current_specs:
         item = current_specs[0]
         source_body = _read(root / item["source"]) if not str(
@@ -694,7 +694,7 @@ def apply_github_material_migration(project_root: Path | str,
             "rules", version, "模块规格")
         snap_lines = [
             f"游戏版本 {row.get('version') or 'v1'}：设计 "
-            f"{_design_id_for(row.get('version') or 'v1', index + 1)} 修订 r1"
+            f"{design_ids[index]} 修订 r1"
             for index, row in enumerate(historical)
         ]
         if "## 模块" not in marked:
@@ -730,8 +730,8 @@ def apply_github_material_migration(project_root: Path | str,
     for index, item in enumerate(historical):
         body = _read(root / item["source"])
         version = item.get("version") or "v1"
-        design_id = _design_id_for(version, index + 1)
-        snap_body = _snapshot_body(item, body, fallback=index + 1)
+        design_id = design_ids[index]
+        snap_body = _snapshot_body(item, body, design_id=design_id)
         issue, adopted = _publish_issue(
             backend, title=f"{SNAPSHOT_HEADING} {design_id} r1",
             body=snap_body, needle=f"{SNAPSHOT_MARK}{design_id}")

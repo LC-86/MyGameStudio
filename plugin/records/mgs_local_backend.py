@@ -14,6 +14,11 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - POSIX lock is the production path
+    fcntl = None
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_record_model import (  # noqa: E402
@@ -33,6 +38,12 @@ UNCLAIMED = "未认领"
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _lock_exclusive(handle) -> None:
+    if fcntl is None:
+        return
+    fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
 
 
 def render_task_body(title: str, identity: str, triage: str, progress: str,
@@ -128,28 +139,36 @@ class LocalMarkdownBackend:
                     expected_body_sha256: str | None = None,
                     change_note: str = "安排更新") -> dict:
         self._assert_not_cancelled("update_task", identity)
-        current = self._read_text(identity)
-        current_sha = _sha(current)
-        if expected_body_sha256 is not None \
-                and expected_body_sha256.lower() != current_sha:
-            overlap = self._task_dir(identity) / f"task.md.overlap-{current_sha[:8]}"
-            overlap.write_text(
-                json.dumps({"fields": fields, "change_note": change_note,
-                            "expected": expected_body_sha256,
-                            "current": current_sha},
-                           ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8")
-            raise RecordsError(
-                f"正文已被他人修改:expected sha256 {expected_body_sha256} "
-                f"!= 当前 {current_sha};已保留双方成果并暂停覆盖")
-        header_updates = {key: value for key, value in fields.items()
-                          if key in ("进度", "当前分流", "认领", "关闭原因")}
-        request_updates = {key: value for key, value in fields.items()
-                           if key not in header_updates}
-        new_body = edit_body(
-            current, header=header_updates, request=request_updates,
-            append_change=f"{today()} {change_note}:{'、'.join(fields)}")
-        self._task_path(identity).write_text(new_body, encoding="utf-8")
+        path = self._task_path(identity)
+        if not path.is_file():
+            raise RecordsError(f"任务不存在或缺少 task.md:{path}")
+        with path.open("r+", encoding="utf-8") as handle:
+            _lock_exclusive(handle)
+            current = handle.read()
+            current_sha = _sha(current)
+            if expected_body_sha256 is not None \
+                    and expected_body_sha256.lower() != current_sha:
+                overlap = self._task_dir(identity) / f"task.md.overlap-{current_sha[:8]}"
+                overlap.write_text(
+                    json.dumps({"fields": fields, "change_note": change_note,
+                                "expected": expected_body_sha256,
+                                "current": current_sha},
+                               ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+                raise RecordsError(
+                    f"正文已被他人修改:expected sha256 {expected_body_sha256} "
+                    f"!= 当前 {current_sha};已保留双方成果并暂停覆盖")
+            header_updates = {key: value for key, value in fields.items()
+                              if key in ("进度", "当前分流", "认领", "关闭原因")}
+            request_updates = {key: value for key, value in fields.items()
+                               if key not in header_updates}
+            new_body = edit_body(
+                current, header=header_updates, request=request_updates,
+                append_change=f"{today()} {change_note}:{'、'.join(fields)}")
+            handle.seek(0)
+            handle.truncate()
+            handle.write(new_body)
+            handle.flush()
         return {"published": True, "readback": self.read_task(identity),
                 "attempts": [{"step": "patch", "outcome": "updated"}]}
 

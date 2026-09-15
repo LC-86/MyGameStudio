@@ -31,6 +31,34 @@ TRIGGERS_ARCHIVE = ("version_freeze", "explicit")
 NO_CLAIM = "归档是维护约定,不宣称不可篡改、权限隔离或自动备份。"
 
 
+def design_id_for_history_version(version: str, assigned: dict[str, str],
+                                  fallback: int) -> str:
+    """Stable unique snapshot id from the complete version string."""
+
+    version = str(version or "v1")
+    if version in assigned:
+        return assigned[version]
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "-", version).strip("-") or str(fallback)
+    candidate = f"ds-{slug}"
+    used = set(assigned.values())
+    if candidate in used:
+        suffix = 2
+        while f"{candidate}-{suffix}" in used:
+            suffix += 1
+        candidate = f"{candidate}-{suffix}"
+    assigned[version] = candidate
+    return candidate
+
+
+def design_ids_for_history(items: list[dict]) -> list[str]:
+    assigned: dict[str, str] = {}
+    return [
+        design_id_for_history_version(
+            item.get("version") or "v1", assigned, index + 1)
+        for index, item in enumerate(items)
+    ]
+
+
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -563,6 +591,36 @@ def _read_github_snapshots(config, *, transport, api_base, cache_dir) -> dict:
     }
 
 
+def _markdown_fence(text: str) -> str:
+    longest = 2
+    for match in re.finditer(r"`+", text or ""):
+        longest = max(longest, len(match.group(0)))
+    return "`" * (longest + 1)
+
+
+def _wrap_markdown_fence(text: str) -> str:
+    fence = _markdown_fence(text)
+    return f"{fence}markdown\n{(text or '').strip()}\n{fence}"
+
+
+def _extract_fenced_markdown(body: str, heading: str) -> str:
+    match = re.search(
+        rf"## {re.escape(heading)}\n+(`{{3,}})markdown\n(.*?)\n\1(?:\n|$)",
+        body or "", re.S)
+    return match.group(2).strip() if match else ""
+
+
+def _extract_named_fenced_sections(body: str, prefix: str) -> dict[str, str]:
+    found: dict[str, str] = {}
+    pattern = (
+        rf"## {re.escape(prefix)}:([^\n]+)\(当时完整内容\)\n+"
+        r"(`{3,})markdown\n(.*?)\n\2(?:\n|$)"
+    )
+    for match in re.finditer(pattern, body or "", re.S):
+        found[match.group(1).strip()] = match.group(3).strip()
+    return found
+
+
 def _parse_github_snapshot(item: dict) -> dict:
     body = item.get("body") or ""
     identity = ""
@@ -570,17 +628,6 @@ def _parse_github_snapshot(item: dict) -> dict:
     if match:
         identity = match.group(1)
     revision = _meta_field(body, "修订") or "r1"
-    overall = _fenced_section(body, "整体设计(当时完整内容)")
-    modules: dict[str, str] = {}
-    for found in re.finditer(
-            r"## 模块:([^\n]+)\(当时完整内容\)\n+```markdown\n(.*?)```",
-            body, re.S):
-        modules[found.group(1).strip()] = found.group(2).strip()
-    attachments: dict[str, str] = {}
-    for found in re.finditer(
-            r"## 附件:([^\n]+)\(当时完整内容\)\n+```markdown\n(.*?)```",
-            body, re.S):
-        attachments[found.group(1).strip()] = found.group(2).strip()
     return {
         "design_id": identity,
         "revision": revision,
@@ -591,31 +638,25 @@ def _parse_github_snapshot(item: dict) -> dict:
         "release": _meta_field(body, "发布") or "未发布",
         "reason": _meta_field(body, "修正原因"),
         "replaces": _meta_field(body, "采用关系"),
-        "overall": overall,
-        "modules": modules,
-        "attachments": attachments,
+        "overall": _extract_fenced_markdown(body, "整体设计(当时完整内容)"),
+        "modules": _extract_named_fenced_sections(body, "模块"),
+        "attachments": _extract_named_fenced_sections(body, "附件"),
         "issue_number": item.get("number"),
         "complete": True,
     }
-
-
-def _fenced_section(body: str, heading: str) -> str:
-    match = re.search(
-        rf"## {re.escape(heading)}\n+```markdown\n(.*?)```", body or "", re.S)
-    return match.group(1).strip() if match else ""
 
 
 def _render_github_body(plan: dict, overall: str, modules: dict[str, str],
                         attachments: dict[str, str], *, formed_at: str) -> str:
     lines = [_render_meta(plan, formed_at=formed_at).rstrip(), ""]
     lines += ["## 整体设计(当时完整内容)", "",
-              "```markdown", overall.strip(), "```", ""]
+              _wrap_markdown_fence(overall), ""]
     for name, body in modules.items():
         lines += [f"## 模块:{name}(当时完整内容)", "",
-                  "```markdown", body.strip(), "```", ""]
+                  _wrap_markdown_fence(body), ""]
     for name, body in attachments.items():
         lines += [f"## 附件:{name}(当时完整内容)", "",
-                  "```markdown", body.strip(), "```", ""]
+                  _wrap_markdown_fence(body), ""]
     return "\n".join(lines).rstrip() + "\n"
 
 

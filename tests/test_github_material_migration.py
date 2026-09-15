@@ -605,6 +605,69 @@ def test_partial_rerun_conflict_missing_unpublished_and_lost_response() -> None:
               f"第二次运行应收养已存在成果,实际 {again}")
 
 
+def test_colliding_version_numbers_keep_separate_github_snapshots() -> None:
+    """GitHub 迁移时 v1.0.0 与 v1.1.0 不得共用快照身份而互相收养覆盖。"""
+
+    play_v100 = "v1.0.0 只接白色星星。"
+    play_v110 = "v1.1.0 改为接金色星星。"
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "star-catcher")
+        _write_tree(root, {
+            "docs/mygamestudio/records/GAME_DESIGN-v1.0.0.md": (
+                f"# 历史 v1.0.0\n\n维护责任：方案设计。基线版本：v1.0.0。\n\n"
+                f"{play_v100}\n"
+            ),
+            "docs/mygamestudio/records/GAME_DESIGN-v1.1.0.md": (
+                f"# 历史 v1.1.0\n\n维护责任：方案设计。基线版本：v1.1.0。\n\n"
+                f"{play_v110}\n"
+            ),
+        })
+        cache = root / "docs/mygamestudio/records/cache"
+        applied = mgs_records.apply_github_material_migration(
+            root, mgs_records.plan_github_material_migration(
+                root, transport=fake, cache_dir=cache),
+            confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"转换应成功:{applied}")
+        snap_bodies = [
+            item.get("body") or ""
+            for item in fake.issues
+            if "快照身份:" in (item.get("body") or "")
+        ]
+        check(any(play_v100 in text for text in snap_bodies),
+              "v1.0.0 历史规格必须仍可经 GitHub 快照读取")
+        check(any(play_v110 in text for text in snap_bodies),
+              "v1.1.0 历史规格必须另存,不得覆盖或收养 v1.0.0")
+        ids = []
+        for text in snap_bodies:
+            if play_v100 not in text and play_v110 not in text:
+                continue
+            marker = "快照身份:"
+            start = text.find(marker)
+            if start < 0:
+                continue
+            ids.append(text[start + len(marker):].split("。", 1)[0].strip())
+        check(len(set(ids)) >= 2,
+              f"两个游戏版本必须有不碰撞的设计身份,实际 {ids}")
+
+
+def test_migration_inventory_includes_issues_beyond_first_page() -> None:
+    """T11: 超过一页的 GitHub Issue 都必须进入迁移清单,不能只盘点前 100 条。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "star-catcher")
+        for index in range(4, 102):
+            fake.seed_issue(f"{index:03d}-pad", f"填充任务 {index}")
+        plan = mgs_records.plan_github_material_migration(root, transport=fake)
+        identities = [
+            item.get("identity") for item in plan.get("items") or []
+            if item.get("kind") == "task"
+        ]
+        check("101-pad" in identities,
+              f"第 101 条任务必须进入迁移清单,实际末项 {identities[-5:]}")
+        check(identities.count("01-move") == 1 and "02-jump" in identities,
+              "分页不得丢掉第一页已有任务")
+
+
 def main() -> int:
     return run_theme(
         "issue #58 GitHub 旧项目完整资料迁移",
@@ -613,6 +676,8 @@ def main() -> int:
             test_full_conversion_restores_native_relations_and_stays_pending_switch,
             test_originals_config_gate_and_user_edits,
             test_partial_rerun_conflict_missing_unpublished_and_lost_response,
+            test_colliding_version_numbers_keep_separate_github_snapshots,
+            test_migration_inventory_includes_issues_beyond_first_page,
             test_local_tracker_is_not_converted_here,
         ),
         FAILURES,
