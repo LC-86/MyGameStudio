@@ -670,6 +670,33 @@ def test_rejected_official_skill_is_not_installed() -> None:
               "明确拒绝后其余通过项仍应切换到来源")
 
 
+def test_upgrade_refreshes_supporting_skill_file_fingerprints() -> None:
+    """升级必须刷新整个技能树指纹,不能只改 SKILL.md。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
+        plugin = _write_current_plugin(Path(tmp) / "plugin")
+        upstream = MATT_UPSTREAM_PATH["tdd"]
+        extra = {f"{upstream}/tests.md": "# tdd tests\nassert True\n"}
+        candidate = _write_candidate(Path(tmp) / "candidate", extra_files=extra)
+        evaluation = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate,
+            candidate_version=PINNED_VERSION,
+            candidate_sha=PINNED_SHA,
+        )
+        check(evaluation.get("decision") == "adopt",
+              f"带支撑文件的兼容候选应能采用,实际 {evaluation.get('decision')}")
+        mgs_upstream_upgrade.apply_upstream_upgrade(
+            plugin, evaluation, confirmed=True)
+        tests_md = plugin / "skills" / "tdd" / "tests.md"
+        check(tests_md.is_file(), "技能树支撑文件必须随升级复制进来")
+        data = json.loads(
+            (plugin / "provenance" / "fingerprints.json").read_text(encoding="utf-8"))
+        by_path = {entry.get("path"): entry for entry in data.get("files") or []}
+        entry = by_path.get("skills/tdd/tests.md") or {}
+        check(entry.get("sha256") == _sha_file(tests_md),
+              f"支撑文件指纹必须更新为当前内容,实际 {entry}")
+
+
 TESTS = (
     test_unpinned_latest_is_not_adopted,
     test_evaluation_records_collection_invocation_refs_license_and_adaptations,
@@ -684,6 +711,7 @@ TESTS = (
     test_missing_license_keeps_current_version,
     test_changed_candidate_keeps_commit_authorization_adaptation,
     test_rejected_official_skill_is_not_installed,
+    test_upgrade_refreshes_supporting_skill_file_fingerprints,
 )
 
 

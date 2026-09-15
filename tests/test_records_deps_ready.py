@@ -85,6 +85,27 @@ def test_task_dependencies_unresolved_and_cycle() -> None:
         check(report["ok"] is False, "存在循环时 deps 不应 ok")
 
 
+def test_frontier_excludes_unresolved_dependencies() -> None:
+    """未解析依赖必须挡住前沿,不能因为任务不存在就当成未阻塞。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio" / "work"
+        path = docs / "02-beta" / "task.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "- 依赖:01-alpha", "- 依赖:99-missing"),
+            encoding="utf-8")
+        report = mgs_records.frontier_tasks(root)
+        ids = [item["identity"] for item in report.get("frontier") or []]
+        check("02-beta" not in ids,
+              f"缺失依赖的任务不得进入前沿,实际 {ids}")
+        ready = mgs_records.startable_tasks(root)
+        startable_ids = [item["identity"] for item in ready.get("startable") or []]
+        check("02-beta" not in startable_ids,
+              "缺失依赖的任务也不得进入可开工集合")
+
+
 def test_startable_tasks_set() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = make_plan_project(Path(tmp))
@@ -389,6 +410,7 @@ TESTS = (
     test_parse_dep_ids_ignores_dates,
     test_task_dependencies_graph,
     test_task_dependencies_unresolved_and_cycle,
+    test_frontier_excludes_unresolved_dependencies,
     test_startable_tasks_set,
     test_capability_negation_not_flagged,
     test_startable_ignores_done_and_wontfix,

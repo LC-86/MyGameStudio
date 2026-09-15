@@ -689,6 +689,32 @@ def test_colliding_version_numbers_keep_separate_snapshots() -> None:
               f"两个游戏版本必须有不碰撞的设计身份,实际 {ids}")
 
 
+def test_duplicate_task_identity_across_roots_pauses() -> None:
+    """配置任务根与 tasks/ 出现同一身份时必须暂停,不得后写覆盖。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "star-catcher")
+        original = (root / "docs/mygamestudio/work/01-move/task.md").read_text(
+            encoding="utf-8")
+        dest = root / "tasks" / "01-move"
+        dest.mkdir(parents=True)
+        (dest / "task.md").write_text(
+            original.replace("当前目标:实现左右移动", "当前目标:另一份同身份任务"),
+            encoding="utf-8")
+        applied = mgs_records.apply_local_material_migration(
+            root, mgs_records.plan_local_material_migration(root),
+            confirmed=True)
+        paused = " ".join(str(item) for item in (applied.get("paused") or []))
+        check("01-move" in paused,
+              f"跨根重复身份必须暂停,实际 paused={applied.get('paused')}")
+        staging = Path(applied.get("pending_root") or "")
+        pending = staging / "docs/mygamestudio/work/01-move/task.md"
+        if pending.is_file():
+            text = pending.read_text(encoding="utf-8")
+            check("另一份同身份任务" not in text,
+                  "不得用后写的重复身份覆盖转换成果")
+
+
 def main() -> int:
     return run_theme(
         "issue #57 本地旧项目完整资料迁移",
@@ -699,6 +725,7 @@ def main() -> int:
             test_partial_rerun_conflict_missing_and_unpublished,
             test_deleted_source_during_prep_pauses_migration,
             test_colliding_version_numbers_keep_separate_snapshots,
+            test_duplicate_task_identity_across_roots_pauses,
             test_github_tracker_is_not_converted_here,
         ),
         FAILURES,

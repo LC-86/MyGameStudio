@@ -650,6 +650,195 @@ def test_colliding_version_numbers_keep_separate_github_snapshots() -> None:
               f"两个游戏版本必须有不碰撞的设计身份,实际 {ids}")
 
 
+def test_github_module_specs_are_converted() -> None:
+    """发现的专业模块规格必须各自转换,不能只用合成的 rules 冒充完整。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "star-catcher")
+        fake.issues.append({
+            "number": 40, "id": 1040, "title": "成长经济",
+            "body": (
+                "规格身份:economy。种类:模块规格。版本:v1。\n\n"
+                "## 当前规则与流程\n\n金币只用于试验商店,尚未采纳。\n"
+            ),
+            "labels": [], "assignees": [], "state": "open",
+            "state_reason": None, "html_url": "https://example.invalid/i/40",
+        })
+        fake.comments[40] = []
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        modules = [item for item in (plan.get("items") or [])
+                   if item.get("kind") == "spec" and item.get("role") == "module"]
+        check(any(item.get("identity") == "economy" for item in modules),
+              f"盘点必须包含专业模块规格,实际 {modules}")
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"转换应成功:{applied}")
+        converted = [
+            item for item in fake.issues
+            if "规格身份:economy" in (item.get("body") or "")
+            and "pending-switch" in (item.get("body") or "")
+        ]
+        check(converted, "专业模块规格必须有对应的待切换 Issue")
+        check(any("金币只用于试验商店" in (item.get("body") or "")
+                  for item in converted),
+              "模块原文必须进入转换成果,不得只合成 rules")
+
+
+def test_github_archive_issue_is_not_migrated_as_current_spec() -> None:
+    """归档快照里嵌套的规格身份不得把快照当成现行规格。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "star-catcher")
+        live = (
+            "规格身份:overall。种类:现行规格。版本:v2。\n\n"
+            "## 核心玩法\n\n现行只接金色星星。\n"
+        )
+        archive = "\n".join([
+            "# 正式版本设计快照 ds-old r1",
+            "快照身份:ds-old。修订:r1。种类:归档快照。不是现行规格。",
+            "游戏版本:v0",
+            "形成时间:2026-09-01",
+            "",
+            "## 整体设计(当时完整内容)",
+            "",
+            "```markdown",
+            "规格身份:overall。种类:现行规格。版本:v0。",
+            "",
+            "## 核心玩法",
+            "",
+            "最早版本用鼠标点击接星。",
+            "```",
+            "",
+        ])
+        fake.issues.insert(0, {
+            "number": 50, "id": 1050, "title": "归档快照",
+            "body": archive, "labels": [], "assignees": [],
+            "state": "open", "state_reason": None,
+            "html_url": "https://example.invalid/i/50",
+        })
+        fake.comments[50] = []
+        fake.issues.append({
+            "number": 51, "id": 1051, "title": "现行规格",
+            "body": live, "labels": [], "assignees": [],
+            "state": "open", "state_reason": None,
+            "html_url": "https://example.invalid/i/51",
+        })
+        fake.comments[51] = []
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        archive_plan = next(
+            item for item in (plan.get("items") or [])
+            if item.get("source") == "github:issue:50")
+        current_plan = next(
+            item for item in (plan.get("items") or [])
+            if item.get("source") == "github:issue:51")
+        check(archive_plan.get("role") == "historical",
+              f"归档快照必须标 historical,实际 {archive_plan}")
+        check(archive_plan.get("identity") == "ds-old",
+              f"归档身份必须来自快照身份,实际 {archive_plan.get('identity')}")
+        check(current_plan.get("role") == "current",
+              f"真实现行规格必须标 current,实际 {current_plan}")
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"转换应成功:{applied}")
+        pending_overall = [
+            item.get("body") or ""
+            for item in fake.issues
+            if "规格身份:overall" in (item.get("body") or "")
+            and "pending-switch" in (item.get("body") or "")
+            and "快照身份:" not in (item.get("body") or "").split("## 整体设计", 1)[0]
+        ]
+        check(any("现行只接金色星星" in text for text in pending_overall),
+              "现行规格必须来自真实现行 Issue")
+        check(not any("最早版本用鼠标点击接星" in text.split("## 整体设计", 1)[0]
+                      for text in pending_overall),
+              "归档正文不得被当成新的现行规格")
+
+
+def test_github_task_assignees_are_preserved() -> None:
+    """旧任务的原生负责人必须带到新 Issue,读回仍能看到认领。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "star-catcher")
+        jump = next(item for item in fake.issues
+                    if "任务身份:02-jump" in (item.get("body") or ""))
+        jump["assignees"] = [{"login": "agent-a"}]
+        cache = root / "docs/mygamestudio/records/cache"
+        applied = mgs_records.apply_github_material_migration(
+            root, mgs_records.plan_github_material_migration(
+                root, transport=fake, cache_dir=cache),
+            confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"转换应成功:{applied}")
+        pending = next(
+            item for item in fake.issues
+            if "任务身份:02-jump" in (item.get("body") or "")
+            and "pending-switch" in (item.get("body") or ""))
+        logins = [entry.get("login") for entry in (pending.get("assignees") or [])]
+        check("agent-a" in logins,
+              f"待切换任务必须保留原生负责人,实际 {pending.get('assignees')}")
+
+
+def test_github_assignee_write_failure_is_not_converted() -> None:
+    """负责人写入失败时不得留下无认领的待切换任务,也不能把该身份记成已转换。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "star-catcher")
+        jump = next(item for item in fake.issues
+                    if "任务身份:02-jump" in (item.get("body") or ""))
+        jump["assignees"] = [{"login": "agent-a"}]
+        fake.omit_create_assignees()
+        fake.http_error("PATCH", "/issues/", 403, body_contains='"assignees"')
+        cache = root / "docs/mygamestudio/records/cache"
+        applied = mgs_records.apply_github_material_migration(
+            root, mgs_records.plan_github_material_migration(
+                root, transport=fake, cache_dir=cache),
+            confirmed=True, transport=fake, cache_dir=cache)
+        pending = [
+            item for item in fake.issues
+            if "任务身份:02-jump" in (item.get("body") or "")
+            and "pending-switch" in (item.get("body") or "")
+            and item.get("state") != "closed"
+        ]
+        unclaimed = [
+            item for item in pending
+            if "agent-a" not in [
+                entry.get("login") for entry in (item.get("assignees") or [])]
+        ]
+        check(not unclaimed,
+              f"负责人未落地不得留下待切换任务:{pending}")
+        mapped = [
+            row for row in ((applied.get("correspondence") or {}).get("tasks") or [])
+            if row.get("identity") == "02-jump"
+        ]
+        check(not mapped,
+              f"负责人回读失败不得记入已转换对应关系:{mapped}")
+
+
+def test_github_pending_config_keeps_write_authorization() -> None:
+    """待切换 CONFIG 必须带上可解析的仓库级 issues-write 授权。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "star-catcher")
+        cache = root / "docs/mygamestudio/records/cache"
+        applied = mgs_records.apply_github_material_migration(
+            root, mgs_records.plan_github_material_migration(
+                root, transport=fake, cache_dir=cache),
+            confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"转换应成功:{applied}")
+        pending_cfg = Path(applied.get("pending_root") or "") / "docs/mygamestudio/CONFIG.md"
+        text = pending_cfg.read_text(encoding="utf-8") if pending_cfg.is_file() else ""
+        check("issues-write" in text,
+              "待切换 CONFIG 必须写出 issues-write 授权,不能只写沿用字样")
+        check("github.com/mygamestudio/issue-accept" in text,
+              "待切换授权必须含仓库坐标")
+        pending_config = mgs_records.load_config(Path(applied.get("pending_root") or ""))
+        check(pending_config.get("remote_write_authorized") is True,
+              f"切换前读待切换 CONFIG 必须仍视为已授权:{pending_config}")
+
+
 def test_migration_inventory_includes_issues_beyond_first_page() -> None:
     """T11: 超过一页的 GitHub Issue 都必须进入迁移清单,不能只盘点前 100 条。"""
 
@@ -677,6 +866,11 @@ def main() -> int:
             test_originals_config_gate_and_user_edits,
             test_partial_rerun_conflict_missing_unpublished_and_lost_response,
             test_colliding_version_numbers_keep_separate_github_snapshots,
+            test_github_module_specs_are_converted,
+            test_github_archive_issue_is_not_migrated_as_current_spec,
+            test_github_task_assignees_are_preserved,
+            test_github_assignee_write_failure_is_not_converted,
+            test_github_pending_config_keeps_write_authorization,
             test_migration_inventory_includes_issues_beyond_first_page,
             test_local_tracker_is_not_converted_here,
         ),

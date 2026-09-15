@@ -49,7 +49,9 @@ class FakeTransport:
         self.calls: list[tuple[str, str, dict | None]] = []
         self._fail: list[tuple[str, str, str]] = []   # (method, needle, kind)
         self._drop: list[tuple[str, str]] = []        # (method, needle)
+        self._http: list[tuple[str, str, int, str | None]] = []
         self._offline = False
+        self._omit_create_assignees = False
 
     # ----- 注入 -----
     def fail(self, method: str, needle: str, kind: str) -> None:
@@ -58,8 +60,22 @@ class FakeTransport:
     def drop(self, method: str, needle: str) -> None:
         self._drop.append((method, needle))
 
+    def http_error(self, method: str, needle: str, status: int,
+                   *, body_contains: str | None = None) -> None:
+        """Return an HTTP status tuple without mutating stand-in state.
+
+        Mirrors UrllibTransport: non-2xx answers are returned, not raised.
+        """
+
+        self._http.append((method, needle, status, body_contains))
+
     def offline(self) -> None:
         self._offline = True
+
+    def omit_create_assignees(self) -> None:
+        """Create-issue POST ignores assignees, matching hosts that assign only via PATCH."""
+
+        self._omit_create_assignees = True
 
     def _guard(self, method: str, path: str) -> None:
         if self._offline:
@@ -100,6 +116,12 @@ class FakeTransport:
         self.calls.append((method, path, body))  # 故障注入的调用也已真实发出
         self.auth_flags.append(auth)             # 可达探测应传 auth=False(不带凭据)
         self._guard(method, path)
+        payload_text = json.dumps(body, ensure_ascii=False) if body else ""
+        for fail_method, needle, status, body_contains in self._http:
+            if fail_method == method and needle in path:
+                if body_contains and body_contains not in payload_text:
+                    continue
+                return status, {"message": f"injected HTTP {status}"}
         query: dict[str, str] = {}
         if "?" in path:
             path, qs = path.split("?", 1)
@@ -185,7 +207,9 @@ class FakeTransport:
                         "timeout", "injected drop (blocked_by)")
                 return 201, {}
         if match and not rest:
-            issue = self.issues[number - 1]
+            issue = self._issue_by_number(number)
+            if issue is None:
+                return 404, {"message": f"stand-in has no issue {number}"}
             if method == "GET":
                 return 200, self._public_issue(issue)
             if method == "PATCH":
@@ -203,8 +227,10 @@ class FakeTransport:
                      "id": 1000 + len(self.issues) + 1,
                      "title": body["title"], "body": body["body"],
                      "labels": [{"name": name} for name in body.get("labels", [])],
-                     "assignees": [{"login": name}
-                                   for name in body.get("assignees", [])],
+                     "assignees": (
+                         [] if self._omit_create_assignees
+                         else [{"login": name}
+                               for name in body.get("assignees", [])]),
                      "state": "open", "state_reason": None,
                      "html_url": f"https://example.invalid/i/{len(self.issues) + 1}"}
             self.issues.append(issue)
@@ -222,6 +248,12 @@ class FakeTransport:
                 return item
         return None
 
+    def _issue_by_number(self, number: int | None) -> dict | None:
+        for item in self.issues:
+            if item.get("number") == number:
+                return item
+        return None
+
     def _public_issue(self, issue: dict) -> dict:
         """附带原生负责人、父子与开放阻塞摘要,供回读。"""
 
@@ -230,7 +262,7 @@ class FakeTransport:
             (parent for parent, children in self.sub_issues.items()
              if issue.get("id") in children),
             None)
-        parent = self.issues[parent_number - 1] if parent_number else None
+        parent = self._issue_by_number(parent_number) if parent_number else None
         open_blockers = 0
         for blocker_id in self.blocked_by.get(number, []):
             blocker = self._issue_by_id(blocker_id)

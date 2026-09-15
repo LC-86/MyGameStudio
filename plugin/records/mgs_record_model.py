@@ -281,6 +281,17 @@ def label_mapping_checks(labels: dict) -> list[dict]:
     ]
 
 
+def is_local_doc_path(path: str) -> bool:
+    """本地权威位置是仓库内文档路径;远端规格位置不按文件存在性核验。"""
+
+    text = (path or "").strip()
+    if not text:
+        return False
+    if any(mark in text for mark in ("GitHub", "规格 Issue", "github:")):
+        return False
+    return text.endswith(".md") or text.startswith("docs/")
+
+
 def docmap_checks(root, docmap: list[dict]) -> list[dict]:
     """核心文档映射:三类齐全、每类唯一当前维护位置且实际存在。"""
 
@@ -292,7 +303,8 @@ def docmap_checks(root, docmap: list[dict]) -> list[dict]:
     unique_ok = not duplicate_types and not duplicate_paths
     missing_paths = [row["path"] for row in
                      (grouped["goal"] + grouped["design"] + grouped["tech"])
-                     if not (root / row["path"]).is_file()]
+                     if is_local_doc_path(row["path"])
+                     and not (root / row["path"]).is_file()]
     return [
         check_item("docmap-core-rows", not core_missing,
                f"缺少核心文档行:{core_missing}" if core_missing

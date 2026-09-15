@@ -529,6 +529,34 @@ def _adopt_candidate(plugin: Path, evaluation: dict) -> dict:
         else:
             entry.pop("adaptation", None)
         by_path[rel] = entry
+        prefix = f"skills/{name}/"
+        live_rels = {rel}
+        for path in dest_dir.rglob("*"):
+            if not path.is_file():
+                continue
+            support_rel = str(path.relative_to(plugin)).replace("\\", "/")
+            live_rels.add(support_rel)
+            if support_rel == rel:
+                continue
+            try:
+                cand_rel = str(
+                    (skill_md.parent / path.relative_to(dest_dir)).relative_to(
+                        candidate))
+            except ValueError:
+                cand_rel = support_rel
+            support = dict(by_path.get(support_rel) or {
+                "path": support_rel,
+                "source": f"github.com/mattpocock/skills @ {sha} {cand_rel}",
+                "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+            })
+            support["path"] = support_rel
+            support["sha256"] = _sha256(path)
+            support["source"] = (
+                f"github.com/mattpocock/skills @ {sha} {cand_rel}")
+            by_path[support_rel] = support
+        for stale in list(by_path):
+            if stale.startswith(prefix) and stale not in live_rels:
+                del by_path[stale]
     material_decisions = evaluation.get("new_material_decisions") or {}
     for rel, decision in material_decisions.items():
         if decision != "include":

@@ -155,6 +155,65 @@ def test_github_onboard_then_create_and_query_one_task() -> None:
         check(first == _snapshot(root), "无缺口时重复接入不得改已有内容")
 
 
+def test_github_design_mapping_matches_remote_spec() -> None:
+    """远端规格采纳后,文档映射不得再把本地 GAME_DESIGN.md 报成缺失。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "remote-design")
+        (root / "docs/mygamestudio/TECH_DESIGN.md").write_text(
+            "# 技术约定\n\n基线版本:v1。纯 HTML/JS。\n", encoding="utf-8")
+        config = mgs_records.load_config(root)
+        design_rows = [
+            row for row in config.get("docmap") or []
+            if "游戏需求" in (row.get("content") or "")
+            or "游戏设计" in (row.get("content") or "")
+        ]
+        check(design_rows, "必须有游戏设计映射行")
+        check(all("GAME_DESIGN.md" not in (row.get("path") or "")
+                  for row in design_rows),
+              f"GitHub tracker 的设计权威位置必须是远端规格,实际 {design_rows}")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "overall": {
+                "title": "star-catcher 设计",
+                "version": "v1",
+                "core_play": "接星星。",
+                "rules": ["得分：每颗星星 1 分。"],
+            },
+        }, transport=fake, cache_dir=cache)
+        adopted = mgs_records.apply_spec_adoption(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(adopted.get("ok") is True, f"应能采纳远端规格:{adopted}")
+        status = mgs_records.status_report(
+            root, transport=fake, cache_dir=cache)
+        gaps = " ".join(str(item) for item in (status.get("gaps") or []))
+        check("GAME_DESIGN.md" not in gaps,
+              f"状态缺口不得再报本地 GAME_DESIGN.md:{gaps}")
+        verified = mgs_records.verify_project(
+            root, transport=fake, cache_dir=cache)
+        path_check = next(
+            (item for item in verified.get("checks") or []
+             if item.get("name") == "docmap-paths-exist"),
+            {})
+        check(path_check.get("ok") is True,
+              f"远端规格映射不得因本地文件缺失失败:{path_check}")
+        check("GAME_DESIGN.md" not in str(path_check.get("detail") or ""),
+              f"核验不得把 GAME_DESIGN.md 当缺失权威位置:{path_check}")
+        baseline = mgs_records.baseline_report(
+            root, transport=fake, cache_dir=cache)
+        design_docs = [
+            item for item in baseline.get("docs") or []
+            if "游戏需求" in (item.get("content") or "")
+            or "游戏设计" in (item.get("content") or "")
+        ]
+        check(design_docs and all(item.get("status") != "文件缺失"
+                                  for item in design_docs),
+              f"基线报告必须读到远端现行规格,实际 {design_docs}")
+
+
 def test_producer_and_matt_entries_read_stage_materials_after_github_onboard() -> None:
     """AC2/T2: 查询只读;游戏入口与 Matt 入口都能找到当前阶段资料。"""
 
@@ -674,6 +733,7 @@ def test_http_standin_lost_response_and_native_readback() -> None:
 
 TESTS = (
     test_github_onboard_then_create_and_query_one_task,
+    test_github_design_mapping_matches_remote_spec,
     test_producer_and_matt_entries_read_stage_materials_after_github_onboard,
     test_native_claim_frontier_parent_and_blocking,
     test_clearing_deps_and_parent_removes_native_relations,

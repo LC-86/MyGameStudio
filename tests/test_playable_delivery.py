@@ -343,6 +343,15 @@ def test_resources_together_versus_independent_file_and_in_game_checks() -> None
               "独立资源任务写入后必须仍可回读预览或播放")
         check((integrate_task.get("request") or {}).get("检查责任"),
               "接入任务写入后仍可回读检查责任")
+        check(file_ticket.get("identity") in str(
+            (integrate_task.get("request") or {}).get("依赖") or ""),
+              "游戏内接入任务必须依赖资源文件任务")
+        ready = mgs_records.startable_tasks(root)
+        startable_ids = {item.get("identity") for item in ready.get("startable") or []}
+        check(file_ticket.get("identity") in startable_ids,
+              "资源文件任务在依赖完成后应可开工")
+        check(game_ticket.get("identity") not in startable_ids,
+              "资源文件未完成时游戏内接入不得进入可开工集合")
 
 
 # --- AC4 / T13: existing tool, substitute, missing handoff -------------------

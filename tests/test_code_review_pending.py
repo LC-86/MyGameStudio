@@ -369,6 +369,33 @@ def test_rename_includes_old_and_new_paths() -> None:
               f"原路径删除必须被收集,实际 deleted={deleted}")
 
 
+def test_mode_only_change_is_complete_pending() -> None:
+    """只改可执行位时字节相同,仍须给出完整待审补丁,不能早退成未完成。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "mode-only"
+        repo.mkdir()
+        _git(repo, "init", "-b", "main")
+        _git(repo, "config", "user.email", "mode@example.test")
+        _git(repo, "config", "user.name", "Mode Fixture")
+        _write(repo, "src/tool.sh", "#!/bin/sh\necho hi\n")
+        _git(repo, "add", "src/tool.sh")
+        _git(repo, "commit", "-m", "baseline")
+        baseline = _head(repo)
+        (repo / "src" / "tool.sh").chmod(0o755)
+        captured = _run_capture(repo, baseline, include=["src"])
+        if not captured:
+            return
+        check(captured.get("complete") is True,
+              f"仅 mode 变化也必须是完整待审:{captured}")
+        patch = captured.get("patch") or ""
+        check("old mode" in patch and "new mode" in patch,
+              f"待审补丁必须包含 mode 变化,实际 {patch[:400]!r}")
+        versions = captured.get("path_versions") or {}
+        check("src/tool.sh" in versions,
+              f"path_versions 必须纳入 mode 变化文件,实际 {versions}")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_mixed_git_states_cover_scope_keep_unrelated_and_stay_readonly,
@@ -378,6 +405,7 @@ if __name__ == "__main__":
         test_binary_in_scope_is_captured_without_writing,
         test_quoted_non_ascii_paths_are_captured,
         test_rename_includes_old_and_new_paths,
+        test_mode_only_change_is_complete_pending,
     )
     raise SystemExit(run_theme(
         "完整待审成果双轴评审(#55 T8)", TESTS, FAILURES))

@@ -594,8 +594,18 @@ def apply_local_material_migration(project_root: Path | str,
     skipped = 0
 
     paused_ids = set()
+    identities = [
+        str(item.get("identity") or "")
+        for item in items if item.get("kind") == "task"]
+    duplicate_ids = {
+        ident for ident in identities if ident and identities.count(ident) > 1}
     runnable: list[dict] = []
     for item in items:
+        identity = str(item.get("identity") or "")
+        if item.get("kind") == "task" and identity in duplicate_ids:
+            paused.append(f"{item.get('kind')}:{identity}")
+            paused_ids.add(identity)
+            continue
         if _changed(root, item, fingerprints):
             paused.append(f"{item.get('kind')}:{item.get('identity') or item.get('source')}")
             if item.get("kind") in {"task", "result", "evidence"}:

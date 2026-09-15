@@ -32,7 +32,7 @@ from mgs_record_model import _parse_dep_ids  # noqa: E402
 from mgs_record_source import DEFAULT_CONFIG_REL, WRITE_OP, load_config  # noqa: E402
 from mgs_snapshot import (  # noqa: E402
     SNAPSHOT_HEADING, SNAPSHOT_MARK, _wrap_markdown_fence, design_ids_for_history)
-from mgs_spec import DISCUSSION_MARK, SPEC_MARK  # noqa: E402
+from mgs_spec import DISCUSSION_MARK, SPEC_MARK, _is_archive_snapshot  # noqa: E402
 
 PENDING_REL = "docs/mygamestudio/records/pending-switch"
 STATUS_NAME = "migration-status.json"
@@ -167,12 +167,20 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
             continue
         if SPEC_MARK in body or SNAPSHOT_MARK in body or DISCUSSION_MARK in body:
             identity = ""
-            match = re.search(r"规格身份\s*[:：]\s*([A-Za-z0-9_-]+)", body)
-            if match:
-                identity = match.group(1)
+            if _is_archive_snapshot(body):
+                match = re.search(r"快照身份\s*[:：]\s*([A-Za-z0-9_-]+)", body)
+                identity = match.group(1) if match else f"issue-{raw.get('number')}"
+                role = "historical"
+            else:
+                match = re.search(r"规格身份\s*[:：]\s*([A-Za-z0-9_-]+)", body)
+                if match:
+                    identity = match.group(1)
+                role = "current" if identity == "overall" else "module"
+                if not identity:
+                    identity = f"issue-{raw.get('number')}"
             items.append({
                 "kind": "spec",
-                "role": "current" if identity == "overall" else "module",
+                "role": role,
                 "identity": identity or f"issue-{raw.get('number')}",
                 "source": _issue_source(raw.get("number")),
                 "issue_number": raw.get("number"),
@@ -198,6 +206,7 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
             "triage": parsed.get("triage") or "",
             "state": parsed.get("state") or "open",
             "state_reason": parsed.get("state_reason"),
+            "assignees": list(parsed.get("assignees") or []),
             "fingerprint": _sha_text(body),
         })
         for comment in _list_comments(backend, parsed.get("issue_number")):
@@ -382,28 +391,78 @@ def _find_pending_issue(backend, needle: str) -> dict | None:
     return None
 
 
+def _issue_logins(issue: dict | None) -> set[str]:
+    found: set[str] = set()
+    for entry in (issue or {}).get("assignees") or []:
+        login = str(entry.get("login") if isinstance(entry, dict) else entry).strip()
+        if login:
+            found.add(login)
+    return found
+
+
 def _publish_issue(backend, *, title: str, body: str, needle: str,
-                   labels: list[str] | None = None) -> tuple[dict | None, bool]:
+                   labels: list[str] | None = None,
+                   assignees: list[str] | None = None) -> tuple[dict | None, bool]:
     existing = _find_pending_issue(backend, needle)
     if existing is not None:
-        return existing, True
-    payload: dict[str, Any] = {"title": title, "body": body}
-    if labels:
-        payload["labels"] = labels
-    try:
-        status, issue = backend.transport.request(
-            "POST", f"{repo_path(backend.repo)}/issues", payload)
-        if status not in (200, 201) or not isinstance(issue, dict):
-            raise TransportError("bad_response", f"create HTTP {status}")
-        return issue, False
-    except TransportError:
+        issue = existing
+        adopted = True
+    else:
+        payload: dict[str, Any] = {"title": title, "body": body}
+        if labels:
+            payload["labels"] = labels
+        if assignees:
+            payload["assignees"] = assignees
         try:
-            landed = _find_pending_issue(backend, needle)
+            status, issue = backend.transport.request(
+                "POST", f"{repo_path(backend.repo)}/issues", payload)
+            if status not in (200, 201) or not isinstance(issue, dict):
+                raise TransportError("bad_response", f"create HTTP {status}")
+            adopted = False
         except TransportError:
-            landed = None
-        if landed is not None:
-            return landed, True
-        return None, False
+            try:
+                landed = _find_pending_issue(backend, needle)
+            except TransportError:
+                landed = None
+            if landed is None:
+                return None, False
+            issue = landed
+            adopted = True
+    wanted = [str(login) for login in (assignees or []) if login]
+    if issue and wanted:
+        try:
+            status, patched = backend.transport.request(
+                "PATCH",
+                f"{repo_path(backend.repo)}/issues/{issue['number']}",
+                {"assignees": wanted})
+            if status in (200, 201) and isinstance(patched, dict):
+                issue = patched
+            else:
+                _status, reread = backend.transport.request(
+                    "GET",
+                    f"{repo_path(backend.repo)}/issues/{issue['number']}")
+                if isinstance(reread, dict):
+                    issue = reread
+        except TransportError:
+            try:
+                _status, reread = backend.transport.request(
+                    "GET",
+                    f"{repo_path(backend.repo)}/issues/{issue['number']}")
+                if isinstance(reread, dict):
+                    issue = reread
+            except TransportError:
+                issue = None
+        if _issue_logins(issue) < set(wanted):
+            if issue and not adopted:
+                try:
+                    backend.transport.request(
+                        "PATCH",
+                        f"{repo_path(backend.repo)}/issues/{issue['number']}",
+                        {"state": "closed", "state_reason": "not_planned"})
+                except TransportError:
+                    pass
+            return None, False
+    return issue, adopted
 
 
 def _publish_comment(backend, number: int, needle: str,
@@ -519,6 +578,11 @@ def _changed(root: Path, item: dict, fingerprints: dict[str, str],
 
 def _render_pending_config(config: dict) -> str:
     repo = config.get("task_root") or ""
+    external = str(config.get("external") or "").strip()
+    if WRITE_OP not in external and config.get("remote_write_authorized"):
+        external = f"{repo}:{WRITE_OP}(GitHub 旧项目资料迁移沿用现行授权)"
+    if not external:
+        external = "无"
     return f"""# 待切换协作配置
 
 维护责任:制作统筹。配置版本:v1。采用依据:GitHub 旧项目完整资料迁移(待切换)。
@@ -528,7 +592,7 @@ def _render_pending_config(config: dict) -> str:
 - 后端:github-issues
 - 当前位置:{repo}
 - 任务读取规则:GitHub Issues 后端约定(Issue 正文承载任务说明,评论承载结果)
-- 外部连接引用及已确认操作范围:沿用现行 CONFIG 授权
+- 外部连接引用及已确认操作范围:{external}
 - 状态:pending-switch。旧 GitHub 资料仍为项目现行来源;本成果不是现行指针。
 
 ## 标签映射
@@ -583,6 +647,23 @@ def _convert_gate(root: Path, staging: Path) -> dict:
     wrote = _write(staging / GATE_HISTORY_REL, text)
     return {"kind": "gate-history", "new": GATE_HISTORY_REL, "wrote": wrote,
             "text": text}
+
+
+def _read_item_body(root: Path, backend, item: dict) -> str:
+    source = str(item.get("source") or "")
+    if source.startswith("github:") or item.get("issue_number"):
+        number = item.get("issue_number")
+        if not number and source.startswith("github:issue:"):
+            number = int(source.rsplit(":", 1)[-1])
+        if number:
+            try:
+                _status, raw = backend.transport.request(
+                    "GET", f"{repo_path(backend.repo)}/issues/{number}")
+            except TransportError:
+                return ""
+            return (raw or {}).get("body") or ""
+        return ""
+    return _read(root / source)
 
 
 def _snapshot_body(item: dict, body: str, *, design_id: str) -> str:
@@ -671,6 +752,7 @@ def apply_github_material_migration(project_root: Path | str,
     specs = [item for item in runnable if item.get("kind") == "spec"]
     historical = [item for item in specs if item.get("role") == "historical"]
     current_specs = [item for item in specs if item.get("role") == "current"]
+    module_specs = [item for item in specs if item.get("role") == "module"]
     decisions = [item for item in runnable if item.get("kind") == "decision"]
     tasks = [item for item in runnable if item.get("kind") == "task"]
     results = [item for item in runnable if item.get("kind") == "result"]
@@ -680,12 +762,7 @@ def apply_github_material_migration(project_root: Path | str,
     design_ids = design_ids_for_history(historical)
     if current_specs:
         item = current_specs[0]
-        source_body = _read(root / item["source"]) if not str(
-            item.get("source") or "").startswith("github:") else ""
-        if not source_body and item.get("issue_number"):
-            _status, raw = backend.transport.request(
-                "GET", f"{repo_path(backend.repo)}/issues/{item['issue_number']}")
-            source_body = (raw or {}).get("body") or ""
+        source_body = _read_item_body(root, backend, item)
         version = item.get("version") or _field(source_body, "基线版本") or "v1"
         marked = _ensure_spec_mark(source_body, "overall", version, "现行规格")
         rules = _section(source_body, "当前规则与流程")
@@ -715,23 +792,49 @@ def apply_github_material_migration(project_root: Path | str,
             })
             created += int(not adopted)
             skipped += int(adopted)
-        module_issue, adopted = _publish_issue(
-            backend, title="规则与数值", body=module_body,
-            needle=f"{SPEC_MARK}rules")
-        if module_issue:
+        has_rules = any(
+            str(row.get("identity") or "") in {"rules", "规则与数值"}
+            for row in module_specs)
+        if not has_rules:
+            module_issue, adopted = _publish_issue(
+                backend, title="规则与数值", body=module_body,
+                needle=f"{SPEC_MARK}rules")
+            if module_issue:
+                converted.append({
+                    "kind": "spec", "old": item.get("source"),
+                    "new_issue": module_issue.get("number"),
+                    "identity": "rules", "wrote": not adopted,
+                })
+                created += int(not adopted)
+                skipped += int(adopted)
+
+    for item in module_specs:
+        identity = str(item.get("identity") or "")
+        source_body = _read_item_body(root, backend, item)
+        version = item.get("version") or _field(source_body, "基线版本") or "v1"
+        marked = _ensure_spec_mark(
+            source_body, identity or "module", version, "模块规格")
+        issue, adopted = _publish_issue(
+            backend, title=item.get("title") or identity,
+            body=marked, needle=f"{SPEC_MARK}{identity}")
+        if issue:
             converted.append({
                 "kind": "spec", "old": item.get("source"),
-                "new_issue": module_issue.get("number"),
-                "identity": "rules", "wrote": not adopted,
+                "new_issue": issue.get("number"),
+                "identity": identity, "wrote": not adopted,
             })
             created += int(not adopted)
             skipped += int(adopted)
 
     for index, item in enumerate(historical):
-        body = _read(root / item["source"])
-        version = item.get("version") or "v1"
-        design_id = design_ids[index]
-        snap_body = _snapshot_body(item, body, design_id=design_id)
+        body = _read_item_body(root, backend, item)
+        version = item.get("version") or _field(body, "基线版本") or "v1"
+        design_id = item.get("identity") if str(
+            item.get("identity") or "").startswith("ds-") else design_ids[index]
+        if _is_archive_snapshot(body):
+            snap_body = _with_pending(body)
+        else:
+            snap_body = _snapshot_body(item, body, design_id=design_id)
         issue, adopted = _publish_issue(
             backend, title=f"{SNAPSHOT_HEADING} {design_id} r1",
             body=snap_body, needle=f"{SNAPSHOT_MARK}{design_id}")
@@ -810,10 +913,14 @@ def apply_github_material_migration(project_root: Path | str,
             parsed.get("progress") or item.get("progress") or "待执行",
             request, index=index_text, changes=[change]))
         triage = parsed.get("triage") or item.get("triage") or "needs-triage"
+        parsed_issue = parse_issue_payload(raw, labels) if isinstance(raw, dict) else {}
+        assignees = [str(login) for login in (
+            item.get("assignees") or parsed_issue.get("assignees") or []) if login]
         issue, adopted = _publish_issue(
             backend, title=parsed.get("title") or identity, body=body,
             needle=f"任务身份:{identity}",
-            labels=[labels.get(triage, triage)])
+            labels=[labels.get(triage, triage)],
+            assignees=assignees)
         if not issue:
             continue
         if (item.get("state") or parsed.get("state")) == "closed":

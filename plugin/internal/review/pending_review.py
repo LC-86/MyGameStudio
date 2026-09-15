@@ -109,6 +109,34 @@ def _name_status(repo: Path, *rev_args: str) -> list[tuple[str, str]]:
     return rows
 
 
+def _ls_tree_mode(repo: Path, rev: str, rel: str) -> str | None:
+    result = _git(repo, "ls-tree", rev, "--", rel)
+    if result.returncode != 0:
+        return None
+    lines = (result.stdout or "").splitlines()
+    if not lines:
+        return None
+    return lines[0].split(None, 1)[0]
+
+
+def _worktree_mode(repo: Path, rel: str) -> str | None:
+    path = repo / rel
+    if not path.is_file():
+        return None
+    executable = bool(path.stat().st_mode & 0o111)
+    return "100755" if executable else "100644"
+
+
+def _mode_hunk(rel: str, before_mode: str | None, after_mode: str | None) -> str:
+    if not before_mode or not after_mode or before_mode == after_mode:
+        return ""
+    return (
+        f"diff --git a/{rel} b/{rel}\n"
+        f"old mode {before_mode}\n"
+        f"new mode {after_mode}\n"
+    )
+
+
 def _sha_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -225,6 +253,13 @@ def capture_pending_review(repo: Path | str, baseline: str,
         exists, _payload = _file_bytes(repo, path)
         if not exists and _git_has(repo, f"HEAD:{path}"):
             deleted.add(path)
+    listed = _git(repo, "ls-files", "-z", "--", *include)
+    for raw in (listed.stdout or "").split("\0"):
+        path = _norm(raw)
+        if not path or not _in_scope(path, include, exclude):
+            continue
+        if _ls_tree_mode(repo, baseline_sha, path) != _worktree_mode(repo, path):
+            pending_paths.add(path)
     patches: list[str] = []
     version_rows: list[str] = [f"baseline={baseline_sha}"]
     path_versions: dict[str, str] = {}
@@ -233,9 +268,20 @@ def capture_pending_review(repo: Path | str, baseline: str,
         exists, after = _file_bytes(repo, path)
         current = after if exists else None
         hunk = _unified_bytes(path, before, current)
+        before_mode = _ls_tree_mode(repo, baseline_sha, path)
+        after_mode = _worktree_mode(repo, path) if exists else None
+        mode_hunk = _mode_hunk(path, before_mode, after_mode)
+        if mode_hunk and hunk:
+            hunk = mode_hunk + hunk
+        elif mode_hunk:
+            hunk = mode_hunk
         if hunk:
             patches.append(hunk)
         marker = "DEL" if not exists else _sha_bytes(after or b"")
+        if after_mode:
+            marker = f"{marker}|{after_mode}"
+        elif before_mode:
+            marker = f"{marker}|{before_mode}"
         path_versions[path] = marker
         version_rows.append(f"{path}\t{marker}")
     patch = "".join(patches)

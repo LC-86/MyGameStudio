@@ -512,6 +512,17 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
     }
 
 
+def _client_complete(plan: dict, skills: dict, unready: list) -> bool:
+    if unready:
+        return False
+    requested = bool(str(plan.get("client_home") or "").strip()
+                     or str(plan.get("package_root") or "").strip())
+    if not requested:
+        return True
+    return bool(skills.get("switched_skills")) and not list(
+        skills.get("paused") or [])
+
+
 def _switch_local(root: Path, plan: dict) -> dict:
     staging = _pending_root(root)
     if not (staging / "docs/mygamestudio/CONFIG.md").is_file():
@@ -546,7 +557,7 @@ def _switch_local(root: Path, plan: dict) -> dict:
         "gate_as_permission": False,
         "real_migration_authorized": False,
         "recovery_destination": GATE_HISTORY_REL,
-        "client_complete": not unready,
+        "client_complete": _client_complete(plan, skills, unready),
         "unready_projects": unready,
         "paused_skills": skills.get("paused") or [],
         "developer_decisions": skills.get("developer_decisions") or [],
@@ -565,7 +576,7 @@ def _switch_local(root: Path, plan: dict) -> dict:
         "real_migration_authorized": False,
         "recovery_destination": GATE_HISTORY_REL,
         "correspondence": correspondence,
-        "client_complete": not unready,
+        "client_complete": _client_complete(plan, skills, unready),
         "unready_projects": unready,
         "paused": list(skills.get("paused") or []),
         "developer_decisions": list(skills.get("developer_decisions") or []),
@@ -673,7 +684,7 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         "gate_as_permission": False,
         "real_migration_authorized": False,
         "recovery_destination": GATE_HISTORY_REL,
-        "client_complete": not unready,
+        "client_complete": _client_complete(plan, skills, unready),
         "unready_projects": unready,
         "paused_skills": skills.get("paused") or [],
         "developer_decisions": skills.get("developer_decisions") or [],
@@ -694,7 +705,7 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         "real_migration_authorized": False,
         "recovery_destination": GATE_HISTORY_REL,
         "correspondence": correspondence,
-        "client_complete": not unready,
+        "client_complete": _client_complete(plan, skills, unready),
         "unready_projects": unready,
         "paused": list(skills.get("paused") or []),
         "developer_decisions": list(skills.get("developer_decisions") or []),

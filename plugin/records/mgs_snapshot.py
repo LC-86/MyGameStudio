@@ -72,6 +72,15 @@ def _source_fingerprint(current: dict) -> str:
     return _sha("\n".join(parts))
 
 
+def _next_revision(existing: list[dict]) -> str:
+    numbers = []
+    for item in existing:
+        match = re.match(r"r(\d+)$", str(item.get("revision") or ""))
+        if match:
+            numbers.append(int(match.group(1)))
+    return f"r{(max(numbers) + 1) if numbers else 1}"
+
+
 def _next_design_id(existing: list[dict]) -> str:
     numbers = []
     for item in existing:
@@ -81,8 +90,19 @@ def _next_design_id(existing: list[dict]) -> str:
     return f"ds-{(max(numbers) + 1) if numbers else 1}"
 
 
+def _attachment_rel(rel: str) -> str:
+    parts = []
+    for part in Path(str(rel or "")).parts:
+        if part in (".", ""):
+            continue
+        if part == "..":
+            continue
+        parts.append(part)
+    return "/".join(parts) if parts else "attachment"
+
+
 def _attachment_name(rel: str) -> str:
-    return Path(rel).name or "attachment"
+    return _attachment_rel(rel)
 
 
 def _read_attachment(root: Path, rel: str) -> tuple[str | None, str]:
@@ -154,7 +174,7 @@ def plan_design_snapshot(project_root: Path | str, request: dict,
     if correction:
         base = str(request.get("design_id") or "")
         prev = [item for item in existing if item.get("design_id") == base]
-        revision = f"r{len(prev) + 1}" if prev else "r1"
+        revision = _next_revision(prev)
         design_id = base or design_id
     else:
         revision = "r1"
@@ -263,9 +283,10 @@ def _load_local_revision(root: Path, design_id: str, rev_dir: Path) -> dict | No
     attachments: dict[str, str] = {}
     attach_root = rev_dir / "attachments"
     if attach_root.is_dir():
-        for path in sorted(attach_root.iterdir()):
+        for path in sorted(attach_root.rglob("*")):
             if path.is_file():
-                attachments[path.name] = path.read_text(encoding="utf-8")
+                attachments[str(path.relative_to(attach_root))] = (
+                    path.read_text(encoding="utf-8"))
     meta = ""
     meta_path = rev_dir / "meta.md"
     if meta_path.is_file():
@@ -371,6 +392,21 @@ def _missing_module_refs(root: Path, overall: str, modules: dict) -> list[str]:
     return missing
 
 
+def _collect_attachments(root: Path, plan: dict) -> tuple[dict[str, str] | None, str]:
+    attachments: dict[str, str] = {}
+    seen: dict[str, str] = {}
+    for rel in plan.get("attachments") or []:
+        key = _attachment_rel(rel)
+        if key in seen and seen[key] != rel:
+            return None, f"附件路径碰撞:{seen[key]} 与 {rel}"
+        seen[key] = rel
+        text, err = _read_attachment(root, rel)
+        if err:
+            return None, err
+        attachments[key] = text or ""
+    return attachments, ""
+
+
 def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
                           config_rel: str) -> dict:
     current = mgs_spec.read_current_design(root, config_rel)
@@ -380,6 +416,13 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
     revision = str(plan.get("revision") or "r1")
     rev_dir = root / SNAPSHOT_DIR / design_id / revision
     existing = rev_dir.is_dir() and (rev_dir / "overall.md").is_file()
+    if existing and plan.get("correction"):
+        return {
+            "ok": False, "wrote": False, "complete": False,
+            "reason": f"修订 {revision} 已占用,不得覆盖",
+            "design_id": design_id, "revision": revision,
+            "gate_required": False,
+        }
     if existing and not plan.get("correction"):
         if _revision_is_complete(rev_dir, plan):
             _ensure_overall_index(root, config, plan, rev_dir)
@@ -395,16 +438,13 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
         saved_overall = (rev_dir / "overall.md").read_text(encoding="utf-8")
         source_ok = (not expected or expected == actual) and saved_overall == overall
         if source_ok:
-            attachments = {}
-            for rel in plan.get("attachments") or []:
-                text, err = _read_attachment(root, rel)
-                if err:
-                    return {
-                        "ok": False, "wrote": True, "complete": False,
-                        "reason": err, "gate_required": False,
-                        "design_id": design_id, "revision": revision,
-                    }
-                attachments[_attachment_name(rel)] = text or ""
+            attachments, err = _collect_attachments(root, plan)
+            if err:
+                return {
+                    "ok": False, "wrote": True, "complete": False,
+                    "reason": err, "gate_required": False,
+                    "design_id": design_id, "revision": revision,
+                }
             _fill_local_gaps(root, rev_dir, overall, modules, attachments)
             meta_path = rev_dir / "meta.md"
             meta_text = meta_path.read_text(encoding="utf-8") if meta_path.is_file() else ""
@@ -442,15 +482,12 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
             "reason": f"缺模块:{', '.join(missing_refs)}",
             "gate_required": False,
         }
-    attachments: dict[str, str] = {}
-    for rel in plan.get("attachments") or []:
-        text, err = _read_attachment(root, rel)
-        if err:
-            return {
-                "ok": False, "wrote": False, "complete": False,
-                "reason": err, "gate_required": False,
-            }
-        attachments[_attachment_name(rel)] = text or ""
+    attachments, err = _collect_attachments(root, plan)
+    if err:
+        return {
+            "ok": False, "wrote": False, "complete": False,
+            "reason": err, "gate_required": False,
+        }
     rev_dir.mkdir(parents=True, exist_ok=True)
     formed = today()
     writes = {
@@ -492,7 +529,7 @@ def _revision_is_complete(rev_dir: Path, plan: dict) -> bool:
     if not meta.is_file() or not _meta_field(meta.read_text(encoding="utf-8"), "形成时间"):
         return False
     for rel in plan.get("attachments") or []:
-        if not (rev_dir / "attachments" / _attachment_name(rel)).is_file():
+        if not (rev_dir / "attachments" / _attachment_rel(rel)).is_file():
             return False
     return True
 
@@ -669,6 +706,15 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
         config, transport=transport, api_base=api_base, cache_dir=cache_dir)
     existing = _find_github_revision(
         backend, plan.get("design_id"), plan.get("revision"))
+    if existing is not None and plan.get("correction"):
+        return {
+            "ok": False, "wrote": False, "complete": False,
+            "reason": f"修订 {plan.get('revision')} 已占用,不得覆盖",
+            "design_id": plan.get("design_id"),
+            "revision": plan.get("revision"),
+            "issue_number": existing.get("number"),
+            "gate_required": False,
+        }
     if existing is not None and not plan.get("correction"):
         number = existing.get("number")
         body_text = existing.get("body") or ""
@@ -686,18 +732,15 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
                     "issue_number": number,
                     "gate_required": False,
                 }
-            attachments = {}
-            for rel in plan.get("attachments") or []:
-                text, err = _read_attachment(root, rel)
-                if err:
-                    return {
-                        "ok": False, "wrote": True, "complete": False,
-                        "reason": err, "gate_required": False,
-                        "design_id": plan.get("design_id"),
-                        "revision": plan.get("revision"),
-                        "issue_number": number,
-                    }
-                attachments[_attachment_name(rel)] = text or ""
+            attachments, err = _collect_attachments(root, plan)
+            if err:
+                return {
+                    "ok": False, "wrote": True, "complete": False,
+                    "reason": err, "gate_required": False,
+                    "design_id": plan.get("design_id"),
+                    "revision": plan.get("revision"),
+                    "issue_number": number,
+                }
             body = _render_github_body(
                 plan, current.get("overall") or "",
                 dict(current.get("modules") or {}), attachments,
@@ -745,15 +788,12 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
             "reason": f"缺模块:{', '.join(missing_refs)}",
             "gate_required": False,
         }
-    attachments: dict[str, str] = {}
-    for rel in plan.get("attachments") or []:
-        text, err = _read_attachment(root, rel)
-        if err:
-            return {
-                "ok": False, "wrote": False, "complete": False,
-                "reason": err, "gate_required": False,
-            }
-        attachments[_attachment_name(rel)] = text or ""
+    attachments, err = _collect_attachments(root, plan)
+    if err:
+        return {
+            "ok": False, "wrote": False, "complete": False,
+            "reason": err, "gate_required": False,
+        }
     body = _render_github_body(
         plan, overall, modules, attachments, formed_at=today())
     title = (f"{SNAPSHOT_HEADING} {plan.get('design_id')} "
@@ -908,10 +948,19 @@ def _associate_github_version(root, config, plan, *, transport, api_base,
                 r"发布\s*[:：]\s*.+",
                 f"发布:{plan.get('release')}", body, count=1)
         try:
-            backend.transport.request(
+            status, _payload = backend.transport.request(
                 "PATCH",
                 f"{mgs_spec.repo_path(backend.repo)}/issues/{match['number']}",
                 {"body": body})
+            if status not in (200, 201):
+                raise mgs_spec.TransportError(
+                    "bad_response", f"associate snapshot HTTP {status}")
+            back = backend.transport.request(
+                "GET",
+                f"{mgs_spec.repo_path(backend.repo)}/issues/{match['number']}")[1]
+            if (back or {}).get("body") != body:
+                raise mgs_spec.TransportError(
+                    "bad_response", "associate snapshot 回读失败")
         except mgs_spec.TransportError as exc:
             draft = mgs_spec._draft(
                 backend, "apply_design_snapshot",

@@ -4,7 +4,7 @@
     "name": "mygamestudio",
     "version": "2.0.0",
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "sha256": "c43875e79f780ebd4eb0f2db9f7a6f1e36929ebb652f3ec9fe936d85517f6339"
+    "sha256": "1fc45ba9f217daee437fe0c727d362b5a191823a6766f0000940f474371f2873"
   },
   "upstream": {
     "name": "mattpocock/skills",
@@ -26,7 +26,7 @@
   "package_consistency": {
     "passed": true,
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "tarball_sha256": "c43875e79f780ebd4eb0f2db9f7a6f1e36929ebb652f3ec9fe936d85517f6339",
+    "tarball_sha256": "1fc45ba9f217daee437fe0c727d362b5a191823a6766f0000940f474371f2873",
     "missing": [],
     "mismatches": []
   },
@@ -76,8 +76,8 @@
     "created_commit": false,
     "excluded_unrelated": true,
     "axes_share_content_version": true,
-    "content_version": "2e5c1917832e124fc00991fb1439e19dd3d75dd89833a8dfd6c472f4b74bf55e",
-    "baseline": "a3a44783e5d34ef7644a5fa50c4bf10dac4673aa",
+    "content_version": "89e169393a7e9990d98440f79fb05c96f996139ae9dfc1c7ddcfdd4d92c71fc9",
+    "baseline": "ea3d8b9debc181326bac6f650f40fe2f77475af1",
     "gate_required": false
   },
   "technical_behaviors": [

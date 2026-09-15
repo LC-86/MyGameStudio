@@ -431,6 +431,46 @@ def test_concurrent_same_sha_updates_keep_overlap_artifact() -> None:
               "不得把两次更新混写成一份正文")
 
 
+def test_local_task_identity_cannot_escape_task_root() -> None:
+    """T4: 除 create 外的本地操作也必须校验任务身份,绝对路径或穿越
+    不得读写任务根之外的文件。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "escape"
+        (root / "src").mkdir(parents=True)
+        (root / "src" / "main.js").write_text("ok\n", encoding="utf-8")
+        mgs_records.apply_local_onboarding(
+            root, mgs_records.plan_local_onboarding(root), confirmed=True)
+        mgs_records.create_task(
+            root, "01-alpha", "甲",
+            {"当前目标": "合法任务", "完成标准": "可回读",
+             "执行责任": "Agent(制作实现)"},
+            triage="ready-for-agent")
+        victim = Path(tmp) / "victim"
+        victim.mkdir()
+        victim_task = victim / "task.md"
+        victim_task.write_text("不得覆盖\n", encoding="utf-8")
+        try:
+            mgs_records.update_task(
+                root, str(victim), {"当前目标": "越权写入"})
+        except mgs_records.RecordsError:
+            pass
+        else:
+            check(False, "绝对路径身份必须拒绝")
+        check(victim_task.read_text(encoding="utf-8") == "不得覆盖\n",
+              "越权身份不得改写任务根之外的文件")
+        try:
+            mgs_records.read_task(root, "../../victim")
+        except mgs_records.RecordsError:
+            pass
+        else:
+            check(False, "穿越身份必须拒绝")
+        original = mgs_records.read_task(root, "01-alpha")
+        check(original.get("identity") == "01-alpha",
+              "合法身份仍应可读")
+
+
 def test_cli_onboard_status_and_create_without_gate() -> None:
     """AC5: 正常接入、记录与只读查询可通过 CLI 外部行为检查。"""
 
@@ -469,6 +509,7 @@ TESTS = (
     test_producer_status_is_readonly_and_matt_entries_find_stage_materials,
     test_no_gate_overlap_cancel_and_interrupt_keep_results,
     test_concurrent_same_sha_updates_keep_overlap_artifact,
+    test_local_task_identity_cannot_escape_task_root,
     test_cli_onboard_status_and_create_without_gate,
 )
 

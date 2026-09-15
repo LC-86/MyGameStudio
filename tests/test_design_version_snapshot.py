@@ -639,6 +639,135 @@ def test_interrupted_snapshot_does_not_mix_source_revisions() -> None:
                   "宣称完整前必须有形成时间") if resumed.get("complete") else None
 
 
+def test_same_basename_attachments_keep_distinct_paths() -> None:
+    """同名附件必须按相对路径分别保存,不得互相覆盖后仍宣称完整。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "star-catcher")
+        art = root / "docs/mygamestudio/design/art/config.md"
+        levels = root / "docs/mygamestudio/design/levels/config.md"
+        art.parent.mkdir(parents=True, exist_ok=True)
+        levels.parent.mkdir(parents=True, exist_ok=True)
+        art.write_text("美术配置\n", encoding="utf-8")
+        levels.write_text("关卡配置\n", encoding="utf-8")
+        applied = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+            "attachments": [
+                "docs/mygamestudio/design/art/config.md",
+                "docs/mygamestudio/design/levels/config.md",
+            ],
+        }), confirmed=True)
+        check(applied.get("ok") is True and applied.get("complete") is True,
+              f"不碰撞的附件应完整归档:{applied}")
+        listed = mgs_records.read_design_snapshots(root)
+        attachments = (listed.get("snapshots") or [{}])[0].get("attachments") or {}
+        blob = "\n".join(attachments.values()) if isinstance(attachments, dict) else str(attachments)
+        names = " ".join(attachments.keys()) if isinstance(attachments, dict) else str(attachments)
+        check("美术配置" in blob, "美术附件内容必须保留")
+        check("关卡配置" in blob, "关卡附件内容必须保留,不得被同名文件覆盖")
+        check("art" in names and "levels" in names,
+              f"附件必须保留相对路径以区分同名文件,实际 {names}")
+
+
+def test_correction_revision_uses_highest_existing_number() -> None:
+    """修正修订必须取现有 rN 的最大值加一,不得覆盖中间缺口中的已占用修订。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "star-catcher")
+        first = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+            "attachments": ["docs/mygamestudio/design/loop-chart.md"],
+        }), confirmed=True)
+        design_id = first.get("design_id")
+        r3 = (root / "docs/mygamestudio/records/design-snapshots"
+              / str(design_id) / "r3")
+        r3.mkdir(parents=True, exist_ok=True)
+        (r3 / "overall.md").write_text("已占用的 r3 正文\n", encoding="utf-8")
+        (r3 / "meta.md").write_text(
+            f"快照身份:{design_id}。修订:r3。形成时间:2026-09-01。\n",
+            encoding="utf-8")
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "正式改为 3 分",
+            "overall": {
+                "title": "star-catcher：当前游戏需求与设计",
+                "version": "v2",
+                "core_play": "接到一颗得 3 分。",
+                "rules": ["得分：每颗星星 3 分。"],
+            },
+        })
+        mgs_records.apply_spec_adoption(root, plan, confirmed=True)
+        corrected_plan = mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "correction": True,
+            "design_id": design_id,
+            "game_version": "0.1.1",
+            "source": "修正快照",
+            "reason": "补记录形成时间",
+            "attachments": ["docs/mygamestudio/design/loop-chart.md"],
+        })
+        check(corrected_plan.get("revision") != "r3",
+              f"有 r1 与 r3 时修正不得再分配 r3,实际 {corrected_plan.get('revision')}")
+        applied = mgs_records.apply_design_snapshot(
+            root, corrected_plan, confirmed=True)
+        check(applied.get("ok") is True, f"新修订应另存:{applied}")
+        check((r3 / "overall.md").read_text(encoding="utf-8") == "已占用的 r3 正文\n",
+              "已占用修订目录不得被覆盖")
+
+
+def test_github_snapshot_association_http_error_is_not_complete() -> None:
+    """复用快照时 PATCH 失败不得在索引已在时仍宣称关联成功。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "assoc")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        spec_plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "overall": {
+                "title": "assoc 整体设计",
+                "version": "v1",
+                "core_play": "接星星。",
+                "rules": ["得分：每颗星星 1 分。"],
+            },
+            "modules": {
+                "规则与数值": {"title": "规则与数值", "rules": ["每颗星星 1 分。"]},
+            },
+        }, transport=fake, cache_dir=cache)
+        mgs_records.apply_spec_adoption(
+            root, spec_plan, confirmed=True, transport=fake, cache_dir=cache)
+        first = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "game_version": "0.1.0",
+            "source": "开发者明确要求",
+        }, transport=fake, cache_dir=cache), confirmed=True,
+            transport=fake, cache_dir=cache)
+        check(first.get("complete") is True, f"首次归档应完整:{first}")
+        snap = next(item for item in fake.issues
+                    if "快照身份:" in (item.get("body") or ""))
+        before = snap.get("body") or ""
+        fake.http_error("PATCH", f"/issues/{snap['number']}", 500)
+        reused = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "reuse_design_id": first.get("design_id"),
+            "game_version": "0.2.0",
+            "source": "复用设计",
+        }, transport=fake, cache_dir=cache), confirmed=True,
+            transport=fake, cache_dir=cache)
+        check(reused.get("ok") is not True or reused.get("complete") is not True,
+              f"关联 PATCH 失败不得宣称完整:{reused}")
+        after = next(item for item in fake.issues
+                     if item.get("number") == snap["number"]).get("body") or ""
+        check("0.2.0" not in after or after == before,
+              "失败的版本关联不得被当成已经写入")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_version_freeze_archives_full_content_daily_does_not,
@@ -648,6 +777,9 @@ if __name__ == "__main__":
         test_github_snapshot_keeps_inner_markdown_fences,
         test_interrupt_and_source_change_do_not_claim_complete_archive,
         test_interrupted_snapshot_does_not_mix_source_revisions,
+        test_same_basename_attachments_keep_distinct_paths,
+        test_correction_revision_uses_highest_existing_number,
+        test_github_snapshot_association_http_error_is_not_complete,
     )
     raise SystemExit(run_theme(
         "正式版本设计快照(#54 T6/T7)", TESTS, FAILURES))

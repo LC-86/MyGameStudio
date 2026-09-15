@@ -280,15 +280,17 @@ def _fill(template: str, mapping: dict[str, str]) -> str:
     return text
 
 
-def _unique_docmap(content: str) -> str:
+def _unique_docmap(content: str, *, backend: str = "local-markdown") -> str:
     """现行规格、任务与结果各有唯一位置(D5)。"""
 
-    table = """## 文档映射
+    design = ("GitHub 规格 Issue" if backend == "github-issues"
+              else "docs/mygamestudio/GAME_DESIGN.md")
+    table = f"""## 文档映射
 
 | 内容 | 当前权威位置 | 维护角色 |
 | --- | --- | --- |
 | 项目目标与范围 | docs/mygamestudio/PROJECT.md | 制作统筹 |
-| 游戏需求与设计 | docs/mygamestudio/GAME_DESIGN.md | 方案设计 |
+| 游戏需求与设计 | {design} | 方案设计 |
 | 技术设计 | docs/mygamestudio/TECH_DESIGN.md | 制作实现 |
 | 术语、ADR 与历史 | docs/mygamestudio/records/ | 对应专业角色 |
 | 成果与证据 | docs/mygamestudio/evidence/ | 对应执行者 |
@@ -472,7 +474,7 @@ def _github_mapping(root: Path, plan: dict) -> dict[str, str]:
         "已有配置引用或位置": "docs/mygamestudio/records/",
         "项目约定位置": PROJECT_REL,
         "协作配置位置": CONFIG_REL,
-        "当前游戏设计位置": "docs/mygamestudio/GAME_DESIGN.md(尚未建立则见 INDEX 缺口)",
+        "当前游戏设计位置": "GitHub 规格 Issue(尚未建立则见 INDEX 缺口)",
         "当前技术设计位置": "docs/mygamestudio/TECH_DESIGN.md(尚未建立则见 INDEX 缺口)",
         "当前任务入口": f"{repo}(GitHub Issues 为唯一现行任务来源;本地仅保存明确标识的草稿或缓存)",
         "术语位置": "按现行规格用语",
@@ -543,7 +545,7 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
     if actions.get(CONFIG_REL) == "新增":
         template = (TEMPLATE_ROOT / "project" / "CONFIG.md").read_text(encoding="utf-8")
         content = _fill(template, mapping)
-        content = _unique_docmap(content)
+        content = _unique_docmap(content, backend="github-issues")
         results.append({"path": CONFIG_REL, "result": _write_new(root / CONFIG_REL, content)})
     else:
         results.append({"path": CONFIG_REL, "result": "复用"})

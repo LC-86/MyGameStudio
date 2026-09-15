@@ -21,6 +21,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -230,6 +231,30 @@ def test_effective_config_and_gate_history_stay_separate() -> None:
           "安全切换接缝必须保留")
 
 
+def test_archived_legacy_tests_are_excluded_from_pytest_discovery() -> None:
+    """Archived gate tests must not be collected by ordinary pytest discovery."""
+
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q"],
+        cwd=REPO_ROOT, capture_output=True, text=True)
+    combined = f"{result.stdout or ''}{result.stderr or ''}"
+    if "No module named pytest" in combined:
+        ini = REPO_ROOT / "pytest.ini"
+        check(ini.is_file(), "无 pytest 时也必须有排除归档套件的配置")
+        text = ini.read_text(encoding="utf-8") if ini.is_file() else ""
+        check("testpaths" in text and "tests" in text,
+              "pytest 必须把有效套件限制在 tests/")
+        check("legacy" in text,
+              "pytest 必须排除 legacy/ 归档检查")
+        return
+    collected = result.stdout or ""
+    check("legacy/tests" not in collected,
+          "普通 pytest 收集不得纳入 legacy/tests 归档套件:"
+          f" {collected[:500]}")
+    check("test_runtime_gate" not in collected,
+          "归档 gate 检查不得进入有效 pytest 收集面")
+
+
 def test_live_docs_drop_retired_capability_promises() -> None:
     """AC4: current-facing docs do not promise tokens, locks, audit or rollback."""
 
@@ -266,6 +291,7 @@ TESTS = (
     test_ordinary_records_work_without_gate_config,
     test_kept_version_draft_and_reread_capabilities,
     test_effective_config_and_gate_history_stay_separate,
+    test_archived_legacy_tests_are_excluded_from_pytest_discovery,
     test_live_docs_drop_retired_capability_promises,
 )
 

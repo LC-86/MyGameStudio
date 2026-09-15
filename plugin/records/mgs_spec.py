@@ -148,13 +148,29 @@ def _draft(backend, op: str, args: dict, cause: str) -> dict:
     return backend.record_unpublished_draft(op, args, cause)
 
 
+def _require_http(status, payload=None, *, action: str):
+    if status not in (200, 201):
+        raise TransportError("bad_response", f"{action} HTTP {status}")
+    return payload
+
+
 def _list_github_items(backend) -> list[dict]:
-    status, data = backend.transport.request(
-        "GET", f"{repo_path(backend.repo)}/issues?state=all&per_page=100")
-    if status != 200 or not isinstance(data, list):
-        raise TransportError("bad_response", f"list issues HTTP {status}")
-    return [item for item in data if "pull_request" not in item
-            and not skip_from_current_reads(item.get("body") or "")]
+    items: list[dict] = []
+    page = 1
+    while True:
+        status, data = backend.transport.request(
+            "GET",
+            f"{repo_path(backend.repo)}/issues?state=all&per_page=100&page={page}")
+        if status != 200 or not isinstance(data, list):
+            raise TransportError("bad_response", f"list issues HTTP {status}")
+        items.extend(
+            item for item in data
+            if "pull_request" not in item
+            and not skip_from_current_reads(item.get("body") or ""))
+        if len(data) < 100:
+            break
+        page += 1
+    return items
 
 
 def _read_local_design(root: Path, config: dict) -> dict[str, Any]:
@@ -417,11 +433,12 @@ def apply_design_discussion(project_root: Path | str, plan: dict,
 
 def _render_spec_body(*, title: str, identity: str, version: str,
                       core_play: str, rules: list[str], modules: dict[str, str],
-                      change_index: list[str], extra_sections: dict[str, str] | None = None) -> str:
+                      change_index: list[str], extra_sections: dict[str, str] | None = None,
+                      kind: str = "现行规格") -> str:
     lines = [
         f"# {title}",
         "",
-        f"{SPEC_MARK}{identity}。种类:现行规格。版本:{version}。",
+        f"{SPEC_MARK}{identity}。种类:{kind}。版本:{version}。",
         "",
         "## 核心玩法",
         "",
@@ -715,6 +732,7 @@ def _apply_local_spec(root: Path, config: dict, plan: dict, *,
             rules=list(body.get("rules") or []),
             modules={},
             change_index=[history_line],
+            kind="模块规格",
         )
         if SPEC_MARK not in content:
             content = f"{SPEC_MARK}{slug}。种类:模块规格。\n\n" + content
@@ -846,7 +864,7 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                 version=str(body.get("version") or "v1"),
                 core_play=str(body.get("core_play") or ""),
                 rules=list(body.get("rules") or []), modules={},
-                change_index=[history_line])
+                change_index=[history_line], kind="模块规格")
             if SPEC_MARK not in content:
                 content = f"{SPEC_MARK}{slug}。种类:模块规格。\n\n" + content
             existing_mod = None
@@ -859,13 +877,24 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                 status, issue = backend.transport.request(
                     "POST", f"{repo_path(backend.repo)}/issues",
                     {"title": f"模块规格:{name}", "body": content})
-                module_issues[name] = issue.get("number")
+                _require_http(status, issue, action="create module")
+                if not isinstance(issue, dict) or not issue.get("number"):
+                    raise TransportError(
+                        "bad_response", f"create module missing number HTTP {status}")
+                number = issue.get("number")
             else:
-                backend.transport.request(
+                number = existing_mod["number"]
+                status, issue = backend.transport.request(
                     "PATCH",
-                    f"{repo_path(backend.repo)}/issues/{existing_mod['number']}",
+                    f"{repo_path(backend.repo)}/issues/{number}",
                     {"body": content})
-                module_issues[name] = existing_mod["number"]
+                _require_http(status, issue, action="update module")
+            back = backend.transport.request(
+                "GET", f"{repo_path(backend.repo)}/issues/{number}")[1]
+            if (back or {}).get("body") != content:
+                raise TransportError(
+                    "bad_response", f"module {name} 回读失败")
+            module_issues[name] = number
         updated_tasks = _sync_github_tasks(
             root, config, plan, overall_number, config_rel, transport)
         return {

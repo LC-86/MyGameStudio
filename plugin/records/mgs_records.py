@@ -56,7 +56,8 @@ from mgs_record_model import (  # noqa: E402  (路径调整后导入)
     CANONICAL_LABELS, CORE_DOC_KEYS, IDENTITY_RE, PLAN_REQUEST_KEYS,
     RecordsError, TASK_REQUEST_KEYS, _bullets, _core_rows, _field,
     _find_cycles, _parse_dep_ids, _sections, check_item, dependency_problems,
-    docmap_checks, label_mapping_checks, parse_task_body, task_core_problems)
+    docmap_checks, is_local_doc_path, label_mapping_checks, parse_task_body,
+    task_core_problems)
 
 # 协作配置与本地任务来源的唯一定义在 mgs_record_source:本模块(查询组织)
 # 从这里取配置、本地列举与按目录读取,并重导出既有公开名字;GitHub adapter
@@ -520,6 +521,18 @@ def baseline_report(project_root: Path | str,
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
     texts = _doc_texts(root, config, config_text=config_text)
+    if config.get("backend") == "github-issues":
+        current = read_current_design(
+            root, config_rel, transport=transport, api_base=api_base,
+            cache_dir=cache_dir)
+        overall = current.get("overall") or ""
+        if overall:
+            for row in config.get("docmap") or []:
+                rel = row.get("path") or ""
+                content = row.get("content") or ""
+                if rel and not is_local_doc_path(rel) and any(
+                        word in content for word in CORE_DOC_KEYS["design"]):
+                    texts[rel] = overall
     versions = _versions_from_texts(config, texts)
     grouped = _core_rows(config["docmap"])
     docs: list[dict] = []
@@ -532,6 +545,8 @@ def baseline_report(project_root: Path | str,
             seen_paths.add(rel)
             text = texts.get(rel)
             if text is None:
+                if not is_local_doc_path(rel):
+                    continue
                 docs.append({"path": rel, "content": row["content"],
                              "role": row["role"], "declared_version": None,
                              "recorded_fingerprint": None,
@@ -848,7 +863,10 @@ def frontier_tasks(project_root: Path | str, parent_identity: str | None = None,
         blocked = False
         for dep in _parse_dep_ids((task.get("request") or {}).get("依赖", "")):
             other = by_id.get(dep)
-            if other is not None and other.get("progress") != "已完成":
+            if other is None:
+                blocked = True
+                break
+            if other.get("progress") != "已完成":
                 if other.get("progress") != "不再执行":
                     blocked = True
                     break
@@ -904,10 +922,24 @@ def status_report(project_root: Path | str,
     ready = startable_tasks(root, config_rel, transport=transport,
                             api_base=api_base, cache_dir=cache_dir)
     gaps: list[str] = []
+    design = None
+    if config.get("backend") == "github-issues":
+        design = read_current_design(
+            root, config_rel, transport=transport, api_base=api_base,
+            cache_dir=cache_dir)
     for row in config.get("docmap", []):
         rel = row.get("path") or ""
-        if rel and not (root / rel).is_file():
-            gaps.append(f"缺项:{row.get('content')} → {rel}")
+        if not rel:
+            continue
+        content = row.get("content") or ""
+        if not is_local_doc_path(rel):
+            if any(word in content for word in CORE_DOC_KEYS["design"]):
+                if design and (design.get("overall") or "").strip():
+                    continue
+                gaps.append(f"缺项:{content} → {rel}")
+            continue
+        if not (root / rel).is_file():
+            gaps.append(f"缺项:{content} → {rel}")
     if not tasks:
         gaps.append("缺项:尚无任务记录")
     startable = ready.get("startable") or []

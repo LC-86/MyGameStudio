@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mgs_record_model import (  # noqa: E402
     CANONICAL_LABELS, IDENTITY_RE, RecordsError, edit_body, parse_task_body,
     today)
-from mgs_record_source import _task_root, local_read_task  # noqa: E402
+from mgs_record_source import _task_root, local_read_task, local_task_dir  # noqa: E402
 
 CLOSE_REASONS = ("完成", "不再执行", "已有成果覆盖")
 CLOSE_PROGRESS = {
@@ -92,7 +92,7 @@ class LocalMarkdownBackend:
         self.task_root = _task_root(self.root, config)
 
     def _task_dir(self, identity: str) -> Path:
-        return self.task_root / identity
+        return local_task_dir(self.root, self.config, identity)
 
     def _task_path(self, identity: str) -> Path:
         return self._task_dir(identity) / "task.md"

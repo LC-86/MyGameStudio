@@ -699,6 +699,66 @@ def test_github_spec_recovery_does_not_claim_success_without_modules() -> None:
               "失败路径不得假装模块已采纳")
 
 
+def test_github_module_http_error_does_not_claim_adoption() -> None:
+    """模块 POST 返回非 2xx 且不抛异常时,不得把未发布模块报成已采纳。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "http-module")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "reason": "最小闭环加规则模块",
+            "overall": {
+                "title": "http 整体设计",
+                "version": "v1",
+                "core_play": "接星星。",
+                "rules": ["得分：每颗星星 1 分。"],
+            },
+            "modules": {
+                "规则与数值": {"title": "规则与数值", "rules": ["每颗星星 1 分。"]},
+            },
+        }, transport=fake, cache_dir=cache)
+        fake.http_error("POST", "/issues", 500, body_contains="种类:模块规格")
+        applied = mgs_records.apply_spec_adoption(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is not True,
+              f"模块 HTTP 失败不得报告成功:{applied}")
+        check(applied.get("published") is not True,
+              f"模块未落地不得标已发布:{applied}")
+        current = mgs_records.read_current_design(
+            root, transport=fake, cache_dir=cache)
+        modules = current.get("modules") or {}
+        check("rules" not in modules and "规则与数值" not in modules,
+              "非 2xx 模块写入不得进入现行规格")
+
+
+def test_github_live_spec_inventory_paginates_beyond_first_page() -> None:
+    """现行规格盘点必须翻页,不能只看前 100 条 Issue。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "paged-spec")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        for index in range(1, 101):
+            fake.seed_issue(f"{index:03d}-pad", f"填充任务 {index}")
+        fake.issues.append({
+            "number": 101, "id": 1101, "title": "现行规格",
+            "body": (
+                "规格身份:overall。种类:现行规格。版本:v1。\n\n"
+                "## 核心玩法\n\n翻页后仍能读到的现行规格。\n"
+            ),
+            "labels": [], "assignees": [], "state": "open",
+            "state_reason": None, "html_url": "https://example.invalid/i/101",
+        })
+        fake.comments[101] = []
+        current = mgs_records.read_current_design(
+            root, transport=fake, cache_dir=cache)
+        check("翻页后仍能读到的现行规格" in (current.get("overall") or ""),
+              f"超过一页时仍须读到现行规格:{current}")
+
+
 def test_github_unknown_write_rereads_and_keeps_unpublished_draft() -> None:
     """AC5: 保存未知时回读后补缺,不重复创建;未发布草稿保持原状态。
     """
@@ -765,6 +825,8 @@ if __name__ == "__main__":
         test_github_tracker_adopts_spec_and_keeps_history_in_comments,
         test_github_live_spec_update_does_not_rewrite_archive,
         test_github_spec_recovery_does_not_claim_success_without_modules,
+        test_github_module_http_error_does_not_claim_adoption,
+        test_github_live_spec_inventory_paginates_beyond_first_page,
         test_github_unknown_write_rereads_and_keeps_unpublished_draft,
     )
     sys.exit(run_theme("游戏设计讨论与现行规格维护(#53 T2/T3/T5)", TESTS, FAILURES))

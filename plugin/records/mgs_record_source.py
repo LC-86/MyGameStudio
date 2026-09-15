@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_record_model import (  # noqa: E402  (路径调整后导入)
-    RecordsError, _bullets, _sections, parse_task_body)
+    IDENTITY_RE, RecordsError, _bullets, _sections, parse_task_body)
 
 DEFAULT_CONFIG_REL = "docs/mygamestudio/CONFIG.md"
 # 本地 Markdown 任务根(《项目目录模板》默认布局;github→local 迁移的
@@ -252,16 +252,34 @@ def local_list_tasks(project_root: Path | str, config: dict) -> list[dict]:
     return tasks
 
 
+def local_task_dir(project_root: Path | str, config: dict,
+                   identity: str) -> Path:
+    """把任务身份解析成任务根下的目录;拒绝越权路径。"""
+
+    if not identity or not IDENTITY_RE.fullmatch(identity):
+        raise RecordsError(
+            f"任务身份必须形如 NN-<slug>,当前 {identity!r}")
+    root = Path(project_root)
+    task_root = _task_root(root, config)
+    candidate = task_root / identity
+    try:
+        candidate.resolve().relative_to(task_root.resolve())
+    except ValueError as exc:
+        raise RecordsError(
+            f"任务身份不得离开任务根:{identity!r}") from exc
+    return candidate
+
+
 def local_read_task(project_root: Path | str, config: dict,
                     task_id: str) -> dict:
     """按目录定位读取单个本地任务(不扫描无关任务,不重读 CONFIG)。
 
     与既有语义一致:目录名即定位键,即使目录名与正文身份不一致也按目录
-    读取;目录缺失或没有 task.md 时以同一错误表达。
+    读取;目录缺失或没有 task.md 时以同一错误表达。身份必须落在任务根内。
     """
 
     root = Path(project_root)
-    task_dir = _task_root(root, config) / task_id
+    task_dir = local_task_dir(root, config, task_id)
     parsed = _parse_task_file(root, task_dir) if task_dir.is_dir() else None
     if parsed is None:
         raise RecordsError(f"任务不存在或缺少 task.md:{task_dir}")

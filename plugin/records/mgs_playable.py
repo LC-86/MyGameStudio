@@ -151,6 +151,8 @@ def _resource_tickets(request: dict) -> tuple[str, list[dict[str, Any]]]:
         "检查责任": owner if "游戏内" in owner else f"{owner};游戏内检查",
         "completion_kind": "in_game",
         "resources": assets,
+        "依赖": file_ticket["identity"],
+        "blocked_by": file_ticket["identity"],
     }
     return "independent", [file_ticket, game_ticket]
 
@@ -165,7 +167,7 @@ def _task_fields(ticket: dict, request: dict) -> dict[str, str]:
         "完成标准": ticket.get("操作") or "",
         "执行责任": "Agent(制作实现)",
         "验收方式": ticket.get("检查责任") or "",
-        "依赖": str(request.get("blocked_by") or "无"),
+        "依赖": str(ticket.get("依赖") or request.get("blocked_by") or "无"),
         "起始条件": ticket.get("起始条件") or "",
         "操作": ticket.get("操作") or "",
         "反馈": ticket.get("反馈") or "",

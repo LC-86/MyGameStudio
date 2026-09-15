@@ -574,6 +574,22 @@ def test_shared_client_unready_keeps_old_environment() -> None:
               "就绪项目自身仍应切换到新版现行来源")
 
 
+def test_requested_client_missing_is_not_complete() -> None:
+    """请求了客户端切换但目录不存在时,不得宣称 client_complete。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        ready = _write_old_local_project(Path(tmp) / "ready-game")
+        _convert_local(ready)
+        missing_home = Path(tmp) / "missing-client"
+        package = REPO_ROOT / "plugin"
+        plan = mgs_records.plan_safe_switch(
+            ready, client_home=missing_home, package_root=package)
+        applied = mgs_records.apply_safe_switch(ready, plan, confirmed=True)
+        check(applied.get("ok") is True, f"项目自身仍应完成切换:{applied}")
+        check(applied.get("client_complete") is not True,
+              f"客户端未切换成功不得宣称完成:{applied}")
+
+
 def test_rollback_preserves_new_additions() -> None:
     """AC4/T12: 回退先保留新版新增内容与对应关系,避免旧快照覆盖新成果。"""
 
@@ -758,6 +774,7 @@ def main() -> int:
             test_skill_switch_keeps_ordinary_user_edits_or_pauses,
             test_later_skill_extras_survive_second_project_switch,
             test_shared_client_unready_keeps_old_environment,
+            test_requested_client_missing_is_not_complete,
             test_rollback_preserves_new_additions,
             test_rollback_preserves_edits_to_migrated_tasks,
             test_prep_change_and_partial_do_not_switch,
