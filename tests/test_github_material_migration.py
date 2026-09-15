@@ -969,6 +969,29 @@ def test_decisions_without_any_adopted_are_still_complete() -> None:
               f"逐条核对决定评论存在即可,不得强制至少一条已采纳,实际 {missing}")
 
 
+def test_result_comments_beyond_first_page_are_inventoried() -> None:
+    """单 Issue 评论超过 100 条时,盘点必须翻页拉全:
+    完整性不得建立在被截断的第一页清单上。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "paged")
+        for index in range(130):
+            fake.comments[1].append({
+                "id": 7000 + index,
+                "body": f"# 追加结果 {index}\n\n任务:01-move。第 {index} 条。\n",
+                "created_at": "2026-09-07T12:00:00Z",
+            })
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake)
+        results = [item for item in plan.get("items") or []
+                   if item.get("kind") == "result"
+                   and item.get("identity") == "01-move"]
+        check(len(results) == 131,
+              f"131 条结果评论必须全部进入清单,实际 {len(results)}")
+        check(any(item.get("comment_id") == 7129 for item in results),
+              "最后一页的评论也必须被盘点到")
+
+
 def main() -> int:
     return run_theme(
         "issue #58 GitHub 旧项目完整资料迁移",
@@ -984,6 +1007,7 @@ def main() -> int:
             test_github_assignee_write_failure_is_not_converted,
             test_github_pending_config_keeps_write_authorization,
             test_migration_inventory_includes_issues_beyond_first_page,
+            test_result_comments_beyond_first_page_are_inventoried,
             test_closed_task_close_failure_is_not_converted,
             test_result_index_comments_are_rewritten_to_new_ids,
             test_native_only_relations_are_inventoried_and_restored,

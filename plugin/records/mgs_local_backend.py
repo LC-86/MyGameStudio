@@ -212,33 +212,44 @@ class LocalMarkdownBackend:
         return self.update_task(identity, {"认领": actor}, change_note="认领")
 
     def append_result(self, identity: str, result_markdown: str) -> dict:
+        """追加结果。文件名分配、结果写入与索引更新持同一任务锁完成:
+        并发投递不得算出同一文件名互相覆盖,也不得丢失对方的索引行。"""
+
         self._assert_not_cancelled("append_result", identity)
         task_dir = self._task_dir(identity)
-        results_dir = task_dir / "results"
-        results_dir.mkdir(parents=True, exist_ok=True)
-        stamp = today()
-        name = f"{stamp}.md"
-        path = results_dir / name
-        index = 1
-        while path.exists():
-            name = f"{stamp}-{index}.md"
+        task_path = self._task_path(identity)
+        if not task_path.is_file():
+            raise RecordsError(f"任务不存在或缺少 task.md:{task_path}")
+        with task_path.open("r+", encoding="utf-8") as handle:
+            _lock_exclusive(handle)
+            current = handle.read()
+            parsed = parse_task_body(current)
+            stamp = today()
+            name = f"{stamp}.md"
+            results_dir = task_dir / "results"
             path = results_dir / name
-            index += 1
-        body = result_markdown
-        if identity not in body:
-            body = f"任务:{identity}\n\n{result_markdown}"
-        path.write_text(body if body.endswith("\n") else body + "\n",
-                        encoding="utf-8")
-        current = self._read_text(identity)
-        parsed = parse_task_body(current)
-        index_text = parsed.get("result_index_text", "").strip()
-        line = f"- results/{name}"
-        if name not in index_text:
-            new_index = (index_text + "\n" if index_text
-                         and index_text != "(暂无)" else "") + line
-            new_body = edit_body(current, index_lines=new_index.splitlines(),
-                                 append_change=f"{today()} 追加结果 {name}")
-            self._task_path(identity).write_text(new_body, encoding="utf-8")
+            index = 1
+            while path.exists():
+                name = f"{stamp}-{index}.md"
+                path = results_dir / name
+                index += 1
+            results_dir.mkdir(parents=True, exist_ok=True)
+            body = result_markdown
+            if identity not in body:
+                body = f"任务:{identity}\n\n{result_markdown}"
+            path.write_text(body if body.endswith("\n") else body + "\n",
+                            encoding="utf-8")
+            index_text = parsed.get("result_index_text", "").strip()
+            line = f"- results/{name}"
+            if name not in index_text:
+                new_index = (index_text + "\n" if index_text
+                             and index_text != "(暂无)" else "") + line
+                new_body = edit_body(current, index_lines=new_index.splitlines(),
+                                     append_change=f"{today()} 追加结果 {name}")
+                handle.seek(0)
+                handle.truncate()
+                handle.write(new_body)
+                handle.flush()
         return {"published": True, "path": f"results/{name}",
                 "readback": self.read_task(identity)}
 

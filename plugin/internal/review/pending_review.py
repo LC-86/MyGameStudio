@@ -14,6 +14,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -121,6 +122,8 @@ def _ls_tree_mode(repo: Path, rev: str, rel: str) -> str | None:
 
 def _worktree_mode(repo: Path, rel: str) -> str | None:
     path = repo / rel
+    if path.is_symlink():
+        return "120000"
     if not path.is_file():
         return None
     executable = bool(path.stat().st_mode & 0o111)
@@ -149,7 +152,18 @@ def _try_decode(data: bytes) -> str | None:
 
 
 def _file_bytes(repo: Path, rel: str) -> tuple[bool, bytes | None]:
+    """工作区内容;符号链接按 Git blob 语义只取链接文本本身。
+
+    目标可能在仓库之外——跟随即把外部文件内容带进评审产物。
+    """
+
     path = repo / rel
+    if path.is_symlink():
+        try:
+            target = os.readlink(path)
+        except OSError:
+            return False, None
+        return True, os.fspath(target).encode("utf-8", "surrogateescape")
     if not path.is_file():
         return False, None
     return True, path.read_bytes()

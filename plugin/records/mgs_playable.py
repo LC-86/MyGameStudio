@@ -263,14 +263,26 @@ def apply_playable_delivery(project_root: Path | str, plan: dict, *,
             "identity": identity,
             "created": result.get("created"),
             "adopted": result.get("adopted"),
+            "published": result.get("published", True),
         })
-    return {
-        "ok": True,
-        "wrote": True,
+    # 工单未全部到达现行账本(离线草稿/部分创建失败)时如实上报:
+    # 调用方不能在缺少权威工作项的情况下继续宣称拆票已应用。
+    unreached = [item["identity"] for item in created
+                 if not (item.get("created") or item.get("adopted"))
+                 or item.get("published") is False]
+    all_published = bool(created) and not unreached
+    outcome = {
+        "ok": all_published,
+        "wrote": bool(created),
         "gate_required": False,
         "formal_delivery_complete": False,
         "created": created,
     }
+    if not all_published:
+        outcome["reason"] = (
+            f"工单未全部到达现行账本(离线草稿或创建失败):{', '.join(unreached)};"
+            "远端可用后重试或重放草稿,不按已应用继续")
+    return outcome
 
 
 def record_playable_result(project_root: Path | str, identity: str,

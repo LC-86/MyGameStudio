@@ -697,6 +697,86 @@ def test_upgrade_refreshes_supporting_skill_file_fingerprints() -> None:
               f"支撑文件指纹必须更新为当前内容,实际 {entry}")
 
 
+def test_reviewed_collection_changes_are_applied() -> None:
+    """D10: 显式采纳的新增技能进入有效目录,显式接受的退役技能
+    退出有效目录与指纹登记;评审目标集合不再被「必须等于现行」拦截。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
+        plugin = _write_current_plugin(Path(tmp) / "plugin")
+        retired = MATT_OFFICIAL[0]
+        bodies = {name: _matt_original(name)
+                  for name in MATT_OFFICIAL if name != retired}
+        candidate = _write_candidate(
+            Path(tmp) / "candidate", skills=bodies,
+            extra_files={
+                "skills/engineering/fresh-skill/SKILL.md":
+                    _matt_original("fresh-skill"),
+            })
+        decisions = {"fresh-skill": "adopt", retired: "adopt"}
+        evaluation = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate,
+            candidate_version=PINNED_VERSION,
+            candidate_sha=PINNED_SHA,
+            collection_decisions=decisions,
+        )
+        check(evaluation.get("decision") == "adopt",
+              f"显式评审过的集合变更应能通过评估,实际 "
+              f"{evaluation.get('decision')} reason={evaluation.get('retain_reason')}")
+        target = (evaluation.get("collection") or {}).get("target_official") or []
+        check("fresh-skill" in target and retired not in target,
+              f"目标集合应体现评审决定,实际 {target}")
+        applied = mgs_upstream_upgrade.apply_upstream_upgrade(
+            plugin, evaluation, confirmed=True)
+        check(applied.get("decision") == "adopt",
+              f"确认后应按目标集合应用,实际 {applied.get('decision')}")
+        check((plugin / "skills" / "fresh-skill" / "SKILL.md").is_file(),
+              "显式采纳的新增技能必须安装进有效目录")
+        check(not (plugin / "skills" / retired).exists(),
+              "显式接受的退役技能必须退出有效目录")
+        data = json.loads(
+            (plugin / "provenance" / "fingerprints.json").read_text(encoding="utf-8"))
+        paths = {entry.get("path") for entry in data.get("files") or []}
+        check(f"skills/{retired}/SKILL.md" not in paths,
+              "退役技能的指纹登记必须移除")
+        check(f"skills/fresh-skill/SKILL.md" in paths,
+              "新增技能必须登记指纹")
+
+
+def test_candidate_tampered_after_review_is_refused_at_apply() -> None:
+    """T13: 评审通过后候选目录被改动,apply 必须按指纹比对拒绝,
+    不得把未评审内容安装在已批准的 pin 名义下。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
+        plugin = _write_current_plugin(Path(tmp) / "plugin")
+        candidate = _write_candidate(Path(tmp) / "candidate")
+        evaluation = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate,
+            candidate_version=PINNED_VERSION,
+            candidate_sha=PINNED_SHA,
+        )
+        check(evaluation.get("decision") == "adopt",
+              f"评审时兼容候选应通过,实际 {evaluation.get('retain_reason')}")
+        _write(candidate, "skills/engineering/injected/SKILL.md",
+               "# injected after review\n")
+        tampered = mgs_upstream_upgrade.apply_upstream_upgrade(
+            plugin, evaluation, confirmed=True)
+        check(tampered.get("decision") == "retain"
+              and tampered.get("retain_reason") == "candidate-changed-after-review",
+              f"评审后被改动的候选必须拒绝,实际 {tampered.get('retain_reason')}")
+        check(not (plugin / "skills" / "injected").exists(),
+              "未评审内容不得进入有效目录")
+        check(_adopted_pin(plugin) == (UPSTREAM_VERSION, UPSTREAM_SHA),
+              "拒绝时 pin 必须保持不变")
+        unbound = dict(evaluation)
+        unbound["candidate"] = {
+            key: value for key, value in (evaluation.get("candidate") or {}).items()
+            if key != "tree_sha256"}
+        refused = mgs_upstream_upgrade.apply_upstream_upgrade(
+            plugin, unbound, confirmed=True)
+        check(refused.get("retain_reason") == "candidate-unbound",
+              f"未绑定候选指纹的旧评审结论不得应用,实际 {refused.get('retain_reason')}")
+
+
 TESTS = (
     test_unpinned_latest_is_not_adopted,
     test_evaluation_records_collection_invocation_refs_license_and_adaptations,
@@ -711,6 +791,8 @@ TESTS = (
     test_missing_license_keeps_current_version,
     test_changed_candidate_keeps_commit_authorization_adaptation,
     test_rejected_official_skill_is_not_installed,
+    test_reviewed_collection_changes_are_applied,
+    test_candidate_tampered_after_review_is_refused_at_apply,
     test_upgrade_refreshes_supporting_skill_file_fingerprints,
 )
 

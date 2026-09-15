@@ -431,6 +431,53 @@ def test_concurrent_same_sha_updates_keep_overlap_artifact() -> None:
               "不得把两次更新混写成一份正文")
 
 
+def test_concurrent_result_appends_keep_both_deliveries() -> None:
+    """T10: 两会话同时向同一任务追加结果必须串行化:两个结果文件与
+    两条索引行都保留,不得共用文件名互相覆盖后仍报告成功。
+    """
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "deliver"
+        (root / "src").mkdir(parents=True)
+        (root / "src" / "main.js").write_text("ok\n", encoding="utf-8")
+        mgs_records.apply_local_onboarding(
+            root, mgs_records.plan_local_onboarding(root), confirmed=True)
+        mgs_records.create_task(
+            root, "01-alpha", "甲",
+            {"当前目标": "并发投递", "完成标准": "两份结果都保留",
+             "执行责任": "Agent(制作实现)"},
+            triage="ready-for-agent")
+        barrier = threading.Barrier(2)
+
+        def worker(content: str) -> None:
+            barrier.wait()
+            mgs_records.append_result(root, "01-alpha", content)
+
+        threads = [
+            threading.Thread(target=worker, args=("会话甲结果:第一份证据",)),
+            threading.Thread(target=worker, args=("会话乙结果:第二份证据",)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        results_dir = root / "docs/mygamestudio/work/01-alpha/results"
+        files = sorted(p.name for p in results_dir.glob("*.md"))
+        check(len(files) == 2,
+              f"并发投递必须留下两个结果文件,实际 {files}")
+        bodies = "".join(p.read_text(encoding="utf-8")
+                         for p in results_dir.glob("*.md"))
+        check("第一份证据" in bodies and "第二份证据" in bodies,
+              "两份结果内容都必须保留,不得互相覆盖")
+        task = mgs_records.read_task(root, "01-alpha")
+        index_text = task.get("result_index_text") or ""
+        listed = [line for line in index_text.splitlines()
+                  if line.startswith("- results/")]
+        check(len(listed) == 2, f"结果索引必须包含两行,实际 {index_text!r}")
+        check(all(name in index_text for name in files),
+              "两个结果文件都必须出现在索引里")
+
+
 def test_local_task_identity_cannot_escape_task_root() -> None:
     """T4: 除 create 外的本地操作也必须校验任务身份,绝对路径或穿越
     不得读写任务根之外的文件。
@@ -545,6 +592,7 @@ TESTS = (
     test_producer_status_is_readonly_and_matt_entries_find_stage_materials,
     test_no_gate_overlap_cancel_and_interrupt_keep_results,
     test_concurrent_same_sha_updates_keep_overlap_artifact,
+    test_concurrent_result_appends_keep_both_deliveries,
     test_local_task_identity_cannot_escape_task_root,
     test_cli_onboard_status_and_create_without_gate,
     test_malformed_config_is_rejected_not_reused_by_onboarding,

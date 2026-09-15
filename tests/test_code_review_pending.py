@@ -454,6 +454,51 @@ def test_staged_delete_with_restored_worktree_shows_deletion() -> None:
               f"暂存删除必须在补丁中表达,实际:\n{patch}")
 
 
+def test_symlinks_are_captured_as_link_text_not_targets() -> None:
+    """范围内符号链接按 Git blob 语义捕获链接文本本身,不跟随目标:
+    指向仓库外的链接不得把目标内容带进评审产物。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        repo = base / "linked"
+        repo.mkdir()
+        _git(repo, "init", "-b", "main")
+        _git(repo, "config", "user.email", "t8@example.test")
+        _git(repo, "config", "user.name", "T8 Fixture")
+        _write(repo, "README.md", "link fixture\n")
+        _write(repo, "src/engine.py", "engine v1\n")
+        _git(repo, "add", "README.md", "src/engine.py")
+        _git(repo, "commit", "-m", "baseline")
+        baseline = _head(repo)
+
+        secret = base / "outside-secret.txt"
+        secret.write_text("OUTSIDE SECRET PAYLOAD\n", encoding="utf-8")
+        (repo / "src" / "notes.md").symlink_to(secret)
+        (repo / "src" / "engine.py").unlink()
+        (repo / "src" / "engine.py").symlink_to("README.md")
+
+        captured = _run_capture(repo, baseline, include=["src"])
+        if not captured:
+            return
+        check(captured.get("ok") is True, f"链接捕获应成功:{captured}")
+        patch = captured.get("patch") or ""
+        check("OUTSIDE SECRET PAYLOAD" not in patch,
+              "指向仓库外的符号链接不得把目标内容带进评审产物")
+        check("outside-secret.txt" in patch,
+              "未跟踪符号链接应按链接文本(目标路径)捕获")
+        check("engine v1" in patch,
+              "被替换为链接的原文件内容应作为删除侧出现,而不是目标内容")
+        versions = captured.get("path_versions") or {}
+        engine_marker = versions.get("src/engine.py") or ""
+        notes_marker = versions.get("src/notes.md") or ""
+        check("120000" in engine_marker,
+              f"链接化文件的模式必须是 120000,实际 {engine_marker!r}")
+        check("120000" in notes_marker,
+              f"未跟踪链接的模式必须是 120000,实际 {notes_marker!r}")
+        check("link fixture" not in patch,
+              "链接化文件不得按目标内容捕获(engine.py -> README.md)")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_mixed_git_states_cover_scope_keep_unrelated_and_stay_readonly,
@@ -466,6 +511,7 @@ if __name__ == "__main__":
         test_mode_only_change_is_complete_pending,
         test_staged_change_with_restored_worktree_is_captured,
         test_staged_delete_with_restored_worktree_shows_deletion,
+        test_symlinks_are_captured_as_link_text_not_targets,
     )
     raise SystemExit(run_theme(
         "完整待审成果双轴评审(#55 T8)", TESTS, FAILURES))

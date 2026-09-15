@@ -131,6 +131,29 @@ def test_startable_tasks_set() -> None:
               "ready 输出必须声明可开工不等于已获写入授权")
 
 
+def test_covered_completion_satisfies_dependencies() -> None:
+    """以「已有成果覆盖」关闭的前置任务同样算依赖完成:
+    可开工分类与本地前沿都不得继续阻塞其下游任务。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio" / "work"
+        (docs / "01-alpha" / "task.md").write_text(
+            (docs / "01-alpha" / "task.md").read_text(encoding="utf-8").replace(
+                "进度:待执行", "进度:已完成(已有成果覆盖)").replace(
+                "关闭原因:无", "关闭原因:已有成果覆盖"),
+            encoding="utf-8")
+        ready = mgs_records.startable_tasks(root)
+        startable = {item["identity"] for item in ready.get("startable") or []}
+        check("02-beta" in startable,
+              f"前置被已有成果覆盖后下游应可开工,实际 {sorted(startable)}")
+        frontier = mgs_records.frontier_tasks(root)
+        frontier_ids = [item["identity"]
+                        for item in frontier.get("frontier") or []]
+        check("02-beta" in frontier_ids,
+              f"本地前沿同样不得阻塞已覆盖完成的下游,实际 {frontier_ids}")
+
+
 def test_capability_negation_not_flagged() -> None:
     """否定式能力表述(不需要/无需/均已就绪)不应误报能力未就绪(任务票 08)。"""
 
@@ -412,6 +435,7 @@ TESTS = (
     test_task_dependencies_unresolved_and_cycle,
     test_frontier_excludes_unresolved_dependencies,
     test_startable_tasks_set,
+    test_covered_completion_satisfies_dependencies,
     test_capability_negation_not_flagged,
     test_startable_ignores_done_and_wontfix,
     test_verify_deps_consistent,

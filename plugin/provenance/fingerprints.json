@@ -89,8 +89,8 @@
     },
     {
       "path": "internal/review/pending_review.py",
-      "sha256": "8ab1d8e76ea823e15273c50cfa3130222300c8e19f6bfa4a0d2adb145b58dd95",
-      "source": "本项目自有内容(MIT); issue #55 完整待审成果; PR #67 审查修复: 暂存区与工作区状态分离捕获",
+      "sha256": "426d8415cc5f4778f5f8e4e326cc8b7857a5b01f29de340a6270fb239217d9d6",
+      "source": "本项目自有内容(MIT); issue #55 完整待审成果; PR #67 审查修复: 暂存区与工作区状态分离捕获;符号链接按链接文本捕获不跟随目标",
       "license": "本项目自有内容(MIT)"
     },
     {

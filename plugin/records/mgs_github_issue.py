@@ -164,6 +164,9 @@ def parse_issue_body(number: int, body: str, labels: list[str],
         "title": record["title"],
         "triage": triage_label or triage_body or "",
         "progress": record["progress"],
+        # 关闭原因与进度一样随正文持久化并回读:两类 completed
+        # (完成/已有成果覆盖)只能靠它区分,GitHub 状态本身不承载。
+        "close_reason": record["close_reason"],
         "issue_number": number,
         "issue_id": issue_id,
         "state": state,

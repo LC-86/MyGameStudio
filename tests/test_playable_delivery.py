@@ -650,6 +650,41 @@ def test_github_playable_task_stays_on_selected_tracker() -> None:
               "本项目必须只使用选定的 GitHub tracker")
 
 
+def test_apply_reports_failure_when_tickets_stay_drafts() -> None:
+    """工单未全部到达现行账本(远端离线只存草稿)时,拆票应用必须
+    报告失败并列出未到达工单,不得宣称已应用。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "drafted")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_playable_delivery(
+            root, _feature_request(
+                identity="05-star-sprite",
+                title="星星贴图",
+                independent_resource=True,
+                kind="independent_resource",
+                resources=[{"path": "assets/star.png", "kind": "visual",
+                            "format": "png", "source": "手工绘制",
+                            "preview": "open assets/star.png"}],
+                integration_identity="06-star-in-game",
+            ), transport=fake, cache_dir=cache)
+        fake.offline()
+        applied = mgs_records.apply_playable_delivery(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is not True,
+              f"全部工单都是未发布草稿时不得报告成功:{applied}")
+        check(applied.get("formal_delivery_complete") is not True,
+              "草稿状态不得宣告正式交付")
+        unreached = [item.get("identity") for item in applied.get("created") or []
+                     if not (item.get("created") or item.get("adopted"))
+                     or item.get("published") is False]
+        check(set(unreached) == {"05-star-sprite", "06-star-in-game"},
+              f"未到达工单必须逐条列出,实际 {unreached}")
+        check("05-star-sprite" in (applied.get("reason") or ""),
+              "失败原因必须指明未到达的工单")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_tickets_implement_review_carry_playable_task_fields,
@@ -660,5 +695,6 @@ if __name__ == "__main__":
         test_delivered_result_never_complete_while_unpublished,
         test_delivery_cases_keep_waiting_and_preserve_on_cancel,
         test_github_playable_task_stays_on_selected_tracker,
+        test_apply_reports_failure_when_tickets_stay_drafts,
     )
     sys.exit(run_theme("可玩任务拆分、资源集成与交付(#56 T3/T9/T10/T13)", TESTS, FAILURES))

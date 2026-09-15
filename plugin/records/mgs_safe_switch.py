@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -351,6 +352,24 @@ def _skill_dirs(root: Path) -> dict[str, Path]:
             if path.is_dir() and (path / "SKILL.md").is_file()}
 
 
+def _retired_skill_names(package: Path) -> list[str]:
+    """新包文档登记的已退役旧入口名;无该文档的包不视为有退役项。"""
+
+    candidates = [
+        package / "internal" / "game" / "retired-entries.md",
+        package.parent / "internal" / "game" / "retired-entries.md",
+        package.parent.parent / "internal" / "game" / "retired-entries.md",
+        Path(__file__).resolve().parent.parent / "internal" / "game"
+        / "retired-entries.md",
+    ]
+    path = next((item for item in candidates if item.is_file()), None)
+    if path is None:
+        return []
+    return sorted({match.group(1) for match in re.finditer(
+        r"^-\s+(game-[a-z-]+)\s+->", path.read_text(encoding="utf-8"),
+        re.MULTILINE)})
+
+
 def _meaning_conflict(user_text: str, package_text: str) -> bool:
     user = user_text.lower()
     package = package_text.lower()
@@ -503,12 +522,37 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
                 dest.write_bytes(data)
         else:
             shutil.copytree(pkg_dir, current / name)
+    # 新包已退役的旧入口(如 1.x 的 game-art/game-status):归档后退出
+    # 活动目录;不在退役清单里的无关用户技能保持原样。否则切换宣称
+    # client_complete 后旧入口仍可被发现,与新包并存两套入口。
+    retired_done: list[str] = []
+    for name in _retired_skill_names(package):
+        if name in pkg_skills:
+            continue
+        user_dir = user_skills.get(name)
+        if user_dir is None:
+            continue
+        hist = history / name
+        if not hist.exists():
+            hist.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(user_dir, hist)
+        else:
+            for src in user_dir.rglob("*"):
+                if not src.is_file():
+                    continue
+                dest = hist / src.relative_to(user_dir)
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                if not dest.exists():
+                    shutil.copy2(src, dest)
+        shutil.rmtree(user_dir)
+        retired_done.append(name)
     _copy_stage_index(home, package)
     return {
         "paused": paused,
         "developer_decisions": decisions,
         "switched_skills": True,
         "old_environment_kept": False,
+        "retired_skills": retired_done,
     }
 
 
@@ -561,6 +605,7 @@ def _switch_local(root: Path, plan: dict) -> dict:
         "unready_projects": unready,
         "paused_skills": skills.get("paused") or [],
         "developer_decisions": skills.get("developer_decisions") or [],
+        "retired_skills": skills.get("retired_skills") or [],
     }
     _save_json(_status_path(root), payload)
     return {
@@ -580,6 +625,7 @@ def _switch_local(root: Path, plan: dict) -> dict:
         "unready_projects": unready,
         "paused": list(skills.get("paused") or []),
         "developer_decisions": list(skills.get("developer_decisions") or []),
+        "retired_skills": list(skills.get("retired_skills") or []),
     }
 
 
@@ -642,9 +688,12 @@ def _current_new_issue_numbers(correspondence: dict) -> list[int]:
     return numbers
 
 
-def _patch_issue_body(backend, number: int, body: str) -> None:
-    backend.transport.request(
+def _patch_issue_body(backend, number: int, body: str) -> bool:
+    """PATCH 正文;仅 2xx 视为成功。忽略状态会把远端失败当成已切换。"""
+
+    status, _issue = backend.transport.request(
         "PATCH", f"{repo_path(backend.repo)}/issues/{number}", {"body": body})
+    return status in (200, 201)
 
 
 def _read_issue_body(backend, number: int) -> str:
@@ -661,15 +710,46 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
     correspondence = plan.get("correspondence") or {}
     archived = _archive_originals(root, staging)
     copied = _promote_pending(root, staging)
+    # 远端标记迁移必须逐项确认:PATCH 成功且回读到目标状态,才允许本地
+    # 宣告 switched;任何一项未确认都不写 switch-status。
+    marker_failures: list[str] = []
     for number in _current_new_issue_numbers(correspondence):
         body = _read_issue_body(backend, number)
         if PENDING_SWITCH_MARK in body:
-            _patch_issue_body(backend, number, _strip_mark(body, PENDING_SWITCH_MARK))
+            target = _strip_mark(body, PENDING_SWITCH_MARK)
+            if not _patch_issue_body(backend, number, target):
+                marker_failures.append(f"#{number}:pending-switch 移除未确认")
+                continue
+            if PENDING_SWITCH_MARK in _read_issue_body(backend, number):
+                marker_failures.append(f"#{number}:pending-switch 回读仍在")
     for number in _old_issue_numbers(correspondence):
         body = _read_issue_body(backend, number)
         if not skip_from_current_reads(body) or PENDING_SWITCH_MARK in body:
-            cleaned = _strip_mark(body, PENDING_SWITCH_MARK)
-            _patch_issue_body(backend, number, _with_mark(cleaned, HISTORY_MARK))
+            target = _with_mark(
+                _strip_mark(body, PENDING_SWITCH_MARK), HISTORY_MARK)
+            if not _patch_issue_body(backend, number, target):
+                marker_failures.append(f"#{number}:readonly-history 写入未确认")
+                continue
+            back = _read_issue_body(backend, number)
+            if HISTORY_MARK not in back or PENDING_SWITCH_MARK in back:
+                marker_failures.append(f"#{number}:readonly-history 回读失败")
+    if marker_failures:
+        return {
+            "ok": False,
+            "wrote": copied > 0 or bool(archived),
+            "status": "pending-switch",
+            "reason": "远端标记更新未全部确认,不宣告切换完成",
+            "marker_failures": marker_failures,
+            "tracker": "github-issues",
+            "backend": "github-issues",
+            "history_root": HISTORY_REL,
+            "archived": archived,
+            "gate_required": False,
+            "gate_as_permission": False,
+            "real_migration_authorized": False,
+            "recovery_destination": GATE_HISTORY_REL,
+            "correspondence": correspondence,
+        }
     unready = _peer_unready(plan.get("peer_projects") or [])
     skills = _switch_skills(plan, unready=unready)
     payload = {
@@ -688,6 +768,7 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         "unready_projects": unready,
         "paused_skills": skills.get("paused") or [],
         "developer_decisions": skills.get("developer_decisions") or [],
+        "retired_skills": skills.get("retired_skills") or [],
         "new_issues": _current_new_issue_numbers(correspondence),
         "old_issues": _old_issue_numbers(correspondence),
     }
@@ -709,6 +790,7 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         "unready_projects": unready,
         "paused": list(skills.get("paused") or []),
         "developer_decisions": list(skills.get("developer_decisions") or []),
+        "retired_skills": list(skills.get("retired_skills") or []),
     }
 
 

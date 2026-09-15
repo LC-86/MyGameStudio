@@ -145,7 +145,11 @@ class FakeTransport:
         number = int(match.group(1)) if match else None
         rest = match.group(2) or "" if match else ""
         if match and rest == "/comments" and method == "GET":
-            return 200, list(self.comments.get(number, []))
+            comments = list(self.comments.get(number, []))
+            per_page = max(1, min(int(query.get("per_page") or 30), 100))
+            page = max(1, int(query.get("page") or 1))
+            start = (page - 1) * per_page
+            return 200, comments[start:start + per_page]
         if match and rest == "/comments" and method == "POST":
             comment = {"id": 5000 + number * 100 + len(self.comments[number]),
                        "body": body["body"], "created_at": "2026-09-08T12:00:00Z"}

@@ -29,6 +29,23 @@ SNAPSHOT_HEADING = "正式版本设计快照"
 SNAPSHOT_DIR = "docs/mygamestudio/records/design-snapshots"
 TRIGGERS_ARCHIVE = ("version_freeze", "explicit")
 NO_CLAIM = "归档是维护约定,不宣称不可篡改、权限隔离或自动备份。"
+DESIGN_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+REVISION_RE = re.compile(r"^r\d+$")
+
+
+def _snapshot_ids_error(design_id: str, revision: str) -> str:
+    """快照身份与修订直接拼进归档目录路径,越界取值一律拒绝。"""
+
+    if not DESIGN_ID_RE.fullmatch(str(design_id or "")):
+        return f"非法 design_id:{design_id or '(空)'}"
+    if not REVISION_RE.fullmatch(str(revision or "")):
+        return f"非法 revision:{revision or '(空)'}"
+    resolved = Path(SNAPSHOT_DIR) / design_id / revision
+    try:
+        resolved.relative_to(Path(SNAPSHOT_DIR))
+    except ValueError:
+        return f"快照目录越界:{design_id}/{revision}"
+    return ""
 
 
 def design_id_for_history_version(version: str, assigned: dict[str, str],
@@ -106,7 +123,16 @@ def _attachment_name(rel: str) -> str:
 
 
 def _read_attachment(root: Path, rel: str) -> tuple[str | None, str]:
-    path = root / rel
+    """附件只允许项目内相对路径:越界来源(绝对路径/../软链出根)不读。"""
+
+    source = Path(str(rel or ""))
+    if source.is_absolute() or ".." in source.parts:
+        return None, f"附件路径越界:{rel}"
+    path = root / source
+    try:
+        path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return None, f"附件路径越界:{rel}"
     if not path.is_file():
         return None, f"附件缺失:{rel}"
     try:
@@ -178,6 +204,17 @@ def plan_design_snapshot(project_root: Path | str, request: dict,
         design_id = base or design_id
     else:
         revision = "r1"
+    ids_error = _snapshot_ids_error(design_id, revision)
+    if ids_error:
+        return {
+            "wrote": False,
+            "should_snapshot": False,
+            "invalid": True,
+            "reason": ids_error,
+            "backend": current.get("backend"),
+            "gate_required": False,
+            "request": dict(request),
+        }
     attachments = [str(item) for item in (request.get("attachments") or [])]
     return {
         "wrote": False,
@@ -212,6 +249,10 @@ def apply_design_snapshot(project_root: Path | str, plan: dict, *,
     if not confirmed:
         return {"ok": False, "wrote": False, "complete": False,
                 "reason": "未确认,不写入归档"}
+    if plan.get("invalid"):
+        return {"ok": False, "wrote": False, "complete": False,
+                "reason": plan.get("reason") or "快照身份非法",
+                "gate_required": False}
     if plan.get("reuse"):
         return _associate_game_version(
             project_root, plan, config_rel=config_rel, transport=transport,
@@ -222,6 +263,12 @@ def apply_design_snapshot(project_root: Path | str, plan: dict, *,
             "reason": plan.get("reason") or "日常修改不强制生成快照",
             "gate_required": False,
         }
+    # 手工构造的 plan 同样校验:身份/修订会直接拼进本地归档目录路径。
+    ids_error = _snapshot_ids_error(
+        str(plan.get("design_id") or ""), str(plan.get("revision") or ""))
+    if ids_error:
+        return {"ok": False, "wrote": False, "complete": False,
+                "reason": ids_error, "gate_required": False}
     root, config = mgs_spec._config(project_root, config_rel)
     if config.get("backend") == "local-markdown":
         return _apply_local_snapshot(root, config, plan, config_rel=config_rel)
@@ -415,6 +462,14 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
     design_id = str(plan.get("design_id") or "ds-1")
     revision = str(plan.get("revision") or "r1")
     rev_dir = root / SNAPSHOT_DIR / design_id / revision
+    try:
+        rev_dir.relative_to(root / SNAPSHOT_DIR)
+    except ValueError:
+        return {
+            "ok": False, "wrote": False, "complete": False,
+            "reason": f"快照目录越界:{design_id}/{revision}",
+            "gate_required": False,
+        }
     existing = rev_dir.is_dir() and (rev_dir / "overall.md").is_file()
     if existing and plan.get("correction"):
         return {

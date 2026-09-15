@@ -47,6 +47,16 @@ PLAN_REQUEST_KEYS = ("当前目标", "输入与基线", "本次交付", "允许�
 IDENTITY_RE = re.compile(r"(?<![\d-])\d{1,3}-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")
 
 
+# 完成类进度:直接完成与「已有成果覆盖」都满足依赖(关闭原因另见正文头部)。
+COMPLETED_PROGRESS = ("已完成", "已完成(已有成果覆盖)")
+
+
+def is_completed_progress(value: str) -> bool:
+    """进度值是否属于完成类(依赖判定与前沿共用的单一口径)。"""
+
+    return str(value or "") in COMPLETED_PROGRESS
+
+
 class RecordsError(Exception):
     """配置缺失、后端不支持或任务记录无法解析。
 

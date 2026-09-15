@@ -735,6 +735,39 @@ def test_github_module_http_error_does_not_claim_adoption() -> None:
               "非 2xx 模块写入不得进入现行规格")
 
 
+def test_github_history_comment_failure_does_not_claim_adoption() -> None:
+    """设计历史评论 POST 返回非 2xx 时不得宣告采用完成:
+    权威规格已更新也必须如实报告历史未记录。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "http-history")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "overall": {
+                "title": "history 整体设计",
+                "version": "v1",
+                "core_play": "接星星。",
+                "rules": ["得分：每颗星星 1 分。"],
+            },
+        }, transport=fake, cache_dir=cache)
+        fake.http_error("POST", "/comments", 500, body_contains="试验值保持未采纳")
+        applied = mgs_records.apply_spec_adoption(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is not True,
+              f"历史评论发布失败不得报告成功:{applied}")
+        check(applied.get("published") is not True,
+              f"历史未记录不得标已发布:{applied}")
+        check("历史" in str(applied.get("reason") or ""),
+              f"失败原因必须指明历史未记录:{applied.get('reason')}")
+        check(not any("试验值保持未采纳" in (item.get("body") or "")
+                      for comments in fake.comments.values()
+                      for item in comments),
+              "替身中不得存在历史评论(与失败事实一致)")
+
+
 def test_github_live_spec_inventory_paginates_beyond_first_page() -> None:
     """现行规格盘点必须翻页,不能只看前 100 条 Issue。"""
 
@@ -921,6 +954,7 @@ if __name__ == "__main__":
         test_github_live_spec_update_does_not_rewrite_archive,
         test_github_spec_recovery_does_not_claim_success_without_modules,
         test_github_module_http_error_does_not_claim_adoption,
+        test_github_history_comment_failure_does_not_claim_adoption,
         test_github_live_spec_inventory_paginates_beyond_first_page,
         test_github_unknown_write_rereads_and_keeps_unpublished_draft,
         test_github_discussion_rounds_append_not_replace,

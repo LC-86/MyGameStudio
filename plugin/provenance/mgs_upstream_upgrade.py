@@ -39,6 +39,23 @@ def _root(path: Path | str) -> Path:
     return Path(path).resolve()
 
 
+def _tree_fingerprint(root: Path) -> str:
+    """候选目录全量指纹:每个文件的相对路径与字节都参与摘要。
+
+    评审结论绑定该指纹——apply 时重算并比对,候选在评审后发生任何
+    变化都不得按已批准的 pin 安装。
+    """
+
+    digest = hashlib.sha256()
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+        rel = str(path.relative_to(root)).replace("\\", "/")
+        digest.update(rel.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _load_json(path: Path) -> dict:
     if not path.is_file():
         return {}
@@ -208,7 +225,9 @@ def _new_materials(candidate: Path, official_files: dict[str, Path]) -> list[str
 
 def _classify_adaptations(plugin: Path, candidate: Path,
                           candidate_official: dict[str, Path],
-                          broken: list[str]) -> list[dict]:
+                          broken: list[str],
+                          decisions: dict | None = None) -> list[dict]:
+    decisions = dict(decisions or {})
     data = _fingerprints(plugin)
     by_path = _fingerprint_by_path(data)
     items: list[dict] = []
@@ -226,8 +245,12 @@ def _classify_adaptations(plugin: Path, candidate: Path,
             continue
         record = {"skill": name, "path": rel, "status": "still-needed"}
         if candidate_path is None:
-            record["status"] = "conflict"
-            items.append(record)
+            # 候选退役:评审接受时适配随技能一起退出,不是冲突
+            # (未决退役由 unevaluated-collection 先行拦截);defer/reject
+            # 保留现行技能,现行适配原样保留。
+            if decisions.get(name) in {"defer", "reject"}:
+                record["status"] = "still-needed"
+                items.append(record)
             continue
         candidate_hash = _sha256(candidate_path)
         try:
@@ -336,6 +359,7 @@ def evaluate_upstream_upgrade(
             "version": candidate_version,
             "sha": candidate_sha,
             "root": str(candidate),
+            "tree_sha256": _tree_fingerprint(candidate),
         },
         "decision": "retain",
         "retain_reason": None,
@@ -390,7 +414,8 @@ def evaluate_upstream_upgrade(
     md_files = [path for path in candidate.rglob("*.md") if path.is_file()]
     broken = _broken_refs(candidate, md_files)
     evaluation["references"] = {"broken": broken}
-    adaptations = _classify_adaptations(plugin, candidate, official_files, broken)
+    adaptations = _classify_adaptations(
+        plugin, candidate, official_files, broken, decisions)
     evaluation["adaptations"] = adaptations
 
     new_materials = _new_materials(candidate, official_files)
@@ -429,8 +454,11 @@ def evaluate_upstream_upgrade(
     public = _public_skills(plugin)
     expected_public = sorted(list(current_official) + list(GAME_ENTRIES))
     verification = {
-        "official_collection": sorted(would_be_official) == sorted(current_official)
-        and public == expected_public,
+        # 评审后的目标集合允许与现行不同(显式采纳的新增/退役按 decisions
+        # 生效);这里验证的是:全部集合变更都已被明确评审,且插件公共
+        # 目录与现行 pin 的期望一致。目标集合在 apply 时安装/移除。
+        "official_collection": public == expected_public
+        and not unevaluated_collection,
         "references_closed": not broken,
         "license": (not license_info["conflict"]) and candidate_license == "MIT",
         "adaptations_recorded": all("status" in item for item in adaptations),
@@ -439,6 +467,7 @@ def evaluate_upstream_upgrade(
     }
     verification["passed"] = all(verification.values())
     evaluation["verification"] = verification
+    evaluation["collection"]["target_official"] = sorted(would_be_official)
 
     reason = None
     if not _is_pinned_sha(candidate_sha) or str(candidate_version).strip().lower() in UNPINNED:
@@ -486,6 +515,18 @@ def _adopt_candidate(plugin: Path, evaluation: dict) -> dict:
     fingerprints = _fingerprints(plugin)
     by_path = _fingerprint_by_path(fingerprints)
     decisions = evaluation.get("collection_decisions") or {}
+    # 评审接受的退役(候选不再提供且未被 defer/reject 保留)必须真正退出
+    # 有效目录并从指纹登记移除;否则退役技能在宣称切换完成后仍可被发现。
+    for name in _current_official(plugin):
+        if name in official_files or decisions.get(name) in {"defer", "reject"}:
+            continue
+        dest_dir = plugin / "skills" / name
+        if dest_dir.is_dir():
+            shutil.rmtree(dest_dir)
+        prefix = f"skills/{name}/"
+        for stale in list(by_path):
+            if stale.startswith(prefix):
+                del by_path[stale]
     for name, skill_md in official_files.items():
         if name in GAME_ENTRIES:
             continue
@@ -614,6 +655,21 @@ def apply_upstream_upgrade(
     if evaluation.get("decision") != "adopt":
         result["decision"] = "retain"
         result["retain_reason"] = evaluation.get("retain_reason") or "verification-failed"
+        result["adopted"] = current
+        return result
+    # 评审结论绑定候选全量指纹:apply 时重算比对。评审后候选目录发生
+    # 任何变化(或评审未绑定指纹)都不得按已批准的 pin 安装。
+    candidate_info = evaluation.get("candidate") or {}
+    expected_tree = str(candidate_info.get("tree_sha256") or "")
+    candidate_root = Path(str(candidate_info.get("root") or ""))
+    tree_ok = bool(
+        expected_tree and candidate_root.is_dir()
+        and _tree_fingerprint(candidate_root) == expected_tree)
+    if not tree_ok:
+        result["decision"] = "retain"
+        result["retain_reason"] = (
+            "candidate-changed-after-review" if expected_tree
+            else "candidate-unbound")
         result["adopted"] = current
         return result
     adopted = _adopt_candidate(plugin, evaluation)

@@ -147,11 +147,26 @@ def _list_issues(backend) -> list[dict]:
 
 
 def _list_comments(backend, number: int) -> list[dict]:
-    status, data = backend.transport.request(
-        "GET", f"{repo_path(backend.repo)}/issues/{number}/comments?per_page=100")
-    if status != 200 or not isinstance(data, list):
-        return []
-    return data
+    """拉取某 Issue 的全部评论:分页直到返回页短于 100。
+
+    只取第一页会漏掉后续结果/决策评论,盘点完整性就建立在被截断的
+    清单上;与 _list_issues 同一分页口径。任一页失败按既有契约返回 []。
+    """
+
+    items: list[dict] = []
+    page = 1
+    while True:
+        status, data = backend.transport.request(
+            "GET",
+            f"{repo_path(backend.repo)}/issues/{number}/comments"
+            f"?per_page=100&page={page}")
+        if status != 200 or not isinstance(data, list):
+            return []
+        items.extend(data)
+        if len(data) < 100:
+            break
+        page += 1
+    return items
 
 
 def _issue_source(number: int) -> str:

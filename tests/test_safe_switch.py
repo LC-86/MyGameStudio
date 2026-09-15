@@ -789,6 +789,78 @@ def test_stale_ready_plan_rechecked_before_promotion() -> None:
             encoding="utf-8") == old_design, "旧现行原件必须保持未切换")
 
 
+def test_github_marker_failure_is_not_reported_switched() -> None:
+    """远端标记 PATCH 失败时不得在本地宣告 switched:
+    switch-status 不落盘,失败 Issue 逐项列出。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "gh-game")
+        mgs_records.apply_github_material_migration(
+            root, mgs_records.plan_github_material_migration(
+                root, transport=fake),
+            confirmed=True, transport=fake)
+        plan = mgs_records.plan_safe_switch(root, transport=fake)
+        check(plan.get("ready") is True, f"前置:完整待切换应可切换:{plan}")
+        fake.http_error("PATCH", "/issues/", 500)
+        applied = mgs_records.apply_safe_switch(
+            root, plan, confirmed=True, transport=fake)
+        check(applied.get("ok") is not True,
+              f"远端标记更新失败不得报告成功:{applied}")
+        check(applied.get("status") != "switched",
+              "标记未确认时不得宣告 switched")
+        check(applied.get("marker_failures"),
+              f"必须逐项列出未确认的标记迁移,实际 {applied}")
+        status = mgs_records.read_safe_switch(root, transport=fake)
+        check(status.get("status") != "switched",
+              f"失败时不得写入本地切换状态,实际 {status.get('status')}")
+        bodies = [item.get("body") or "" for item in fake.issues]
+        check(any("迁移状态:pending-switch" in body for body in bodies),
+              "替身状态中待切换标记仍在(与未确认事实一致)")
+
+
+def test_client_switch_retires_legacy_entries_and_keeps_user_skills() -> None:
+    """切换客户端来源时,新包已退役的 1.x 旧入口先归档再退出活动目录;
+    无关用户技能保持原样;client_complete 如实反映。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        ready = _write_old_local_project(Path(tmp) / "ready-game")
+        _convert_local(ready)
+        home = Path(tmp) / "shared-codex"
+        skills = _write_isolated_client(home)
+        for retired_name in ("game-art", "game-status"):
+            legacy = skills / retired_name
+            legacy.mkdir(parents=True, exist_ok=True)
+            (legacy / "SKILL.md").write_text(
+                f"---\nname: {retired_name}\ndescription: 1.x 旧入口。\n---\n\n"
+                "旧入口正文。\n", encoding="utf-8")
+        custom = skills / "my-custom"
+        custom.mkdir(parents=True, exist_ok=True)
+        (custom / "SKILL.md").write_text(
+            "---\nname: my-custom\ndescription: 用户自建。\n---\n\n自建正文。\n",
+            encoding="utf-8")
+        package = Path(tmp) / "package-skills"
+        shutil.copytree(PLUGIN_SKILLS, package)
+        internal = Path(tmp) / "internal" / "game"
+        shutil.copytree(REPO_ROOT / "plugin" / "internal" / "game", internal)
+        plan = mgs_records.plan_safe_switch(
+            ready, client_home=home, package_root=package)
+        applied = mgs_records.apply_safe_switch(ready, plan, confirmed=True)
+        check(applied.get("ok") is True, f"切换应成功:{applied}")
+        retired = applied.get("retired_skills") or []
+        check(set(retired) >= {"game-art", "game-status"},
+              f"退役的 1.x 入口必须逐项上报,实际 {retired}")
+        check(not (skills / "game-art").exists()
+              and not (skills / "game-status").exists(),
+              "退役入口不得继续留在活动目录")
+        check((home / "skills-history" / "game-art" / "SKILL.md").is_file()
+              and (home / "skills-history" / "game-status" / "SKILL.md").is_file(),
+              "退役入口必须先归档再移除")
+        check((skills / "my-custom" / "SKILL.md").is_file(),
+              "无关用户技能必须保持原样")
+        check(applied.get("client_complete") is True,
+              "退役清理不阻塞切换完成")
+
+
 def main() -> int:
     return run_theme(
         "issue #59 用户修改、同名来源与安全切换",
@@ -805,6 +877,8 @@ def main() -> int:
             test_prep_change_and_partial_do_not_switch,
             test_deleted_source_during_prep_blocks_switch,
             test_github_switch_makes_new_current_and_can_roll_back,
+            test_github_marker_failure_is_not_reported_switched,
+            test_client_switch_retires_legacy_entries_and_keeps_user_skills,
             test_stale_ready_plan_rechecked_before_promotion,
         ),
         FAILURES)

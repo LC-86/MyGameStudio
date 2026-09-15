@@ -223,12 +223,44 @@ def test_close_reasons() -> None:
         check(result["readback"]["state_reason"] == "completed"
               and "已有成果覆盖" in result["readback"]["progress"],
               f"已有成果覆盖应表达在进度与说明中,实际 {result['readback']}")
+        # 关闭原因必须随正文持久化:稍后 read_task 仍能区分两类 completed
+        reread = backend.read_task("03-covered")
+        check(reread.get("close_reason") == "已有成果覆盖",
+              f"关闭原因应可从 GitHub 状态外读回,实际 {reread.get('close_reason')}")
+        reread_done = backend.read_task("01-done")
+        check(reread_done.get("close_reason") == "完成",
+              f"完成任务的关闭原因同样应读回,实际 {reread_done.get('close_reason')}")
         try:
             backend.close_task("01-done", "随便关")
         except mgs_github.GithubRecordsError:
             check(True, "")
         else:
             check(False, "关闭原因必须限定三类,不得含糊关闭")
+
+
+def test_relations_validation_rejection_is_failure() -> None:
+    """原生依赖写入被远端校验拒绝(HTTP 422,如成环)时按失败处理:
+    不把「依赖已写」落进正文或读回结论。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_github_project(Path(tmp))
+        fake = FakeTransport()
+        fake.seed_issue("01-alpha", "甲任务")
+        fake.seed_issue("02-beta", "乙任务")
+        backend = backend_for(root, fake)
+        fake.http_error("POST", "/dependencies/blocked_by", 422)
+        try:
+            backend.set_relations("02-beta", ["01-alpha"])
+        except mgs_github.GithubRecordsError as exc:
+            check("422" in str(exc) or "依赖" in str(exc),
+                  f"校验拒绝应报明确错误:{exc}")
+        else:
+            check(False, "422 校验拒绝不得报告成功")
+        body = fake.issues[1]["body"]
+        check("依赖:#1" not in body,
+              f"被拒绝的依赖不得写成正文约定,实际正文:{body[:200]}")
+        check(not fake.blocked_by.get(2),
+              "替身状态中依赖确实未落地(与读回核实的前提一致)")
 
 
 def test_update_change_note_three_paths() -> None:
@@ -270,6 +302,7 @@ TESTS = (
     test_update_task_fields_and_version_check,
     test_set_triage_and_append_result,
     test_relations_native_and_fallback,
+    test_relations_validation_rejection_is_failure,
     test_close_reasons,
     test_update_change_note_three_paths,
 )

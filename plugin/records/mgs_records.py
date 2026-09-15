@@ -56,8 +56,8 @@ from mgs_record_model import (  # noqa: E402  (路径调整后导入)
     CANONICAL_LABELS, CORE_DOC_KEYS, IDENTITY_RE, PLAN_REQUEST_KEYS,
     RecordsError, TASK_REQUEST_KEYS, _bullets, _core_rows, _field,
     _find_cycles, _parse_dep_ids, _sections, check_item, dependency_problems,
-    docmap_checks, is_local_doc_path, label_mapping_checks, parse_task_body,
-    task_core_problems)
+    docmap_checks, is_completed_progress, is_local_doc_path,
+    label_mapping_checks, parse_task_body, task_core_problems)
 
 # 协作配置与本地任务来源的唯一定义在 mgs_record_source:本模块(查询组织)
 # 从这里取配置、本地列举与按目录读取,并重导出既有公开名字;GitHub adapter
@@ -412,7 +412,7 @@ def _ready_classification(tasks: list[dict], graph: dict,
             for dep in graph["edges"].get(identity, []):
                 if dep not in by_id:
                     reasons.append(f"依赖未解析:{dep}(任务不存在)")
-                elif by_id[dep]["progress"] != "已完成":
+                elif not is_completed_progress(by_id[dep]["progress"]):
                     reasons.append(
                         f"依赖未完成:{dep}(进度:{by_id[dep]['progress'] or '缺失'})")
             missing_fields = [key for key in PLAN_REQUEST_KEYS
@@ -866,7 +866,7 @@ def frontier_tasks(project_root: Path | str, parent_identity: str | None = None,
             if other is None:
                 blocked = True
                 break
-            if other.get("progress") != "已完成":
+            if not is_completed_progress(other.get("progress")):
                 if other.get("progress") != "不再执行":
                     blocked = True
                     break

@@ -422,7 +422,21 @@ class GithubBackend(GithubReadMixin):
                             "set_relations", draft_args,
                             "写入原生阻塞关系 HTTP 404,探测时能力仍在;"
                             "不自行降级为正文约定")
-                    if status not in (200, 201, 422):
+                    if status == 422:
+                        # 校验拒绝(如依赖成环)不是成功:先回读核实是否
+                        # 已存在;确实未落地则按失败上报,不把「依赖已写」
+                        # 写进正文或读回结论。
+                        landed, landed_data = self._probe_get(probe_path)
+                        if landed == "available":
+                            landed_ids = {
+                                item.get("id") for item in (landed_data or [])
+                                if isinstance(item, dict)}
+                            if blocker.get("issue_id") in landed_ids:
+                                continue
+                        raise GithubRecordsError(
+                            f"写入原生阻塞关系被拒绝(HTTP 422,依赖 {dep} "
+                            "未落地);按失败处理,不写正文约定也不虚报原生成功")
+                    if status not in (200, 201):
                         raise TransportError(
                             "bad_response", f"blocked_by HTTP {status}")
                 except TransportError as exc:
@@ -783,9 +797,11 @@ class GithubBackend(GithubReadMixin):
                                     {"identity": identity, "reason": reason,
                                      "note": note}, "离线缓存态无法关闭远端任务")
         number = parsed["issue_number"]
+        # 关闭原因随正文持久化:仅写进度头部或只发一条评论时,后续
+        # read_task 无法从 GitHub 状态重建两类 completed 的区别。
         new_body = edit_body(issue.get("body") or "",
-                              header={"进度": progress},
-                              append_change=f"{today()} 关闭({reason})")
+                             header={"进度": progress, "关闭原因": reason},
+                             append_change=f"{today()} 关闭({reason})")
         try:
             status, updated = self.transport.request(
                 "PATCH", f"{repo_path(self.repo)}/issues/{number}",

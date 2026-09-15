@@ -797,6 +797,70 @@ def test_interrupted_snapshot_retry_fills_modules_before_complete() -> None:
                   == MODULE_RULES, "补写的模块内容必须与被归档设计一致")
 
 
+def test_escaping_snapshot_ids_and_attachments_are_refused() -> None:
+    """快照身份/修订与附件路径越界时拒绝归档:不外写目录,不读项目外内容。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        root = _onboard_local(base / "star-catcher")
+        outside = base / "outside"
+        outside.mkdir()
+        secret = outside / "secret.md"
+        secret.write_text("项目外秘密内容\n", encoding="utf-8")
+
+        for bad_id in ("/tmp/escape", "../escape", "ds/inner"):
+            plan = mgs_records.plan_design_snapshot(root, {
+                "trigger": "version_freeze",
+                "game_version": "0.1.0",
+                "design_id": bad_id,
+                "source": "正式版本设计确定",
+            })
+            applied = mgs_records.apply_design_snapshot(root, plan, confirmed=True)
+            check(applied.get("ok") is not True,
+                  f"越界 design_id {bad_id!r} 不得报告成功:{applied}")
+        hand = mgs_records.apply_design_snapshot(root, {
+            "should_snapshot": True, "design_id": "../escape", "revision": "r1",
+            "game_version": "0.1.0", "source": "正式版本设计确定",
+        }, confirmed=True)
+        check(hand.get("ok") is not True, "手工构造 plan 的越界身份同样拒绝")
+        snapshots_root = root / "docs/mygamestudio/records/design-snapshots"
+        check(not (base / "escape").exists(),
+              "越界身份不得在归档根外创建目录")
+        for path in (snapshots_root.rglob("*") if snapshots_root.is_dir() else []):
+            if path.is_file():
+                check("项目外秘密内容" not in path.read_text(encoding="utf-8"),
+                      "归档目录不得包含项目外文件内容")
+
+        for bad_rel in (str(secret), "../outside/secret.md"):
+            plan = mgs_records.plan_design_snapshot(root, {
+                "trigger": "version_freeze",
+                "game_version": "0.1.0",
+                "source": "正式版本设计确定",
+                "attachments": [bad_rel],
+            })
+            applied = mgs_records.apply_design_snapshot(root, plan, confirmed=True)
+            check(applied.get("ok") is not True
+                  and applied.get("complete") is not True,
+                  f"越界附件 {bad_rel!r} 不得归档成功:{applied}")
+
+        gh_root = _onboard_github(base / "gh-star")
+        fake = FakeTransport()
+        cache = gh_root / "docs/mygamestudio/records/cache"
+        gh_plan = mgs_records.plan_design_snapshot(gh_root, {
+            "trigger": "explicit",
+            "game_version": "0.1.0",
+            "source": "开发者明确要求",
+            "attachments": ["../outside/secret.md"],
+        }, transport=fake, cache_dir=cache)
+        gh_applied = mgs_records.apply_design_snapshot(
+            gh_root, gh_plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(gh_applied.get("ok") is not True,
+              f"GitHub 路径的越界附件同样拒绝:{gh_applied}")
+        check(not any("项目外秘密内容" in (item.get("body") or "")
+                      for item in fake.issues),
+              "越界附件内容不得进入任何归档 Issue")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_version_freeze_archives_full_content_daily_does_not,
@@ -810,6 +874,7 @@ if __name__ == "__main__":
         test_correction_revision_uses_highest_existing_number,
         test_github_snapshot_association_http_error_is_not_complete,
         test_interrupted_snapshot_retry_fills_modules_before_complete,
+        test_escaping_snapshot_ids_and_attachments_are_refused,
     )
     raise SystemExit(run_theme(
         "正式版本设计快照(#54 T6/T7)", TESTS, FAILURES))

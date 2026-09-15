@@ -202,6 +202,25 @@ def _read_local_design(root: Path, config: dict) -> dict[str, Any]:
     }
 
 
+def _list_github_comments(backend, number: int) -> list[dict]:
+    """拉取某 Issue 全部评论(分页直到返回页短于 100;失败返回 [])。"""
+
+    items: list[dict] = []
+    page = 1
+    while True:
+        status, data = backend.transport.request(
+            "GET",
+            f"{repo_path(backend.repo)}/issues/{number}/comments"
+            f"?per_page=100&page={page}")
+        if status != 200 or not isinstance(data, list):
+            return []
+        items.extend(data)
+        if len(data) < 100:
+            break
+        page += 1
+    return items
+
+
 def _read_github_design(backend) -> dict[str, Any]:
     items = _list_github_items(backend)
     overall = ""
@@ -217,8 +236,7 @@ def _read_github_design(backend) -> dict[str, Any]:
             overall = body
             overall_number = item.get("number")
             history_bits = []
-            comments_path = f"{repo_path(backend.repo)}/issues/{overall_number}/comments"
-            for comment in backend.transport.request("GET", comments_path)[1] or []:
+            for comment in _list_github_comments(backend, int(overall_number)):
                 history_bits.append(comment.get("body") or "")
             history = "\n\n".join(history_bits)
         elif _is_live_spec(body) and identity and identity != OVERALL_ID:
@@ -873,14 +891,33 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
             f"未采纳:{'; '.join(plan.get('unadopted') or []) or '无'}\n"
             "试验值保持未采纳,不进入正式规则。"
         )
-        comments = backend.transport.request(
-            "GET",
-            f"{repo_path(backend.repo)}/issues/{overall_number}/comments")[1] or []
-        if not any(comment.strip() == (c.get("body") or "").strip() for c in comments):
-            backend.transport.request(
+        comments = _list_github_comments(backend, int(overall_number))
+        if not any(comment.strip() == (c.get("body") or "").strip()
+                   for c in comments):
+            # 设计历史评论必须真实落地并回读确认:权威规格已更新而历史
+            # 未记录时,不得宣告采用完成(published)。
+            status, _posted = backend.transport.request(
                 "POST",
                 f"{repo_path(backend.repo)}/issues/{overall_number}/comments",
                 {"body": comment})
+            if status not in (200, 201):
+                return {
+                    "ok": False, "wrote": True, "backend": "github-issues",
+                    "overall_issue": overall_number,
+                    "gate_required": False, "published": False,
+                    "reason": f"设计历史评论发布失败(HTTP {status});"
+                              "权威规格已更新但历史未记录,不宣告采用完成",
+                }
+            back = _list_github_comments(backend, int(overall_number))
+            if not any(comment.strip() == (c.get("body") or "").strip()
+                       for c in back):
+                return {
+                    "ok": False, "wrote": True, "backend": "github-issues",
+                    "overall_issue": overall_number,
+                    "gate_required": False, "published": False,
+                    "reason": "设计历史评论回读失败;"
+                              "权威规格已更新但历史未确认,不宣告采用完成",
+                }
         module_issues = {}
         for name, body in (plan.get("modules") or {}).items():
             slug = slugs[str(name)]
@@ -968,9 +1005,8 @@ def _github_adoption_complete(backend, existing: dict, new_overall: str,
         return False
     try:
         items = _list_github_items(backend)
-        comments = backend.transport.request(
-            "GET",
-            f"{repo_path(backend.repo)}/issues/{existing.get('number')}/comments")[1] or []
+        comments = _list_github_comments(
+            backend, int(existing.get("number")))
     except TransportError:
         return False
     history_line = _history_line(plan, include_replaces=True)
