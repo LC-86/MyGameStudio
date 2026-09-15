@@ -39,6 +39,8 @@ def _norm(rel: str) -> str:
     text = rel.replace("\\", "/")
     while text.startswith("./"):
         text = text[2:]
+    if text == ".":
+        return ""
     return text
 
 
@@ -49,6 +51,8 @@ def _decode_git_path(raw: bytes) -> str:
 def _matches(rel: str, prefix: str) -> bool:
     prefix = _norm(prefix).rstrip("/")
     rel = _norm(rel)
+    if prefix == "":
+        return True  # 仓库根前缀(. 或 ./):匹配所有仓库内路径
     return rel == prefix or rel.startswith(prefix + "/")
 
 
@@ -277,7 +281,12 @@ def capture_pending_review(repo: Path | str, baseline: str,
         exists, _payload = _file_bytes(repo, path)
         if not exists and _git_has(repo, f"HEAD:{path}"):
             deleted.add(path)
-    listed = _git(repo, "ls-files", "-z", "--", *include)
+    # 空串是规范化后的仓库根前缀(. 或 ./);空 pathspec 会被 git 拒绝,
+    # 命中根前缀即等价于全仓库,不再拼接其余 pathspec。
+    git_pathspecs = [item for item in include if item]
+    if include and len(git_pathspecs) < len(include):
+        git_pathspecs = []
+    listed = _git(repo, "ls-files", "-z", "--", *git_pathspecs)
     for raw in (listed.stdout or "").split("\0"):
         path = _norm(raw)
         if not path or not _in_scope(path, include, exclude):
@@ -320,8 +329,8 @@ def capture_pending_review(repo: Path | str, baseline: str,
     patch = "".join(patches)
     content_version = _sha("\n".join(version_rows) + "\n")
     committed_args = ["diff", f"{baseline_sha}...HEAD"]
-    if include:
-        committed_args.extend(["--", *include])
+    if git_pathspecs:
+        committed_args.extend(["--", *git_pathspecs])
     committed_patch = _git(repo, *committed_args)
     committed_diff_empty = not (committed_patch.stdout or "").strip()
     uncommitted = staged | unstaged | untracked | deleted

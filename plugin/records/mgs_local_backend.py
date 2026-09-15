@@ -130,21 +130,43 @@ class LocalMarkdownBackend:
                     "attempts": [{"step": "read-first", "outcome": "exists"}]}
         body = render_task_body(title, identity, triage, progress, request)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(body, encoding="utf-8")
+        try:
+            # 排他创建:并发同名任务只有一个真正落盘,其余收养胜者,
+            # 不得双方都宣称 created(检查后写入存在竞态窗口)。
+            with path.open("x", encoding="utf-8") as handle:
+                handle.write(body)
+        except FileExistsError:
+            existing = self.read_task(identity)
+            return {"created": False, "adopted": True,
+                    "duplicate_avoided": True, "readback": existing,
+                    "attempts": [{"step": "create-race", "outcome": "exists"}]}
         return {"created": True, "adopted": False, "duplicate_avoided": False,
                 "readback": self.read_task(identity),
                 "attempts": [{"step": "create-1", "outcome": "created"}]}
 
-    def update_task(self, identity: str, fields: dict, *,
-                    expected_body_sha256: str | None = None,
-                    change_note: str = "安排更新") -> dict:
-        self._assert_not_cancelled("update_task", identity)
+    def _locked_write(self, identity: str, transform) -> dict:
+        """同一文件锁内完成 读→变换→写;变换抛错则正文保持不变。"""
+
         path = self._task_path(identity)
         if not path.is_file():
             raise RecordsError(f"任务不存在或缺少 task.md:{path}")
         with path.open("r+", encoding="utf-8") as handle:
             _lock_exclusive(handle)
             current = handle.read()
+            new_body = transform(current)
+            handle.seek(0)
+            handle.truncate()
+            handle.write(new_body)
+            handle.flush()
+        return {"published": True, "readback": self.read_task(identity),
+                "attempts": [{"step": "patch", "outcome": "updated"}]}
+
+    def update_task(self, identity: str, fields: dict, *,
+                    expected_body_sha256: str | None = None,
+                    change_note: str = "安排更新") -> dict:
+        self._assert_not_cancelled("update_task", identity)
+
+        def transform(current: str) -> str:
             current_sha = _sha(current)
             if expected_body_sha256 is not None \
                     and expected_body_sha256.lower() != current_sha:
@@ -162,15 +184,11 @@ class LocalMarkdownBackend:
                               if key in ("进度", "当前分流", "认领", "关闭原因")}
             request_updates = {key: value for key, value in fields.items()
                                if key not in header_updates}
-            new_body = edit_body(
+            return edit_body(
                 current, header=header_updates, request=request_updates,
                 append_change=f"{today()} {change_note}:{'、'.join(fields)}")
-            handle.seek(0)
-            handle.truncate()
-            handle.write(new_body)
-            handle.flush()
-        return {"published": True, "readback": self.read_task(identity),
-                "attempts": [{"step": "patch", "outcome": "updated"}]}
+
+        return self._locked_write(identity, transform)
 
     def set_triage(self, identity: str, label: str) -> dict:
         if label not in CANONICAL_LABELS:
@@ -204,12 +222,20 @@ class LocalMarkdownBackend:
         return result
 
     def claim_task(self, identity: str, actor: str) -> dict:
-        current = parse_task_body(self._read_text(identity))
-        holder = current.get("claim") or UNCLAIMED
-        if holder not in ("", UNCLAIMED) and holder != actor:
-            raise RecordsError(
-                f"任务已由 {holder} 认领,不覆盖他人认领")
-        return self.update_task(identity, {"认领": actor}, change_note="认领")
+        self._assert_not_cancelled("update_task", identity)
+
+        def transform(current: str) -> str:
+            # 认领检查必须与写入同锁:先读后写会把未认领判断建立在
+            # 过期正文上,两个并发认领者都能通过检查并互相覆盖。
+            parsed = parse_task_body(current)
+            holder = parsed.get("claim") or UNCLAIMED
+            if holder not in ("", UNCLAIMED) and holder != actor:
+                raise RecordsError(
+                    f"任务已由 {holder} 认领,不覆盖他人认领")
+            return edit_body(current, header={"认领": actor},
+                             append_change=f"{today()} 认领")
+
+        return self._locked_write(identity, transform)
 
     def append_result(self, identity: str, result_markdown: str) -> dict:
         """追加结果。文件名分配、结果写入与索引更新持同一任务锁完成:

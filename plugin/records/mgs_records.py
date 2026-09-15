@@ -698,52 +698,58 @@ def verify_project(project_root: Path | str,
 
 # ---------- 本地接入、任务写入与只读状态(issue #51) ----------
 
-def analyze_project(project_root: Path | str) -> dict:
+def analyze_project(project_root: Path | str,
+                    config_rel: str = DEFAULT_CONFIG_REL) -> dict:
     """Game-Init 只读分析:不写入,也不开始制作。"""
 
     import mgs_onboard  # noqa: PLC0415
 
-    return mgs_onboard.analyze_project(project_root)
+    return mgs_onboard.analyze_project(project_root, config_rel)
 
 
-def plan_local_onboarding(project_root: Path | str) -> dict:
+def plan_local_onboarding(project_root: Path | str,
+                          config_rel: str = DEFAULT_CONFIG_REL) -> dict:
     """选择本地 Markdown 为唯一现行 tracker,形成接入清单(不写入)。"""
 
     import mgs_onboard  # noqa: PLC0415
 
-    return mgs_onboard.plan_local_onboarding(project_root)
+    return mgs_onboard.plan_local_onboarding(project_root, config_rel)
 
 
 def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
-                           *, confirmed: bool = False) -> dict:
+                           *, confirmed: bool = False,
+                           config_rel: str = DEFAULT_CONFIG_REL) -> dict:
     """按确认清单接入;不覆盖有效旧资料,普通路径不依赖 gate。"""
 
     import mgs_onboard  # noqa: PLC0415
 
     return mgs_onboard.apply_local_onboarding(
-        project_root, plan, confirmed=confirmed)
+        project_root, plan, confirmed=confirmed, config_rel=config_rel)
 
 
 def plan_github_onboarding(project_root: Path | str, *, repo: str,
-                           authorization: str = "") -> dict:
+                           authorization: str = "",
+                           config_rel: str = DEFAULT_CONFIG_REL) -> dict:
     """选择 GitHub Issues 为唯一现行 tracker,形成接入清单(不写入)。"""
 
     import mgs_onboard  # noqa: PLC0415
 
     return mgs_onboard.plan_github_onboarding(
-        project_root, repo=repo, authorization=authorization)
+        project_root, repo=repo, authorization=authorization,
+        config_rel=config_rel)
 
 
 def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
                             *, confirmed: bool = False, repo: str | None = None,
-                            authorization: str = "") -> dict:
+                            authorization: str = "",
+                            config_rel: str = DEFAULT_CONFIG_REL) -> dict:
     """按确认清单接入 GitHub;不覆盖有效旧资料,普通路径不依赖 gate。"""
 
     import mgs_onboard  # noqa: PLC0415
 
     return mgs_onboard.apply_github_onboarding(
         project_root, plan, confirmed=confirmed, repo=repo,
-        authorization=authorization)
+        authorization=authorization, config_rel=config_rel)
 
 
 def _backend_for(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,

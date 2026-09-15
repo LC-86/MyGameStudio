@@ -23,7 +23,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_local_backend import render_task_body  # noqa: E402
-from mgs_record_model import RecordsError, parse_task_body, today  # noqa: E402
+from mgs_record_model import (  # noqa: E402
+    IDENTITY_RE, RecordsError, parse_task_body, today)
 from mgs_record_source import (  # noqa: E402
     DEFAULT_CONFIG_REL, DEFAULT_TASK_ROOT, load_config)
 from mgs_snapshot import (  # noqa: E402
@@ -489,6 +490,19 @@ def _convert_history(root: Path, staging: Path, specs: list[dict],
     return {"kind": "history", "new": HISTORY_REL, "wrote": wrote}
 
 
+def _valid_task_identity(identity: str) -> bool:
+    return bool(identity) and bool(IDENTITY_RE.fullmatch(identity))
+
+
+def _assert_dest_inside(base: Path, dest: Path, identity: str) -> None:
+    """迁移身份会直接拼进待切换树路径:越界目标一律拒绝写入。"""
+
+    try:
+        dest.resolve().relative_to(base.resolve())
+    except ValueError:
+        raise RecordsError(f"迁移目标越界,拒绝写入:{identity}") from None
+
+
 def _convert_task(root: Path, staging: Path, item: dict,
                   evidence_notes: list[str]) -> dict:
     source = root / item["source"]
@@ -529,6 +543,7 @@ def _convert_task(root: Path, staging: Path, item: dict,
         change=change,
     )
     dest = staging / DEFAULT_TASK_ROOT / identity / "task.md"
+    _assert_dest_inside(staging / DEFAULT_TASK_ROOT, dest, identity)
     wrote = _write(dest, body)
     return {
         "kind": "task",
@@ -543,6 +558,7 @@ def _convert_result(root: Path, staging: Path, item: dict) -> dict:
     identity = item.get("identity") or ""
     source = root / item["source"]
     dest = staging / DEFAULT_TASK_ROOT / identity / "results" / Path(item["source"]).name
+    _assert_dest_inside(staging / DEFAULT_TASK_ROOT, dest, identity)
     wrote = _write(dest, _read(source))
     return {
         "kind": "result",
@@ -616,10 +632,19 @@ def apply_local_material_migration(project_root: Path | str,
     duplicate_ids = {
         ident for ident in identities if ident and identities.count(ident) > 1}
     runnable: list[dict] = []
+    source_inventory: dict[str, int] = {}
     for item in items:
         identity = str(item.get("identity") or "")
+        kind = str(item.get("kind") or "")
+        source_inventory[kind] = source_inventory.get(kind, 0) + 1
         if item.get("kind") == "task" and identity in duplicate_ids:
             paused.append(f"{item.get('kind')}:{identity}")
+            paused_ids.add(identity)
+            continue
+        # 非法任务身份(含 ../ 或路径分隔符)会直接拼进待切换树路径,
+        # 必须暂停该项而不是写出 pending-switch 之外的位置。
+        if kind in {"task", "result"} and not _valid_task_identity(identity):
+            paused.append(f"{kind}:{identity or item.get('source')}:身份非法")
             paused_ids.add(identity)
             continue
         if _changed(root, item, fingerprints):
@@ -729,6 +754,7 @@ def apply_local_material_migration(project_root: Path | str,
         "correspondence": mapping,
         "paused": paused,
         "missing_evidence": sorted(set(missing_evidence)),
+        "source_inventory": source_inventory,
         "gate_history": GATE_HISTORY_REL,
         "recovery_archive": gate_row.get("text") or "",
         "gate_as_permission": False,
@@ -757,6 +783,30 @@ def apply_local_material_migration(project_root: Path | str,
     }
 
 
+_KIND_SOURCE = {
+    "specs": "spec",
+    "decisions": "decision",
+    "tasks": "task",
+    "results": "result",
+    "evidence": "evidence",
+}
+
+
+def _count_source_items(root: Path) -> dict[str, int]:
+    """只读盘点当前来源各类记录;旧状态文件未记录清单时回退使用。"""
+
+    try:
+        config = _config_or_local(root)
+        items = _discover_items(root, config)
+    except RecordsError:
+        return {}
+    counts: dict[str, int] = {}
+    for item in items:
+        kind = str(item.get("kind") or "")
+        counts[kind] = counts.get(kind, 0) + 1
+    return counts
+
+
 def _incomplete_reason(root: Path, status: dict) -> list[str]:
     missing: list[str] = []
     staging = Path(status.get("pending_root") or _pending_root(root))
@@ -775,16 +825,18 @@ def _incomplete_reason(root: Path, status: dict) -> list[str]:
         missing.append("新规格缺少完整设计正文")
     history = converted.get("history") or ""
     mapping = status.get("correspondence") or {}
-    if not mapping.get("specs"):
-        missing.append("缺少规格对应关系")
-    if not mapping.get("decisions") and "状态:" not in history:
-        missing.append("缺少决定对应关系")
-    if not mapping.get("tasks"):
-        missing.append("缺少任务对应关系")
-    if not mapping.get("results"):
-        missing.append("缺少结果对应关系")
-    if not mapping.get("evidence"):
-        missing.append("缺少证据对应关系")
+    # 对应关系按来源盘点比较:来源里本就没有的类别(如只有开放任务、
+    # 尚无结果与证据的新项目)不作为缺口,否则切换闸门永远打不开。
+    inventory = dict(status.get("source_inventory") or {})
+    if not inventory:
+        inventory = _count_source_items(root)
+    labels = {"specs": "规格", "decisions": "决定", "tasks": "任务",
+              "results": "结果", "evidence": "证据"}
+    for group, label in labels.items():
+        if mapping.get(group):
+            continue
+        if inventory.get(_KIND_SOURCE[group], 0):
+            missing.append(f"缺少{label}对应关系")
     if not converted.get("modules"):
         missing.append("缺少可读取模块")
     return missing

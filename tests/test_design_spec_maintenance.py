@@ -942,6 +942,55 @@ def test_github_spec_sync_forwards_custom_config_rel() -> None:
               f"任务同步必须透传配置路径:{applied.get('updated_tasks')}")
 
 
+def test_github_adoption_reports_unpublished_task_sync() -> None:
+    """受影响任务同步只剩未发布草稿时,采用不得宣称完成(published)。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "task-sync")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        mgs_records.create_task(
+            root, "01-catch-star", "接住第一颗星星",
+            _task_request("接住一颗星星并计分"),
+            triage="ready-for-agent", transport=fake, cache_dir=cache)
+        task_number = mgs_records.read_task(
+            root, "01-catch-star", transport=fake,
+            cache_dir=cache).get("issue_number")
+        fake.fail("PATCH", f"/issues/{task_number}", "timeout")
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "正式改为 3 分",
+            "overall": {
+                "title": "task-sync 整体设计",
+                "version": "v2",
+                "core_play": "接星星。接到一颗得 3 分。",
+                "rules": ["得分：每颗星星 3 分。"],
+            },
+            "modules": {
+                "规则与数值": {"title": "规则与数值", "rules": ["每颗星星 3 分。"]},
+            },
+            "affected_tasks": ["01-catch-star"],
+        }, transport=fake, cache_dir=cache)
+        applied = mgs_records.apply_spec_adoption(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is False,
+              f"任务基线未同步发布不得宣告采用完成:{applied}")
+        check(applied.get("published") is False,
+              f"未发布不得报 published,实际 {applied.get('published')}")
+        check("01-catch-star" in (applied.get("unpublished_tasks") or []),
+              f"必须逐个列出未发布的任务,实际 {applied.get('unpublished_tasks')}")
+        current = mgs_records.read_current_design(
+            root, transport=fake, cache_dir=cache)
+        check("每颗星星 3 分" in (current.get("overall") or ""),
+              "权威规格的实际更新应如实可见(部分成果不掩盖)")
+        task = mgs_records.read_task(
+            root, "01-catch-star", transport=fake, cache_dir=cache)
+        check("spec-overall" not in str((task.get("request") or {})
+                                        .get("输入与基线", "")),
+              "任务基线未发布时不得当作已同步")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_game_and_matt_entries_read_design_stage_requirements,
@@ -960,5 +1009,6 @@ if __name__ == "__main__":
         test_github_discussion_rounds_append_not_replace,
         test_tospec_preserves_unrelated_sections,
         test_github_spec_sync_forwards_custom_config_rel,
+        test_github_adoption_reports_unpublished_task_sync,
     )
     sys.exit(run_theme("游戏设计讨论与现行规格维护(#53 T2/T3/T5)", TESTS, FAILURES))

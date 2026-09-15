@@ -107,6 +107,24 @@ def _next_design_id(existing: list[dict]) -> str:
     return f"ds-{(max(numbers) + 1) if numbers else 1}"
 
 
+def _latest_revision_snapshot(snapshots: list[dict],
+                              design_id: str) -> dict | None:
+    """同一 design_id 的现行修订是编号最高的 rN:更低编号已被替代。"""
+
+    best: dict | None = None
+    best_number = -1
+    for item in snapshots:
+        if item.get("design_id") != design_id:
+            continue
+        match = re.match(r"r(\d+)$", str(item.get("revision") or ""))
+        if not match:
+            continue
+        number = int(match.group(1))
+        if number > best_number:
+            best, best_number = item, number
+    return best
+
+
 def _attachment_rel(rel: str) -> str:
     parts = []
     for part in Path(str(rel or "")).parts:
@@ -171,8 +189,7 @@ def plan_design_snapshot(project_root: Path | str, request: dict,
     existing = listed.get("snapshots") or []
     reuse_id = str(request.get("reuse_design_id") or request.get("reuse") or "")
     if reuse_id:
-        match = next((item for item in existing
-                      if item.get("design_id") == reuse_id), None)
+        match = _latest_revision_snapshot(existing, reuse_id)
         return {
             "wrote": False,
             "should_snapshot": False,
@@ -298,8 +315,11 @@ def _read_local_snapshots(root: Path, config: dict) -> dict:
     base = root / SNAPSHOT_DIR
     snapshots: list[dict] = []
     if base.is_dir():
+        # 写入侧接受全部符合 ID 语法的 design_id(不强制 ds- 前缀);
+        # 读取侧按同一语法枚举,否则自定义 ID 的归档会从读取 API 消失。
         for design_dir in sorted(p for p in base.iterdir()
-                                 if p.is_dir() and p.name.startswith("ds-")):
+                                 if p.is_dir()
+                                 and DESIGN_ID_RE.fullmatch(p.name)):
             for rev_dir in sorted(p for p in design_dir.iterdir() if p.is_dir()):
                 snap = _load_local_revision(root, design_dir.name, rev_dir)
                 if snap:
@@ -634,8 +654,8 @@ def _associate_game_version(project_root, plan, *, config_rel, transport,
     root, config = mgs_spec._config(project_root, config_rel)
     if config.get("backend") == "local-markdown":
         listed = _read_local_snapshots(root, config)
-        match = next((item for item in listed.get("snapshots") or []
-                      if item.get("design_id") == plan.get("design_id")), None)
+        match = _latest_revision_snapshot(
+            listed.get("snapshots") or [], str(plan.get("design_id") or ""))
         if match is None:
             return {"ok": False, "wrote": False, "complete": False,
                     "reason": f"可复用快照不存在:{plan.get('design_id')}"}
@@ -816,10 +836,32 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
                 plan, current.get("overall") or "",
                 dict(current.get("modules") or {}), attachments,
                 formed_at=today())
-            backend.transport.request(
-                "PATCH",
-                f"{mgs_spec.repo_path(backend.repo)}/issues/{number}",
-                {"body": body})
+            # 恢复 PATCH 必须成功且回读一致:归档 Issue 若仍缺整体/模块/
+            # 附件内容,不得因索引已就绪就宣告恢复完成。
+            try:
+                status, _payload = backend.transport.request(
+                    "PATCH",
+                    f"{mgs_spec.repo_path(backend.repo)}/issues/{number}",
+                    {"body": body})
+                if status not in (200, 201):
+                    raise mgs_spec.TransportError(
+                        "bad_response", f"rebuild snapshot HTTP {status}")
+                back = backend.transport.request(
+                    "GET",
+                    f"{mgs_spec.repo_path(backend.repo)}/issues/{number}")[1]
+                if (back or {}).get("body") != body:
+                    raise mgs_spec.TransportError(
+                        "bad_response", "rebuild snapshot 回读失败")
+            except mgs_spec.TransportError as exc:
+                return {
+                    "ok": False, "wrote": True, "complete": False,
+                    "filled_gap_only": True,
+                    "design_id": plan.get("design_id"),
+                    "revision": plan.get("revision"),
+                    "issue_number": number,
+                    "reason": f"归档恢复未确认:{exc}",
+                    "gate_required": False,
+                }
         index_ok = _ensure_github_index(backend, plan, number)
         if not index_ok:
             return {
@@ -1066,6 +1108,7 @@ def _associate_github_version(root, config, plan, *, transport, api_base,
 
 def _find_latest_github(backend, design_id) -> dict | None:
     found = None
+    found_number = -1
     try:
         items = mgs_spec._list_github_items(backend)
     except mgs_spec.TransportError:
@@ -1073,6 +1116,11 @@ def _find_latest_github(backend, design_id) -> dict | None:
     for item in items:
         body = item.get("body") or ""
         match = re.search(r"快照身份\s*[:：]\s*([A-Za-z0-9_-]+)", body)
-        if match and match.group(1) == design_id:
-            found = item
+        if not match or match.group(1) != design_id:
+            continue
+        revision = re.match(
+            r"r(\d+)$", _meta_field(body, "修订") or "r1")
+        number = int(revision.group(1)) if revision else 0
+        if number > found_number:
+            found, found_number = item, number
     return found

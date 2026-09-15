@@ -861,6 +861,104 @@ def test_client_switch_retires_legacy_entries_and_keeps_user_skills() -> None:
               "退役清理不阻塞切换完成")
 
 
+def test_github_marker_failure_keeps_local_sources_unpromoted() -> None:
+    """远端标记未确认时本地必须保持旧来源:不得先提升再报 pending-switch。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "gh-game")
+        mgs_records.apply_github_material_migration(
+            root, mgs_records.plan_github_material_migration(
+                root, transport=fake),
+            confirmed=True, transport=fake)
+        plan = mgs_records.plan_safe_switch(root, transport=fake)
+        check(plan.get("ready") is True, f"前置:完整待切换应可切换:{plan}")
+        old_design = (root / "docs/mygamestudio/GAME_DESIGN.md").read_text(
+            encoding="utf-8")
+        old_config = (root / "docs/mygamestudio/CONFIG.md").read_text(
+            encoding="utf-8")
+        fake.http_error("PATCH", "/issues/", 500)
+        applied = mgs_records.apply_safe_switch(
+            root, plan, confirmed=True, transport=fake)
+        check(applied.get("ok") is not True,
+              f"远端标记失败不得报告成功:{applied}")
+        check((root / "docs/mygamestudio/GAME_DESIGN.md").read_text(
+            encoding="utf-8") == old_design,
+            "本地现行规格必须保持旧来源,不得提前提升")
+        check((root / "docs/mygamestudio/CONFIG.md").read_text(
+            encoding="utf-8") == old_config,
+            "本地 CONFIG 不得被改写成已切换")
+        check(not (root / "docs/mygamestudio/records/switch-status.json"
+                   ).exists(),
+              "远端未确认时不得写切换状态")
+        check(not (root / "docs/mygamestudio/records/readonly-history"
+                   ).exists(),
+              "远端未确认时不得归档本地旧件")
+
+
+def test_github_rollback_verifies_remote_markers_before_restoring() -> None:
+    """回滚的远端标记必须逐项确认;未确认时本地保持已切换,不得恢复旧件。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "gh-game")
+        mgs_records.apply_github_material_migration(
+            root, mgs_records.plan_github_material_migration(
+                root, transport=fake),
+            confirmed=True, transport=fake)
+        plan = mgs_records.plan_safe_switch(root, transport=fake)
+        applied = mgs_records.apply_safe_switch(
+            root, plan, confirmed=True, transport=fake)
+        check(applied.get("ok") is True, f"前置:切换应成功:{applied}")
+        new_design = (root / "docs/mygamestudio/GAME_DESIGN.md").read_text(
+            encoding="utf-8")
+        fake.http_error("PATCH", "/issues/", 500)
+        rolled = mgs_records.rollback_safe_switch(
+            root, plan, confirmed=True, transport=fake)
+        check(rolled.get("ok") is not True,
+              f"远端标记回退失败不得报告回滚成功:{rolled}")
+        check(rolled.get("status") != "rolled-back",
+              "未确认远端标记时不得宣告 rolled-back")
+        check(rolled.get("marker_failures"),
+              f"必须逐项列出未确认的标记回退,实际 {rolled}")
+        status = mgs_records.read_safe_switch(root, transport=fake)
+        check(status.get("status") == "switched",
+              f"本地必须保持已切换状态,实际 {status.get('status')}")
+        check((root / "docs/mygamestudio/GAME_DESIGN.md").read_text(
+            encoding="utf-8") == new_design,
+            "远端未确认时不得用旧件覆盖本地新件")
+        bodies = [item.get("body") or "" for item in fake.issues]
+        check(any("迁移状态:readonly-history" in body for body in bodies),
+              "旧权威 Issue 仍处于只读历史(与未回退事实一致)")
+
+
+def test_shared_support_file_edits_pause_skill_switch() -> None:
+    """用户改过包内同名支持文件时必须暂停该技能,不得用包副本静默覆盖。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        ready = _write_old_local_project(Path(tmp) / "ready-game")
+        _convert_local(ready)
+        home = Path(tmp) / "isolated-codex"
+        skills = _write_isolated_client(home)
+        shared = skills / "implement" / "agents" / "openai.yaml"
+        edited = "model: gpt-custom\n# 本项目接驳改过此文件\n"
+        shared.write_text(edited, encoding="utf-8")
+        package = Path(tmp) / "package-skills"
+        shutil.copytree(PLUGIN_SKILLS, package)
+        applied = mgs_records.apply_safe_switch(
+            ready, mgs_records.plan_safe_switch(
+                ready, client_home=home, package_root=package),
+            confirmed=True)
+        paused = [str(item) for item in applied.get("paused") or []]
+        check("implement" in paused,
+              f"改过共享支持文件的技能必须暂停交开发者决定,实际 {paused}")
+        check(shared.read_text(encoding="utf-8") == edited,
+              "暂停技能里被改过的共享文件必须原样保留")
+        detail = applied.get("paused_shared_files") or {}
+        check("agents/openai.yaml" in (detail.get("implement") or []),
+              f"必须指出致暂停的共享文件,实际 {detail}")
+        check("tdd" not in paused,
+              "未修改的共享文件不得引发无关技能暂停")
+
+
 def main() -> int:
     return run_theme(
         "issue #59 用户修改、同名来源与安全切换",
@@ -878,6 +976,9 @@ def main() -> int:
             test_deleted_source_during_prep_blocks_switch,
             test_github_switch_makes_new_current_and_can_roll_back,
             test_github_marker_failure_is_not_reported_switched,
+            test_github_marker_failure_keeps_local_sources_unpromoted,
+            test_github_rollback_verifies_remote_markers_before_restoring,
+            test_shared_support_file_edits_pause_skill_switch,
             test_client_switch_retires_legacy_entries_and_keeps_user_skills,
             test_stale_ready_plan_rechecked_before_promotion,
         ),

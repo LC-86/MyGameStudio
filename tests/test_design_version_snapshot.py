@@ -861,6 +861,142 @@ def test_escaping_snapshot_ids_and_attachments_are_refused() -> None:
               "越界附件内容不得进入任何归档 Issue")
 
 
+def test_reuse_picks_latest_replacement_revision() -> None:
+    """修正 r2 替代 r1 后,复用必须关联到 r2,不得选回被替代的 r1。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "reuse-latest")
+        first = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+        }), confirmed=True)
+        design_id = first.get("design_id")
+        mgs_records.apply_spec_adoption(root, mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "正式改为 3 分",
+            "overall": {
+                "title": "star-catcher：当前游戏需求与设计",
+                "version": "v2",
+                "core_play": "接到一颗得 3 分。",
+                "rules": ["得分：每颗星星 3 分。"],
+            },
+        }), confirmed=True)
+        mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "correction": True,
+            "design_id": design_id,
+            "game_version": "0.1.1",
+            "source": "修正快照",
+            "reason": "补记修正",
+        }), confirmed=True)
+        reuse_plan = mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "reuse_design_id": design_id,
+            "game_version": "0.2.0",
+            "source": "复用设计",
+        })
+        check(reuse_plan.get("revision") == "r2",
+              f"复用必须指向替代后的最新修订,实际 {reuse_plan.get('revision')}")
+        applied = mgs_records.apply_design_snapshot(
+            root, reuse_plan, confirmed=True)
+        check(applied.get("revision") == "r2",
+              f"版本关联必须落在最新修订上,实际 {applied.get('revision')}")
+        listed = mgs_records.read_design_snapshots(root).get("snapshots") or []
+        by_rev = {item.get("revision"): item for item in listed
+                  if item.get("design_id") == design_id}
+        check("0.2.0" in (by_rev.get("r2") or {}).get("game_versions", []),
+              f"新游戏版本必须记入现行修订 r2,实际 {by_rev.get('r2')}")
+        check("0.2.0" not in (by_rev.get("r1") or {}).get("game_versions", []),
+              f"被替代的 r1 不得代收新版本,实际 {by_rev.get('r1')}")
+
+
+def test_reader_lists_custom_design_id_snapshots() -> None:
+    """写入侧接受的自定义 design_id(如 launch-design)必须仍能被读取 API 发现。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "custom-id")
+        applied = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "design_id": "launch-design",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+        }), confirmed=True)
+        check(applied.get("ok") is True,
+              f"自定义合法 design_id 应能归档,实际 {applied}")
+        listed = mgs_records.read_design_snapshots(root)
+        ids = {item.get("design_id") for item in listed.get("snapshots") or []}
+        check("launch-design" in ids,
+              f"读取 API 必须列出全部合法 design_id 的归档,实际 {ids}")
+
+
+def test_github_snapshot_recovery_patch_is_verified_before_complete() -> None:
+    """归档 Issue 缺正文时的恢复 PATCH 必须 2xx 且回读一致才可宣告完整。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "recover")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        mgs_records.apply_spec_adoption(
+            root, mgs_records.plan_spec_adoption(root, {
+                "kind": "new_feature",
+                "source": "开发者主动 to-spec",
+                "overall": {
+                    "title": "recover 整体设计",
+                    "version": "v1",
+                    "core_play": "接星星。",
+                    "rules": ["得分：每颗星星 1 分。"],
+                },
+                "modules": {
+                    "规则与数值": {"title": "规则与数值", "rules": ["每颗星星 1 分。"]},
+                },
+            }, transport=fake, cache_dir=cache),
+            confirmed=True, transport=fake, cache_dir=cache)
+        first = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "game_version": "0.1.0",
+            "source": "开发者明确要求",
+        }, transport=fake, cache_dir=cache), confirmed=True,
+            transport=fake, cache_dir=cache)
+        check(first.get("complete") is True, f"前置:首次归档应完整:{first}")
+        snap = next(item for item in fake.issues
+                    if "快照身份:" in (item.get("body") or ""))
+
+        def strip_to_meta_only() -> None:
+            body = snap.get("body") or ""
+            snap["body"] = body.split("## 整体设计(当时完整内容)", 1)[0].rstrip() + "\n"
+
+        strip_to_meta_only()
+        rebuilt = mgs_records.apply_design_snapshot(
+            root, mgs_records.plan_design_snapshot(root, {
+                "trigger": "explicit",
+                "design_id": first.get("design_id"),
+                "game_version": "0.1.0",
+                "source": "开发者明确要求",
+            }, transport=fake, cache_dir=cache),
+            confirmed=True, transport=fake, cache_dir=cache)
+        check(rebuilt.get("ok") is True and rebuilt.get("complete") is True,
+              f"恢复成功且回读一致时应补齐并宣告完整:{rebuilt}")
+        check("## 整体设计(当时完整内容)" in (snap.get("body") or ""),
+              "恢复后归档 Issue 必须重新持有完整正文")
+
+        strip_to_meta_only()
+        fake.http_error("PATCH", f"/issues/{snap['number']}", 500)
+        failed = mgs_records.apply_design_snapshot(
+            root, mgs_records.plan_design_snapshot(root, {
+                "trigger": "explicit",
+                "design_id": first.get("design_id"),
+                "game_version": "0.1.0",
+                "source": "开发者明确要求",
+            }, transport=fake, cache_dir=cache),
+            confirmed=True, transport=fake, cache_dir=cache)
+        check(failed.get("complete") is not True,
+              f"恢复 PATCH 失败不得宣告完整:{failed}")
+        check(failed.get("ok") is not True,
+              f"恢复未确认必须如实报告失败:{failed}")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_version_freeze_archives_full_content_daily_does_not,
@@ -875,6 +1011,9 @@ if __name__ == "__main__":
         test_github_snapshot_association_http_error_is_not_complete,
         test_interrupted_snapshot_retry_fills_modules_before_complete,
         test_escaping_snapshot_ids_and_attachments_are_refused,
+        test_reuse_picks_latest_replacement_revision,
+        test_reader_lists_custom_design_id_snapshots,
+        test_github_snapshot_recovery_patch_is_verified_before_complete,
     )
     raise SystemExit(run_theme(
         "正式版本设计快照(#54 T6/T7)", TESTS, FAILURES))

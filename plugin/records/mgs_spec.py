@@ -957,15 +957,25 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                 raise TransportError(
                     "bad_response", f"module {name} 回读失败")
             module_issues[name] = number
-        updated_tasks = _sync_github_tasks(
-            root, config, plan, overall_number, config_rel, transport)
-        return {
+        task_sync = _sync_github_tasks(
+            root, config, plan, overall_number, config_rel, transport,
+            cache_dir)
+        adopted_result = {
             "ok": True, "wrote": True, "backend": "github-issues",
             "overall_issue": overall_number, "modules": module_issues,
-            "updated_tasks": updated_tasks,
+            "updated_tasks": task_sync["updated"],
+            "unpublished_tasks": task_sync["unpublished"],
             "decision_ticket_required": plan.get("decision_ticket_required"),
             "gate_required": False, "published": True,
         }
+        if task_sync["unpublished"]:
+            # 受影响任务只剩未发布草稿时,权威规格已更新而任务基线仍旧:
+            # 聚合失败并宣告采用未完成,不静默跳过。
+            adopted_result["ok"] = False
+            adopted_result["published"] = False
+            adopted_result["reason"] = (
+                "受影响任务同步未发布:" + "、".join(task_sync["unpublished"]))
+        return adopted_result
     except TransportError as exc:
         existing = None
         try:
@@ -976,8 +986,12 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
         except TransportError:
             existing = None
         if existing is not None:
-            if _github_adoption_complete(
-                    backend, existing, new_overall, plan, slugs):
+            adoption_ok = _github_adoption_complete(
+                backend, existing, new_overall, plan, slugs)
+            missing_tasks = _github_tasks_missing_cite(
+                root, plan, int(existing.get("number") or 0),
+                config_rel, transport, cache_dir) if adoption_ok else []
+            if adoption_ok and not missing_tasks:
                 return {
                     "ok": True, "wrote": True, "backend": "github-issues",
                     "overall_issue": existing.get("number"),
@@ -989,7 +1003,11 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                 "overall_issue": existing.get("number"),
                 "filled_gap_only": True, "gate_required": False,
                 "published": False,
-                "reason": "部分保存,未回读到完整采纳结果",
+                "unpublished_tasks": missing_tasks,
+                "reason": (
+                    "受影响任务基线未确认同步:" + "、".join(missing_tasks)
+                    if adoption_ok
+                    else "部分保存,未回读到完整采纳结果"),
             }
         draft = _draft(
             backend, "apply_spec_adoption",
@@ -1021,20 +1039,51 @@ def _github_adoption_complete(backend, existing: dict, new_overall: str,
     return all(slug in found for slug in slugs.values())
 
 
-def _sync_github_tasks(root: Path, config: dict, plan: dict, spec_number: int,
-                       config_rel: str, transport) -> list[str]:
-    import mgs_records  # noqa: PLC0415
-
-    updated = []
+def _task_cite(plan: dict, spec_number: int) -> str:
     version = (plan.get("overall_update") or (plan.get("adopted") or {}).get("overall")
                or {}).get("version") or "v1"
-    cite = f"spec-overall #{spec_number} {version}"
+    return f"spec-overall #{spec_number} {version}"
+
+
+def _sync_github_tasks(root: Path, config: dict, plan: dict, spec_number: int,
+                       config_rel: str, transport, cache_dir=None) -> dict:
+    """同步受影响任务基线;未发布的草稿不得被静默跳过。"""
+
+    import mgs_records  # noqa: PLC0415
+
+    updated: list[str] = []
+    unpublished: list[str] = []
+    cite = _task_cite(plan, spec_number)
     for identity in plan.get("affected_tasks") or []:
         result = mgs_records.update_task(
             root, identity, {"输入与基线": cite},
             change_note="规格引用同步", config_rel=config_rel,
-            transport=transport)
+            transport=transport, cache_dir=cache_dir)
         if result.get("ok") is False or result.get("published") is False:
+            unpublished.append(identity)
             continue
         updated.append(identity)
-    return updated
+    return {"updated": updated, "unpublished": unpublished}
+
+
+def _github_tasks_missing_cite(root: Path, plan: dict, spec_number: int,
+                               config_rel: str, transport,
+                               cache_dir=None) -> list[str]:
+    """只读核对:受影响任务基线是否已含本次规格引用。"""
+
+    import mgs_records  # noqa: PLC0415
+
+    cite = _task_cite(plan, spec_number)
+    missing: list[str] = []
+    for identity in plan.get("affected_tasks") or []:
+        try:
+            task = mgs_records.read_task(
+                root, identity, config_rel, transport=transport,
+                cache_dir=cache_dir)
+        except (RecordsError, OSError, TransportError):
+            missing.append(identity)
+            continue
+        baseline = str((task.get("request") or {}).get("输入与基线") or "")
+        if cite not in baseline:
+            missing.append(identity)
+    return missing

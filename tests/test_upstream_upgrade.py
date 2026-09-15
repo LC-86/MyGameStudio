@@ -777,6 +777,78 @@ def test_candidate_tampered_after_review_is_refused_at_apply() -> None:
               f"未绑定候选指纹的旧评审结论不得应用,实际 {refused.get('retain_reason')}")
 
 
+def test_untrusted_candidate_sha_stays_inside_evaluation_dir() -> None:
+    """非 pin 形态的候选 SHA(含 ../)不得直接拼进评估记录文件名。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
+        plugin = _write_current_plugin(Path(tmp) / "plugin")
+        candidate = _write_candidate(Path(tmp) / "candidate")
+        evaluation = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate,
+            candidate_version="9.9.9",
+            candidate_sha="../../outside",
+        )
+        check(evaluation.get("decision") == "retain",
+              "未钉住的候选必须保持当前版本")
+        record_rel = str(evaluation.get("record") or "")
+        check(record_rel and ".." not in Path(record_rel).parts,
+              f"评估记录必须仍是 provenance 内的相对路径,实际 {record_rel!r}")
+        folder = plugin / "provenance" / "upgrade-evaluations"
+        records = sorted(path.name for path in folder.glob("*.json"))
+        check(len(records) == 1,
+              f"应恰好留下一份评估记录,实际 {records}")
+        check(Path(record_rel).parent == Path("provenance/upgrade-evaluations"),
+              f"记录必须落在评估目录内,实际 {record_rel}")
+        saved = json.loads((plugin / record_rel).read_text(encoding="utf-8"))
+        check(saved.get("candidate", {}).get("sha") == "../../outside",
+              "记录内容必须保留原始候选值供复查")
+        escaped = plugin / "outside.json"
+        check(not escaped.exists(),
+              "含 ../ 的候选值不得在评估目录之外创建文件")
+        # 同一候选重复评估仍落在同一份记录上(名字由内容决定,不随调用变化)
+        again = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate, candidate_version="9.9.9",
+            candidate_sha="../../outside")
+        check(again.get("record") == record_rel,
+              "同一未钉候选的记录名必须稳定,不得散落多份")
+
+
+def test_upstream_retired_support_file_leaves_installed_skill() -> None:
+    """上游候选退役某支持文件时,安装目录与指纹都必须真正移除它。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
+        plugin = _write_current_plugin(Path(tmp) / "plugin")
+        stale_rel = "skills/tdd/tests.md"
+        stale = _write(plugin, stale_rel, "# 旧 pin 安装过的支持文件\n")
+        fingerprints_path = plugin / "provenance" / "fingerprints.json"
+        data = json.loads(fingerprints_path.read_text(encoding="utf-8"))
+        data["files"].append({
+            "path": stale_rel,
+            "sha256": _sha_file(stale),
+            "source": (f"github.com/mattpocock/skills @ {UPSTREAM_SHA} "
+                       f"{MATT_UPSTREAM_PATH['tdd']}/tests.md"),
+            "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+        })
+        fingerprints_path.write_text(
+            json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        candidate = _write_candidate(Path(tmp) / "candidate")
+        evaluation = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate,
+            candidate_version=PINNED_VERSION,
+            candidate_sha=PINNED_SHA,
+        )
+        check(evaluation.get("decision") == "adopt",
+              f"兼容候选应能采用,实际 {evaluation.get('decision')}")
+        mgs_upstream_upgrade.apply_upstream_upgrade(
+            plugin, evaluation, confirmed=True)
+        check(not stale.is_file(),
+              "上游已退役的支持文件必须退出安装目录")
+        updated = json.loads(fingerprints_path.read_text(encoding="utf-8"))
+        by_path = {entry.get("path"): entry for entry in updated.get("files") or []}
+        check(stale_rel not in by_path,
+              f"退役文件不得仍登记在新 pin 指纹下,实际 {sorted(by_path)}")
+
+
 TESTS = (
     test_unpinned_latest_is_not_adopted,
     test_evaluation_records_collection_invocation_refs_license_and_adaptations,
@@ -794,6 +866,8 @@ TESTS = (
     test_reviewed_collection_changes_are_applied,
     test_candidate_tampered_after_review_is_refused_at_apply,
     test_upgrade_refreshes_supporting_skill_file_fingerprints,
+    test_untrusted_candidate_sha_stays_inside_evaluation_dir,
+    test_upstream_retired_support_file_leaves_installed_skill,
 )
 
 

@@ -408,6 +408,29 @@ def _skill_file_rels(skill_dir: Path) -> set[str]:
     return rels
 
 
+def _edited_shared_files(user_dir: Path, pkg_dir: Path,
+                         hist_dir: Path | None) -> list[str]:
+    """用户改过、包内同名路径也存在 SKILL.md 之外的支持文件。
+
+    与包副本一致不算用户修改;与上次切换时的历史副本一致说明差异来自
+    上游版本变化,可安全采用新包;其余差异无法证明非用户编辑,按用户
+    编辑处理并暂停该技能,不得用包副本静默覆盖。
+    """
+
+    edited: list[str] = []
+    for rel in sorted(_skill_file_rels(user_dir) & _skill_file_rels(pkg_dir)):
+        if rel == "SKILL.md":
+            continue
+        user = (user_dir / rel).read_bytes()
+        if user == (pkg_dir / rel).read_bytes():
+            continue
+        if hist_dir is not None and (hist_dir / rel).is_file() \
+                and user == (hist_dir / rel).read_bytes():
+            continue
+        edited.append(rel)
+    return edited
+
+
 def _additive_user_skill_text(user_text: str, pkg_text: str) -> str | None:
     """Return extra user SKILL.md text that can be appended, or None if unsafe."""
 
@@ -485,6 +508,7 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
     user_skills = _skill_dirs(current)
     paused: list[str] = []
     decisions: list[str] = []
+    paused_shared_files: dict[str, list[str]] = {}
     for name, pkg_dir in pkg_skills.items():
         user_dir = user_skills.get(name)
         pkg_text = _read(pkg_dir / "SKILL.md")
@@ -492,10 +516,15 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
             user_text = _read(user_dir / "SKILL.md")
             extra_rels = _skill_file_rels(user_dir) - _skill_file_rels(pkg_dir)
             extra_text = _additive_user_skill_text(user_text, pkg_text)
-            if _meaning_conflict(user_text, pkg_text) or extra_text is None:
+            hist_dir = history / name if (history / name).is_dir() else None
+            edited_shared = _edited_shared_files(user_dir, pkg_dir, hist_dir)
+            if (_meaning_conflict(user_text, pkg_text) or extra_text is None
+                    or edited_shared):
                 _write(user_dir / "SKILL.md", _ensure_stage_pointer(user_text))
                 paused.append(name)
                 decisions.append(name)
+                if edited_shared:
+                    paused_shared_files[name] = edited_shared
                 continue
             live_extras: dict[str, bytes] = {}
             for rel in extra_rels:
@@ -553,6 +582,7 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
         "switched_skills": True,
         "old_environment_kept": False,
         "retired_skills": retired_done,
+        "paused_shared_files": paused_shared_files,
     }
 
 
@@ -606,6 +636,7 @@ def _switch_local(root: Path, plan: dict) -> dict:
         "paused_skills": skills.get("paused") or [],
         "developer_decisions": skills.get("developer_decisions") or [],
         "retired_skills": skills.get("retired_skills") or [],
+        "paused_shared_files": skills.get("paused_shared_files") or {},
     }
     _save_json(_status_path(root), payload)
     return {
@@ -626,6 +657,7 @@ def _switch_local(root: Path, plan: dict) -> dict:
         "paused": list(skills.get("paused") or []),
         "developer_decisions": list(skills.get("developer_decisions") or []),
         "retired_skills": list(skills.get("retired_skills") or []),
+        "paused_shared_files": dict(skills.get("paused_shared_files") or {}),
     }
 
 
@@ -708,10 +740,10 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
     backend = _github_backend(
         root, transport=transport, api_base=api_base, cache_dir=cache_dir)
     correspondence = plan.get("correspondence") or {}
-    archived = _archive_originals(root, staging)
-    copied = _promote_pending(root, staging)
-    # 远端标记迁移必须逐项确认:PATCH 成功且回读到目标状态,才允许本地
-    # 宣告 switched;任何一项未确认都不写 switch-status。
+    # 远端标记迁移必须先于本地提升逐项确认:PATCH 成功且回读到目标状态
+    # 才允许归档旧件、提升新件;任何一项未确认时本地保持旧来源,
+    # 不写 switch-status。先提升再打标记会让本地指向新源而 GitHub
+    # 仍停留旧源或混合源。
     marker_failures: list[str] = []
     for number in _current_new_issue_numbers(correspondence):
         body = _read_issue_body(backend, number)
@@ -736,20 +768,22 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
     if marker_failures:
         return {
             "ok": False,
-            "wrote": copied > 0 or bool(archived),
+            "wrote": False,
             "status": "pending-switch",
-            "reason": "远端标记更新未全部确认,不宣告切换完成",
+            "reason": "远端标记更新未全部确认,本地保持旧来源,不宣告切换完成",
             "marker_failures": marker_failures,
             "tracker": "github-issues",
             "backend": "github-issues",
             "history_root": HISTORY_REL,
-            "archived": archived,
+            "archived": [],
             "gate_required": False,
             "gate_as_permission": False,
             "real_migration_authorized": False,
             "recovery_destination": GATE_HISTORY_REL,
             "correspondence": correspondence,
         }
+    archived = _archive_originals(root, staging)
+    copied = _promote_pending(root, staging)
     unready = _peer_unready(plan.get("peer_projects") or [])
     skills = _switch_skills(plan, unready=unready)
     payload = {
@@ -769,6 +803,7 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         "paused_skills": skills.get("paused") or [],
         "developer_decisions": skills.get("developer_decisions") or [],
         "retired_skills": skills.get("retired_skills") or [],
+        "paused_shared_files": skills.get("paused_shared_files") or {},
         "new_issues": _current_new_issue_numbers(correspondence),
         "old_issues": _old_issue_numbers(correspondence),
     }
@@ -791,6 +826,7 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         "paused": list(skills.get("paused") or []),
         "developer_decisions": list(skills.get("developer_decisions") or []),
         "retired_skills": list(skills.get("retired_skills") or []),
+        "paused_shared_files": dict(skills.get("paused_shared_files") or {}),
     }
 
 
@@ -1041,15 +1077,44 @@ def rollback_safe_switch(project_root: Path | str,
                 preserved.append(identity)
                 if isinstance(number, int):
                     known.append(number)
+        # 回滚的远端标记必须逐项确认(2xx + 回读):旧权威 Issue 若仍
+        # 处于 readonly-history,本地不得恢复旧件并宣告 rolled-back。
+        marker_failures: list[str] = []
         for number in _current_new_issue_numbers(correspondence):
             if number in known and number not in _old_issue_numbers(correspondence):
                 body = _read_issue_body(backend, number)
-                _patch_issue_body(
-                    backend, number, _with_mark(
-                        _strip_mark(body, HISTORY_MARK), PENDING_SWITCH_MARK))
+                target = _with_mark(
+                    _strip_mark(body, HISTORY_MARK), PENDING_SWITCH_MARK)
+                if not _patch_issue_body(backend, number, target):
+                    marker_failures.append(f"#{number}:pending-switch 恢复未确认")
+                    continue
+                back = _read_issue_body(backend, number)
+                if HISTORY_MARK in back or PENDING_SWITCH_MARK not in back:
+                    marker_failures.append(f"#{number}:pending-switch 回读失败")
         for number in _old_issue_numbers(correspondence):
             body = _read_issue_body(backend, number)
-            _patch_issue_body(backend, number, _strip_mark(body, HISTORY_MARK))
+            target = _strip_mark(body, HISTORY_MARK)
+            if not _patch_issue_body(backend, number, target):
+                marker_failures.append(f"#{number}:readonly-history 移除未确认")
+                continue
+            if HISTORY_MARK in _read_issue_body(backend, number):
+                marker_failures.append(f"#{number}:readonly-history 回读仍在")
+        if marker_failures:
+            return {
+                "ok": False,
+                "wrote": False,
+                "status": "switched",
+                "reason": "远端标记回退未全部确认,保持已切换状态,不回退本地",
+                "marker_failures": marker_failures,
+                "preserved": preserved,
+                "correspondence": correspondence,
+                "history_root": HISTORY_REL,
+                "preserve_root": PRESERVE_REL,
+                "gate_required": False,
+                "gate_as_permission": False,
+                "real_migration_authorized": False,
+                "recovery_destination": GATE_HISTORY_REL,
+            }
     restored = _restore_history(root)
     payload = dict(current)
     payload.update({

@@ -146,11 +146,21 @@ def _broken_refs(root: Path, files: list[Path]) -> list[str]:
     return broken
 
 
+def _evaluation_record_name(sha: str) -> str:
+    text = str(sha or "").strip()
+    if _is_pinned_sha(text):
+        return text.lower()
+    # 非 pin 形态的候选值(可能含 ../ 等)不得直接作文件名:
+    # 折叠为摘要名,路径仍限制在评估目录内。
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return f"unpinned-{digest}"
+
+
 def _write_evaluation(plugin: Path, evaluation: dict) -> Path:
     sha = str((evaluation.get("candidate") or {}).get("sha") or "unpinned")
     folder = plugin / "provenance" / "upgrade-evaluations"
     folder.mkdir(parents=True, exist_ok=True)
-    path = folder / f"{sha}.json"
+    path = folder / f"{_evaluation_record_name(sha)}.json"
     evaluation["record"] = str(path.relative_to(plugin))
     serializable = json.loads(json.dumps(evaluation))
     candidate = serializable.get("candidate") or {}
@@ -537,6 +547,21 @@ def _adopt_candidate(plugin: Path, evaluation: dict) -> dict:
         dest_skill = dest_dir / "SKILL.md"
         previous = dest_skill.read_text(encoding="utf-8") if dest_skill.is_file() else ""
         previous_original = (by_path.get(f"skills/{name}/SKILL.md") or {}).get("original_sha256") or ""
+        # 目录与候选同步:上游已退役的支持文件必须退出有效目录,
+        # 否则残留文件会被当作现行内容并重新登记到新 pin 名下。
+        candidate_files = {
+            src.relative_to(skill_md.parent)
+            for src in skill_md.parent.rglob("*") if src.is_file()
+        }
+        for stale in dest_dir.rglob("*"):
+            if stale.is_file() and stale.relative_to(dest_dir) not in candidate_files:
+                stale.unlink()
+        for empty_dir in sorted((p for p in dest_dir.rglob("*") if p.is_dir()),
+                                key=lambda p: len(p.parts), reverse=True):
+            try:
+                empty_dir.rmdir()
+            except OSError:
+                pass
         for src in skill_md.parent.rglob("*"):
             if not src.is_file():
                 continue

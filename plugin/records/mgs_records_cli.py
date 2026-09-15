@@ -213,16 +213,20 @@ def _cli() -> int:
         elif args.cmd == "analyze":
             payload = analyze_project(root)
         elif args.cmd == "onboard":
+            # --config 必须贯通到接入规划与写入:否则非默认路径下会把
+            # 项目当未配置分析,并在默认路径再建第二套 tracker 权威。
             if args.tracker == "github-issues":
                 if not args.repo:
                     raise RecordsError("GitHub 接入必须提供 --repo host/owner/repository")
                 payload = apply_github_onboarding(
                     root, plan_github_onboarding(
-                        root, repo=args.repo, authorization=args.authorization),
-                    confirmed=args.confirmed)
+                        root, repo=args.repo, authorization=args.authorization,
+                        config_rel=args.config),
+                    confirmed=args.confirmed, config_rel=args.config)
             else:
                 payload = apply_local_onboarding(
-                    root, plan_local_onboarding(root), confirmed=args.confirmed)
+                    root, plan_local_onboarding(root, args.config),
+                    confirmed=args.confirmed, config_rel=args.config)
         elif args.cmd == "frontier":
             payload = frontier_tasks(
                 root, parent_identity=args.parent, config_rel=args.config,

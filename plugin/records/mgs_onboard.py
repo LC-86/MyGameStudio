@@ -47,7 +47,8 @@ def _existing_files(root: Path) -> list[Path]:
     return files
 
 
-def analyze_project(project_root: Path | str) -> dict:
+def analyze_project(project_root: Path | str,
+                    config_rel: str = CONFIG_REL) -> dict:
     """只读分析已有设计、工程和资料;不写入,也不开始制作。"""
 
     root = Path(project_root)
@@ -83,7 +84,7 @@ def analyze_project(project_root: Path | str) -> dict:
         if path.name == "CONFIG.md" and "github-issues" in text \
                 and "local-markdown" in text:
             conflicts.append(rel)
-    if not (root / CONFIG_REL).is_file():
+    if not (root / config_rel).is_file():
         gaps.append("缺少协作配置与现行 tracker 选择")
     if not (root / INDEX_REL).is_file():
         gaps.append("缺少资料入口指针")
@@ -113,11 +114,12 @@ def _project_name(root: Path) -> str:
     return root.name
 
 
-def plan_local_onboarding(project_root: Path | str) -> dict:
+def plan_local_onboarding(project_root: Path | str,
+                          config_rel: str = CONFIG_REL) -> dict:
     """形成本地 Markdown 接入清单;不写入。"""
 
     root = Path(project_root)
-    broken = _config_parse_error(root)
+    broken = _config_parse_error(root, config_rel)
     if broken is not None:
         return {
             "ok": False,
@@ -126,25 +128,25 @@ def plan_local_onboarding(project_root: Path | str) -> dict:
             "reason": broken,
             "items": [],
         }
-    mismatch = _tracker_mismatch(root, "local-markdown")
+    mismatch = _tracker_mismatch(root, "local-markdown", config_rel)
     if mismatch is not None:
         return {
             "ok": False,
             "wrote": False,
-            "backend": _current_backend(root) or "",
+            "backend": _current_backend(root, config_rel) or "",
             "reason": mismatch,
             "items": [],
         }
-    analysis = analyze_project(root)
+    analysis = analyze_project(root, config_rel)
     items: list[dict] = []
 
     def add(path: str, action: str, reason: str) -> None:
         items.append({"path": path, "action": action, "reason": reason})
 
-    if not (root / CONFIG_REL).is_file():
-        add(CONFIG_REL, "新增", "选择本地 Markdown 为唯一现行任务来源")
+    if not (root / config_rel).is_file():
+        add(config_rel, "新增", "选择本地 Markdown 为唯一现行任务来源")
     else:
-        add(CONFIG_REL, "复用", "已有协作配置,不覆盖")
+        add(config_rel, "复用", "已有协作配置,不覆盖")
     if not (root / INDEX_REL).is_file():
         add(INDEX_REL, "新增", "建立现行规格/任务/阶段资料指针")
     else:
@@ -160,7 +162,7 @@ def plan_local_onboarding(project_root: Path | str) -> dict:
     if not (root / ONBOARD_REL).is_file():
         add(ONBOARD_REL, "新增", "保存本次接入记录")
     reused = [rel for rel in analysis["已采纳"]
-              if rel not in {CONFIG_REL, INDEX_REL, PROJECT_REL}]
+              if rel not in {config_rel, INDEX_REL, PROJECT_REL}]
     for rel in reused:
         add(rel, "复用", "沿用已有有效资料,不覆盖")
     return {
@@ -173,30 +175,31 @@ def plan_local_onboarding(project_root: Path | str) -> dict:
     }
 
 
-def _config_parse_error(root: Path) -> str | None:
+def _config_parse_error(root: Path, config_rel: str = CONFIG_REL) -> str | None:
     """现有 CONFIG.md 存在但无法解析时返回原因;损坏配置不得被接入复用。"""
 
-    if not (root / CONFIG_REL).is_file():
+    if not (root / config_rel).is_file():
         return None
     try:
-        load_config(root)
+        load_config(root, config_rel)
     except RecordsError as exc:
-        return f"现有 {CONFIG_REL} 无法解析:{exc};接入不会复用损坏配置," \
+        return f"现有 {config_rel} 无法解析:{exc};接入不会复用损坏配置," \
                "请先修复或明确替换后再接入"
     return None
 
 
-def _current_backend(root: Path) -> str | None:
-    if not (root / CONFIG_REL).is_file():
+def _current_backend(root: Path, config_rel: str = CONFIG_REL) -> str | None:
+    if not (root / config_rel).is_file():
         return None
     try:
-        return str(load_config(root).get("backend") or "") or None
+        return str(load_config(root, config_rel).get("backend") or "") or None
     except RecordsError:
         return None
 
 
-def _tracker_mismatch(root: Path, wanted: str) -> str | None:
-    current = _current_backend(root)
+def _tracker_mismatch(root: Path, wanted: str,
+                      config_rel: str = CONFIG_REL) -> str | None:
+    current = _current_backend(root, config_rel)
     if current and current != wanted:
         return (
             f"已有 {current} tracker,改用 {wanted} 须走迁移与切换,"
@@ -204,11 +207,12 @@ def _tracker_mismatch(root: Path, wanted: str) -> str | None:
     return None
 
 
-def _github_repo_mismatch(root: Path, wanted: str) -> str | None:
-    if _current_backend(root) != "github-issues":
+def _github_repo_mismatch(root: Path, wanted: str,
+                          config_rel: str = CONFIG_REL) -> str | None:
+    if _current_backend(root, config_rel) != "github-issues":
         return None
     try:
-        current = load_config(root).get("repo") or {}
+        current = load_config(root, config_rel).get("repo") or {}
     except RecordsError:
         return None
     if not isinstance(current, dict):
@@ -231,11 +235,12 @@ def _github_repo_mismatch(root: Path, wanted: str) -> str | None:
 
 
 def plan_github_onboarding(project_root: Path | str, *, repo: str,
-                           authorization: str = "") -> dict:
+                           authorization: str = "",
+                           config_rel: str = CONFIG_REL) -> dict:
     """形成 GitHub Issues 接入清单;不写入,也不把本地 Markdown 升为现行账本。"""
 
     root = Path(project_root)
-    broken = _config_parse_error(root)
+    broken = _config_parse_error(root, config_rel)
     if broken is not None:
         return {
             "ok": False,
@@ -244,36 +249,36 @@ def plan_github_onboarding(project_root: Path | str, *, repo: str,
             "reason": broken,
             "items": [],
         }
-    mismatch = _tracker_mismatch(root, "github-issues")
+    mismatch = _tracker_mismatch(root, "github-issues", config_rel)
     if mismatch is not None:
         return {
             "ok": False,
             "wrote": False,
-            "backend": _current_backend(root) or "",
+            "backend": _current_backend(root, config_rel) or "",
             "reason": mismatch,
             "items": [],
         }
     parsed = parse_repo_location(repo)
     repo_value = f"{parsed['host']}/{parsed['owner']}/{parsed['repo']}"
-    repo_mismatch = _github_repo_mismatch(root, repo_value)
+    repo_mismatch = _github_repo_mismatch(root, repo_value, config_rel)
     if repo_mismatch is not None:
         return {
             "ok": False,
             "wrote": False,
-            "backend": _current_backend(root) or "github-issues",
+            "backend": _current_backend(root, config_rel) or "github-issues",
             "reason": repo_mismatch,
             "items": [],
         }
-    analysis = analyze_project(root)
+    analysis = analyze_project(root, config_rel)
     items: list[dict] = []
 
     def add(path: str, action: str, reason: str) -> None:
         items.append({"path": path, "action": action, "reason": reason})
 
-    if not (root / CONFIG_REL).is_file():
-        add(CONFIG_REL, "新增", "选择 GitHub Issues 为唯一现行任务来源")
+    if not (root / config_rel).is_file():
+        add(config_rel, "新增", "选择 GitHub Issues 为唯一现行任务来源")
     else:
-        add(CONFIG_REL, "复用", "已有协作配置,不覆盖")
+        add(config_rel, "复用", "已有协作配置,不覆盖")
     if not (root / INDEX_REL).is_file():
         add(INDEX_REL, "新增", "建立现行规格/任务/阶段资料指针")
     else:
@@ -285,7 +290,7 @@ def plan_github_onboarding(project_root: Path | str, *, repo: str,
     if not (root / ONBOARD_REL).is_file():
         add(ONBOARD_REL, "新增", "保存本次接入记录")
     reused = [rel for rel in analysis["已采纳"]
-              if rel not in {CONFIG_REL, INDEX_REL, PROJECT_REL}]
+              if rel not in {config_rel, INDEX_REL, PROJECT_REL}]
     for rel in reused:
         add(rel, "复用", "沿用已有有效资料,不覆盖")
     return {
@@ -340,13 +345,14 @@ def _write_new(path: Path, content: str) -> str:
 
 
 def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
-                           *, confirmed: bool = False) -> dict:
+                           *, confirmed: bool = False,
+                           config_rel: str = CONFIG_REL) -> dict:
     """按确认清单写入接入资料;不覆盖有效旧文件,不要求 gate。"""
 
     root = Path(project_root)
     if not confirmed:
         raise RecordsError("未确认接入清单,不写入")
-    broken = _config_parse_error(root)
+    broken = _config_parse_error(root, config_rel)
     if broken is not None:
         return {
             "ok": False,
@@ -355,21 +361,21 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
             "reason": broken,
             "items": [],
         }
-    mismatch = _tracker_mismatch(root, "local-markdown")
+    mismatch = _tracker_mismatch(root, "local-markdown", config_rel)
     if mismatch is not None:
         return {
             "ok": False,
             "wrote": False,
-            "backend": _current_backend(root) or "",
+            "backend": _current_backend(root, config_rel) or "",
             "reason": mismatch,
             "items": [],
         }
-    plan = plan or plan_local_onboarding(root)
+    plan = plan or plan_local_onboarding(root, config_rel)
     if plan.get("ok") is False:
         return {
             "ok": False,
             "wrote": False,
-            "backend": plan.get("backend") or _current_backend(root) or "",
+            "backend": plan.get("backend") or _current_backend(root, config_rel) or "",
             "reason": plan.get("reason") or "接入前置条件未满足",
             "items": [],
         }
@@ -389,7 +395,7 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
         "位置": PROJECT_REL,
         "已有配置引用或位置": "docs/mygamestudio/records/",
         "项目约定位置": PROJECT_REL,
-        "协作配置位置": CONFIG_REL,
+        "协作配置位置": config_rel,
         "当前游戏设计位置": "docs/mygamestudio/GAME_DESIGN.md(尚未建立则见 INDEX 缺口)",
         "当前技术设计位置": "docs/mygamestudio/TECH_DESIGN.md(尚未建立则见 INDEX 缺口)",
         "当前任务入口": DEFAULT_TASK_ROOT,
@@ -411,13 +417,13 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
         "事实": "无",
     }
     actions = {item["path"]: item["action"] for item in plan.get("items", [])}
-    if actions.get(CONFIG_REL) == "新增":
+    if actions.get(config_rel) == "新增":
         template = (TEMPLATE_ROOT / "project" / "CONFIG.md").read_text(encoding="utf-8")
         content = _fill(template, mapping)
         content = _unique_docmap(content)
-        results.append({"path": CONFIG_REL, "result": _write_new(root / CONFIG_REL, content)})
+        results.append({"path": config_rel, "result": _write_new(root / config_rel, content)})
     else:
-        results.append({"path": CONFIG_REL, "result": "复用"})
+        results.append({"path": config_rel, "result": "复用"})
     if actions.get(INDEX_REL) == "新增":
         template = (TEMPLATE_ROOT / "project" / "INDEX.md").read_text(encoding="utf-8")
         content = _fill(template, mapping)
@@ -428,7 +434,7 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
         reused_design = [
             item["path"] for item in plan.get("items", [])
             if item.get("action") == "复用"
-            and item["path"] not in {CONFIG_REL, INDEX_REL, PROJECT_REL}
+            and item["path"] not in {config_rel, INDEX_REL, PROJECT_REL}
             and not str(item["path"]).endswith("/")
         ]
         if reused_design:
@@ -478,7 +484,7 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
                 " 制作统筹 | 已确认 |")
         lines += [
             "", "## 就绪与恢复", "",
-            f"- 文档与任务入口：{INDEX_REL} 与 {CONFIG_REL}",
+            f"- 文档与任务入口：{INDEX_REL} 与 {config_rel}",
             "- 运行保障：普通本地工作不要求 gate 配置",
             "- 已完成与剩余项：清单已应用；规格文件未建立的记入状态查询缺项",
             "- 用户后续修改及影响：恢复时重读当前文件，不覆盖后来变更",
@@ -497,7 +503,8 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
     }
 
 
-def _github_mapping(root: Path, plan: dict) -> dict[str, str]:
+def _github_mapping(root: Path, plan: dict,
+                    config_rel: str = CONFIG_REL) -> dict[str, str]:
     name = plan.get("project_name") or _project_name(root)
     repo = plan.get("repo") or ""
     authorization = plan.get("authorization") or "无"
@@ -513,7 +520,7 @@ def _github_mapping(root: Path, plan: dict) -> dict[str, str]:
         "位置": PROJECT_REL,
         "已有配置引用或位置": "docs/mygamestudio/records/",
         "项目约定位置": PROJECT_REL,
-        "协作配置位置": CONFIG_REL,
+        "协作配置位置": config_rel,
         "当前游戏设计位置": "GitHub 规格 Issue(尚未建立则见 INDEX 缺口)",
         "当前技术设计位置": "docs/mygamestudio/TECH_DESIGN.md(尚未建立则见 INDEX 缺口)",
         "当前任务入口": f"{repo}(GitHub Issues 为唯一现行任务来源;本地仅保存明确标识的草稿或缓存)",
@@ -538,13 +545,14 @@ def _github_mapping(root: Path, plan: dict) -> dict[str, str]:
 
 def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
                             *, confirmed: bool = False, repo: str | None = None,
-                            authorization: str = "") -> dict:
+                            authorization: str = "",
+                            config_rel: str = CONFIG_REL) -> dict:
     """按确认清单写入 GitHub 接入资料;不覆盖有效旧文件,不把本地 task.md 当作现行账本。"""
 
     root = Path(project_root)
     if not confirmed:
         raise RecordsError("未确认接入清单,不写入")
-    broken = _config_parse_error(root)
+    broken = _config_parse_error(root, config_rel)
     if broken is not None:
         return {
             "ok": False,
@@ -553,33 +561,34 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
             "reason": broken,
             "items": [],
         }
-    mismatch = _tracker_mismatch(root, "github-issues")
+    mismatch = _tracker_mismatch(root, "github-issues", config_rel)
     if mismatch is not None:
         return {
             "ok": False,
             "wrote": False,
-            "backend": _current_backend(root) or "",
+            "backend": _current_backend(root, config_rel) or "",
             "reason": mismatch,
             "items": [],
         }
     plan = plan or plan_github_onboarding(
-        root, repo=repo or "", authorization=authorization)
+        root, repo=repo or "", authorization=authorization,
+        config_rel=config_rel)
     if plan.get("ok") is False:
         return {
             "ok": False,
             "wrote": False,
-            "backend": plan.get("backend") or _current_backend(root) or "",
+            "backend": plan.get("backend") or _current_backend(root, config_rel) or "",
             "reason": plan.get("reason") or "接入前置条件未满足",
             "items": [],
         }
     wanted_repo = plan.get("repo") or repo or ""
     repo_mismatch = (
-        _github_repo_mismatch(root, wanted_repo) if wanted_repo else None)
+        _github_repo_mismatch(root, wanted_repo, config_rel) if wanted_repo else None)
     if repo_mismatch is not None:
         return {
             "ok": False,
             "wrote": False,
-            "backend": _current_backend(root) or plan.get("backend") or "",
+            "backend": _current_backend(root, config_rel) or plan.get("backend") or "",
             "reason": repo_mismatch,
             "items": [],
         }
@@ -589,15 +598,15 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
         raise RecordsError("GitHub 接入必须明确 host/owner/repository")
     name = plan.get("project_name") or _project_name(root)
     results: list[dict] = []
-    mapping = _github_mapping(root, plan)
+    mapping = _github_mapping(root, plan, config_rel)
     actions = {item["path"]: item["action"] for item in plan.get("items", [])}
-    if actions.get(CONFIG_REL) == "新增":
+    if actions.get(config_rel) == "新增":
         template = (TEMPLATE_ROOT / "project" / "CONFIG.md").read_text(encoding="utf-8")
         content = _fill(template, mapping)
         content = _unique_docmap(content, backend="github-issues")
-        results.append({"path": CONFIG_REL, "result": _write_new(root / CONFIG_REL, content)})
+        results.append({"path": config_rel, "result": _write_new(root / config_rel, content)})
     else:
-        results.append({"path": CONFIG_REL, "result": "复用"})
+        results.append({"path": config_rel, "result": "复用"})
     if actions.get(INDEX_REL) == "新增":
         template = (TEMPLATE_ROOT / "project" / "INDEX.md").read_text(encoding="utf-8")
         content = _fill(template, mapping)
@@ -608,7 +617,7 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
         reused_design = [
             item["path"] for item in plan.get("items", [])
             if item.get("action") == "复用"
-            and item["path"] not in {CONFIG_REL, INDEX_REL, PROJECT_REL}
+            and item["path"] not in {config_rel, INDEX_REL, PROJECT_REL}
             and not str(item["path"]).endswith("/")
         ]
         if reused_design:
@@ -653,7 +662,7 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
                 " 制作统筹 | 已确认 |")
         lines += [
             "", "## 就绪与恢复", "",
-            f"- 文档与任务入口：{INDEX_REL} 与 {CONFIG_REL}",
+            f"- 文档与任务入口：{INDEX_REL} 与 {config_rel}",
             "- 运行保障：普通工作不要求 gate 配置",
             "- 已完成与剩余项：清单已应用；规格文件未建立的记入状态查询缺项",
             "- 用户后续修改及影响：恢复时重读当前文件与 GitHub 实际状态，不覆盖后来变更",

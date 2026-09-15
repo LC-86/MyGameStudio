@@ -549,6 +549,42 @@ def test_cli_onboard_status_and_create_without_gate() -> None:
         check(before == _snapshot(root), "状态查询前后内容不变")
 
 
+def test_cli_onboard_honors_custom_config_path() -> None:
+    """onboard --config 指向非默认配置时必须沿用该路径;
+    不得在默认路径再建第二套 tracker 权威。"""
+
+    from records_backend_support import CONFIG_TEMPLATE, FIVE_LABELS
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "cfg-game"
+        root.mkdir(parents=True)
+        (root / "README.md").write_text("# cfg-game\n", encoding="utf-8")
+        custom_rel = "docs/mygamestudio/records/CONFIG-alt.md"
+        custom_path = root / custom_rel
+        custom_path.parent.mkdir(parents=True)
+        label_rows = "\n".join(f"| {name} | {name} |" for name in FIVE_LABELS)
+        custom_path.write_text(
+            CONFIG_TEMPLATE.format(
+                backend="local-markdown",
+                location="docs/mygamestudio/work/", label_rows=label_rows),
+            encoding="utf-8")
+        before = custom_path.read_text(encoding="utf-8")
+        onboard = run_cli("onboard", "--project", str(root),
+                          "--config", custom_rel, "--confirmed")
+        check(onboard.returncode == 0,
+              f"自定义配置路径的接入应成功:{onboard.stderr[:300]}")
+        payload = json.loads(onboard.stdout)
+        default_path = root / "docs/mygamestudio/CONFIG.md"
+        check(not default_path.exists(),
+              "默认路径不得出现第二套协作配置权威")
+        rows = {row.get("path"): row.get("result")
+                for row in payload.get("results", [])}
+        check(rows.get(custom_rel) == "复用",
+              f"自定义路径的既有有效配置必须被复用,实际 {rows.get(custom_rel)}")
+        check(custom_path.read_text(encoding="utf-8") == before,
+              "复用不得改写既有配置正文")
+
+
 def test_malformed_config_is_rejected_not_reused_by_onboarding() -> None:
     """现有 CONFIG.md 无法解析时,接入必须拒绝而不是当作无配置复用。"""
 
@@ -585,6 +621,83 @@ def test_malformed_config_is_rejected_not_reused_by_onboarding() -> None:
               f"GitHub 接入同样不得复用损坏配置:{gh_plan}")
 
 
+def test_concurrent_creation_of_same_identity_has_single_winner() -> None:
+    """并发创建同一身份:只有一个请求真正落盘,其余收养胜者。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboarded(Path(tmp) / "race-create")
+        barrier = threading.Barrier(6)
+        collected: list[dict] = []
+        guard = threading.Lock()
+
+        def worker(index: int) -> None:
+            barrier.wait()
+            outcome = mgs_records.create_task(
+                root, "09-race", f"并发创建第 {index} 名",
+                _task_request("并发创建同一身份"))
+            with guard:
+                collected.append(outcome)
+
+        threads = [threading.Thread(target=worker, args=(index,))
+                   for index in range(6)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        created = [item for item in collected if item.get("created") is True]
+        check(len(created) == 1,
+              f"同一身份并发创建只能有一个 created=True,实际 {len(created)}")
+        check(all(item.get("duplicate_avoided") is True
+                  for item in collected if item.get("created") is not True),
+              "未胜出的创建必须收养既有任务而不是互相覆盖")
+        readback = mgs_records.read_task(root, "09-race")
+        check(readback.get("identity") == "09-race",
+              f"并发创建后任务必须可回读,实际 {readback.get('identity')!r}")
+        check("任务身份:09-race" in (root / "docs/mygamestudio/work/09-race"
+                                    / "task.md").read_text(encoding="utf-8"),
+              "胜者正文必须完整落在唯一任务位置")
+
+
+def test_concurrent_distinct_claims_keep_single_holder() -> None:
+    """并发认领同一未认领任务:认领检查必须与写入同锁,只留一个持有人。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboarded(Path(tmp) / "race-claim")
+        mgs_records.create_task(
+            root, "10-claim", "并发认领", _task_request("并发认领同一任务"),
+            triage="ready-for-agent")
+        actors = ["agent-a", "agent-b", "agent-c", "agent-d", "agent-e"]
+        barrier = threading.Barrier(len(actors))
+        winners: list[str] = []
+        guard = threading.Lock()
+
+        def worker(actor: str) -> None:
+            barrier.wait()
+            try:
+                mgs_records.claim_task(root, "10-claim", actor)
+                with guard:
+                    winners.append(actor)
+            except mgs_records.RecordsError:
+                return
+
+        threads = [threading.Thread(target=worker, args=(actor,))
+                   for actor in actors]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        check(len(winners) == 1,
+              f"并发认领只能成功一人,实际 {winners}")
+        task = mgs_records.read_task(root, "10-claim")
+        check(task.get("claim") == winners[0],
+              f"任务持有人必须是唯一胜者,实际 {task.get('claim')!r}")
+        others = [actor for actor in actors if actor != winners[0]]
+        check(all(actor not in (root / "docs/mygamestudio/work/10-claim"
+                                / "task.md").read_text(encoding="utf-8")
+                  for actor in others),
+              "未胜者的认领不得覆盖或追加到任务正文")
+
+
 TESTS = (
     test_new_project_onboard_records_and_queries_one_task,
     test_existing_project_reuses_materials_and_flags_conflicts,
@@ -595,7 +708,10 @@ TESTS = (
     test_concurrent_result_appends_keep_both_deliveries,
     test_local_task_identity_cannot_escape_task_root,
     test_cli_onboard_status_and_create_without_gate,
+    test_cli_onboard_honors_custom_config_path,
     test_malformed_config_is_rejected_not_reused_by_onboarding,
+    test_concurrent_creation_of_same_identity_has_single_winner,
+    test_concurrent_distinct_claims_keep_single_holder,
 )
 
 

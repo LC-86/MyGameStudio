@@ -499,6 +499,38 @@ def test_symlinks_are_captured_as_link_text_not_targets() -> None:
               "链接化文件不得按目标内容捕获(engine.py -> README.md)")
 
 
+def test_repository_root_include_spelling_captures_all_pending() -> None:
+    """仓库根范围(. 与 ./)必须按整仓前缀处理:不得漏掉每个待审文件。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, baseline = _mixed_repo(Path(tmp))
+        expected_files = ("src/game.py", "src/player.py", "src/hud.py",
+                          "src/new_level.py", "src/old.py")
+        for spelling in (".", "./"):
+            captured = _run_capture(repo, baseline, [spelling],
+                                    exclude=[".scratch"])
+            if not captured:
+                continue
+            check(captured.get("ok") is True,
+                  f"仓库根范围({spelling!r})捕获应成功:{captured}")
+            check(captured.get("complete") is True,
+                  f"仓库根范围({spelling!r})有实际待审内容不得标为不完整")
+            paths = captured.get("paths") or {}
+            listed = set(paths.get("committed") or []) \
+                | set(paths.get("staged") or []) \
+                | set(paths.get("unstaged") or []) \
+                | set(paths.get("untracked") or []) \
+                | set(paths.get("deleted") or [])
+            for rel in expected_files:
+                check(rel in listed,
+                      f"仓库根范围({spelling!r})不得漏掉待审文件 {rel},"
+                      f"实际 {sorted(listed)}")
+            check(".scratch/research.md" not in listed,
+                  "排除范围仍须按相对前缀生效")
+            check("src/game.py" in (captured.get("patch") or ""),
+                  "已提交待审差异必须进入补丁正文")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_mixed_git_states_cover_scope_keep_unrelated_and_stay_readonly,
@@ -512,6 +544,7 @@ if __name__ == "__main__":
         test_staged_change_with_restored_worktree_is_captured,
         test_staged_delete_with_restored_worktree_shows_deletion,
         test_symlinks_are_captured_as_link_text_not_targets,
+        test_repository_root_include_spelling_captures_all_pending,
     )
     raise SystemExit(run_theme(
         "完整待审成果双轴评审(#55 T8)", TESTS, FAILURES))

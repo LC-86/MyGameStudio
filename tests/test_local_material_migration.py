@@ -755,6 +755,71 @@ def test_scoped_migration_keeps_sidecars_within_scope_and_fingerprints() -> None
                   "未获批准的侧车改动不得进入待切换树")
 
 
+def test_malformed_task_identity_stays_inside_pending_tree() -> None:
+    """畸形任务身份(含 ../ 或路径分隔符)必须暂停,不得写出待切换树之外。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "evil")
+        escape_dir = root / "docs/mygamestudio/records/pending-switch" \
+            / "docs/mygamestudio/work"
+        evil_task = root / "docs/mygamestudio/work/99-evil/task.md"
+        evil_task.parent.mkdir(parents=True, exist_ok=True)
+        evil_task.write_text(
+            "# 越界任务\n\n"
+            "任务身份:../../97-escape。当前分流:needs-triage。进度:待执行。\n\n"
+            "## 工作请求\n\n- 当前目标:越界写入\n\n"
+            "## 结果索引\n\n(暂无)\n",
+            encoding="utf-8")
+        applied = mgs_records.apply_local_material_migration(
+            root, mgs_records.plan_local_material_migration(root),
+            confirmed=True)
+        paused = [str(item) for item in applied.get("paused") or []]
+        check(any("97-escape" in item for item in paused),
+              f"畸形身份的任务必须暂停并点名,实际 {paused}")
+        staging = Path(applied.get("pending_root") or "")
+        check(staging.is_dir(), "前置:待切换树应存在")
+        escaped = staging / "docs/mygamestudio/97-escape/task.md"
+        check(not escaped.exists(),
+              "不得越过待切换任务根创建越界任务文件")
+        for path in staging.rglob("task.md"):
+            check("../../" not in str(path.relative_to(staging)),
+                  f"待切换树内不得出现越界路径片段:{path}")
+        check(not (root / "97-escape").exists(),
+              "项目根不得被越界身份写入")
+        mapping = (applied.get("correspondence") or {}).get("tasks") or []
+        check(all("../" not in str(row.get("new") or "") for row in mapping),
+              f"对应关系不得登记越界目标,实际 {mapping}")
+
+
+def test_migration_completes_without_results_or_evidence_yet() -> None:
+    """只有开放任务、尚无结果与证据的项目:空类别不作为缺口阻塞切换闸门。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "young")
+        # 摘除全部结果与证据,模拟只有开放任务的年轻项目。
+        for task_dir in sorted((root / "docs/mygamestudio/work").iterdir()):
+            results = task_dir / "results"
+            if results.is_dir():
+                for path in results.iterdir():
+                    path.unlink()
+        evidence = root / "docs/mygamestudio/evidence"
+        if evidence.is_dir():
+            for path in evidence.iterdir():
+                path.unlink()
+        applied = mgs_records.apply_local_material_migration(
+            root, mgs_records.plan_local_material_migration(root),
+            confirmed=True)
+        check(applied.get("status") == "pending-switch",
+              f"来源完整的年轻项目应正常完成转换:{applied.get('status')}")
+        report = mgs_records.read_local_material_migration(root)
+        missing = [item for item in report.get("missing") or []
+                   if "结果" in item or "证据" in item]
+        check(not missing,
+              f"来源里没有的类别不得报缺少对应关系,实际 {missing}")
+        check(report.get("complete") is True,
+              f"空的可选记录类别不得阻塞完整判定:{report.get('missing')}")
+
+
 def main() -> int:
     return run_theme(
         "issue #57 本地旧项目完整资料迁移",
@@ -768,6 +833,8 @@ def main() -> int:
             test_duplicate_task_identity_across_roots_pauses,
             test_scoped_migration_keeps_sidecars_within_scope_and_fingerprints,
             test_github_tracker_is_not_converted_here,
+            test_malformed_task_identity_stays_inside_pending_tree,
+            test_migration_completes_without_results_or_evidence_yet,
         ),
         FAILURES,
     )
