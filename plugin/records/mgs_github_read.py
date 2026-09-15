@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import mgs_record_model  # noqa: E402
-from mgs_github_issue import is_pending_switch, parse_issue_payload  # noqa: E402
+from mgs_github_issue import parse_issue_payload, skip_from_current_reads  # noqa: E402
 from mgs_github_transport import (  # noqa: E402
     GithubRecordsError, TransportError, repo_path, repo_str)
 from mgs_record_model import CANONICAL_LABELS  # noqa: E402
@@ -92,7 +92,7 @@ class GithubReadMixin:
         tasks = [parse_issue_payload(item, self.config["labels"])
                  for item in data
                  if "pull_request" not in item
-                 and not is_pending_switch(item.get("body") or "")
+                 and not skip_from_current_reads(item.get("body") or "")
                  and "规格身份:" not in (item.get("body") or "")
                  and "讨论身份:" not in (item.get("body") or "")
                  and "快照身份:" not in (item.get("body") or "")]

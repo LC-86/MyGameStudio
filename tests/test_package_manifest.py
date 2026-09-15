@@ -116,7 +116,11 @@ def test_records_backend_module() -> None:
                      "read_local_material_migration",
                      "plan_github_material_migration",
                      "apply_github_material_migration",
-                     "read_github_material_migration"):
+                     "read_github_material_migration",
+                     "plan_safe_switch",
+                     "apply_safe_switch",
+                     "read_safe_switch",
+                     "rollback_safe_switch"):
             check(callable(getattr(mgs_records, name, None)),
                   f"records/mgs_records.py 缺少可用公开接缝 {name}")
         for name in ("load_config", "local_list_tasks", "local_read_task",

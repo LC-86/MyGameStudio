@@ -27,13 +27,14 @@
 
 ## 游戏入口与资料
 
-- `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。Game-Init 完成本地 Markdown 或 GitHub Issues 二选一接入与任务维护,并对已有本地 Markdown 或 GitHub 项目做完整资料转换(待切换);Game-Producer 只读查询真实记录。Game-Design 处理玩法讨论;已采纳规则由开发者主动调用 `to-spec` 写入现行规格。公开接缝 `records/mgs_records.py`。
+- Game-Init 完成本地 Markdown 或 GitHub Issues 二选一接入与任务维护,并对已有本地 Markdown 或 GitHub 项目做完整资料转换(待切换);核对完整后经 `plan_safe_switch` / `apply_safe_switch` / `read_safe_switch` / `rollback_safe_switch` 切换现行指针与技能来源。Game-Producer 只读查询真实记录。Game-Design 处理玩法讨论;已采纳规则由开发者主动调用 `to-spec` 写入现行规格。公开接缝 `records/mgs_records.py`。
 - `internal/game/invocation.md`:调用合同(用户专用入口不得被统筹自动串调)。
-- `internal/game/stage-requirements.md`:按工作阶段组织的专业资料索引(唯一副本);任务/原型/评审节承载可玩拆票、资源接入与交付要求;项目接入节指向本地与 GitHub 旧项目完整资料迁移接缝。
+- 项目接入节指向本地与 GitHub 旧项目完整资料迁移接缝,以及核对后的安全切换与回退接缝。
 - `internal/review/pending_review.py`:`code-review` 捕获完整待审成果的只读入口;不以获取标识为由创建提交。
 - 可玩交付公开接缝:`records/mgs_records.py` 的 `plan_playable_delivery` / `apply_playable_delivery` / `record_playable_result`。
 - 本地旧项目完整资料迁移公开接缝:`records/mgs_records.py` 的 `plan_local_material_migration` / `apply_local_material_migration` / `read_local_material_migration`。
 - GitHub 旧项目完整资料迁移公开接缝:`records/mgs_records.py` 的 `plan_github_material_migration` / `apply_github_material_migration` / `read_github_material_migration`。
+- 用户修改、同名来源与安全切换公开接缝:`records/mgs_records.py` 的 `plan_safe_switch` / `apply_safe_switch` / `read_safe_switch` / `rollback_safe_switch`。技能来源切换用隔离目录演示合同,不安装到真实 Codex。
 
 `game-design/` 目录内仍保留既有设计讨论 Python 模块,供既有检查使用;新版普通路径以 `records/mgs_records.py` 的设计/规格接缝为准,不经 mgs-gate。
 

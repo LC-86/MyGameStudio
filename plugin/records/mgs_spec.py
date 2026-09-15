@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_record_model import RecordsError, today  # noqa: E402
 from mgs_record_source import DEFAULT_CONFIG_REL, WRITE_OP, load_config  # noqa: E402
-from mgs_github_issue import authorization_for, is_pending_switch  # noqa: E402
+from mgs_github_issue import authorization_for, skip_from_current_reads  # noqa: E402
 from mgs_github_transport import TransportError, repo_path  # noqa: E402
 
 SPEC_MARK = "规格身份:"
@@ -120,7 +120,7 @@ def _list_github_items(backend) -> list[dict]:
     if status != 200 or not isinstance(data, list):
         raise TransportError("bad_response", f"list issues HTTP {status}")
     return [item for item in data if "pull_request" not in item
-            and not is_pending_switch(item.get("body") or "")]
+            and not skip_from_current_reads(item.get("body") or "")]
 
 
 def _read_local_design(root: Path, config: dict) -> dict[str, Any]:

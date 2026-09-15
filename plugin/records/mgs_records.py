@@ -3,7 +3,7 @@
 票 17 增加对 github-issues 后端的分发与写操作 CLI;issue #51 补齐本地写入、
 接入与只读状态查询;issue #52 补齐 GitHub 接入与原生关系;issue #53 补齐
 设计讨论与现行规格维护,issue #54 补齐正式版本设计快照归档,issue #56 补齐
-可玩任务拆分与资源交付,issue #57 补齐本地旧项目完整资料迁移,issue #58 补齐 GitHub 旧项目完整资料迁移,普通本地工作不经 mgs-gate)。
+可玩任务拆分与资源交付,issue #57 补齐本地旧项目完整资料迁移,issue #58 补齐 GitHub 旧项目完整资料迁移,issue #59 补齐用户修改、同名来源与安全切换,普通本地工作不经 mgs-gate)。
 
 对应设计《工作记录合同》「后端接口」一节:读取配置、列出任务、读取任务与结果、
 回读核验(票 04);关系解析与循环检测、当前可开工集合(票 08);核心基线内容
@@ -1161,6 +1161,64 @@ def read_github_material_migration(project_root: Path | str, *,
     return mgs_github_material_migration.read_github_material_migration(
         project_root, transport=transport, api_base=api_base,
         cache_dir=cache_dir)
+
+
+# ---------- 用户修改、同名来源与安全切换(issue #59) ----------
+
+def plan_safe_switch(project_root: Path | str, *,
+                     client_home: Path | str | None = None,
+                     package_root: Path | str | None = None,
+                     peer_projects: list | None = None,
+                     transport=None, api_base: str | None = None,
+                     cache_dir: Path | str | None = None) -> dict:
+    """只读核对照切换条件。不写入,不切换现行指针或技能来源。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.plan_safe_switch(
+        project_root, client_home=client_home, package_root=package_root,
+        peer_projects=peer_projects, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def apply_safe_switch(project_root: Path | str,
+                      plan: dict | None = None, *,
+                      confirmed: bool = False,
+                      transport=None, api_base: str | None = None,
+                      cache_dir: Path | str | None = None) -> dict:
+    """核对通过且确认后切换现行指针与技能来源。未确认不写。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.apply_safe_switch(
+        project_root, plan, confirmed=confirmed, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def read_safe_switch(project_root: Path | str, *,
+                     transport=None, api_base: str | None = None,
+                     cache_dir: Path | str | None = None) -> dict:
+    """回读切换状态、现行来源与恢复去向。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.read_safe_switch(
+        project_root, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def rollback_safe_switch(project_root: Path | str,
+                         plan: dict | None = None, *,
+                         confirmed: bool = False,
+                         transport=None, api_base: str | None = None,
+                         cache_dir: Path | str | None = None) -> dict:
+    """回退前先保留新版新增成果,不用迁移前快照覆盖。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.rollback_safe_switch(
+        project_root, plan, confirmed=confirmed, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------

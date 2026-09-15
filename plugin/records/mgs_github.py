@@ -160,7 +160,7 @@ class GithubBackend(GithubReadMixin):
         for item in data:
             if "pull_request" in item:
                 continue
-            if mgs_github_issue.is_pending_switch(item.get("body") or ""):
+            if mgs_github_issue.skip_from_current_reads(item.get("body") or ""):
                 continue
             parsed = parse_issue_payload(item, self.config["labels"])
             if parsed["identity"] == identity:

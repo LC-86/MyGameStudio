@@ -33,6 +33,7 @@ import mgs_record_source  # noqa: E402
 from mgs_record_model import CANONICAL_LABELS, RecordsError, today  # noqa: E402
 from mgs_github_transport import GithubRecordsError  # noqa: E402
 
+HISTORY_MARK = "迁移状态:readonly-history"
 PENDING_SWITCH_MARK = "迁移状态:pending-switch"
 
 
@@ -40,6 +41,18 @@ def is_pending_switch(body: str) -> bool:
     """待切换迁移成果:现行读取应跳过,不能充当当前来源。"""
 
     return PENDING_SWITCH_MARK in (body or "")
+
+
+def is_historical_source(body: str) -> bool:
+    """切换后的旧原件:只读历史,不能充当当前来源。"""
+
+    return HISTORY_MARK in (body or "")
+
+
+def skip_from_current_reads(body: str) -> bool:
+    """现行读取跳过待切换成果与只读历史原件。"""
+
+    return is_pending_switch(body) or is_historical_source(body)
 
 
 def authorization_for(config: dict, op: str) -> tuple[bool, str]:
