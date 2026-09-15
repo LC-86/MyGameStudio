@@ -2,9 +2,11 @@
 
 Type: grilling
 Labels: wayfinder:grilling
-Status: open
+Status: published-snapshot
+Remote: [上游版本、插件分发与专业工具适配](https://github.com/LC-86/MyGameStudio/issues/45)
+Authority: GitHub; local content is the publication source snapshot
 Blocked by: 01, 02, 05
-Parent: [改版地图](../map.md)
+Parent: [MyGameStudio：沿用 Matt 流程的游戏专业扩展改版地图](https://github.com/LC-86/MyGameStudio/issues/39)
 
 ## Question
 
