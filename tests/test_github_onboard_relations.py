@@ -731,6 +731,76 @@ def test_http_standin_lost_response_and_native_readback() -> None:
             proc.wait(timeout=10)
 
 
+def test_frontier_honors_body_reference_dependencies() -> None:
+    """原生依赖不可用回退正文引用后,前沿必须把已知开放依赖视为阻塞。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "body-deps")
+        fake = FakeTransport(dependencies_supported=False)
+        mgs_records.create_task(
+            root, "00-map", "地图", _task_request("父"),
+            triage="ready-for-agent", transport=fake)
+        mgs_records.create_task(
+            root, "01-alpha", "甲", _task_request("无依赖"),
+            triage="ready-for-agent", transport=fake)
+        mgs_records.create_task(
+            root, "02-beta", "乙", _task_request("被甲阻塞"),
+            triage="ready-for-agent", transport=fake)
+        mgs_records.set_parent(root, "01-alpha", "00-map", transport=fake)
+        mgs_records.set_parent(root, "02-beta", "00-map", transport=fake)
+        rel = mgs_records.set_relations(root, "02-beta", ["01-alpha"],
+                                        transport=fake)
+        check(rel.get("mode") == "body-reference",
+              f"原生依赖不可用应回退正文引用,实际 {rel}")
+        frontier = mgs_records.frontier_tasks(
+            root, parent_identity="00-map", transport=fake)
+        ids = [item["identity"] for item in frontier.get("frontier") or []]
+        check(ids == ["01-alpha"],
+              f"正文引用的开放依赖必须挡住前沿,实际 {ids}")
+
+
+def test_claim_keeps_co_assignees_when_claimant_already_assigned() -> None:
+    """认领者已在指派名单内时,认领不得移除其他共同指派。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "co-assign")
+        fake = FakeTransport()
+        created = mgs_records.create_task(
+            root, "01-alpha", "甲", _task_request("协作"),
+            triage="ready-for-agent", transport=fake)
+        number = (created or {}).get("issue_number") or 1
+        fake.request("PATCH", f"/repos/mygamestudio/issue-accept/issues/{number}",
+                     {"assignees": ["alice", "bob"]})
+        claimed = mgs_records.claim_task(root, "01-alpha", "bob",
+                                         transport=fake)
+        check(claimed.get("published") is True and claimed.get("adopted") is True,
+              f"名单内认领应按已认领返回,实际 {claimed}")
+        _st, issue = fake.request(
+            "GET", f"/repos/mygamestudio/issue-accept/issues/{number}")
+        logins = [entry.get("login")
+                  for entry in (issue or {}).get("assignees") or []]
+        check(sorted(logins) == ["alice", "bob"],
+              f"共同指派必须保留,不得整单替换,实际 {logins}")
+
+
+def test_task_mentioning_record_marker_stays_a_task() -> None:
+    """记录类型只按正式元数据头分类;工作请求里提到格式字样仍是任务。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "mention")
+        fake = FakeTransport()
+        mgs_records.create_task(
+            root, "01-alpha", "甲",
+            _task_request("核对引用 规格身份:overall 的说明是否过期"),
+            triage="ready-for-agent", transport=fake)
+        tasks = mgs_records.list_tasks(root, transport=fake)
+        ids = [item.get("identity") for item in tasks]
+        check("01-alpha" in ids,
+              f"正文提到记录字样的任务不得从任务列表消失,实际 {ids}")
+        ready = mgs_records.read_task(root, "01-alpha", transport=fake)
+        check(ready.get("identity") == "01-alpha", "普通任务必须可读回")
+
+
 TESTS = (
     test_github_onboard_then_create_and_query_one_task,
     test_github_design_mapping_matches_remote_spec,
@@ -744,6 +814,9 @@ TESTS = (
     test_auth_lost_response_offline_draft_cancel_and_dedup,
     test_cli_github_onboard_status_and_create_without_gate,
     test_http_standin_lost_response_and_native_readback,
+    test_frontier_honors_body_reference_dependencies,
+    test_claim_keeps_co_assignees_when_claimant_already_assigned,
+    test_task_mentioning_record_marker_stays_a_task,
 )
 
 

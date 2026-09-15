@@ -396,6 +396,64 @@ def test_mode_only_change_is_complete_pending() -> None:
               f"path_versions 必须纳入 mode 变化文件,实际 {versions}")
 
 
+def test_staged_change_with_restored_worktree_is_captured() -> None:
+    """暂存后工作区还原成基线内容时,待审成果仍必须包含暂存内容。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "staged-only"
+        repo.mkdir()
+        _git(repo, "init", "-b", "main")
+        _git(repo, "config", "user.email", "t8@example.test")
+        _git(repo, "config", "user.name", "T8 Fixture")
+        _write(repo, "src/game.py", GAME_V1)
+        _git(repo, "add", "src/game.py")
+        _git(repo, "commit", "-m", "baseline")
+        baseline = _head(repo)
+
+        _write(repo, "src/game.py", GAME_V2)
+        _git(repo, "add", "src/game.py")
+        # 工作区又还原成基线内容:净比对为空,但下一次提交将携带暂存改动。
+        _write(repo, "src/game.py", GAME_V1)
+
+        captured = _run_capture(repo, baseline, include=["src"])
+        if not captured:
+            return
+        check(captured.get("complete") is True,
+              "只存在暂存差异时不得把待审成果标为空")
+        patch = captured.get("patch") or ""
+        check("+jump()" in patch,
+              f"基线→暂存区的差异必须进入待审成果,实际:\n{patch}")
+        staged = (captured.get("paths") or {}).get("staged") or []
+        check("src/game.py" in staged, "该路径必须归入暂存集合")
+
+
+def test_staged_delete_with_restored_worktree_shows_deletion() -> None:
+    """暂存删除后工作区又还原时,待审成果必须表达将删除的提交内容。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "staged-delete"
+        repo.mkdir()
+        _git(repo, "init", "-b", "main")
+        _git(repo, "config", "user.email", "t8@example.test")
+        _git(repo, "config", "user.name", "T8 Fixture")
+        _write(repo, "src/old.py", OLD_BODY)
+        _git(repo, "add", "src/old.py")
+        _git(repo, "commit", "-m", "baseline")
+        baseline = _head(repo)
+
+        _git(repo, "rm", "--cached", "src/old.py")
+        _write(repo, "src/old.py", OLD_BODY)
+
+        captured = _run_capture(repo, baseline, include=["src"])
+        if not captured:
+            return
+        check(captured.get("complete") is True,
+              "暂存删除是真实待审差异,不得标为空")
+        patch = captured.get("patch") or ""
+        check("old helper" in patch,
+              f"暂存删除必须在补丁中表达,实际:\n{patch}")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_mixed_git_states_cover_scope_keep_unrelated_and_stay_readonly,
@@ -406,6 +464,8 @@ if __name__ == "__main__":
         test_quoted_non_ascii_paths_are_captured,
         test_rename_includes_old_and_new_paths,
         test_mode_only_change_is_complete_pending,
+        test_staged_change_with_restored_worktree_is_captured,
+        test_staged_delete_with_restored_worktree_shows_deletion,
     )
     raise SystemExit(run_theme(
         "完整待审成果双轴评审(#55 T8)", TESTS, FAILURES))

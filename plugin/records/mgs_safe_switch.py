@@ -753,6 +753,43 @@ def apply_safe_switch(project_root: Path | str,
             "real_migration_authorized": False,
             "status": plan.get("migration_status") or "blocked",
         }
+    # 提升前立即重算核对:清单可能在与确认之间变旧(待切换成果被删改),
+    # 旧清单不能替代转换完整性、证据与用户修改检查。
+    fresh = plan_safe_switch(
+        root, transport=transport, api_base=api_base, cache_dir=cache_dir)
+    if fresh.get("already_switched"):
+        current = _switch_status(root)
+        return {
+            "ok": True,
+            "wrote": False,
+            "status": "switched",
+            "tracker": current.get("tracker") or fresh.get("tracker"),
+            "duplicate_avoided": True,
+            "gate_required": False,
+            "gate_as_permission": False,
+            "real_migration_authorized": False,
+            "recovery_destination": current.get("recovery_destination") or GATE_HISTORY_REL,
+        }
+    if not fresh.get("ready"):
+        return {
+            "ok": False,
+            "wrote": False,
+            "reason": "确认后待切换成果发生变化,重新核对未通过,不切换现行指针",
+            "blockers": list(fresh.get("blockers") or []),
+            "gate_required": False,
+            "real_migration_authorized": False,
+            "status": fresh.get("migration_status") or "blocked",
+        }
+    if (plan.get("tracker") != fresh.get("tracker")
+            or plan.get("correspondence") != fresh.get("correspondence")):
+        return {
+            "ok": False,
+            "wrote": False,
+            "reason": "确认后待切换对应关系发生变化,与已确认清单不一致,不切换现行指针",
+            "gate_required": False,
+            "real_migration_authorized": False,
+            "status": fresh.get("migration_status") or "blocked",
+        }
     tracker = plan.get("tracker") or _tracker_of(root)
     if tracker == "github-issues":
         return _switch_github(

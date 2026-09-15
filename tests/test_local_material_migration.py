@@ -715,6 +715,46 @@ def test_duplicate_task_identity_across_roots_pauses() -> None:
                   "不得用后写的重复身份覆盖转换成果")
 
 
+def test_scoped_migration_keeps_sidecars_within_scope_and_fingerprints() -> None:
+    """受限范围的迁移不得暂存计划外侧车;全量侧车必须受指纹保护。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "scoped-sidecar")
+        task_source = "docs/mygamestudio/work/01-move/task.md"
+        scoped = mgs_records.plan_local_material_migration(
+            root, scope={"sources": [task_source]})
+        check(scoped.get("sidecars") == [],
+              f"受限范围不得把计划外侧车列入暂存,实际 {scoped.get('sidecars')}")
+        applied = mgs_records.apply_local_material_migration(
+            root, scoped, confirmed=True)
+        staging = Path(applied.get("pending_root") or "")
+        check(not (staging / "docs/mygamestudio/PROJECT.md").exists()
+              and not (staging / "docs/mygamestudio/TECH_DESIGN.md").exists(),
+              "受限迁移不得把未获批准的侧车暂存进待切换树")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "sidecar-change")
+        plan = mgs_records.plan_local_material_migration(root)
+        check("docs/mygamestudio/PROJECT.md" in (plan.get("sidecars") or []),
+              "全量迁移必须把侧车纳入计划")
+        check("docs/mygamestudio/PROJECT.md"
+              in (plan.get("source_fingerprints") or {}),
+              "计划内侧车必须参加指纹校验")
+        (root / "docs/mygamestudio/PROJECT.md").write_text(
+            "# 项目约定(确认后改动)\n", encoding="utf-8")
+        applied = mgs_records.apply_local_material_migration(
+            root, plan, confirmed=True)
+        paused = applied.get("paused") or []
+        check(any("sidecar" in str(item) for item in paused),
+              f"确认后改动的侧车必须暂停而不是悄悄带入,实际 {paused}")
+        staging = Path(applied.get("pending_root") or "")
+        if staging.is_dir():
+            staged = staging / "docs/mygamestudio/PROJECT.md"
+            check(not staged.exists() or
+                  "确认后改动" not in staged.read_text(encoding="utf-8"),
+                  "未获批准的侧车改动不得进入待切换树")
+
+
 def main() -> int:
     return run_theme(
         "issue #57 本地旧项目完整资料迁移",
@@ -726,6 +766,7 @@ def main() -> int:
             test_deleted_source_during_prep_pauses_migration,
             test_colliding_version_numbers_keep_separate_snapshots,
             test_duplicate_task_identity_across_roots_pauses,
+            test_scoped_migration_keeps_sidecars_within_scope_and_fingerprints,
             test_github_tracker_is_not_converted_here,
         ),
         FAILURES,

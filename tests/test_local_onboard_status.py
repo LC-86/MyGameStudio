@@ -502,6 +502,42 @@ def test_cli_onboard_status_and_create_without_gate() -> None:
         check(before == _snapshot(root), "状态查询前后内容不变")
 
 
+def test_malformed_config_is_rejected_not_reused_by_onboarding() -> None:
+    """现有 CONFIG.md 无法解析时,接入必须拒绝而不是当作无配置复用。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "broken"
+        root.mkdir(parents=True)
+        (root / "README.md").write_text("# broken\n", encoding="utf-8")
+        config_path = root / "docs/mygamestudio/CONFIG.md"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("# 协作配置\n\n没有任务来源章节,无法解析。\n",
+                               encoding="utf-8")
+        before = config_path.read_text(encoding="utf-8")
+
+        planned = mgs_records.plan_local_onboarding(root)
+        check(planned.get("ok") is False,
+              f"损坏配置不得进入接入清单:{planned}")
+        check("无法解析" in str(planned.get("reason") or ""),
+              f"必须说明解析失败原因:{planned.get('reason')}")
+        items = {(item or {}).get("path") for item in planned.get("items") or []}
+        check("docs/mygamestudio/CONFIG.md" not in items,
+              "损坏配置不得被标记为复用")
+
+        applied = mgs_records.apply_local_onboarding(root, planned,
+                                                     confirmed=True)
+        check(applied.get("ok") is False,
+              f"应用阶段同样必须拒绝:{applied}")
+        check(config_path.read_text(encoding="utf-8") == before,
+              "拒绝路径不得改写现有文件")
+
+        from github_backend_fixtures import AUTH, REPO
+        gh_plan = mgs_records.plan_github_onboarding(
+            root, repo=REPO, authorization=AUTH)
+        check(gh_plan.get("ok") is False,
+              f"GitHub 接入同样不得复用损坏配置:{gh_plan}")
+
+
 TESTS = (
     test_new_project_onboard_records_and_queries_one_task,
     test_existing_project_reuses_materials_and_flags_conflicts,
@@ -511,6 +547,7 @@ TESTS = (
     test_concurrent_same_sha_updates_keep_overlap_artifact,
     test_local_task_identity_cannot_escape_task_root,
     test_cli_onboard_status_and_create_without_gate,
+    test_malformed_config_is_rejected_not_reused_by_onboarding,
 )
 
 

@@ -486,6 +486,9 @@ def _write_github_discussion(root: Path, config: dict, plan: dict, answers: dict
             number = issue.get("number")
         else:
             number = existing["number"]
+            # 与本地后端一致:新轮次追加到既有讨论,不整篇替换旧轮次。
+            prior = str(existing.get("body") or "").strip()
+            body = prior + ("\n\n" if prior else "") + body
             status, issue = backend.transport.request(
                 "PATCH", f"{repo_path(backend.repo)}/issues/{number}",
                 {"body": body})
@@ -588,6 +591,21 @@ def apply_spec_adoption(project_root: Path | str, plan: dict, *,
     raise RecordsError(f"后端 {config.get('backend')} 未实现")
 
 
+_MANAGED_SECTIONS = (
+    "核心玩法", "当前规则与流程", "模块", "变更索引", "持久状态恢复", "正式版本设计快照")
+
+
+def _section_headings(text: str) -> list[str]:
+    """按出现顺序列出二级标题;用于识别重建时须原样保留的章节。"""
+
+    found: list[str] = []
+    for match in re.finditer(r"^## (.+)$", text or "", re.M):
+        heading = match.group(1).strip()
+        if heading and heading not in found:
+            found.append(heading)
+    return found
+
+
 def _merge_overall(current: str, adopted: dict, history_line: str) -> str:
     overall = dict(adopted.get("overall") or adopted)
     title = overall.get("title")
@@ -607,6 +625,13 @@ def _merge_overall(current: str, adopted: dict, history_line: str) -> str:
             if line not in rules:
                 rules.append(line)
     extra = {}
+    # 本次采纳未涉及的既有章节原样保留,重建不得静默删除。
+    for heading in _section_headings(current):
+        if heading in _MANAGED_SECTIONS or heading in extra:
+            continue
+        section = _section(current, heading)
+        if section:
+            extra[heading] = section
     if overall.get("progress_guard"):
         extra["持久状态恢复"] = str(overall["progress_guard"])
     elif _section(current, "持久状态恢复"):
@@ -780,7 +805,7 @@ def _sync_local_tasks(root: Path, config: dict, plan: dict, spec_rel: str,
             continue
         result = mgs_records.update_task(
             root, identity, {"输入与基线": cite},
-            change_note="规格引用同步")
+            change_note="规格引用同步", config_rel=config_rel)
         if result.get("ok") is False:
             continue
         updated.append(identity)
@@ -971,7 +996,8 @@ def _sync_github_tasks(root: Path, config: dict, plan: dict, spec_number: int,
     for identity in plan.get("affected_tasks") or []:
         result = mgs_records.update_task(
             root, identity, {"输入与基线": cite},
-            change_note="规格引用同步", transport=transport)
+            change_note="规格引用同步", config_rel=config_rel,
+            transport=transport)
         if result.get("ok") is False or result.get("published") is False:
             continue
         updated.append(identity)

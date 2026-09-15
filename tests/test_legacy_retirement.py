@@ -282,6 +282,20 @@ def test_live_docs_drop_retired_capability_promises() -> None:
           f"{offenders}")
 
 
+def test_templates_do_not_reference_retired_method_paths() -> None:
+    """实例化模板不得指向已退役的 internal/methods 路径。"""
+
+    readme = PLUGIN_ROOT / "templates" / "README.md"
+    check(readme.is_file(), f"缺少模板说明 {readme}")
+    text = readme.read_text(encoding="utf-8") if readme.is_file() else ""
+    check("internal/methods/" not in text,
+          "模板说明不得再指向包内已移除的 internal/methods/ 位置")
+    check("skills/writing-for-agents/" in text,
+          "writing-for-agents 必须指向包内现行 skills/ 位置")
+    check((PLUGIN_ROOT / "skills" / "writing-for-agents").is_dir(),
+          "模板引用的 skills/writing-for-agents/ 必须真实存在于包内")
+
+
 TESTS = (
     test_public_collection_is_official_twenty_five_plus_three,
     test_retired_entries_are_not_executable,
@@ -293,6 +307,7 @@ TESTS = (
     test_effective_config_and_gate_history_stay_separate,
     test_archived_legacy_tests_are_excluded_from_pytest_discovery,
     test_live_docs_drop_retired_capability_promises,
+    test_templates_do_not_reference_retired_method_paths,
 )
 
 

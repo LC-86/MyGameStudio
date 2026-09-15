@@ -163,6 +163,16 @@ def _show_bytes(repo: Path, spec: str) -> bytes | None:
     return result.stdout
 
 
+def _index_bytes(repo: Path, rel: str) -> tuple[bool, bytes | None]:
+    """暂存区(stage 0)内容;未跟踪/未暂存新文件不在索引中。"""
+
+    result = subprocess.run(
+        ["git", "show", f":{rel}"], cwd=repo, check=False, capture_output=True)
+    if result.returncode != 0:
+        return False, None
+    return True, result.stdout or b""
+
+
 def _git_has(repo: Path, spec: str) -> bool:
     return _git(repo, "cat-file", "-e", spec).returncode == 0
 
@@ -266,6 +276,15 @@ def capture_pending_review(repo: Path | str, baseline: str,
     for path in sorted(pending_paths):
         before = _show_bytes(repo, f"{baseline_sha}:{path}")
         exists, after = _file_bytes(repo, path)
+        tracked, staged_bytes = _index_bytes(repo, path)
+        # 同时捕获 基线→暂存区 与 暂存区→工作区 两段状态:
+        # 暂存了改动又把工作区还原成基线内容时,净比对会漏掉
+        # 下一次提交即将携带的暂存内容,这里以暂存内容为准补上。
+        if exists and after == before:
+            if tracked and staged_bytes != before:
+                after = staged_bytes
+            elif not tracked and before is not None:
+                after = None  # 暂存删除后工作区又还原,提交仍将删除
         current = after if exists else None
         hunk = _unified_bytes(path, before, current)
         before_mode = _ls_tree_mode(repo, baseline_sha, path)
@@ -277,7 +296,7 @@ def capture_pending_review(repo: Path | str, baseline: str,
             hunk = mode_hunk
         if hunk:
             patches.append(hunk)
-        marker = "DEL" if not exists else _sha_bytes(after or b"")
+        marker = "DEL" if current is None else _sha_bytes(current)
         if after_mode:
             marker = f"{marker}|{after_mode}"
         elif before_mode:

@@ -117,6 +117,15 @@ def plan_local_onboarding(project_root: Path | str) -> dict:
     """形成本地 Markdown 接入清单;不写入。"""
 
     root = Path(project_root)
+    broken = _config_parse_error(root)
+    if broken is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": "",
+            "reason": broken,
+            "items": [],
+        }
     mismatch = _tracker_mismatch(root, "local-markdown")
     if mismatch is not None:
         return {
@@ -162,6 +171,19 @@ def plan_local_onboarding(project_root: Path | str) -> dict:
         "items": items,
         "wrote": False,
     }
+
+
+def _config_parse_error(root: Path) -> str | None:
+    """现有 CONFIG.md 存在但无法解析时返回原因;损坏配置不得被接入复用。"""
+
+    if not (root / CONFIG_REL).is_file():
+        return None
+    try:
+        load_config(root)
+    except RecordsError as exc:
+        return f"现有 {CONFIG_REL} 无法解析:{exc};接入不会复用损坏配置," \
+               "请先修复或明确替换后再接入"
+    return None
 
 
 def _current_backend(root: Path) -> str | None:
@@ -213,6 +235,15 @@ def plan_github_onboarding(project_root: Path | str, *, repo: str,
     """形成 GitHub Issues 接入清单;不写入,也不把本地 Markdown 升为现行账本。"""
 
     root = Path(project_root)
+    broken = _config_parse_error(root)
+    if broken is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": "",
+            "reason": broken,
+            "items": [],
+        }
     mismatch = _tracker_mismatch(root, "github-issues")
     if mismatch is not None:
         return {
@@ -315,6 +346,15 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
     root = Path(project_root)
     if not confirmed:
         raise RecordsError("未确认接入清单,不写入")
+    broken = _config_parse_error(root)
+    if broken is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": "",
+            "reason": broken,
+            "items": [],
+        }
     mismatch = _tracker_mismatch(root, "local-markdown")
     if mismatch is not None:
         return {
@@ -504,6 +544,15 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
     root = Path(project_root)
     if not confirmed:
         raise RecordsError("未确认接入清单,不写入")
+    broken = _config_parse_error(root)
+    if broken is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": "",
+            "reason": broken,
+            "items": [],
+        }
     mismatch = _tracker_mismatch(root, "github-issues")
     if mismatch is not None:
         return {

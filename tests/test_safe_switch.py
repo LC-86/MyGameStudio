@@ -764,6 +764,31 @@ def test_github_switch_makes_new_current_and_can_roll_back() -> None:
               "回退后不得把新版规格当作现行来源")
 
 
+def test_stale_ready_plan_rechecked_before_promotion() -> None:
+    """确认后待切换成果被删改时,旧就绪清单不得替代提升前重算。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "star-catcher")
+        _convert_local(root)
+        plan = mgs_records.plan_safe_switch(root)
+        check(plan.get("ready") is True, f"前置:转换完成应可切换:{plan}")
+        # 清单返回 ready 之后、确认提升之前,待切换成果被删改。
+        design_new = (root / "docs/mygamestudio/records/pending-switch"
+                      / "docs/mygamestudio/GAME_DESIGN.md")
+        check(design_new.is_file(), f"前置:应存在待切换规格 {design_new}")
+        design_new.unlink()
+        old_design = (root / "docs/mygamestudio/GAME_DESIGN.md").read_text(
+            encoding="utf-8")
+        applied = mgs_records.apply_safe_switch(root, plan, confirmed=True)
+        check(applied.get("ok") is False,
+              f"待切换成果缺失时不得按旧清单宣称切换成功:{applied}")
+        reason = str(applied.get("reason") or "")
+        check("重新核对未通过" in reason or "对应关系发生变化" in reason,
+              f"必须说明是确认后状态变化:{reason}")
+        check((root / "docs/mygamestudio/GAME_DESIGN.md").read_text(
+            encoding="utf-8") == old_design, "旧现行原件必须保持未切换")
+
+
 def main() -> int:
     return run_theme(
         "issue #59 用户修改、同名来源与安全切换",
@@ -780,6 +805,7 @@ def main() -> int:
             test_prep_change_and_partial_do_not_switch,
             test_deleted_source_during_prep_blocks_switch,
             test_github_switch_makes_new_current_and_can_roll_back,
+            test_stale_ready_plan_rechecked_before_promotion,
         ),
         FAILURES)
 

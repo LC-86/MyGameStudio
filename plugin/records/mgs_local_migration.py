@@ -260,6 +260,12 @@ def _fingerprints(root: Path, items: list[dict]) -> dict[str, str]:
     return fingerprints
 
 
+SIDECAR_RELS = (
+    "docs/mygamestudio/PROJECT.md",
+    "docs/mygamestudio/TECH_DESIGN.md",
+)
+
+
 def plan_local_material_migration(project_root: Path | str,
                                   *, scope: dict | None = None) -> dict:
     """只读整理获准范围内的完整资料转换清单。不写入,不切换现行来源。"""
@@ -269,11 +275,20 @@ def plan_local_material_migration(project_root: Path | str,
         raise RecordsError(f"目标项目不存在:{root}")
     config = _config_or_local(root)
     items = _discover_items(root, config)
+    allowed: set[str] = set()
     if scope:
         allowed = set(scope.get("sources") or [])
         if allowed:
             items = [item for item in items if item.get("source") in allowed]
+    # 侧车文件属于计划的一部分:受限范围不含它们就不暂存;
+    # 纳入范围就必须随清单一起指纹校验,确认后改动会被暂停而不是悄悄带入。
+    sidecars = [rel for rel in SIDECAR_RELS
+                if not allowed or rel in allowed]
     fingerprints = _fingerprints(root, items)
+    for rel in sidecars:
+        path = root / rel
+        if path.is_file() and rel not in fingerprints:
+            fingerprints[rel] = _sha_file(path)
     return {
         "wrote": False,
         "tracker": "local-markdown",
@@ -283,6 +298,7 @@ def plan_local_material_migration(project_root: Path | str,
         "project_root": str(root),
         "pending_root": str(_pending_root(root)),
         "items": items,
+        "sidecars": sidecars,
         "source_fingerprints": fingerprints,
         "retention": [
             "旧原件全部保留,不删除、不改写现行指针",
@@ -614,8 +630,15 @@ def apply_local_material_migration(project_root: Path | str,
         runnable.append(item)
 
     _write(staging / DEFAULT_CONFIG_REL, _render_new_config())
-    _copy_sidecar(root, staging, "docs/mygamestudio/PROJECT.md")
-    _copy_sidecar(root, staging, "docs/mygamestudio/TECH_DESIGN.md")
+    # 侧车只在计划范围内暂存;确认后发生变化则暂停该项,不带入未批准内容。
+    sidecar_rels = plan.get("sidecars")
+    if sidecar_rels is None:
+        sidecar_rels = list(SIDECAR_RELS)
+    for rel in sidecar_rels:
+        if _changed(root, {"source": rel}, fingerprints):
+            paused.append(f"sidecar:{rel}")
+            continue
+        _copy_sidecar(root, staging, rel)
     index_src = _read(root / "docs/mygamestudio/INDEX.md")
     if index_src:
         _write(staging / "docs/mygamestudio/INDEX.md", index_src)

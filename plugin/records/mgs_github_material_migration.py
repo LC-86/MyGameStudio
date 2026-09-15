@@ -161,6 +161,8 @@ def _issue_source(number: int) -> str:
 def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     labels = config.get("labels") or {}
+    number_to_identity: dict[int, str] = {}
+    task_rows: list[dict[str, Any]] = []
     for raw in _list_issues(backend):
         body = raw.get("body") or ""
         if is_pending_switch(body):
@@ -178,6 +180,8 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
                 role = "current" if identity == "overall" else "module"
                 if not identity:
                     identity = f"issue-{raw.get('number')}"
+            if raw.get("number") is not None:
+                number_to_identity[int(raw["number"])] = identity
             items.append({
                 "kind": "spec",
                 "role": role,
@@ -193,7 +197,8 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
         if not identity:
             continue
         request = parsed.get("request") or {}
-        items.append({
+        parent_meta = raw.get("parent") if isinstance(raw.get("parent"), dict) else {}
+        task_rows.append({
             "kind": "task",
             "identity": identity,
             "source": _issue_source(parsed.get("issue_number")),
@@ -208,7 +213,11 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
             "state_reason": parsed.get("state_reason"),
             "assignees": list(parsed.get("assignees") or []),
             "fingerprint": _sha_text(body),
+            # 原生接口才有的父子关系先记编号;身份统一解析后移除临时键。
+            "_native_parent_no": parent_meta.get("number"),
         })
+        if parsed.get("issue_number") is not None:
+            number_to_identity[int(parsed["issue_number"])] = identity
         for comment in _list_comments(backend, parsed.get("issue_number")):
             text = comment.get("body") or ""
             items.append({
@@ -220,6 +229,43 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
                 "title": (text.strip().splitlines() or ["结果"])[0][:80],
                 "fingerprint": _sha_text(text),
             })
+    # 第二遍:正文约定之外,盘点仅存于原生接口的父子/阻塞关系,
+    # 迁移恢复阶段才不会丢失真实的先后约束。
+    for row in task_rows:
+        native_parent_no = row.pop("_native_parent_no", None)
+        body_parent = str(row.get("parent") or "").strip()
+        if (not body_parent or body_parent == "无") \
+                and native_parent_no in number_to_identity:
+            row["parent"] = f"#{native_parent_no} {number_to_identity[native_parent_no]}"
+        number = row.get("issue_number")
+        native_dep_nos: list[int] = []
+        if number is not None:
+            try:
+                status, blockers = backend.transport.request(
+                    "GET",
+                    f"{repo_path(backend.repo)}/issues/{number}"
+                    "/dependencies/blocked_by")
+            except TransportError:
+                blockers = None
+                status = None
+            if status == 200 and isinstance(blockers, list):
+                for blocker in blockers:
+                    blocker_no = (blocker or {}).get("number") \
+                        if isinstance(blocker, dict) else None
+                    if blocker_no in number_to_identity:
+                        native_dep_nos.append(int(blocker_no))
+        if native_dep_nos:
+            known = _parse_dep_ids(str(row.get("deps") or ""))
+            tokens = [token for token in str(row.get("deps") or "").split("、")
+                      if token.strip() and token.strip() != "无"]
+            for dep_no in native_dep_nos:
+                dep_id = number_to_identity.get(dep_no)
+                if dep_id in known:
+                    continue
+                known.append(dep_id)
+                tokens.append(f"#{dep_no} {dep_id}")
+            row["deps"] = "、".join(tokens)
+    items.extend(task_rows)
     return items
 
 
@@ -925,13 +971,25 @@ def apply_github_material_migration(project_root: Path | str,
             continue
         if (item.get("state") or parsed.get("state")) == "closed":
             reason = item.get("state_reason") or "completed"
+            # 迁移后的关闭必须回读确认:传输返回非 2xx 不抛错,
+            # 未验证关闭状态的新开任务不得记为已转换(否则已完成工作复活)。
+            closed_verified = False
             try:
-                backend.transport.request(
+                status, _patched = backend.transport.request(
                     "PATCH",
                     f"{repo_path(backend.repo)}/issues/{issue['number']}",
                     {"state": "closed", "state_reason": reason})
+                if status in (200, 201):
+                    _st, reread = backend.transport.request(
+                        "GET",
+                        f"{repo_path(backend.repo)}/issues/{issue['number']}")
+                    closed_verified = (reread or {}).get("state") == "closed"
             except TransportError:
-                pass
+                closed_verified = False
+            if not closed_verified:
+                paused.append(f"task:{identity}(迁移后未确认保持关闭)")
+                paused_ids.add(identity)
+                continue
         new_tasks[identity] = issue
         converted.append({
             "kind": "task", "old": item.get("source"),
@@ -941,6 +999,7 @@ def apply_github_material_migration(project_root: Path | str,
         created += int(not adopted)
         skipped += int(adopted)
 
+    comment_id_map: dict[str, dict[int, int]] = {}
     for item in results:
         identity = str(item.get("identity") or "")
         if identity in paused_ids or identity not in new_tasks:
@@ -958,6 +1017,11 @@ def apply_github_material_migration(project_root: Path | str,
         wrapped = f"{needle}\n\n{text}"
         posted, adopted = _publish_comment(
             backend, target["number"], needle, wrapped)
+        if posted and comment_id and posted.get("id"):
+            # 结果以新评论重发;旧结果索引里的 #issuecomment-<旧id>
+            # 引用必须改写指向新评论,否则切换后留下悬空引用。
+            comment_id_map.setdefault(identity, {})[int(comment_id)] = \
+                int(posted["id"])
         converted.append({
             "kind": "result", "old": item.get("source"),
             "new_issue": target.get("number"),
@@ -966,6 +1030,34 @@ def apply_github_material_migration(project_root: Path | str,
         })
         created += int(bool(posted) and not adopted)
         skipped += int(adopted)
+
+    for identity, issue in new_tasks.items():
+        rewrite = comment_id_map.get(identity) or {}
+        if not rewrite:
+            continue
+        try:
+            _st, raw_new = backend.transport.request(
+                "GET", f"{repo_path(backend.repo)}/issues/{issue['number']}")
+            body_text = str((raw_new or {}).get("body") or "")
+            new_body = re.sub(
+                r"#issuecomment-(\d+)",
+                lambda match: f"#issuecomment-"
+                              f"{rewrite.get(int(match.group(1)), int(match.group(1)))}",
+                body_text)
+            if new_body != body_text:
+                status, _patched = backend.transport.request(
+                    "PATCH",
+                    f"{repo_path(backend.repo)}/issues/{issue['number']}",
+                    {"body": new_body})
+                if status not in (200, 201):
+                    raise TransportError("bad_response", f"index HTTP {status}")
+                _st2, reread = backend.transport.request(
+                    "GET",
+                    f"{repo_path(backend.repo)}/issues/{issue['number']}")
+                if str((reread or {}).get("body") or "") != new_body:
+                    raise TransportError("bad_response", "index 回读不一致")
+        except TransportError:
+            paused.append(f"task:{identity}(结果索引未改写为新评论引用)")
 
     for identity, issue in new_tasks.items():
         source = next((item for item in tasks if item.get("identity") == identity),
@@ -1116,10 +1208,9 @@ def read_github_material_migration(project_root: Path | str, *,
             "gate_as_permission": False,
         }
     native = dict(status.get("native_relations") or {})
-    history = ""
+    overall_comments: list[dict] = []
     if backend and status.get("overall_issue"):
-        comments = _list_comments(backend, int(status["overall_issue"]))
-        history = "\n\n".join(comment.get("body") or "" for comment in comments)
+        overall_comments = _list_comments(backend, int(status["overall_issue"]))
         mapping = status.get("correspondence") or {}
         for task in mapping.get("tasks") or []:
             identity = str(task.get("identity") or "")
@@ -1152,12 +1243,24 @@ def read_github_material_migration(project_root: Path | str, *,
             native[identity] = rel
     missing = _incomplete_reason(root, status, backend) if backend else [
         "没有待切换的完整资料转换"]
-    if "已采纳" not in history and (status.get("correspondence") or {}).get("decisions"):
-        missing.append("决定历史未进入规格评论")
+    # 决定完整性按映射逐条核对历史评论存在,而不是要求至少一条"已采纳":
+    # 全部未决/试验/被否决的决定同样是有效的决定历史。
+    decision_rows = (status.get("correspondence") or {}).get("decisions") or []
+    for row in decision_rows:
+        ident = str(row.get("identity") or "")
+        if not ident:
+            continue
+        needle = f"身份:{ident}"
+        if not any(needle in (comment.get("body") or "")
+                   for comment in overall_comments):
+            missing.append(f"决定 {ident} 的历史评论未进入规格评论")
+            break
     gate_text = _read(staging / GATE_HISTORY_REL)
     recovery = ""
     if "待恢复" in gate_text or "unknown" in gate_text:
         recovery = gate_text
+    history = "\n\n".join(
+        comment.get("body") or "" for comment in overall_comments)
     complete = (
         not missing
         and not status.get("paused")

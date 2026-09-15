@@ -89,8 +89,8 @@
     },
     {
       "path": "internal/review/pending_review.py",
-      "sha256": "238c842d49f58c73b1483185d7e976b47d245ddbd93668b374c9011d14cf74fa",
-      "source": "本项目自有内容(MIT); issue #55 完整待审成果",
+      "sha256": "8ab1d8e76ea823e15273c50cfa3130222300c8e19f6bfa4a0d2adb145b58dd95",
+      "source": "本项目自有内容(MIT); issue #55 完整待审成果; PR #67 审查修复: 暂存区与工作区状态分离捕获",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -674,8 +674,8 @@
     },
     {
       "path": "templates/README.md",
-      "sha256": "3491a78a19ef96cba5219d164f2d663c6e86acd0faf01e4e6e0850dc30e95c82",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "bccbbc96cb7f8884558e303207572ce7c871b001d0eb9f18661333aa42b52c4a",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包; PR #67 审查修复: writing-for-agents 路径改指 skills/",
       "license": "本项目自有内容(MIT)"
     },
     {

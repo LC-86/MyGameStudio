@@ -857,6 +857,118 @@ def test_migration_inventory_includes_issues_beyond_first_page() -> None:
               "分页不得丢掉第一页已有任务")
 
 
+def test_closed_task_close_failure_is_not_converted() -> None:
+    """旧任务已关闭但迁移后关闭未确认时,不得记为已转换。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "close-fail")
+        fake.http_error("PATCH", "/issues", 500,
+                        body_contains='"state": "closed"')
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        paused = applied.get("paused") or []
+        check(any("01-move" in item and "未确认保持关闭" in item
+                  for item in paused),
+              f"关闭未确认必须暂停该项,实际 {paused}")
+        task_rows = [row.get("identity")
+                     for row in (applied.get("correspondence") or {}).get("tasks") or []]
+        check("01-move" not in task_rows,
+              f"关闭未验证的任务不得记为已转换,实际 {task_rows}")
+        report = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        check(report.get("complete") is False,
+              "存在暂停项时迁移不得宣称完整")
+
+
+def test_result_index_comments_are_rewritten_to_new_ids() -> None:
+    """旧结果索引的 #issuecomment-<旧id> 引用必须改写为新评论 id。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "index-map")
+        move = fake.issues[0]
+        move["body"] = move["body"].replace(
+            "(暂无)", "- 成果:https://example.invalid/i/1#issuecomment-6101")
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"迁移应完成:{applied}")
+        new_issue = next(
+            (item for item in fake.issues
+             if "迁移状态:pending-switch" in (item.get("body") or "")
+             and "任务身份:01-move" in (item.get("body") or "")), None)
+        check(new_issue is not None, "应存在迁移后的 01-move 新任务 Issue")
+        if new_issue is None:
+            return
+        body = new_issue.get("body") or ""
+        check("#issuecomment-6101" not in body,
+              f"旧评论锚点必须被改写,实际正文:\n{body}")
+        new_comment = next(
+            (comment for comment in fake.comments.get(new_issue["number"], [])
+             if "迁移结果:01-move:6101" in (comment.get("body") or "")), None)
+        check(new_comment is not None, "结果必须以新评论重发")
+        if new_comment is not None:
+            check(f"#issuecomment-{new_comment['id']}" in body,
+                  f"结果索引必须指向新评论 #{new_comment['id']},实际正文:\n{body}")
+
+
+def test_native_only_relations_are_inventoried_and_restored() -> None:
+    """仅存于原生接口的父子/阻塞关系必须在盘点与恢复中保留。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "native-only")
+        fake.seed_issue(
+            "04-native", "原生关系任务", project_label="agent-ready",
+            request=_task_request("正文不含关系字段", deps="无", parent="无"))
+        native = fake.issues[3]
+        # 正文约定之外,只用原生接口登记:父=01-move,阻塞=01-move。
+        fake.sub_issues.setdefault(1, []).append(native["id"])
+        fake.blocked_by.setdefault(native["number"], []).append(
+            fake.issues[0]["id"])
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        row = next((item for item in plan.get("items") or []
+                    if item.get("identity") == "04-native"), None)
+        check(row is not None, "盘点必须包含新任务")
+        if row is not None:
+            check("01-move" in str(row.get("parent") or ""),
+                  f"原生父任务必须进入盘点,实际 {row.get('parent')!r}")
+            check("01-move" in str(row.get("deps") or ""),
+                  f"原生阻塞必须进入盘点,实际 {row.get('deps')!r}")
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"迁移应完成:{applied}")
+        rel = (applied.get("native_relations") or {}).get("04-native") or {}
+        check(rel.get("parent_identity") == "01-move",
+              f"迁移后必须恢复原生父子关系,实际 {rel}")
+        check("01-move" in (rel.get("blocked_by") or []),
+              f"迁移后必须恢复原生阻塞关系,实际 {rel}")
+
+
+def test_decisions_without_any_adopted_are_still_complete() -> None:
+    """全部决定未决/试验/被替代时,迁移完整性不得因缺「已采纳」而失败。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "no-adopted")
+        (root / "docs/mygamestudio/records/decision-adopted.md").unlink()
+        cache = root / "docs/mygamestudio/records/cache"
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"迁移应完成:{applied}")
+        report = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=cache)
+        missing = report.get("missing") or []
+        check(not any("决定" in item for item in missing),
+              f"逐条核对决定评论存在即可,不得强制至少一条已采纳,实际 {missing}")
+
+
 def main() -> int:
     return run_theme(
         "issue #58 GitHub 旧项目完整资料迁移",
@@ -872,6 +984,10 @@ def main() -> int:
             test_github_assignee_write_failure_is_not_converted,
             test_github_pending_config_keeps_write_authorization,
             test_migration_inventory_includes_issues_beyond_first_page,
+            test_closed_task_close_failure_is_not_converted,
+            test_result_index_comments_are_rewritten_to_new_ids,
+            test_native_only_relations_are_inventoried_and_restored,
+            test_decisions_without_any_adopted_are_still_complete,
             test_local_tracker_is_not_converted_here,
         ),
         FAILURES,

@@ -27,7 +27,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from github_backend_fixtures import AUTH, REPO, make_checker, run_theme
+from github_backend_fixtures import (
+    AUTH, REPO, make_checker, make_github_project, run_theme)
 from github_backend_transport import FakeTransport
 from redesign_bundle_contract import STAGE_REQUIREMENTS_REL
 
@@ -814,6 +815,100 @@ def test_github_unknown_write_rereads_and_keeps_unpublished_draft() -> None:
               "未发布草稿必须保持原状态")
 
 
+def test_github_discussion_rounds_append_not_replace() -> None:
+    """GitHub 讨论第二轮必须追加到同一 Issue,不得整篇替换旧轮次。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "star-catcher")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        first = mgs_records.plan_design_discussion(root, {
+            "kind": "small_change", "request": "调分。",
+            "settled": {"core-play": "接星星。"},
+            "trial_values": [{"id": "star-score", "value": 3, "adopted": False}],
+        }, transport=fake, cache_dir=cache)
+        r1 = mgs_records.apply_design_discussion(
+            root, first, {"score-value": "先用试验值 3"},
+            transport=fake, cache_dir=cache)
+        check(r1.get("ok") is True, f"第一轮讨论应保存:{r1}")
+        second = mgs_records.plan_design_discussion(root, {
+            "kind": "small_change", "request": "再调漏接上限。",
+            "settled": {"core-play": "接星星。"},
+            "trial_values": [{"id": "miss-limit", "value": 5, "adopted": False}],
+        }, transport=fake, cache_dir=cache)
+        r2 = mgs_records.apply_design_discussion(
+            root, second, {"miss-limit": "先用试验值 5"},
+            transport=fake, cache_dir=cache)
+        check(r2.get("ok") is True, f"第二轮讨论应保存:{r2}")
+        check(r2.get("issue_number") == r1.get("issue_number"),
+              "第二轮讨论应写进同一个讨论 Issue")
+        _st, issue = fake.request(
+            "GET", f"/repos/mygamestudio/issue-accept/issues/{r1['issue_number']}")
+        body = (issue or {}).get("body") or ""
+        check("star-score" in body and "先用试验值 3" in body,
+              "旧轮次的试验值与作答必须保留")
+        check("miss-limit" in body and "先用试验值 5" in body,
+              "新轮次必须追加到既有正文")
+
+
+def test_tospec_preserves_unrelated_sections() -> None:
+    """to-spec 重建整体规格时,白名单外的既有章节必须原样保留。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(
+            Path(tmp) / "star-catcher",
+            design=CORE_DESIGN + "\n## 操作与界面\n\n方向键左右移动。\n")
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "调分",
+            "overall": {"version": "v2", "rules": ["得分：每颗星星 3 分。"]},
+            "modules": {},
+        })
+        applied = mgs_records.apply_spec_adoption(root, plan, confirmed=True)
+        check(applied.get("ok") is True, f"to-spec 应写入:{applied}")
+        overall = mgs_records.read_current_design(root).get("overall") or ""
+        check("## 操作与界面" in overall and "方向键左右移动" in overall,
+              "与本次采纳无关的既有章节不得在重建中被静默删除")
+        check("每颗星星 3 分" in overall, "已采纳规则仍应写入")
+
+
+def test_github_spec_sync_forwards_custom_config_rel() -> None:
+    """自定义配置路径下 to-spec 的任务同步必须走同一配置路径。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "star-catcher"
+        root.mkdir(parents=True)
+        (root / "README.md").write_text("# star-catcher\n", encoding="utf-8")
+        make_github_project(root)
+        alt = root / "docs/alt/CONFIG.md"
+        alt.parent.mkdir(parents=True)
+        alt.write_text((root / "docs/mygamestudio/CONFIG.md").read_text(
+            encoding="utf-8"), encoding="utf-8")
+        (root / "docs/mygamestudio/CONFIG.md").unlink()
+        config_rel = "docs/alt/CONFIG.md"
+        fake = FakeTransport()
+        cache = root / "docs/alt/cache"
+        mgs_records.create_task(
+            root, "01-catch-star", "接住第一颗星星",
+            _task_request("接住一颗星星并计分"),
+            triage="ready-for-agent", transport=fake, cache_dir=cache,
+            config_rel=config_rel)
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "overall": {"version": "v2", "core_play": "接星星。",
+                        "rules": ["得分：每颗星星 3 分。"]},
+            "modules": {},
+            "affected_tasks": ["01-catch-star"],
+        }, transport=fake, cache_dir=cache, config_rel=config_rel)
+        applied = mgs_records.apply_spec_adoption(
+            root, plan, confirmed=True, transport=fake, cache_dir=cache,
+            config_rel=config_rel)
+        check(applied.get("ok") is True, f"自定义配置路径下 to-spec 应成功:{applied}")
+        check(applied.get("updated_tasks") == ["01-catch-star"],
+              f"任务同步必须透传配置路径:{applied.get('updated_tasks')}")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_game_and_matt_entries_read_design_stage_requirements,
@@ -828,5 +923,8 @@ if __name__ == "__main__":
         test_github_module_http_error_does_not_claim_adoption,
         test_github_live_spec_inventory_paginates_beyond_first_page,
         test_github_unknown_write_rereads_and_keeps_unpublished_draft,
+        test_github_discussion_rounds_append_not_replace,
+        test_tospec_preserves_unrelated_sections,
+        test_github_spec_sync_forwards_custom_config_rel,
     )
     sys.exit(run_theme("游戏设计讨论与现行规格维护(#53 T2/T3/T5)", TESTS, FAILURES))

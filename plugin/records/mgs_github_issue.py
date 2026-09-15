@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -35,6 +36,18 @@ from mgs_github_transport import GithubRecordsError  # noqa: E402
 
 HISTORY_MARK = "迁移状态:readonly-history"
 PENDING_SWITCH_MARK = "迁移状态:pending-switch"
+
+_RECORD_HEADER_RE = re.compile(r"^(?:规格身份|讨论身份|快照身份):", re.M)
+
+
+def is_record_carrier(body: str) -> bool:
+    """正文以行首正式元数据头承载规格/讨论/快照记录。
+
+    只认元数据头,不认正文任意位置的子串:普通任务的工作请求里
+    出现 ``规格身份:overall`` 这类字样时,任务本身仍是任务。
+    """
+
+    return bool(_RECORD_HEADER_RE.search(body or ""))
 
 
 def is_pending_switch(body: str) -> bool:

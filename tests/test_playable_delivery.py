@@ -469,6 +469,38 @@ def test_risk_selects_run_or_build_and_keeps_trial_out_of_rules() -> None:
 # --- AC6 / T9 / T10: technical cases -----------------------------------------
 
 
+def test_delivered_result_never_complete_while_unpublished() -> None:
+    """AC5: 结果只落成未发布草稿时,不得宣告正式交付完成或验收关闭。"""
+
+    from github_backend_fixtures import make_github_project
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "star-catcher"
+        root.mkdir(parents=True)
+        (root / "README.md").write_text("# star-catcher\n", encoding="utf-8")
+        make_github_project(root)
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        mgs_records.create_task(
+            root, "01-catch-star", "接住第一颗星星",
+            _task_request("接住一颗星星并计分"),
+            triage="ready-for-agent", transport=fake, cache_dir=cache)
+        mgs_records.list_tasks(root, transport=fake, cache_dir=cache)
+        fake.offline()
+        recorded = mgs_records.record_playable_result(root, "01-catch-star", {
+            "version": "src@v1", "launch": "open src/index.html",
+            "check_scope": "接住星星", "status": "delivered",
+        }, transport=fake, cache_dir=cache)
+        check(recorded.get("published") is False,
+              f"断连注入后结果应只有未发布草稿:{recorded}")
+        check(recorded.get("formal_delivery_complete") is False,
+              "证据未到达现行账本不得宣告正式交付完成")
+        check(recorded.get("close_as_accepted") is False,
+              "未发布的结果不得按验收关闭任务")
+        check("未发布草稿" in str(recorded.get("reason") or ""),
+              f"必须报告草稿/部分失败而不是静默成功:{recorded.get('reason')}")
+
+
 def test_delivery_cases_keep_waiting_and_preserve_on_cancel() -> None:
     """AC6/T9/T10: 正常交付、缺失资源、工具不可用、明确原型、构建差异、
     取消及续作;约定试玩未发生时保留等待,不关闭为已验收;
@@ -625,6 +657,7 @@ if __name__ == "__main__":
         test_resources_together_versus_independent_file_and_in_game_checks,
         test_existing_substitute_and_missing_tools_have_correct_outcomes,
         test_risk_selects_run_or_build_and_keeps_trial_out_of_rules,
+        test_delivered_result_never_complete_while_unpublished,
         test_delivery_cases_keep_waiting_and_preserve_on_cancel,
         test_github_playable_task_stays_on_selected_tracker,
     )

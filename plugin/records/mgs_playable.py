@@ -319,7 +319,14 @@ def record_playable_result(project_root: Path | str, identity: str,
             project_root, "create_task", identity,
             note="取消后不再启动被撤销范围的新动作",
             config_rel=config_rel)
-    return {
+    # 正式交付完成必须以结果真正到达现行账本为前提;
+    # 只有未发布草稿时不得宣告交付完成或验收关闭。
+    published = bool(written.get("published"))
+    complete = (status == "delivered" and published
+                and not keep_waiting and not missing)
+    unpublished = (status == "delivered" and not published
+                   and not keep_waiting and not missing and not cancelled)
+    result_out = {
         "ok": True,
         "wrote": True,
         "gate_required": False,
@@ -329,8 +336,7 @@ def record_playable_result(project_root: Path | str, identity: str,
         "launch": launch,
         "check_scope": scope,
         "status": status,
-        "close_as_accepted": False if (keep_waiting or missing or cancelled
-                                       or not complete) else True,
+        "close_as_accepted": complete,
         "formal_delivery_complete": bool(complete),
         "keep_waiting": keep_waiting,
         "cancelled": cancelled,
@@ -338,3 +344,8 @@ def record_playable_result(project_root: Path | str, identity: str,
         "restored": restored,
         "demo_game_required": False,
     }
+    if unpublished:
+        result_out["reason"] = (
+            "结果仅保存为未发布草稿,未到达现行任务账本;"
+            "不宣告正式交付完成,也不按验收关闭")
+    return result_out

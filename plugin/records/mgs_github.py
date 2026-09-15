@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import datetime as _dt  # noqa: F401 - 兼容接缝:既有测试经 mgs_github._dt 冻结时钟
 import hashlib
+import re
 import sys
 from pathlib import Path
 
@@ -614,7 +615,9 @@ class GithubBackend(GithubReadMixin):
         if current and actor not in current:
             raise GithubRecordsError(
                 f"任务已由 {current[0]} 认领,不覆盖他人认领")
-        if current == [actor]:
+        if actor in current:
+            # 已在指派名单内(可能另有协作者):按已认领返回,
+            # 不得把整个指派名单替换成单人而移除共同指派。
             parsed["assignees"] = current
             parsed["claim"] = actor
             return {"published": True, "adopted": True,
@@ -679,6 +682,48 @@ class GithubBackend(GithubReadMixin):
                 mode = "body-reference"
         else:
             ordered = list(tasks)
+        # 原生阻塞关系不可用时,依赖只存在于正文引用;
+        # 前沿必须把已知开放依赖同样视为阻塞,否则会放行不可开始的任务。
+        dep_mode = "native-blocked-by"
+        probe_target = None
+        if parent_identity and parent_identity in by_id:
+            probe_target = by_id[parent_identity]["issue_number"]
+        elif ordered:
+            probe_target = ordered[0].get("issue_number")
+        if probe_target:
+            probe_state, _probe_data = self._probe_get(
+                f"{repo_path(self.repo)}/issues/"
+                f"{probe_target}/dependencies/blocked_by")
+            if probe_state == "transient":
+                raise GithubRecordsError(
+                    f"读取原生阻塞关系失败({_probe_data});"
+                    "短暂错误不降级为正文约定")
+            if probe_state != "available":
+                dep_mode = "body-reference"
+
+        def _body_blocked(task: dict) -> bool:
+            raw = str((task.get("request") or {}).get("依赖") or "").strip()
+            if not raw or raw == "无":
+                return False
+            for token in raw.split("、"):
+                token = token.strip()
+                if not token:
+                    continue
+                match = re.match(r"#(\d+)\s+(\S+)", token)
+                if match:
+                    blocker = by_number.get(int(match.group(1)))
+                    identity = match.group(2)
+                else:
+                    blocker = by_id.get(token.split()[0])
+                    identity = token.split()[0]
+                if blocker is None:
+                    blocker = by_id.get(identity)
+                if blocker is None:
+                    return True
+                if blocker.get("state", "open") == "open":
+                    return True
+            return False
+
         frontier = []
         for task in ordered:
             if parent_identity and task["identity"] == parent_identity:
@@ -688,6 +733,8 @@ class GithubBackend(GithubReadMixin):
             if task.get("assignees"):
                 continue
             if int(task.get("open_blocker_count") or 0) > 0:
+                continue
+            if dep_mode == "body-reference" and _body_blocked(task):
                 continue
             parent_no = task.get("parent_issue_number")
             parent_name = (by_number[parent_no]["identity"]

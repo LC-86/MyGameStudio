@@ -424,7 +424,7 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
             "gate_required": False,
         }
     if existing and not plan.get("correction"):
-        if _revision_is_complete(rev_dir, plan):
+        if _revision_is_complete(rev_dir, plan, modules):
             _ensure_overall_index(root, config, plan, rev_dir)
             return {
                 "ok": True, "wrote": True, "complete": True,
@@ -452,7 +452,7 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
                 meta_path.parent.mkdir(parents=True, exist_ok=True)
                 meta_path.write_text(_render_meta(plan, formed_at=today()),
                                      encoding="utf-8")
-        if not source_ok or not _revision_is_complete(rev_dir, plan):
+        if not source_ok or not _revision_is_complete(rev_dir, plan, modules):
             return {
                 "ok": False, "wrote": True, "complete": False,
                 "reason": "生成期间来源改变,不能保存混合修订并宣称完整",
@@ -521,13 +521,29 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
     }
 
 
-def _revision_is_complete(rev_dir: Path, plan: dict) -> bool:
+def _revision_is_complete(rev_dir: Path, plan: dict,
+                          modules: dict[str, str] | None = None) -> bool:
     overall = rev_dir / "overall.md"
     meta = rev_dir / "meta.md"
     if not overall.is_file() or not overall.read_text(encoding="utf-8").strip():
         return False
     if not meta.is_file() or not _meta_field(meta.read_text(encoding="utf-8"), "形成时间"):
         return False
+    # 设计模块与整体入口同属修订内容;中断后重试不得只凭
+    # overall/meta 两文件就宣告修订完整。
+    if modules is not None:
+        module_dir = rev_dir / "modules"
+        expected = {f"{name}.md": body for name, body in modules.items()}
+        archived: set[str] = set()
+        if module_dir.is_dir():
+            archived = {item.name for item in module_dir.iterdir()
+                        if item.is_file()}
+        if archived != set(expected):
+            return False
+        for name, body in expected.items():
+            path = module_dir / name
+            if not path.is_file() or path.read_text(encoding="utf-8") != body:
+                return False
     for rel in plan.get("attachments") or []:
         if not (rev_dir / "attachments" / _attachment_rel(rel)).is_file():
             return False

@@ -768,6 +768,35 @@ def test_github_snapshot_association_http_error_is_not_complete() -> None:
               "失败的版本关联不得被当成已经写入")
 
 
+def test_interrupted_snapshot_retry_fills_modules_before_complete() -> None:
+    """中断重试不得只凭 overall/meta 宣告修订完整;设计模块必须补齐。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "star-catcher")
+        plan = mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+        })
+        rev_dir = root / "docs/mygamestudio/records/design-snapshots" / \
+            str(plan.get("design_id") or "ds-1") / str(plan.get("revision") or "r1")
+        # 模拟第一次尝试中断:只写了 overall.md 与 meta.md,模块未写。
+        rev_dir.mkdir(parents=True)
+        overall_now = mgs_records.read_current_design(root).get("overall") or ""
+        (rev_dir / "overall.md").write_text(overall_now, encoding="utf-8")
+        (rev_dir / "meta.md").write_text(
+            "# 正式版本设计快照\n\n形成时间:2026-09-15\n", encoding="utf-8")
+        applied = mgs_records.apply_design_snapshot(root, plan)
+        check(applied.get("complete") is True,
+              f"中断重试应补齐后宣告完整:{applied}")
+        modules_dir = rev_dir / "modules"
+        check((modules_dir / "rules.md").is_file(),
+              "完整修订必须包含设计模块文件,不得只凭 overall/meta 宣告完整")
+        if (modules_dir / "rules.md").is_file():
+            check((modules_dir / "rules.md").read_text(encoding="utf-8")
+                  == MODULE_RULES, "补写的模块内容必须与被归档设计一致")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_version_freeze_archives_full_content_daily_does_not,
@@ -780,6 +809,7 @@ if __name__ == "__main__":
         test_same_basename_attachments_keep_distinct_paths,
         test_correction_revision_uses_highest_existing_number,
         test_github_snapshot_association_http_error_is_not_complete,
+        test_interrupted_snapshot_retry_fills_modules_before_complete,
     )
     raise SystemExit(run_theme(
         "正式版本设计快照(#54 T6/T7)", TESTS, FAILURES))
