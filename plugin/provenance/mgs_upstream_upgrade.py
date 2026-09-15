@@ -444,6 +444,12 @@ def evaluate_upstream_upgrade(
     unevaluated_materials = [
         rel for rel in new_materials if rel not in material_decisions
     ]
+    # 决策只能落在枚举出的候选材料上:额外键(含 `..` 分量或根外路径)
+    # 未经评审,不得进入采纳;否则 apply 会按决策复制未审查字节。
+    unknown_material_decisions = [
+        rel for rel in material_decisions if rel not in set(new_materials)
+    ]
+    evaluation["materials"]["unknown_decisions"] = unknown_material_decisions
     game_collision = [name for name in candidate_official if name in GAME_ENTRIES]
     adaptation_conflicts = [
         item["skill"] for item in adaptations if item.get("status") == "conflict"
@@ -492,6 +498,8 @@ def evaluate_upstream_upgrade(
         reason = "unevaluated-collection-change"
     elif unevaluated_materials:
         reason = "unevaluated-new-material"
+    elif unknown_material_decisions:
+        reason = "unknown-material-decision"
     elif license_info["conflict"]:
         reason = "license-conflict"
     elif not verification["passed"]:
@@ -624,13 +632,21 @@ def _adopt_candidate(plugin: Path, evaluation: dict) -> dict:
             if stale.startswith(prefix) and stale not in live_rels:
                 del by_path[stale]
     material_decisions = evaluation.get("new_material_decisions") or {}
+    # 只允许复制评审枚举过的候选材料;解析后的源与目标都必须仍位于
+    # 各自根之下。决策里的额外键或 `..` 分量不得把复制指向根外文件。
+    enumerated_materials = set(_new_materials(candidate, official_files))
+    candidate_root = candidate.resolve()
+    plugin_root = plugin.resolve()
     for rel, decision in material_decisions.items():
-        if decision != "include":
+        if decision != "include" or rel not in enumerated_materials:
             continue
-        src = candidate / rel
+        src = (candidate / rel).resolve()
+        dest = (plugin / rel).resolve()
+        if not (src.is_relative_to(candidate_root)
+                and dest.is_relative_to(plugin_root)):
+            continue
         if not src.is_file():
             continue
-        dest = plugin / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
         entry = dict(by_path.get(rel) or {

@@ -4,7 +4,7 @@
     "name": "mygamestudio",
     "version": "2.0.0",
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "sha256": "f9364adda14b9c785e651e51d82a6bf135719548eef7751bf0c8e74fcb8ded59"
+    "sha256": "150d7be4ff4e9bdb87deef4e1e9b8cb244abc2336376092f0c9fb400b5afd4e0"
   },
   "upstream": {
     "name": "mattpocock/skills",
@@ -24,7 +24,7 @@
   "package_consistency": {
     "passed": true,
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "tarball_sha256": "f9364adda14b9c785e651e51d82a6bf135719548eef7751bf0c8e74fcb8ded59",
+    "tarball_sha256": "150d7be4ff4e9bdb87deef4e1e9b8cb244abc2336376092f0c9fb400b5afd4e0",
     "missing": [],
     "mismatches": []
   },

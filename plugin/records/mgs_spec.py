@@ -919,16 +919,9 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                               "权威规格已更新但历史未确认,不宣告采用完成",
                 }
         module_issues = {}
-        for name, body in (plan.get("modules") or {}).items():
+        for name, content in _intended_module_bodies(
+                plan, slugs, history_line).items():
             slug = slugs[str(name)]
-            content = body if isinstance(body, str) else _render_spec_body(
-                title=str(body.get("title") or name), identity=slug,
-                version=str(body.get("version") or "v1"),
-                core_play=str(body.get("core_play") or ""),
-                rules=list(body.get("rules") or []), modules={},
-                change_index=[history_line], kind="模块规格")
-            if SPEC_MARK not in content:
-                content = f"{SPEC_MARK}{slug}。种类:模块规格。\n\n" + content
             existing_mod = None
             for item in _list_github_items(backend):
                 item_body = item.get("body") or ""
@@ -1017,6 +1010,25 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
         return draft
 
 
+def _intended_module_bodies(plan: dict, slugs: dict,
+                            history_line: str) -> dict[str, str]:
+    """按主写入路径同一规则重建每个模块的预期正文,供写入与恢复核对共用。"""
+
+    bodies: dict[str, str] = {}
+    for name, body in (plan.get("modules") or {}).items():
+        slug = slugs[str(name)]
+        content = body if isinstance(body, str) else _render_spec_body(
+            title=str(body.get("title") or name), identity=slug,
+            version=str(body.get("version") or "v1"),
+            core_play=str(body.get("core_play") or ""),
+            rules=list(body.get("rules") or []), modules={},
+            change_index=[history_line], kind="模块规格")
+        if SPEC_MARK not in content:
+            content = f"{SPEC_MARK}{slug}。种类:模块规格。\n\n" + content
+        bodies[str(name)] = content
+    return bodies
+
+
 def _github_adoption_complete(backend, existing: dict, new_overall: str,
                               plan: dict, slugs: dict) -> bool:
     if (existing.get("body") or "") != new_overall:
@@ -1031,12 +1043,19 @@ def _github_adoption_complete(backend, existing: dict, new_overall: str,
     if history_line and not any(
             history_line in (item.get("body") or "") for item in comments):
         return False
-    found = {
-        _spec_identity(item.get("body") or "")
-        for item in items
-        if _is_live_spec(item.get("body") or "")
-    }
-    return all(slug in found for slug in slugs.values())
+    # 仅存在同身份的模块 issue 不足以证明采用完成:恢复前留下的旧正文同样
+    # 携带该身份。必须逐模块与预期正文比对,全部一致才承认恢复完成。
+    intended = _intended_module_bodies(plan, slugs, _history_line(plan))
+    live_bodies: dict[str, list[str]] = {}
+    for item in items:
+        body = item.get("body") or ""
+        if _is_live_spec(body):
+            live_bodies.setdefault(_spec_identity(body), []).append(body)
+    for name, content in intended.items():
+        slug = slugs[str(name)]
+        if not any(body == content for body in live_bodies.get(slug) or []):
+            return False
+    return True
 
 
 def _task_cite(plan: dict, spec_number: int) -> str:

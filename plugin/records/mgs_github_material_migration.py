@@ -818,6 +818,20 @@ def apply_github_material_migration(project_root: Path | str,
     tasks = [item for item in runnable if item.get("kind") == "task"]
     results = [item for item in runnable if item.get("kind") == "result"]
     evidence_items = [item for item in runnable if item.get("kind") == "evidence"]
+    # 源任务身份碰撞:两个源 Issue 共用同一任务身份时,后一个会按身份
+    # 收养前一个刚建的待切换 Issue,两个来源并成一个目标,后一个的
+    # 正文被静默丢弃。碰撞身份按冲突暂停,不共享目标。
+    task_identities = [str(item.get("identity") or "") for item in tasks]
+    duplicate_ids = {
+        ident for ident in task_identities
+        if ident and task_identities.count(ident) > 1}
+    for ident in sorted(duplicate_ids):
+        paused.append(f"task:{ident}(源身份碰撞,不共享目标)")
+        paused_ids.add(ident)
+    tasks = [item for item in tasks
+             if str(item.get("identity") or "") not in duplicate_ids]
+    results = [item for item in results
+               if str(item.get("identity") or "") not in duplicate_ids]
 
     overall_issue = None
     design_ids = design_ids_for_history(historical)

@@ -332,12 +332,17 @@ def record_playable_result(project_root: Path | str, identity: str,
             note="取消后不再启动被撤销范围的新动作",
             config_rel=config_rel)
     # 正式交付完成必须以结果真正到达现行账本为前提;
-    # 只有未发布草稿时不得宣告交付完成或验收关闭。
+    # 只有未发布草稿时不得宣告交付完成或验收关闭;部分成功(评论已
+    # 发布而结果索引未确认更新)同样留有待恢复的发布缺口,不算完成。
     published = bool(written.get("published"))
-    complete = (status == "delivered" and published
+    index_pending = (bool(written.get("partial"))
+                     or written.get("index_updated") is False)
+    complete = (status == "delivered" and published and not index_pending
                 and not keep_waiting and not missing)
     unpublished = (status == "delivered" and not published
                    and not keep_waiting and not missing and not cancelled)
+    pending_recovery = (status == "delivered" and published and index_pending
+                        and not keep_waiting and not missing and not cancelled)
     result_out = {
         "ok": True,
         "wrote": True,
@@ -360,4 +365,8 @@ def record_playable_result(project_root: Path | str, identity: str,
         result_out["reason"] = (
             "结果仅保存为未发布草稿,未到达现行任务账本;"
             "不宣告正式交付完成,也不按验收关闭")
+    elif pending_recovery:
+        result_out["reason"] = (
+            "结果发布部分成功:评论已落地而结果索引未确认更新;"
+            "发布恢复完成前不宣告正式交付完成,也不按验收关闭")
     return result_out

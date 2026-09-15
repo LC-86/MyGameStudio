@@ -47,6 +47,20 @@ def _existing_files(root: Path) -> list[Path]:
     return files
 
 
+_MAX_TEXT_BYTES = 2 * 1024 * 1024
+
+
+def _read_head(path: Path) -> str:
+    """限量读取正文头部分类用关键词;不为本可按路径分类的资产付出全量解码。"""
+
+    try:
+        with path.open("rb") as handle:
+            data = handle.read(_MAX_TEXT_BYTES)
+    except OSError:
+        return ""
+    return data.decode("utf-8", errors="replace")
+
+
 def analyze_project(project_root: Path | str,
                     config_rel: str = CONFIG_REL) -> dict:
     """只读分析已有设计、工程和资料;不写入,也不开始制作。"""
@@ -63,8 +77,9 @@ def analyze_project(project_root: Path | str,
     actual: list[str] = []
     for path in _existing_files(root):
         rel = _rel(root, path)
-        text = path.read_text(encoding="utf-8", errors="replace")
         lowered = rel.lower()
+        # 先按路径分类:工程与资产类只看路径,不读内容——游戏项目里
+        # 大图/音频/构建产物可能是数 GB,解码它们只会拖垮分析。
         if lowered.startswith("src/") or lowered.startswith("assets/") \
                 or path.suffix in {".js", ".ts", ".html", ".css"} \
                 or path.name == "package.json":
@@ -72,6 +87,7 @@ def analyze_project(project_root: Path | str,
             actual.append(rel)
         elif "DESIGN" in path.name.upper() or path.name == "GAME_DESIGN.md":
             adopted.append(rel)
+            text = _read_head(path)
             if "被替代" in text or "历史决定" in text:
                 history.append(rel)
         elif "TECH" in path.name.upper() or path.name == "TECH_DESIGN.md":
@@ -81,9 +97,10 @@ def analyze_project(project_root: Path | str,
         elif "/tasks/" in f"/{lowered}" or lowered.startswith("tasks/"):
             history.append(rel)
             unverified.append(rel)
-        if path.name == "CONFIG.md" and "github-issues" in text \
-                and "local-markdown" in text:
-            conflicts.append(rel)
+        if path.name == "CONFIG.md":
+            text = _read_head(path)
+            if "github-issues" in text and "local-markdown" in text:
+                conflicts.append(rel)
     if not (root / config_rel).is_file():
         gaps.append("缺少协作配置与现行 tracker 选择")
     if not (root / INDEX_REL).is_file():

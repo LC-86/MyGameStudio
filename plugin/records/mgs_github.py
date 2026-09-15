@@ -580,7 +580,22 @@ class GithubBackend(GithubReadMixin):
                             "set_parent", draft_args,
                             "写入原生父子关系 HTTP 404,探测时能力仍在;"
                             "不自行降级为正文约定")
-                    elif status not in (200, 201, 422):
+                    if status == 422:
+                        # 校验拒绝(子 Issue 已属其他父/会成环等)不是
+                        # 成功:回读核实是否已落地;未落地按失败上报,
+                        # 不把原生关系写进正文或虚报 parent_identity。
+                        landed, payload = self._probe_get(probe_path)
+                        landed_child = (
+                            landed == "available"
+                            and any(isinstance(item, dict)
+                                    and item.get("id") == child_id
+                                    for item in (payload or [])))
+                        if not landed_child:
+                            raise GithubRecordsError(
+                                "写入原生父子关系被拒绝(HTTP 422,子 Issue "
+                                "未落地);按失败处理,不写正文约定也不虚报"
+                                "原生成功")
+                    elif status not in (200, 201):
                         raise TransportError(
                             "bad_response", f"sub-issues HTTP {status}")
                 except TransportError as exc:

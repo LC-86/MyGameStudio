@@ -26,10 +26,11 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_github_issue import (  # noqa: E402
-    HISTORY_MARK, PENDING_SWITCH_MARK, skip_from_current_reads)
+    HISTORY_MARK, PENDING_SWITCH_MARK, authorization_for, skip_from_current_reads)
 from mgs_github_transport import repo_path  # noqa: E402
 from mgs_record_model import RecordsError, today  # noqa: E402
-from mgs_record_source import DEFAULT_CONFIG_REL, load_config  # noqa: E402
+from mgs_record_source import (  # noqa: E402
+    DEFAULT_CONFIG_REL, WRITE_OP, load_config)
 from mgs_spec import read_current_design  # noqa: E402
 
 PENDING_REL = "docs/mygamestudio/records/pending-switch"
@@ -720,12 +721,34 @@ def _current_new_issue_numbers(correspondence: dict) -> list[int]:
     return numbers
 
 
-def _patch_issue_body(backend, number: int, body: str) -> bool:
-    """PATCH 正文;仅 2xx 视为成功。忽略状态会把远端失败当成已切换。"""
+def _write_denied_reason(backend) -> str:
+    """重查当前 CONFIG 仓库级 issues-write 授权;允许时返回空串。
 
+    已确认的本地切换计划不替代现行授权:迁移准备后授权可能被收回或
+    不再匹配仓库,远端标记变更前必须按当前配置重新核对并失败闭合。"""
+
+    allowed, note = authorization_for(backend.config, WRITE_OP)
+    return "" if allowed else note
+
+
+def _marker_failure(number: int, what: str, denied: str = "") -> str:
+    text = f"#{number}:{what}"
+    if denied:
+        text += f"(当前 CONFIG 未授予 issues-write:{denied})"
+    return text
+
+
+def _patch_issue_body(backend, number: int, body: str) -> tuple[bool, str]:
+    """PATCH 正文;仅 2xx 视为成功。忽略状态会把远端失败当成已切换。
+
+    每次变更前重查当前 issues-write 授权;缺失时按失败闭合并附原因。"""
+
+    denied = _write_denied_reason(backend)
+    if denied:
+        return False, denied
     status, _issue = backend.transport.request(
         "PATCH", f"{repo_path(backend.repo)}/issues/{number}", {"body": body})
-    return status in (200, 201)
+    return status in (200, 201), ""
 
 
 def _read_issue_body(backend, number: int) -> str:
@@ -740,6 +763,26 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
     backend = _github_backend(
         root, transport=transport, api_base=api_base, cache_dir=cache_dir)
     correspondence = plan.get("correspondence") or {}
+    # 切换前先按当前 CONFIG 重查 issues-write:迁移准备时的授权不能
+    # 替代此刻的授权;缺失或不再匹配时失败闭合,不动远端标记。
+    denied = _write_denied_reason(backend)
+    if denied:
+        return {
+            "ok": False,
+            "wrote": False,
+            "status": "pending-switch",
+            "reason": "当前 CONFIG 未授予 issues-write,不执行远端标记变更:"
+                      f"{denied}",
+            "tracker": "github-issues",
+            "backend": "github-issues",
+            "history_root": HISTORY_REL,
+            "archived": [],
+            "gate_required": False,
+            "gate_as_permission": False,
+            "real_migration_authorized": False,
+            "recovery_destination": GATE_HISTORY_REL,
+            "correspondence": correspondence,
+        }
     # 远端标记迁移必须先于本地提升逐项确认:PATCH 成功且回读到目标状态
     # 才允许归档旧件、提升新件;任何一项未确认时本地保持旧来源,
     # 不写 switch-status。先提升再打标记会让本地指向新源而 GitHub
@@ -749,22 +792,28 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         body = _read_issue_body(backend, number)
         if PENDING_SWITCH_MARK in body:
             target = _strip_mark(body, PENDING_SWITCH_MARK)
-            if not _patch_issue_body(backend, number, target):
-                marker_failures.append(f"#{number}:pending-switch 移除未确认")
+            ok, denied = _patch_issue_body(backend, number, target)
+            if not ok:
+                marker_failures.append(_marker_failure(
+                    number, "pending-switch 移除未确认", denied))
                 continue
             if PENDING_SWITCH_MARK in _read_issue_body(backend, number):
-                marker_failures.append(f"#{number}:pending-switch 回读仍在")
+                marker_failures.append(_marker_failure(
+                    number, "pending-switch 回读仍在"))
     for number in _old_issue_numbers(correspondence):
         body = _read_issue_body(backend, number)
         if not skip_from_current_reads(body) or PENDING_SWITCH_MARK in body:
             target = _with_mark(
                 _strip_mark(body, PENDING_SWITCH_MARK), HISTORY_MARK)
-            if not _patch_issue_body(backend, number, target):
-                marker_failures.append(f"#{number}:readonly-history 写入未确认")
+            ok, denied = _patch_issue_body(backend, number, target)
+            if not ok:
+                marker_failures.append(_marker_failure(
+                    number, "readonly-history 写入未确认", denied))
                 continue
             back = _read_issue_body(backend, number)
             if HISTORY_MARK not in back or PENDING_SWITCH_MARK in back:
-                marker_failures.append(f"#{number}:readonly-history 回读失败")
+                marker_failures.append(_marker_failure(
+                    number, "readonly-history 回读失败"))
     if marker_failures:
         return {
             "ok": False,
@@ -1063,6 +1112,25 @@ def rollback_safe_switch(project_root: Path | str,
     if tracker == "github-issues":
         backend = _github_backend(
             root, transport=transport, api_base=api_base, cache_dir=cache_dir)
+        # 回滚同样先按当前 CONFIG 重查 issues-write:授权缺失或不再
+        # 匹配时不动远端标记,保持已切换状态。
+        denied = _write_denied_reason(backend)
+        if denied:
+            return {
+                "ok": False,
+                "wrote": False,
+                "status": "switched",
+                "reason": "当前 CONFIG 未授予 issues-write,不执行远端标记回退:"
+                          f"{denied}",
+                "preserved": preserved,
+                "correspondence": correspondence,
+                "history_root": HISTORY_REL,
+                "preserve_root": PRESERVE_REL,
+                "gate_required": False,
+                "gate_as_permission": False,
+                "real_migration_authorized": False,
+                "recovery_destination": GATE_HISTORY_REL,
+            }
         known = _current_new_issue_numbers(correspondence)
         try:
             import mgs_records  # noqa: PLC0415
@@ -1079,26 +1147,38 @@ def rollback_safe_switch(project_root: Path | str,
                     known.append(number)
         # 回滚的远端标记必须逐项确认(2xx + 回读):旧权威 Issue 若仍
         # 处于 readonly-history,本地不得恢复旧件并宣告 rolled-back。
+        # 迭代收集到的全部新 Issue 号(迁移期 + 切换后新增):切换后
+        # 新增任务只进 preserved 不打标记,会在恢复旧权威后同时留在
+        # 现行读取集里。
         marker_failures: list[str] = []
-        for number in _current_new_issue_numbers(correspondence):
-            if number in known and number not in _old_issue_numbers(correspondence):
-                body = _read_issue_body(backend, number)
-                target = _with_mark(
-                    _strip_mark(body, HISTORY_MARK), PENDING_SWITCH_MARK)
-                if not _patch_issue_body(backend, number, target):
-                    marker_failures.append(f"#{number}:pending-switch 恢复未确认")
-                    continue
-                back = _read_issue_body(backend, number)
-                if HISTORY_MARK in back or PENDING_SWITCH_MARK not in back:
-                    marker_failures.append(f"#{number}:pending-switch 回读失败")
+        old_numbers = set(_old_issue_numbers(correspondence))
+        for number in dict.fromkeys(
+                issue for issue in known if isinstance(issue, int)):
+            if number in old_numbers:
+                continue
+            body = _read_issue_body(backend, number)
+            target = _with_mark(
+                _strip_mark(body, HISTORY_MARK), PENDING_SWITCH_MARK)
+            ok, denied = _patch_issue_body(backend, number, target)
+            if not ok:
+                marker_failures.append(_marker_failure(
+                    number, "pending-switch 恢复未确认", denied))
+                continue
+            back = _read_issue_body(backend, number)
+            if HISTORY_MARK in back or PENDING_SWITCH_MARK not in back:
+                marker_failures.append(_marker_failure(
+                    number, "pending-switch 回读失败"))
         for number in _old_issue_numbers(correspondence):
             body = _read_issue_body(backend, number)
             target = _strip_mark(body, HISTORY_MARK)
-            if not _patch_issue_body(backend, number, target):
-                marker_failures.append(f"#{number}:readonly-history 移除未确认")
+            ok, denied = _patch_issue_body(backend, number, target)
+            if not ok:
+                marker_failures.append(_marker_failure(
+                    number, "readonly-history 移除未确认", denied))
                 continue
             if HISTORY_MARK in _read_issue_body(backend, number):
-                marker_failures.append(f"#{number}:readonly-history 回读仍在")
+                marker_failures.append(_marker_failure(
+                    number, "readonly-history 回读仍在"))
         if marker_failures:
             return {
                 "ok": False,

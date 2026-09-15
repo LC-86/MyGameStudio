@@ -276,6 +276,12 @@ def plan_local_material_migration(project_root: Path | str,
         raise RecordsError(f"目标项目不存在:{root}")
     config = _config_or_local(root)
     items = _discover_items(root, config)
+    # 完整性基数取自过滤前的全量盘点:受限范围只缩小转换集,不缩小
+    # 基数——否则部分迁移会被回读误判为完整并放行全局切换。
+    full_inventory: dict[str, int] = {}
+    for item in items:
+        kind = str(item.get("kind") or "")
+        full_inventory[kind] = full_inventory.get(kind, 0) + 1
     allowed: set[str] = set()
     if scope:
         allowed = set(scope.get("sources") or [])
@@ -300,6 +306,8 @@ def plan_local_material_migration(project_root: Path | str,
         "pending_root": str(_pending_root(root)),
         "items": items,
         "sidecars": sidecars,
+        "scoped": bool(allowed),
+        "source_inventory": full_inventory,
         "source_fingerprints": fingerprints,
         "retention": [
             "旧原件全部保留,不删除、不改写现行指针",
@@ -632,11 +640,17 @@ def apply_local_material_migration(project_root: Path | str,
     duplicate_ids = {
         ident for ident in identities if ident and identities.count(ident) > 1}
     runnable: list[dict] = []
-    source_inventory: dict[str, int] = {}
+    # 完整性基数沿用计划登记的全量盘点;受限范围缩小的是转换集。
+    source_inventory: dict[str, int] = {
+        str(kind): int(count)
+        for kind, count in (plan.get("source_inventory") or {}).items()}
+    if not source_inventory:
+        for item in items:
+            kind = str(item.get("kind") or "")
+            source_inventory[kind] = source_inventory.get(kind, 0) + 1
     for item in items:
         identity = str(item.get("identity") or "")
         kind = str(item.get("kind") or "")
-        source_inventory[kind] = source_inventory.get(kind, 0) + 1
         if item.get("kind") == "task" and identity in duplicate_ids:
             paused.append(f"{item.get('kind')}:{identity}")
             paused_ids.add(identity)
@@ -734,6 +748,18 @@ def apply_local_material_migration(project_root: Path | str,
     created += int(gate_row["wrote"])
     skipped += int(not gate_row["wrote"])
 
+    # 为每个已落地映射绑定内容指纹:切换前回读按行重算比对,迁移后被
+    # 删除或篡改的产物不得继续宣告迁移完成。
+    for row in converted:
+        new = str(row.get("new") or "")
+        if not new:
+            continue
+        if row.get("kind") == "evidence":
+            target = root / str(row.get("old") or new)
+        else:
+            target = staging / new
+        if target.is_file():
+            row["sha256"] = _sha_file(target)
     mapping = {
         "specs": [row for row in converted if row.get("kind") == "spec"],
         "decisions": [row for row in converted if row.get("kind") == "decision"],
@@ -753,6 +779,7 @@ def apply_local_material_migration(project_root: Path | str,
         "pending_root": str(staging),
         "correspondence": mapping,
         "paused": paused,
+        "scoped": bool(plan.get("scoped")),
         "missing_evidence": sorted(set(missing_evidence)),
         "source_inventory": source_inventory,
         "gate_history": GATE_HISTORY_REL,
@@ -807,6 +834,32 @@ def _count_source_items(root: Path) -> dict[str, int]:
     return counts
 
 
+def _row_unverified(root: Path, staging: Path, row: dict) -> str:
+    """逐行核实映射产物仍在原位且字节未变;无指纹的行按未核实处理。"""
+
+    new = str(row.get("new") or "")
+    old = str(row.get("old") or "")
+    if not new:
+        return str(row.get("identity") or old or "未知")
+    if row.get("kind") == "evidence":
+        if row.get("reachable") is False:
+            return ""
+        target = (root / old).resolve() if old else None
+        if target is None or not target.is_file():
+            return old or new
+    else:
+        target = (staging / new).resolve()
+        if (not target.is_file()
+                or not target.is_relative_to(staging.resolve())):
+            return new
+    digest = row.get("sha256")
+    if not digest:
+        return f"{new}(缺少内容指纹)"
+    if _sha_file(target) != digest:
+        return f"{new}(内容已变化)"
+    return ""
+
+
 def _incomplete_reason(root: Path, status: dict) -> list[str]:
     missing: list[str] = []
     staging = Path(status.get("pending_root") or _pending_root(root))
@@ -833,10 +886,18 @@ def _incomplete_reason(root: Path, status: dict) -> list[str]:
     labels = {"specs": "规格", "decisions": "决定", "tasks": "任务",
               "results": "结果", "evidence": "证据"}
     for group, label in labels.items():
-        if mapping.get(group):
+        rows = mapping.get(group) or []
+        expected = inventory.get(_KIND_SOURCE[group], 0)
+        if len(rows) < expected:
+            # 受限范围只转换了部分来源:数量不足时不得按完整宣告,
+            # 否则 apply_safe_switch 会在未转换记录上切换全局权威。
+            missing.append(
+                f"缺少{label}对应关系(已转换 {len(rows)}/共 {expected})")
             continue
-        if inventory.get(_KIND_SOURCE[group], 0):
-            missing.append(f"缺少{label}对应关系")
+        for row in rows:
+            reason = _row_unverified(root, staging, row)
+            if reason:
+                missing.append(f"{label}映射未核实:{reason}")
     if not converted.get("modules"):
         missing.append("缺少可读取模块")
     return missing
