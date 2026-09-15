@@ -15,6 +15,7 @@ description: Game-Producer 游戏制作统筹。用户显式调用或已在当�
 - [阶段资料入口](../../internal/game/stage-requirements.md)：当前阶段专业要求（**读取资料不是开始制作**）
 - [管理技能合同](../../internal/contracts/management.md)中的 Game-Producer 一节
 - [共同合同](../../internal/contracts/common.md)**《共同执行规则》《写入与保障》**
+- [旧入口与 gate 去向](../../internal/game/retired-entries.md)：已退役入口说明，不是可执行别名
 
 公开只读接缝：`<插件根>/records/mgs_records.py` 的 `status_report`、`list_tasks`、`startable_tasks`、`frontier_tasks`。查询本身不修改文件。项目接入后从 `docs/mygamestudio/INDEX.md` 读取现行规格与任务位置；GitHub 模式下任务现行状态以远端 Issue 为准，本地草稿或缓存须标明身份。
 

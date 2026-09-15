@@ -11,38 +11,38 @@
   "files": [
     {
       "path": "internal/contracts/common.md",
-      "sha256": "921b0f01f0345689aa0a0348e704e833224baf0fac363b9f5af0a67f284b2cd2",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "914f2ed94029a42846b65aeaefebc71c1f88fe3552b31427e86a1293c4d97620",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "b65a45e5509822a3e792dad69528b4a49356e6effe2b25ecd7b0818facbcdf31",
-      "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
+      "sha256": "41469e827d843382cbaf435c6a6b51f702e67349f6412f3f44c974909f5822de",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "5bb4a3e458ca8b3593931cf5991834377dc5025bc9dcd177abd712e4473dcde7",
-      "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
+      "sha256": "1e5cb6d01a0764f92e463038d60784980c2fe3f06af7f5e24feb860fc257d240",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "33061d2501e063d9a345eca8a530bfaf03a5191aca0ce0e2c54d8a84a69cd052",
-      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
+      "sha256": "42d44840df3b2cb011378e734664ee4638313ce156a13ad1105898394823ad61",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/project-configuration.md",
-      "sha256": "c9f40ad5aee251f0e9333e2860b3854ed812ca5477545ee98728f0fbb4aaf5ed",
-      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
+      "sha256": "aceef52454aab806c21c3146543a001460e711e9a99640764ebc2e5824333fd3",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/records.md",
-      "sha256": "f2d64299958bbfefad43a72dbf1b762d0ac7102cecef1b1394b452e4cff81ddb",
-      "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
+      "sha256": "314fa6962e0752822fb0ac44d16172016ef0baaf3c25b7a324b9e08afe2b2da7",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -53,14 +53,20 @@
     },
     {
       "path": "internal/contracts/verification.md",
-      "sha256": "6d0e1f1fa8a1a8bccfe33a4f54a6c4530dc5e6f10fcbb040d60702c100716e82",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "e40654b09b42e2564573594d0614635d2c8fe403c73778dd5a504fee7505e4cc",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/game/invocation.md",
       "sha256": "9339a8cf0166d25869d74c34f07bde26ff9c11d70f53835d2399c9970243e0d8",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/game/retired-entries.md",
+      "sha256": "e39ba3c4da7e608dfe25af5ce3c2e4917a81fe84b76ea991b4d20d453e0a2526",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -71,8 +77,8 @@
     },
     {
       "path": "internal/proposals/project-layout.md",
-      "sha256": "101886bb77f6d6f66289e11aaf35b81eac85dbbeb0fd226834fd75f4b92bcd53",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "6635f0f392adf0cd1b4c04abf0597186c233e40ee074b74027036ef4ee0f68af",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -82,99 +88,9 @@
       "license": "本项目自有内容(MIT)"
     },
     {
-      "path": "internal/protocols/gate-protocol.md",
-      "sha256": "ebcbacfde410f1fffd4405c0cee06e71ca2813c109ec0bbc614483917d718aee",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
       "path": "internal/review/pending_review.py",
       "sha256": "a9c8dc2490c72a29675915048d45b0923c45396f6235737b840286018b2483f9",
       "source": "本项目自有内容(MIT); issue #55 完整待审成果",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/README.md",
-      "sha256": "3491a78a19ef96cba5219d164f2d663c6e86acd0faf01e4e6e0850dc30e95c82",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/evidence/playtest.md",
-      "sha256": "ee4b8d41dcd89b3a45630dbf784b916a8aec92e5ff69054594e33403052acd1e",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/evidence/review.md",
-      "sha256": "a2c74c273ccf69b21148fe2aee546594769ebb1fb9477faa6a05c873f96ad59b",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/project/CONFIG.md",
-      "sha256": "90e3010d9ff11207200899bfd85d09905583c6a0a5a2806f3976173e61b9c500",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/project/CONTEXT.md",
-      "sha256": "14fc717a39288d1434df1ad4fdaa3948062efbf7aced178d9fbd4a5a37b5d9b8",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/project/GAME_DESIGN.md",
-      "sha256": "d7dbe67822ac74ee58cd5f08e8fa2a04c5713e4b0dc8fc6054d27c56e1b038a7",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/project/INDEX.md",
-      "sha256": "e964065e9406159854dfa86334638b31f007f0bfaf1c38805fdbbc4b0afd8fa4",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/project/PROJECT.md",
-      "sha256": "66a87fbd738ff54a1d5a206e048dd710378181620fab0035c4622e6267660a38",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/project/TECH_DESIGN.md",
-      "sha256": "4cc9cf8ded8706fffee35b445339ff1b9610b36ff8de1cdab3784632909f110c",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/records/decision.md",
-      "sha256": "bbf880ec350c73d1c581acbc9de080caff36b25e6308a7602c03321d8d06e1d9",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/records/onboarding.md",
-      "sha256": "b5531d1a39ae7900c2b72e20db6e9fd54ff6faf6c537df66bf73a904057598df",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/records/research.md",
-      "sha256": "176d8027cf4f5db1d0f8eeaedc22bdd81da9f4ca4dd238cdd6a504417fa9d0e6",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/work/result.md",
-      "sha256": "56056ecc9dc835f304c8ed83f33710408e4970449a31b88edc3ac2db920a4560",
-      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "templates/work/task.md",
-      "sha256": "fb53996d586bb35eb14cd704663543743506c39d115e34eaccf8034882d3f0eb",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -307,180 +223,6 @@
       "license": "本项目自有内容(MIT)"
     },
     {
-      "path": "skills/game-design/change_flow.py",
-      "sha256": "a5e7e4e8384e18c1871717dab0c80f1cd3684b077aebae364c15641ce6ef6baa",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/change_flow_cli.py",
-      "sha256": "df29a3a6689343a1f89386317c00e30c3bce17fdb5cb21ffdb4dcde705fb790b",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/change_impact.py",
-      "sha256": "e88def1a47dff29ff731baef2abd5ce9fbe4910154f7db61fb7f27872260921f",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/change_input.py",
-      "sha256": "4abaf813b4810f58d25f3ffb80acdf5f3e072fad1332d901d8f4803aa07ac0d8",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/change_render.py",
-      "sha256": "75880cf84894d2a11b54f935dbe1a10d8055b4841441f3955262e3761a334c63",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/change_report.py",
-      "sha256": "e3becb955a11a172cf9019d8aa1dc04d372ded1bc2902de875c89f40160ec35d",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/check_evidence.py",
-      "sha256": "7d6f5cb2ffc0165840032488702f5c2828c516e6800a5f29e0e96a4574a809a5",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/check_state.py",
-      "sha256": "f8358f84be946db49ca3f2ff3cd38c09b7ebdce3f9a282a84ada56ebdff77d9c",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/checks.py",
-      "sha256": "2e44763bf624aae31e09b9dbb2a433e06620bb5dc778cb7313840d42d4ce985e",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/coverage_map.py",
-      "sha256": "a31baa9415d71fed1f8b733cf68a319cb8c4f7f7d3c6ac284811e0196aaf90a9",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/decision_mapping.py",
-      "sha256": "b024861327197ce3b5202cf3d6743da108baa2fe9745d1eb93befe6925775d4a",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/decision_records.py",
-      "sha256": "b4fb6bf746bb2a1ab55dbef691e6ee16ae8ea5177eac845b63d9099e64616444",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/decisions.py",
-      "sha256": "61c325cd28d1d05830b3531ae660bac034dab5a642cded279e9ae3d6daf1affe",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/decisions_cli.py",
-      "sha256": "c8de8af7b3ea0c82880a6411177c36d5cd6c554a4ea58ae8c14b5647deddbab2",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/full_design.py",
-      "sha256": "2935fe14d12de5663483332d8c6c60450b2a7dbf71d449d1cda5828e25dd2d96",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/full_design_cli.py",
-      "sha256": "0c92a5a3104874f583fbafad404fa0ee7abf35e424ce706cd8ab3ac880e6b19c",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/full_render.py",
-      "sha256": "26334d26adba9eb8ba2027962db5ec54e481995015e6300a0cc91e052ef41ff6",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/full_report.py",
-      "sha256": "7efccf5b694bb7101bb2fe401db3c08c6fd524824a553500ddf0c2159e6c7eb0",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/gate_commit.py",
-      "sha256": "a8a35a29ab28852ff9bbe3f013b8d9297c6ffe33b2b765a757f00341b77a8c89",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/journey.py",
-      "sha256": "9621ae29053c92238c1836c77dc34d83bdcbed4a0026534390e7585667201313",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/removal.py",
-      "sha256": "39eaa877e07c560d0ff9fd8c009837413e895e362aab8457f76d3942581fd73c",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/removal_cli.py",
-      "sha256": "a14f257e0968e1526c90c8733cb900a5cb4cd0e7976bc9ce2ad80914367a8e58",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/removal_impact.py",
-      "sha256": "42f9496634653a9074b60c6287928f15dbe8a5867c9ae6a8adcbd1c76b1904b7",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/rounds.py",
-      "sha256": "f068f82db9fcd18ebe78c3978b37629e23bed92761fa6e861e1b05d7ba481ba1",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/spec_draft.py",
-      "sha256": "05bc1c8829c93029082f711cf9aefbe399aca53e912693d594830468ee6d76b3",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/spec_draft_cli.py",
-      "sha256": "786709b5c058f4de3b5a8d72308eac3cd6b6cc9f3089f5c9c8ab8968ac9e412e",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/spec_render.py",
-      "sha256": "701f7e0f7d8d9d0ee5ded9a101615db655ed57a981818a721464bb9ca67a66c0",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/spec_report.py",
-      "sha256": "dd372b7ab8f5cc5b302cb004a85c7478696932b0117bd72ad0f0c34fe61fe4ab",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
-      "path": "skills/game-design/spec_sync.py",
-      "sha256": "492f7e3b81c956bdf6e1eb1198d6a27fc64113c5e20e4441f7528ca2086932d2",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
-      "license": "本项目自有内容(MIT)"
-    },
-    {
       "path": "skills/game-init/SKILL.md",
       "sha256": "98788d97b8ee502b846660d7818e3cef92f31029bef5355c031be509b8b1f859",
       "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
@@ -494,8 +236,8 @@
     },
     {
       "path": "skills/game-producer/SKILL.md",
-      "sha256": "bd7b5ea7d504161f869c077491ba2e9a3a830a1bec528c29106bb8b27502fdba",
-      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
+      "sha256": "405be1bd03fdee982664298df1911e2c2a72e6da88b16a04383493e93d63bbc7",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -929,6 +671,90 @@
       "original_sha256": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/writing-for-agents/agents/openai.yaml",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "templates/README.md",
+      "sha256": "3491a78a19ef96cba5219d164f2d663c6e86acd0faf01e4e6e0850dc30e95c82",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/evidence/playtest.md",
+      "sha256": "ee4b8d41dcd89b3a45630dbf784b916a8aec92e5ff69054594e33403052acd1e",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/evidence/review.md",
+      "sha256": "a2c74c273ccf69b21148fe2aee546594769ebb1fb9477faa6a05c873f96ad59b",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/CONFIG.md",
+      "sha256": "90e3010d9ff11207200899bfd85d09905583c6a0a5a2806f3976173e61b9c500",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/CONTEXT.md",
+      "sha256": "14fc717a39288d1434df1ad4fdaa3948062efbf7aced178d9fbd4a5a37b5d9b8",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/GAME_DESIGN.md",
+      "sha256": "d7dbe67822ac74ee58cd5f08e8fa2a04c5713e4b0dc8fc6054d27c56e1b038a7",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/INDEX.md",
+      "sha256": "e964065e9406159854dfa86334638b31f007f0bfaf1c38805fdbbc4b0afd8fa4",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/PROJECT.md",
+      "sha256": "66a87fbd738ff54a1d5a206e048dd710378181620fab0035c4622e6267660a38",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/project/TECH_DESIGN.md",
+      "sha256": "4cc9cf8ded8706fffee35b445339ff1b9610b36ff8de1cdab3784632909f110c",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/records/decision.md",
+      "sha256": "bbf880ec350c73d1c581acbc9de080caff36b25e6308a7602c03321d8d06e1d9",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/records/onboarding.md",
+      "sha256": "b5531d1a39ae7900c2b72e20db6e9fd54ff6faf6c537df66bf73a904057598df",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/records/research.md",
+      "sha256": "176d8027cf4f5db1d0f8eeaedc22bdd81da9f4ca4dd238cdd6a504417fa9d0e6",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/work/result.md",
+      "sha256": "56056ecc9dc835f304c8ed83f33710408e4970449a31b88edc3ac2db920a4560",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "templates/work/task.md",
+      "sha256": "fb53996d586bb35eb14cd704663543743506c39d115e34eaccf8034882d3f0eb",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
     }
   ]
 }

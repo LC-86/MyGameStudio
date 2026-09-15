@@ -14,6 +14,10 @@ import json
 import sys
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT / "tests") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "tests"))
+
 from plugin_package_support import REPO_ROOT, make_checker, run_theme
 
 FAILURES, check = make_checker()

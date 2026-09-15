@@ -17,12 +17,13 @@ import sys
 import time
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT / "plugin" / "runtime"))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "tests"))
+sys.path.insert(0, str(REPO_ROOT / "legacy" / "runtime"))
 
 from mgs_runtime import GateService  # noqa: E402
 
-GATE_SCRIPT = REPO_ROOT / "plugin" / "runtime" / "mcp_gate.py"
+GATE_SCRIPT = REPO_ROOT / "legacy" / "runtime" / "mcp_gate.py"
 
 __all__ = [
     "REPO_ROOT", "GATE_SCRIPT", "GateService", "make_checker", "run_theme",

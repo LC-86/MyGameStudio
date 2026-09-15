@@ -17,12 +17,16 @@ import sys
 import tempfile
 from pathlib import Path
 
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT / "tests") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "tests"))
+
 from plugin_package_support import PLUGIN_ROOT, REPO_ROOT, make_checker, run_theme
 from runtime_gate_support import GateService
 
 FAILURES, check = make_checker()
 
-SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
+SKILL_DIR = REPO_ROOT / "legacy" / "game-design"
 LEGACY_DESIGN_ENTRY = REPO_ROOT / "legacy" / "game-design-discussion-entry.md"
 LEGACY_SPEC_ENTRY = REPO_ROOT / "legacy" / "plugin-skills" / "game-spec" / "SKILL.md"
 if str(SKILL_DIR) not in sys.path:

@@ -8,7 +8,7 @@
 - **Game-Init**：分析已有游戏并补齐必要游戏接入资料；通用 tracker / 标签 / 领域文档交给 `setup-matt-pocock-skills`。
 - **Game-Design**：玩法、数值与体验讨论；复用 `grilling` 与 `domain-modeling`；大型不清晰路线提示调用 `wayfinder`。
 
-读取专业资料不会自行启动制作。普通调用不需要 mgs-gate。无提交授权时 `implement` 保留未提交成果。
+读取专业资料不会自行启动制作。普通调用不需要 mgs-gate。无提交授权时 `implement` 保留未提交成果。旧入口去向见 [plugin/internal/game/retired-entries.md](plugin/internal/game/retired-entries.md)。
 
 ## 版本与使用
 
@@ -27,8 +27,7 @@
 python3 -B tests/test_plugin_package.py
 python3 -B tests/test_records_backend.py
 python3 -B tests/test_github_backend.py
-python3 -B tests/test_runtime_gate.py
-python3 -B tests/test_runtime_boundaries.py
+python3 -B tests/test_legacy_retirement.py
 ```
 
-交付包由 `dist/build-package.sh` 构建，版本来自 `plugin/.codex-plugin/plugin.json`。
+交付包由 `dist/build-package.sh` 构建，版本来自 `plugin/.codex-plugin/plugin.json`。旧 gate 检查已移出有效套件，历史材料在 `legacy/`。

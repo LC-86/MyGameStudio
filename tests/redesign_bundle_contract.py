@@ -62,6 +62,51 @@ RETIRED_GAME_ENTRIES = (
     "game-status",
 )
 
+# D1 destinations: retired names are explanations, not executable aliases.
+# Values are the replacement callers actually use after retirement.
+RETIRED_ENTRY_DESTINATIONS = {
+    "game-status": "game-producer",
+    "game-plan": "to-tickets",
+    "game-spec": "to-spec",
+    "game-implement": "implement",
+    "game-code": "on-demand-reference",
+    "game-art": "task",
+    "game-audio": "task",
+    "game-build": "task",
+    "game-review": "task",
+    "game-playtest": "task",
+    "game-prototype": "task",
+}
+
+RETIRED_ENTRIES_REL = "internal/game/retired-entries.md"
+KEPT_RECORD_SEAMS = (
+    "load_config",
+    "list_tasks",
+    "read_task",
+    "verify_project",
+    "status_report",
+    "read_current_design",
+    "plan_design_discussion",
+    "apply_design_discussion",
+    "plan_spec_adoption",
+    "apply_spec_adoption",
+    "plan_design_snapshot",
+    "apply_design_snapshot",
+    "read_design_snapshots",
+    "plan_playable_delivery",
+    "apply_playable_delivery",
+    "plan_local_material_migration",
+    "apply_local_material_migration",
+    "read_local_material_migration",
+    "plan_github_material_migration",
+    "apply_github_material_migration",
+    "read_github_material_migration",
+    "plan_safe_switch",
+    "apply_safe_switch",
+    "read_safe_switch",
+    "rollback_safe_switch",
+)
+
 # D2 / research of 3cca18b: 14 user-only (disable-model-invocation) skills.
 MATT_USER_ONLY = (
     "ask-matt",

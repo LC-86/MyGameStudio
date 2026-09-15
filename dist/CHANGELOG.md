@@ -1,17 +1,17 @@
 # MyGameStudio 安装包变更说明(dist/)
 
-本目录当前提供 **2.0.0** 候选组合包（issue #50）。1.0.0 / 0.18.x 安装包保留为历史文件。
+本目录当前提供 **2.0.0** 候选组合包（issue #50/#61）。1.0.0 / 0.18.x 安装包保留为历史文件。
 安装包、逐文件清单与校验和由
 `dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致,经
 `dist/verify-reproducible.sh` 干净副本隔离重建验证);
 `tests/test_plugin_package.py` 持续核对清单、校验和与源码三方一致。
 
-## 2.0.0（2026-09-15，issue #50 候选包）
+## 2.0.0（2026-09-15，issue #50/#61 候选包）
 
 - 固定上游 Matt Pocock skills **1.2.3**（提交 `3cca18b368ae95cdbdebbff572ccafa662551015`）。
 - 公开集合：正式 25 项加 Game-Producer、Game-Init、Game-Design。
 - 保留 MIT 许可、原始与分发校验值、适配记录；`implement` 无授权不提交；阶段资料指针可读且不启动制作。
-- 插件清单不再注册 mgs-gate。旧 runtime 仍在包内供既有检查，退役由后续票处理。
+- 插件清单不注册 mgs-gate。issue #61 已将旧 runtime、强制通道和已退役入口移出安装包；去向见包内 `internal/game/retired-entries.md`。
 - 不安装到用户日常技能目录。真实 Codex 安装与发版由后续票处理。
 
 ## 1.0.0（2026-09-15）

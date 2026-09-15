@@ -85,17 +85,18 @@ def test_explicit_skills() -> None:
                 f"{skill_name} 必须 allow_implicit_invocation: false(关闭普通对话自动触发)",
             )
 def test_mcp_gate_config() -> None:
-    """Issue #50/D8: leftover runtime may remain, but must not be an install-time gate."""
+    """Issue #61/D8: gate is retired; the installable plugin has no optional mode."""
 
     manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text())
     check("mcpServers" not in manifest, "plugin.json 不得注册 mcpServers")
     check(not (PLUGIN_ROOT / ".mcp.json").is_file(),
           "插件根不得再放 .mcp.json")
-    for rel in ("runtime/mcp_gate.py", "runtime/mgs_runtime.py", "runtime/mgsrt_admin.py"):
-        check((PLUGIN_ROOT / rel).is_file(),
-              f"旧运行代码 {rel} 仍应可被既有 runtime 检查加载,退役由后续票处理")
-    protocol = PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md"
-    check(protocol.is_file(), "旧 gate-protocol 文档仍保留至退役票,但不作为新入口依赖")
+    check(not (PLUGIN_ROOT / "runtime").exists(),
+          "安装包不得再带 runtime/ 作为可执行 gate")
+    check(not (PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md").is_file(),
+          "安装包不得再把 gate-protocol 当作有效能力")
+    dest = PLUGIN_ROOT / "internal" / "game" / "retired-entries.md"
+    check(dest.is_file(), "缺少旧入口与 gate 去向说明")
 def test_records_backend_module() -> None:
     module = PLUGIN_ROOT / "records" / "mgs_records.py"
     check(module.is_file(), "缺少 records/mgs_records.py(本地 Markdown 后端统一接口)")
