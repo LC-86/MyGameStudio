@@ -20,6 +20,7 @@
 
 1. 在方法正文后追加 MyGameStudio 阶段资料指针,指向 `internal/game/stage-requirements.md`。接入后的游戏项目再用 `docs/mygamestudio/INDEX.md` 定位现行规格与任务。读取该资料不是开始制作。
 2. `implement` 额外把无条件 `Commit your work to the current branch.` 改为:有提交授权才提交,否则保留未提交成果。
+3. `code-review` 额外把仅比较 `<fixed-point>...HEAD` 改为先捕获完整待审成果(已提交、暂存、未暂存、新建、删除,排除无关改动),两轴消费同一内容版本;不以获取标识为由创建提交。
 
 除此以外不重写 Matt 方法。原始字节与分发字节不一致的文件必须带 `adaptation` 字段。
 
@@ -28,6 +29,7 @@
 - `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。Game-Init 完成本地 Markdown 或 GitHub Issues 二选一接入与任务维护;Game-Producer 只读查询真实记录。Game-Design 处理玩法讨论;已采纳规则由开发者主动调用 `to-spec` 写入现行规格。公开接缝 `records/mgs_records.py`。
 - `internal/game/invocation.md`:调用合同(用户专用入口不得被统筹自动串调)。
 - `internal/game/stage-requirements.md`:按工作阶段组织的专业资料索引(唯一副本)。
+- `internal/review/pending_review.py`:`code-review` 捕获完整待审成果的只读入口;不以获取标识为由创建提交。
 
 `game-design/` 目录内仍保留既有设计讨论 Python 模块,供既有检查使用;新版普通路径以 `records/mgs_records.py` 的设计/规格接缝为准,不经 mgs-gate。
 

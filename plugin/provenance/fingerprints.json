@@ -65,8 +65,8 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "941b156dd742a0b6c7c7dd582a8f41105738ffafb59e03bc6a7f88b8d59b60b5",
-      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
+      "sha256": "ba87c7c1d8c505e1e6f8584286c84ee6851d830e87b73a8a0271449a3a4cbda3",
+      "source": "本项目自有内容(MIT); issue #55 完整待审成果",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -85,6 +85,12 @@
       "path": "internal/protocols/gate-protocol.md",
       "sha256": "ebcbacfde410f1fffd4405c0cee06e71ca2813c109ec0bbc614483917d718aee",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "internal/review/pending_review.py",
+      "sha256": "a9c8dc2490c72a29675915048d45b0923c45396f6235737b840286018b2483f9",
+      "source": "本项目自有内容(MIT); issue #55 完整待审成果",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -195,11 +201,11 @@
     },
     {
       "path": "skills/code-review/SKILL.md",
-      "sha256": "7381850dd7b5a993be261b991b04d46d620506901f6cc033b00a3b1db3a23e76",
+      "sha256": "ac75e9d53d6295c1ecdb57b82feb2b5778da41d8c10fb0c6da1045cd7b5f3dbd",
       "original_sha256": "47f4e52c21694def9c7c11cbfbf891ca35eac7a93e395797515be3c8a409ae50",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/code-review/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+      "adaptation": "Append MyGameStudio stage-materials pointer. Adapt capture so both axes review one complete pending deliverable (committed, staged, unstaged, new, deleted), excluding unrelated existing changes; content version is a hash, not a new commit. Upstream two-axis method otherwise unchanged."
     },
     {
       "path": "skills/code-review/agents/openai.yaml",
