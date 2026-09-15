@@ -203,7 +203,7 @@ def read_current_design(project_root: Path | str,
                           cache_dir=cache_dir)
         try:
             return _read_github_design(backend)
-        except Exception as exc:  # TransportError 等
+        except TransportError as exc:
             return {
                 "wrote": False,
                 "backend": "github-issues",
