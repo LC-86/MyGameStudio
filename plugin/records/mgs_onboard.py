@@ -117,6 +117,15 @@ def plan_local_onboarding(project_root: Path | str) -> dict:
     """形成本地 Markdown 接入清单;不写入。"""
 
     root = Path(project_root)
+    mismatch = _tracker_mismatch(root, "local-markdown")
+    if mismatch is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": _current_backend(root) or "",
+            "reason": mismatch,
+            "items": [],
+        }
     analysis = analyze_project(root)
     items: list[dict] = []
 
@@ -173,6 +182,32 @@ def _tracker_mismatch(root: Path, wanted: str) -> str | None:
     return None
 
 
+def _github_repo_mismatch(root: Path, wanted: str) -> str | None:
+    if _current_backend(root) != "github-issues":
+        return None
+    try:
+        current = load_config(root).get("repo") or {}
+    except RecordsError:
+        return None
+    if not isinstance(current, dict):
+        return None
+    have = (
+        str(current.get("host") or "").lower(),
+        str(current.get("owner") or ""),
+        str(current.get("repo") or ""),
+    )
+    if not all(have):
+        return None
+    parsed = parse_repo_location(wanted)
+    want = (parsed["host"], parsed["owner"], parsed["repo"])
+    if have != want:
+        return (
+            f"已有 GitHub 仓库 {have[0]}/{have[1]}/{have[2]},"
+            f"改用 {want[0]}/{want[1]}/{want[2]} 须走迁移与切换,"
+            "不能把接入报成成功")
+    return None
+
+
 def plan_github_onboarding(project_root: Path | str, *, repo: str,
                            authorization: str = "") -> dict:
     """形成 GitHub Issues 接入清单;不写入,也不把本地 Markdown 升为现行账本。"""
@@ -189,6 +224,15 @@ def plan_github_onboarding(project_root: Path | str, *, repo: str,
         }
     parsed = parse_repo_location(repo)
     repo_value = f"{parsed['host']}/{parsed['owner']}/{parsed['repo']}"
+    repo_mismatch = _github_repo_mismatch(root, repo_value)
+    if repo_mismatch is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": _current_backend(root) or "github-issues",
+            "reason": repo_mismatch,
+            "items": [],
+        }
     analysis = analyze_project(root)
     items: list[dict] = []
 
@@ -269,7 +313,24 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
     root = Path(project_root)
     if not confirmed:
         raise RecordsError("未确认接入清单,不写入")
+    mismatch = _tracker_mismatch(root, "local-markdown")
+    if mismatch is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": _current_backend(root) or "",
+            "reason": mismatch,
+            "items": [],
+        }
     plan = plan or plan_local_onboarding(root)
+    if plan.get("ok") is False:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": plan.get("backend") or _current_backend(root) or "",
+            "reason": plan.get("reason") or "接入前置条件未满足",
+            "items": [],
+        }
     if plan.get("backend") != "local-markdown":
         raise RecordsError("本入口只接入本地 Markdown tracker,GitHub 接入见后续票")
     name = plan.get("project_name") or _project_name(root)
@@ -458,6 +519,17 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
             "wrote": False,
             "backend": plan.get("backend") or _current_backend(root) or "",
             "reason": plan.get("reason") or "接入前置条件未满足",
+            "items": [],
+        }
+    wanted_repo = plan.get("repo") or repo or ""
+    repo_mismatch = (
+        _github_repo_mismatch(root, wanted_repo) if wanted_repo else None)
+    if repo_mismatch is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": _current_backend(root) or plan.get("backend") or "",
+            "reason": repo_mismatch,
             "items": [],
         }
     if plan.get("backend") != "github-issues":

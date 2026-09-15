@@ -353,6 +353,58 @@ def test_github_onboard_does_not_succeed_over_local_tracker() -> None:
               "现行 tracker 必须仍是本地 Markdown")
 
 
+def test_local_onboard_does_not_succeed_over_github_tracker() -> None:
+    """D5: 已有 GitHub Issues tracker 时,本地接入不得报成功却另起本地账本。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "already-github")
+        check(mgs_records.load_config(root)["backend"] == "github-issues",
+              "前置必须已是 GitHub Issues tracker")
+        before = _snapshot(root)
+        plan = mgs_records.plan_local_onboarding(root)
+        check(plan.get("ok") is not True,
+              f"计划必须拒绝 tracker 冲突,实际 {plan}")
+        applied = mgs_records.apply_local_onboarding(
+            root, plan, confirmed=True)
+        check(applied.get("ok") is not True,
+              f"不得把本地接入报成成功,实际 {applied}")
+        check(applied.get("wrote") is not True,
+              "冲突接入不得写入")
+        check(mgs_records.load_config(root)["backend"] == "github-issues",
+              "现行 tracker 必须仍是 GitHub Issues")
+        work = root / "docs/mygamestudio/work"
+        check(not work.exists() or not any(work.rglob("task.md")),
+              "冲突接入不得另起本地现行任务账本")
+        check(before == _snapshot(root), "冲突接入不得改已有协作配置")
+
+
+def test_github_onboard_does_not_reuse_a_different_repository() -> None:
+    """D5: 已接到仓库 A 时,不得把仓库 B 的接入报成成功却仍使用 A。"""
+
+    other = "github.com/mygamestudio/other-game"
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "repo-a")
+        config = mgs_records.load_config(root)
+        check(config["repo"]["owner"] == "mygamestudio"
+              and config["repo"]["repo"] == "issue-accept",
+              f"前置必须已接到仓库 A,实际 {config.get('repo')}")
+        plan = mgs_records.plan_github_onboarding(
+            root, repo=other, authorization=AUTH)
+        check(plan.get("ok") is not True,
+              f"计划必须拒绝仓库冲突,实际 {plan}")
+        applied = mgs_records.apply_github_onboarding(
+            root, plan, confirmed=True)
+        check(applied.get("ok") is not True,
+              f"不得把另一仓库接入报成成功,实际 {applied}")
+        check(applied.get("wrote") is not True, "仓库冲突不得写入")
+        after = mgs_records.load_config(root)
+        check(after["backend"] == "github-issues",
+              "现行 tracker 必须仍是 GitHub Issues")
+        check(after["repo"]["owner"] == "mygamestudio"
+              and after["repo"]["repo"] == "issue-accept",
+              f"现行仓库必须仍是 A,实际 {after.get('repo')}")
+
+
 def test_transient_error_does_not_downgrade_native_relations() -> None:
     """AC4: 短暂错误不得自行降级为正文约定;确认不可用才回退。"""
 
@@ -626,6 +678,8 @@ TESTS = (
     test_native_claim_frontier_parent_and_blocking,
     test_clearing_deps_and_parent_removes_native_relations,
     test_github_onboard_does_not_succeed_over_local_tracker,
+    test_local_onboard_does_not_succeed_over_github_tracker,
+    test_github_onboard_does_not_reuse_a_different_repository,
     test_transient_error_does_not_downgrade_native_relations,
     test_auth_lost_response_offline_draft_cancel_and_dedup,
     test_cli_github_onboard_status_and_create_without_gate,

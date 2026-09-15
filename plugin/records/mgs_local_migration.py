@@ -294,9 +294,11 @@ def plan_local_material_migration(project_root: Path | str,
 def _changed(root: Path, item: dict, fingerprints: dict[str, str]) -> bool:
     source = str(item.get("source") or "")
     expected = fingerprints.get(source)
-    path = root / source
-    if not expected or not path.is_file():
+    if not expected:
         return False
+    path = root / source
+    if not path.is_file():
+        return True
     return _sha_file(path) != expected
 
 

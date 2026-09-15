@@ -619,6 +619,36 @@ def test_partial_rerun_conflict_missing_and_unpublished() -> None:
             check("已采纳" in hist, "中断恢复必须补回缺失的历史记录")
 
 
+def test_deleted_source_during_prep_pauses_migration() -> None:
+    """T12: 准备期间删除已指纹来源必须暂停该项,不得用空正文重建后继续宣称对应完整。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "deleted-source")
+        plan = mgs_records.plan_local_material_migration(root)
+        task_path = root / "docs/mygamestudio/work/02-jump/task.md"
+        check(task_path.is_file(), "前置必须有已指纹的任务原件")
+        task_path.unlink()
+        applied = mgs_records.apply_local_material_migration(
+            root, plan, confirmed=True)
+        paused = applied.get("paused") or []
+        check(any("02-jump" in str(item) for item in paused),
+              f"删除已指纹来源必须暂停该项,实际 {paused}")
+        staging = Path(applied.get("pending_root") or "")
+        check(staging.is_dir(), "其余无冲突步骤仍应留下待切换目录")
+        identities = {
+            task.get("identity")
+            for task in mgs_records.list_tasks(staging)
+        }
+        check("02-jump" not in identities,
+              f"不得用空正文重建已删除任务,实际 {sorted(identities)}")
+        mapped = [
+            row.get("identity")
+            for row in (applied.get("correspondence") or {}).get("tasks") or []
+        ]
+        check("02-jump" not in mapped,
+              f"对应关系不得把已删除任务记成已转换,实际 {mapped}")
+
+
 def main() -> int:
     return run_theme(
         "issue #57 本地旧项目完整资料迁移",
@@ -627,6 +657,7 @@ def main() -> int:
             test_full_conversion_maps_all_kinds_and_stays_pending_switch,
             test_originals_config_gate_and_user_edits,
             test_partial_rerun_conflict_missing_and_unpublished,
+            test_deleted_source_during_prep_pauses_migration,
             test_github_tracker_is_not_converted_here,
         ),
         FAILURES,
