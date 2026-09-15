@@ -22,6 +22,8 @@
 读取：已有游戏的有效设计、工程、资源，以及接入工作流仍缺的资料。
 
 - 选择本地 Markdown 或 GitHub Issues 后，Game-Init 分析、建立指针、维护现行任务；每项目只维护一种 tracker，不双向同步
+- 已采用本地 Markdown 的旧项目，经 `records/mgs_records.py` 的 `plan_local_material_migration` / `apply_local_material_migration` / `read_local_material_migration` 转换规格、决定、任务、结果与证据索引；成果待切换，旧资料仍为现行来源，不盘点仓库外真实个人项目
+- 通用分流标签与领域文档布局：开发者调用 `setup-matt-pocock-skills`，本入口不另维护同义配置流程
 - 通用分流标签与领域文档布局：开发者调用 `setup-matt-pocock-skills`，本入口不另维护同义配置流程
 - 游戏侧补齐指向本索引的短指针，以及现有项目中仍有效的设计/工程/资源位置；接入后项目 `docs/mygamestudio/INDEX.md` 是现行资料入口
 

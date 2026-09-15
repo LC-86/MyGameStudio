@@ -19,7 +19,7 @@ description: Game-Init 游戏项目接入。用户显式调用或制作统筹按
 - [初始化流程](../../internal/proposals/project-onboarding.md)
 - [项目目录模板](../../internal/proposals/project-layout.md)与[模板入口](../../templates/README.md)
 
-公开接缝在 `<插件根>/records/mgs_records.py`：`analyze_project`、`plan_local_onboarding`、`apply_local_onboarding`、`plan_github_onboarding`、`apply_github_onboarding`、`create_task`、`claim_task`、`frontier_tasks` 及任务维护入口。普通工作不要求专用运行保障或 gate 配置。GitHub 写入须 CONFIG 中明确到仓库的 issues-write 授权；本地只保存明确标识的草稿或缓存。
+公开接缝在 `<插件根>/records/mgs_records.py`：`analyze_project`、`plan_local_onboarding`、`apply_local_onboarding`、`plan_github_onboarding`、`apply_github_onboarding`、`plan_local_material_migration`、`apply_local_material_migration`、`read_local_material_migration`、`create_task`、`claim_task`、`frontier_tasks` 及任务维护入口。普通工作不要求专用运行保障或 gate 配置。GitHub 写入须 CONFIG 中明确到仓库的 issues-write 授权；本地只保存明确标识的草稿或缓存。本地 Markdown 旧项目的完整资料转换保持所选 tracker，成果待切换，不把 GitHub 旧项目并入本入口。
 
 若当前上下文没有给出技能安装位置，在 `$CODEX_HOME` 下定位 `skills/game-init/SKILL.md`，再取其包根（上级两级）。
 

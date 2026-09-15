@@ -111,7 +111,9 @@ def test_records_backend_module() -> None:
         import mgs_records
         for name in ("load_config", "list_tasks", "read_task",
                      "task_dependencies", "startable_tasks",
-                     "verify_project"):
+                     "verify_project", "plan_local_material_migration",
+                     "apply_local_material_migration",
+                     "read_local_material_migration"):
             check(callable(getattr(mgs_records, name, None)),
                   f"records/mgs_records.py 缺少可用公开接缝 {name}")
         for name in ("load_config", "local_list_tasks", "local_read_task",

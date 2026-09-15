@@ -17,14 +17,14 @@
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "9668707ae2c228a9ccac303139c98dcc0a3dc2913bc3eb5dff072218f8f0a5bd",
-      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
+      "sha256": "186d54d123a5e7454e1f493aa01cc313d18f6d0c3b7ceafcef6edcba7e5aab59",
+      "source": "本项目自有内容(MIT); issue #57 本地旧项目完整资料迁移",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "9dc1d352d02d343bf3b100d917ddd8f0b7d5a334baf363fd0c884a22ffba2bc4",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "5427c4f7b2477c635e6fe91c39828683bccbcdbb030df1d46f671663317178d0",
+      "source": "本项目自有内容(MIT); issue #57 本地旧项目完整资料迁移",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -41,8 +41,8 @@
     },
     {
       "path": "internal/contracts/records.md",
-      "sha256": "e2398e467dadabe812f018d8fe7381c734852f99c54b4c21be2846b910577fa9",
-      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
+      "sha256": "cdaab624a2a2f4df29a06b7a6800047e092a7b118544e9410b9eb4b770fb6b91",
+      "source": "本项目自有内容(MIT); issue #57 本地旧项目完整资料迁移",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -65,8 +65,8 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "1f3c26fe9d472a84ef9c3f033286edab4592b4b29e12e6821190fc533936d8c7",
-      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
+      "sha256": "a56a149fbfb4762d5ca47d656b7a5d4798756dd11b1bfecc5693d4b697f79fe3",
+      "source": "本项目自有内容(MIT); issue #57 本地旧项目完整资料迁移",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -77,8 +77,8 @@
     },
     {
       "path": "internal/proposals/project-onboarding.md",
-      "sha256": "0d873ebf60da8b34d50bbc7783c20e3a259c6194abb9c6e406dc119031df9547",
-      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
+      "sha256": "8944bd053e661f264746b791e364e0fc63371e9e2431c9f42a836911abea73ac",
+      "source": "本项目自有内容(MIT); issue #57 本地旧项目完整资料迁移",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -482,8 +482,8 @@
     },
     {
       "path": "skills/game-init/SKILL.md",
-      "sha256": "595edb692196de6cef7b5753f8bb2b63589569f7a745180071838ba2ceaf4f2d",
-      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
+      "sha256": "65de56795f4df9e38ef4962eb5b9e78fd1a404c388bc06615b3d11830a1a0826",
+      "source": "本项目自有内容(MIT); issue #57 本地旧项目完整资料迁移",
       "license": "本项目自有内容(MIT)"
     },
     {

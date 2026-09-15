@@ -54,4 +54,4 @@
 
 ---
 
-包内说明(issue #51/#52):本包实现「新项目或接手已有项目」下选择本地 Markdown 或 GitHub Issues 为唯一现行 tracker：只读现状分析、复用有效资料、任务维护与只读状态查询;普通工作不经 mgs-gate。GitHub 写入须 CONFIG 仓库级 issues-write 授权。包内统一接口为 `records/mgs_records.py`。
+包内说明(issue #51/#52/#57):本包实现「新项目或接手已有项目」下选择本地 Markdown 或 GitHub Issues 为唯一现行 tracker：只读现状分析、复用有效资料、任务维护与只读状态查询;已有本地 Markdown 项目的规格、决定、任务、结果与证据可经 `plan_local_material_migration` / `apply_local_material_migration` / `read_local_material_migration` 转换成待切换成果,不覆盖现行指针。普通工作不经 mgs-gate。GitHub 写入须 CONFIG 仓库级 issues-write 授权。包内统一接口为 `records/mgs_records.py`。
