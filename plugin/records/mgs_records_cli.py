@@ -9,7 +9,7 @@
 
 用法(与 mgs_records.py 完全一致):
   mgs_records.py config --project <项目根> [--config <CONFIG相对路径>]
-  mgs_records.py list|show|deps|ready|status|analyze|onboard|baseline|verify ...
+  mgs_records.py list|show|deps|ready|frontier|status|analyze|onboard|baseline|verify ...
   mgs_records.py create|update|append-result|set-triage|set-relations|
                 set-parent|claim|close ...
   GitHub 后端: publish-drafts|switch-plan|switch-apply|handover ...
@@ -29,8 +29,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # 的模块级定义不反向导入本模块(仅旧脚本入口的脚本守卫延迟导入)。
 from mgs_records import (  # noqa: E402  (路径调整后导入)
     CANONICAL_LABELS, DEFAULT_CONFIG_REL, RecordsError, append_result,
-    apply_local_onboarding, analyze_project, baseline_report, claim_task,
-    close_task, create_task, list_tasks, load_config, plan_local_onboarding,
+    apply_github_onboarding, apply_local_onboarding, analyze_project, baseline_report, claim_task,
+    close_task, create_task, frontier_tasks, list_tasks, load_config, plan_github_onboarding,
+    plan_local_onboarding,
     read_task, set_parent, set_relations, set_triage, startable_tasks,
     status_report, task_dependencies, update_task, verify_project)
 
@@ -72,9 +73,21 @@ def _cli() -> int:
                    help="Game-Init 只读分析(不修改文件)")
     p_onboard = sub.add_parser(
         "onboard", parents=[common],
-        help="按确认清单接入本地 Markdown(不覆盖有效旧资料)")
+        help="按确认清单接入本地 Markdown 或 GitHub Issues(不覆盖有效旧资料)")
     p_onboard.add_argument("--confirmed", action="store_true",
                            help="确认标记(未确认则拒绝写入)")
+    p_onboard.add_argument(
+        "--tracker", default="local-markdown",
+        choices=["local-markdown", "github-issues"],
+        help="唯一现行 tracker(默认 local-markdown,与既有本地接入兼容)")
+    p_onboard.add_argument("--repo", default=None,
+                           help="github-issues 时的 host/owner/repository")
+    p_onboard.add_argument("--authorization", default="",
+                           help="github-issues 写入授权记录,形如 host/owner/repo:issues-write(说明)")
+    p_frontier = sub.add_parser(
+        "frontier", parents=[common],
+        help="前沿查询:开放、未认领、无开放阻塞的子票(只读)")
+    p_frontier.add_argument("--parent", default=None, help="地图/父任务身份")
     sub.add_parser("baseline", parents=[common],
                    help="核心基线内容指纹核对与受影响任务"
                         "(存在实质变更未同步时退出码 1)")
@@ -200,8 +213,20 @@ def _cli() -> int:
         elif args.cmd == "analyze":
             payload = analyze_project(root)
         elif args.cmd == "onboard":
-            payload = apply_local_onboarding(
-                root, plan_local_onboarding(root), confirmed=args.confirmed)
+            if args.tracker == "github-issues":
+                if not args.repo:
+                    raise RecordsError("GitHub 接入必须提供 --repo host/owner/repository")
+                payload = apply_github_onboarding(
+                    root, plan_github_onboarding(
+                        root, repo=args.repo, authorization=args.authorization),
+                    confirmed=args.confirmed)
+            else:
+                payload = apply_local_onboarding(
+                    root, plan_local_onboarding(root), confirmed=args.confirmed)
+        elif args.cmd == "frontier":
+            payload = frontier_tasks(
+                root, parent_identity=args.parent, config_rel=args.config,
+                **remote)
         elif args.cmd == "create":
             payload = create_task(
                 root, args.identity, args.title, _parse_fields(args.field),

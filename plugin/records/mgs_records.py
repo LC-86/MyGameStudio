@@ -13,9 +13,10 @@
 边界:
 - 本地 Markdown 后端:读取、核验与写入(创建/更新/认领/关闭/结果)均经本接口;
   普通本地工作不经 mgs-gate。核验针对实际落盘内容。
-- GitHub Issues 后端(任务票 17):读取经 mgs_github 传输层(远端不可用回
+- GitHub Issues 后端(任务票 17 / issue #52):读取经 mgs_github 传输层(远端不可用回
   注明时间与来源的缓存,不静默切本地);远端写操作先核对 CONFIG 中明确到仓库
-  的 issues-write 授权。GitHub 原生接入的完整项目路径由后续票扩充。
+  的 issues-write 授权。认领走原生负责人,父子与阻塞走原生关系;普通工作不经
+  mgs-gate。
 - 未实现的其他后端:明确报不支持,不静默降级。
 - 开工集合是「记录可核对的开工条件」判断,不是授权:ready-for-agent
   不等于依赖已完成或已获全部写入授权,开工前仍需按任务允许修改范围与
@@ -706,6 +707,28 @@ def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
         project_root, plan, confirmed=confirmed)
 
 
+def plan_github_onboarding(project_root: Path | str, *, repo: str,
+                           authorization: str = "") -> dict:
+    """选择 GitHub Issues 为唯一现行 tracker,形成接入清单(不写入)。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.plan_github_onboarding(
+        project_root, repo=repo, authorization=authorization)
+
+
+def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
+                            *, confirmed: bool = False, repo: str | None = None,
+                            authorization: str = "") -> dict:
+    """按确认清单接入 GitHub;不覆盖有效旧资料,普通路径不依赖 gate。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.apply_github_onboarding(
+        project_root, plan, confirmed=confirmed, repo=repo,
+        authorization=authorization)
+
+
 def _backend_for(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
                  *, transport=None, api_base: str | None = None,
                  cache_dir: Path | str | None = None):
@@ -791,6 +814,51 @@ def claim_task(project_root: Path | str, identity: str, actor: str, *,
     return backend.claim_task(identity, actor)
 
 
+def frontier_tasks(project_root: Path | str, parent_identity: str | None = None,
+                   *, config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                   api_base: str | None = None,
+                   cache_dir: Path | str | None = None) -> dict:
+    """前沿查询:开放、未认领、无开放阻塞的子票(只读)。"""
+
+    backend = _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+    if hasattr(backend, "frontier_tasks"):
+        return backend.frontier_tasks(parent_identity)
+    tasks = list_tasks(project_root, config_rel, transport=transport,
+                       api_base=api_base, cache_dir=cache_dir)
+    children = []
+    for task in tasks:
+        parent = (task.get("request") or {}).get("父任务", "")
+        if parent_identity and parent_identity not in parent:
+            continue
+        children.append(task)
+    frontier = []
+    by_id = {task["identity"]: task for task in tasks}
+    for task in children:
+        if parent_identity and task["identity"] == parent_identity:
+            continue
+        if task.get("progress") not in ("", "待执行", "执行中"):
+            continue
+        claim = task.get("claim") or (task.get("request") or {}).get("认领") or "未认领"
+        if claim not in ("", "未认领"):
+            continue
+        blocked = False
+        for dep in _parse_dep_ids((task.get("request") or {}).get("依赖", "")):
+            other = by_id.get(dep)
+            if other is not None and other.get("progress") != "已完成":
+                if other.get("progress") != "不再执行":
+                    blocked = True
+                    break
+        if blocked:
+            continue
+        frontier.append({"identity": task["identity"], "title": task["title"],
+                         "triage": task.get("triage")})
+    return {"wrote": False, "frontier": frontier,
+            "selected": frontier[0] if frontier else None,
+            "mode": "body-reference"}
+
+
 def append_result(project_root: Path | str, identity: str, result_markdown: str,
                   *, config_rel: str = DEFAULT_CONFIG_REL, transport=None,
                   api_base: str | None = None,
@@ -811,15 +879,14 @@ def close_task(project_root: Path | str, identity: str, reason: str,
 
 def cancel_operation(project_root: Path | str, op: str, identity: str, *,
                      note: str = "", config_rel: str = DEFAULT_CONFIG_REL) -> dict:
-    """登记已撤销动作;恢复时不得重放。"""
+    """登记已撤销动作;恢复时不得重放。本地草稿目录明确标识,不是现行任务账本。"""
 
     import mgs_local_backend  # noqa: PLC0415
 
-    config = load_config(project_root, config_rel)
-    if config["backend"] != "local-markdown":
-        raise RecordsError("本票只登记本地 Markdown 的撤销,不提前做 GitHub 接入")
+    root = Path(project_root)
+    config = load_config(root, config_rel)
     return mgs_local_backend.LocalMarkdownBackend(
-        project_root, config).cancel_operation(op, identity, note=note)
+        root, config).cancel_operation(op, identity, note=note)
 
 
 def status_report(project_root: Path | str,

@@ -35,8 +35,8 @@
     },
     {
       "path": "internal/contracts/project-configuration.md",
-      "sha256": "b0b29c508b5eb0af7422510c0aea0d4df94b0bfee29b30b0283b698482d3a0e0",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "c9f40ad5aee251f0e9333e2860b3854ed812ca5477545ee98728f0fbb4aaf5ed",
+      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -65,8 +65,8 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "b20a2a93cf456459f4adf500aeac08c8d4e59dea35fb3d21a75d82eb7996cf7c",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "b4653e85d20f1c8756bc2d317b4c53aa4310436947a6bcd0c42c14c0c04b483c",
+      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -77,8 +77,8 @@
     },
     {
       "path": "internal/proposals/project-onboarding.md",
-      "sha256": "b432876681406834592a2502a4171d4b22f6537496f91d94c95f2822e7b29f86",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "0d873ebf60da8b34d50bbc7783c20e3a259c6194abb9c6e406dc119031df9547",
+      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -476,8 +476,8 @@
     },
     {
       "path": "skills/game-init/SKILL.md",
-      "sha256": "d8bb4b7d7330f016a642a7e1ad9789d07b9be52c57c34179d13dd58643eebef3",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "595edb692196de6cef7b5753f8bb2b63589569f7a745180071838ba2ceaf4f2d",
+      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -488,8 +488,8 @@
     },
     {
       "path": "skills/game-producer/SKILL.md",
-      "sha256": "e48d62140643b76bf4cd6c19788b07ef2fc674f9b51b6ab6947ebb568d1b7612",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "bd7b5ea7d504161f869c077491ba2e9a3a830a1bec528c29106bb8b27502fdba",
+      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
       "license": "本项目自有内容(MIT)"
     },
     {

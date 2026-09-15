@@ -38,7 +38,7 @@ def test_retired_delivery_entries_not_public() -> None:
 
 
 def test_github_issue_workflow_content() -> None:
-    """记录后端公开接缝仍有效;完整 GitHub 接入由后续票扩充。"""
+    """记录后端公开接缝仍有效;GitHub 接入含认领与前沿查询。"""
 
     module = PLUGIN_ROOT / "records" / "mgs_github.py"
     check(module.is_file(), "缺少 records/mgs_github.py(GitHub Issues 后端适配器)")
@@ -53,7 +53,8 @@ def test_github_issue_workflow_content() -> None:
         check(isinstance(getattr(mgs_github, "GithubBackend", None), type),
               "records/mgs_github.py 缺少 GithubBackend")
         for method in ("create_task", "update_task", "set_triage", "append_result",
-                       "set_relations", "set_parent", "close_task", "publish_drafts"):
+                       "set_relations", "set_parent", "claim_task", "frontier_tasks",
+                       "close_task", "publish_drafts"):
             check(callable(getattr(mgs_github.GithubBackend, method, None)),
                   f"GithubBackend 缺少公开接缝 {method}")
         for seam in ("plan_backend_switch", "apply_backend_switch",
@@ -65,6 +66,8 @@ def test_github_issue_workflow_content() -> None:
         text = skill_md.read_text(encoding="utf-8")
         check("setup-matt-pocock-skills" in text,
               "game-init 应将通用 tracker 配置交给上游 setup")
+        check("plan_github_onboarding" in text or "GitHub Issues" in text,
+              "game-init 应将 GitHub tracker 选择接到同一入口")
         check("mgs_remote" not in text and "mgs-gate" not in text,
               "game-init 新版入口不得把 mgs_remote/mgs-gate 当作普通路径")
     manifest_path = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"

@@ -32,16 +32,19 @@ class FakeTransport:
     - offline():此后全部调用抛 offline(模拟断连)。
     """
 
-    def __init__(self, *, sub_issues_supported: bool = True) -> None:
+    def __init__(self, *, sub_issues_supported: bool = True,
+                 dependencies_supported: bool = True) -> None:
         self.issues: list[dict] = []
         self.comments: dict[int, list[dict]] = {}
         self.sub_issues: dict[int, list[int]] = {}
+        self.blocked_by: dict[int, list[int]] = {}  # child number -> blocker issue ids
         self.repo_labels: list[str] = ["triage", "info", "agent-ready",
                                        "human-ready", "wont-do"]
         # 交接可达检查用的绝对 URL → 状态码(未登记的绝对 URL 应答 404)
         self.remote_refs: dict[str, int] = {}
         self.auth_flags: list[bool | None] = []  # 每次调用的 auth 参数(凭据核对)
         self.sub_issues_supported = sub_issues_supported
+        self.dependencies_supported = dependencies_supported
         self.calls: list[tuple[str, str, dict | None]] = []
         self._fail: list[tuple[str, str, str]] = []   # (method, needle, kind)
         self._drop: list[tuple[str, str]] = []        # (method, needle)
@@ -83,6 +86,7 @@ class FakeTransport:
         issue = {"number": len(self.issues) + 1, "id": 1000 + len(self.issues) + 1,
                  "title": title, "body": body,
                  "labels": ([{"name": project_label}] if project_label else []),
+                 "assignees": [],
                  "state": state, "state_reason": state_reason,
                  "html_url": f"https://example.invalid/i/{len(self.issues) + 1}"}
         self.issues.append(issue)
@@ -104,55 +108,112 @@ class FakeTransport:
             return 404, {"message": f"stand-in has no {url}"}
         base = f"/repos/mygamestudio/issue-accept"
         if method == "GET" and path == base + "/issues":
-            return 200, list(self.issues)
+            return 200, [self._public_issue(item) for item in self.issues]
         if method == "GET" and path.startswith(base + "/labels"):
             return 200, [{"name": name} for name in self.repo_labels]
         match = re.match(rf"{base}/issues/(\d+)(/.*)?$", path)
         number = int(match.group(1)) if match else None
-        if match and match.group(2) == "/comments" and method == "GET":
+        rest = match.group(2) or "" if match else ""
+        if match and rest == "/comments" and method == "GET":
             return 200, list(self.comments.get(number, []))
-        if match and match.group(2) == "/comments" and method == "POST":
+        if match and rest == "/comments" and method == "POST":
             comment = {"id": 5000 + number * 100 + len(self.comments[number]),
                        "body": body["body"], "created_at": "2026-09-08T12:00:00Z"}
             self.comments[number].append(comment)
             if self._dropped(method, path):
                 raise mgs_github.TransportError("timeout", "injected drop (comment)")
             return 201, comment
-        if match and match.group(2) == "/sub_issues":
+        if match and rest == "/sub_issues":
             if not self.sub_issues_supported:
                 return 404, {"message": "Sub-issues API not available (stand-in)"}
             if method == "GET":
-                subs = self.sub_issues.get(number, [])
-                return 200, [self.issues[i - 1] for i in subs]
+                ids = self.sub_issues.get(number, [])
+                return 200, [self._public_issue(self._issue_by_id(issue_id))
+                             for issue_id in ids if self._issue_by_id(issue_id)]
             if method == "POST":
-                self.sub_issues.setdefault(number, []).append(body["sub_issue_id"])
+                child_id = body["sub_issue_id"]
+                current = self.sub_issues.setdefault(number, [])
+                if child_id not in current:
+                    current.append(child_id)
+                if self._dropped(method, path):
+                    raise mgs_github.TransportError("timeout", "injected drop (sub_issues)")
                 return 201, {}
-        if match and not match.group(2):
+        if match and rest == "/dependencies/blocked_by":
+            if not self.dependencies_supported:
+                return 404, {"message": "Issue dependencies not available (stand-in)"}
+            if method == "GET":
+                ids = self.blocked_by.get(number, [])
+                return 200, [self._public_issue(self._issue_by_id(issue_id))
+                             for issue_id in ids if self._issue_by_id(issue_id)]
+            if method == "POST":
+                blocker_id = body["issue_id"]
+                current = self.blocked_by.setdefault(number, [])
+                if blocker_id not in current:
+                    current.append(blocker_id)
+                if self._dropped(method, path):
+                    raise mgs_github.TransportError(
+                        "timeout", "injected drop (blocked_by)")
+                return 201, {}
+        if match and not rest:
             issue = self.issues[number - 1]
             if method == "GET":
-                return 200, issue
+                return 200, self._public_issue(issue)
             if method == "PATCH":
                 for key in ("title", "body", "state", "state_reason"):
                     if key in body:
                         issue[key] = body[key]
                 if "labels" in body:
                     issue["labels"] = [{"name": name} for name in body["labels"]]
-                return 200, issue
+                if "assignees" in body:
+                    issue["assignees"] = [{"login": name}
+                                          for name in body["assignees"]]
+                return 200, self._public_issue(issue)
         if method == "POST" and path == base + "/issues":
             issue = {"number": len(self.issues) + 1,
                      "id": 1000 + len(self.issues) + 1,
                      "title": body["title"], "body": body["body"],
                      "labels": [{"name": name} for name in body.get("labels", [])],
+                     "assignees": [{"login": name}
+                                   for name in body.get("assignees", [])],
                      "state": "open", "state_reason": None,
                      "html_url": f"https://example.invalid/i/{len(self.issues) + 1}"}
             self.issues.append(issue)
             self.comments[issue["number"]] = []
             if self._dropped(method, path):
                 raise mgs_github.TransportError("timeout", "injected drop (create)")
-            return 201, issue
+            return 201, self._public_issue(issue)
         if method == "GET" and path.startswith("/repos/") and path.endswith("/issues"):
-            return 200, list(self.issues)
+            return 200, [self._public_issue(item) for item in self.issues]
         return 404, {"message": f"stand-in has no {method} {path}"}
+
+    def _issue_by_id(self, issue_id: int | None) -> dict | None:
+        for item in self.issues:
+            if item.get("id") == issue_id:
+                return item
+        return None
+
+    def _public_issue(self, issue: dict) -> dict:
+        """附带原生负责人、父子与开放阻塞摘要,供回读。"""
+
+        number = issue["number"]
+        parent_number = next(
+            (parent for parent, children in self.sub_issues.items()
+             if issue.get("id") in children),
+            None)
+        parent = self.issues[parent_number - 1] if parent_number else None
+        open_blockers = 0
+        for blocker_id in self.blocked_by.get(number, []):
+            blocker = self._issue_by_id(blocker_id)
+            if blocker and blocker.get("state", "open") == "open":
+                open_blockers += 1
+        payload = dict(issue)
+        payload["assignees"] = list(issue.get("assignees") or [])
+        payload["issue_dependencies_summary"] = {
+            "blocked_by": {"total_count": open_blockers}}
+        if parent:
+            payload["parent"] = {"id": parent["id"], "number": parent["number"],
+                                 "title": parent["title"]}
+        return payload
 
 
 def backend_for(root: Path, transport: FakeTransport, cache: Path | None = None):

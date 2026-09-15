@@ -14,9 +14,7 @@
   时拒绝执行,不做任何远端调用。
 - 凭据不进入项目记录:调用方从进程环境取令牌(默认 MGS_GITHUB_TOKEN/
   GH_TOKEN),本模块与 CONFIG 均不保存令牌值。
-- 工作实例(会话内)的远端写入经 mgs-gate 的 mgs_remote 受控通道执行
-  (角色 ∩ 任务 ∩ 用途 ∩ 授权再放行);本模块的 CLI 写入口供可信调度侧
-  与已授权操作者使用,与 mgsrt_admin 同级。
+- 普通工作不经 mgs-gate;仓库级授权与宿主实际限制继续适用。
 
 故障语义(超时回读再重试 / 防重复创建 / 离线缓存与草稿):
 - 创建超时或结果不确定:先用任务身份回读远端(已落地则收养,不重复
@@ -182,6 +180,15 @@ class GithubBackend(GithubReadMixin):
         """
 
         self._authorize_write()
+        import mgs_local_backend  # noqa: PLC0415
+
+        root = Path(self.config.get("project_root") or ".")
+        for entry in mgs_local_backend.load_cancelled(root, self.config):
+            if (entry.get("op") == "create_task"
+                    and entry.get("identity") == identity
+                    and entry.get("status") == "cancelled"):
+                raise GithubRecordsError(
+                    f"操作已撤销:create_task {identity};不得恢复已撤销动作")
         if not identity or not mgs_record_model.IDENTITY_RE.fullmatch(identity):
             raise GithubRecordsError(
                 f"任务身份必须形如 NN-<slug>,当前 {identity!r}(身份跨后端保持稳定)")
@@ -354,16 +361,32 @@ class GithubBackend(GithubReadMixin):
             save_draft=self._save_draft, read_back=self.read_task)
         return publication.append(identity, result_markdown)
 
+    def _probe_get(self, path: str):
+        """探测原生能力:available / unavailable(确认 404) / transient。
+
+        短暂故障不得记成能力不存在。
+        """
+
+        try:
+            status, data = self.transport.request("GET", path)
+        except TransportError as exc:
+            return "transient", exc
+        if status == 404:
+            return "unavailable", None
+        if status == 200:
+            return "available", data
+        return "transient", TransportError(
+            "bad_response", f"GET {path} HTTP {status}")
+
     def set_relations(self, identity: str, deps: list[str]) -> dict:
-        """设置依赖(阻塞关系):写成「#Issue号 身份」的明确可解析引用,
-        使 deps/ready 与本地后端同语义解析(身份核对,数字仅供人定位)。"""
+        """设置阻塞关系:优先原生 issue dependencies;确认不可用才回退正文。"""
 
         self._authorize_write()
+        draft_args = {"identity": identity, "deps": deps}
         try:
             tasks = self.fetch_tasks()["tasks"]
         except TransportError as exc:
-            return self._save_draft("set_relations",
-                                    {"identity": identity, "deps": deps}, str(exc))
+            return self._save_draft("set_relations", draft_args, str(exc))
         except GithubRecordsError:
             raise
         by_id = {task["identity"]: task for task in tasks}
@@ -371,22 +394,67 @@ class GithubBackend(GithubReadMixin):
         if missing:
             raise GithubRecordsError(
                 f"依赖任务不存在:{missing}(引用必须可解析,不写悬空依赖)")
+        child = by_id[identity]
         value = "、".join(f"#{by_id[dep]['issue_number']} {dep}" for dep in deps) \
             or "无"
-        return self.update_task(identity, {"依赖": value},
-                                change_note="设置依赖")
+        probe_path = (f"{repo_path(self.repo)}/issues/"
+                      f"{child['issue_number']}/dependencies/blocked_by")
+        state, data = self._probe_get(probe_path)
+        if state == "transient":
+            return self._save_draft(
+                "set_relations", draft_args,
+                f"探测原生阻塞关系失败({data});不自行降级")
+        if state == "available":
+            existing_ids = {item.get("id") for item in (data or [])
+                            if isinstance(item, dict)}
+            for dep in deps:
+                blocker = by_id[dep]
+                if blocker.get("issue_id") in existing_ids:
+                    continue
+                try:
+                    status, _payload = self.transport.request(
+                        "POST", probe_path, {"issue_id": blocker["issue_id"]})
+                    if status == 404:
+                        return self._save_draft(
+                            "set_relations", draft_args,
+                            "写入原生阻塞关系 HTTP 404,探测时能力仍在;"
+                            "不自行降级为正文约定")
+                    if status not in (200, 201, 422):
+                        raise TransportError(
+                            "bad_response", f"blocked_by HTTP {status}")
+                except TransportError as exc:
+                    landed, landed_exc = self._probe_get(probe_path)
+                    if landed == "available":
+                        landed_ids = {item.get("id") for item in (landed_exc or [])
+                                      if isinstance(item, dict)}
+                        if blocker.get("issue_id") in landed_ids:
+                            continue
+                    return self._save_draft(
+                        "set_relations", draft_args,
+                        f"写入原生阻塞关系结果未知({exc});先回读再补缺项")
+            result = self.update_task(identity, {"依赖": value},
+                                      change_note="设置依赖(原生)")
+            result["mode"] = "native-blocked-by"
+            readback = result.get("readback") or {}
+            readback["blocked_by_identities"] = list(deps)
+            readback["blocked_by"] = list(deps)
+            result["readback"] = readback
+            return result
+        result = self.update_task(identity, {"依赖": value},
+                                  change_note="设置依赖(正文引用)")
+        result["mode"] = "body-reference"
+        result["fallback_reason"] = "原生阻塞关系确认不可用"
+        return result
 
     def set_parent(self, identity: str, parent_id: str | None) -> dict:
-        """设置父子关系:优先原生 sub-issues API;后端不提供时回退为
-        工作请求中的明确引用「父任务:#Issue号 身份」。mode 回报实际采用。"""
+        """设置父子关系:优先原生 sub-issues;仅确认不可用时回退正文引用。"""
 
         self._authorize_write()
+        draft_args = {"identity": identity, "parent": parent_id}
         try:
             _issue, parsed, _payload = self._get_issue(identity)
         except TransportError as exc:
-            return self._save_draft("set_parent",
-                                    {"identity": identity, "parent": parent_id},
-                                    str(exc))
+            return self._save_draft("set_parent", draft_args, str(exc))
         if parent_id is None:
             body_change = {"父任务": "无"}
             result = self.update_task(identity, body_change,
@@ -396,40 +464,187 @@ class GithubBackend(GithubReadMixin):
         parent = self._find_by_identity(parent_id)
         if parent is None:
             raise GithubRecordsError(f"父任务不存在:{parent_id}")
+        probe_path = (f"{repo_path(self.repo)}/issues/"
+                      f"{parent['issue_number']}/sub_issues")
         if self._sub_issues_available is None:
-            try:
-                status, _data = self.transport.request(
-                    "GET", f"{repo_path(self.repo)}/issues/"
-                           f"{parent['issue_number']}/sub_issues")
-                self._sub_issues_available = status == 200
-            except TransportError as exc:
-                self._sub_issues_available = False
-        if self._sub_issues_available:
-            try:
-                status, _data = self.transport.request(
-                    "POST", f"{repo_path(self.repo)}/issues/"
-                            f"{parent['issue_number']}/sub_issues",
-                    {"sub_issue_id": parsed.get("issue_id")
-                     or parsed["issue_number"]})
-                if status in (200, 201):
-                    result = self.update_task(
-                        identity,
-                        {"父任务": f"#{parent['issue_number']} {parent_id}"
-                                   "(原生 sub-issue)"},
-                        change_note="设置父任务(原生)")
-                    result["mode"] = "native-sub-issues"
-                    result["readback"]["body"] = result["readback"].get("body", "")
-                    return result
-            except TransportError as exc:
+            state, data = self._probe_get(probe_path)
+            if state == "transient":
                 return self._save_draft(
-                    "set_parent", {"identity": identity, "parent": parent_id},
-                    str(exc))
+                    "set_parent", draft_args,
+                    f"探测原生父子关系失败({data});不自行降级")
+            self._sub_issues_available = state == "available"
+            existing = data if state == "available" else []
+        elif self._sub_issues_available:
+            state, data = self._probe_get(probe_path)
+            if state == "transient":
+                return self._save_draft(
+                    "set_parent", draft_args,
+                    f"读取原生父子关系失败({data});不自行降级")
+            if state == "unavailable":
+                self._sub_issues_available = False
+                existing = []
+            else:
+                existing = data or []
+        else:
+            existing = []
+        if self._sub_issues_available:
+            child_id = parsed.get("issue_id") or parsed["issue_number"]
+            already = any(
+                isinstance(item, dict) and item.get("id") == child_id
+                for item in existing)
+            if not already:
+                try:
+                    status, _data = self.transport.request(
+                        "POST", probe_path, {"sub_issue_id": child_id})
+                    if status == 404:
+                        return self._save_draft(
+                            "set_parent", draft_args,
+                            "写入原生父子关系 HTTP 404,探测时能力仍在;"
+                            "不自行降级为正文约定")
+                    elif status not in (200, 201, 422):
+                        raise TransportError(
+                            "bad_response", f"sub-issues HTTP {status}")
+                except TransportError as exc:
+                    landed, payload = self._probe_get(probe_path)
+                    if landed == "available" and any(
+                            isinstance(item, dict) and item.get("id") == child_id
+                            for item in (payload or [])):
+                        already = True
+                    else:
+                        return self._save_draft(
+                            "set_parent", draft_args,
+                            f"写入原生父子关系结果未知({exc});先回读再补缺项")
+            if self._sub_issues_available:
+                result = self.update_task(
+                    identity,
+                    {"父任务": f"#{parent['issue_number']} {parent_id}"
+                               "(原生 sub-issue)"},
+                    change_note="设置父任务(原生)")
+                result["mode"] = "native-sub-issues"
+                readback = result.get("readback") or {}
+                readback["parent_identity"] = parent_id
+                result["readback"] = readback
+                return result
         result = self.update_task(
             identity,
             {"父任务": f"#{parent['issue_number']} {parent_id}"},
             change_note="设置父任务(正文引用)")
         result["mode"] = "body-reference"
+        result["fallback_reason"] = "原生父子关系确认不可用"
         return result
+
+    def claim_task(self, identity: str, actor: str) -> dict:
+        """认领:写入原生负责人(assignees);已有他人认领则拒绝覆盖。"""
+
+        self._authorize_write()
+        draft_args = {"identity": identity, "actor": actor}
+        try:
+            issue, parsed, _payload = self._get_issue(identity)
+        except TransportError as exc:
+            return self._save_draft("claim_task", draft_args, str(exc))
+        if issue is None:
+            return self._save_draft(
+                "claim_task", draft_args, "离线缓存态无法改远端负责人")
+        current = [entry.get("login") for entry in (issue.get("assignees") or [])
+                   if entry.get("login")]
+        if current and actor not in current:
+            raise GithubRecordsError(
+                f"任务已由 {current[0]} 认领,不覆盖他人认领")
+        if current == [actor]:
+            parsed["assignees"] = current
+            parsed["claim"] = actor
+            return {"published": True, "adopted": True,
+                    "issue_number": parsed["issue_number"], "readback": parsed}
+        try:
+            status, updated = self.transport.request(
+                "PATCH",
+                f"{repo_path(self.repo)}/issues/{parsed['issue_number']}",
+                {"assignees": [actor]})
+            if status != 200:
+                raise TransportError("bad_response", f"claim HTTP {status}")
+        except TransportError as exc:
+            try:
+                landed = self._find_by_identity(identity)
+            except TransportError:
+                landed = None
+            if landed and actor in (landed.get("assignees") or []):
+                return {"published": True, "adopted": True,
+                        "duplicate_avoided": True,
+                        "issue_number": landed["issue_number"],
+                        "readback": landed}
+            return self._save_draft(
+                "claim_task", draft_args,
+                f"认领结果未知({exc});先回读再补缺项")
+        try:
+            self.update_task(identity, {"认领": actor}, change_note="认领")
+        except (TransportError, GithubRecordsError):
+            pass
+        readback = parse_issue_payload(updated, self.config["labels"])
+        readback["assignees"] = [actor]
+        readback["claim"] = actor
+        return {"published": True, "issue_number": parsed["issue_number"],
+                "readback": readback}
+
+    def frontier_tasks(self, parent_identity: str | None = None) -> dict:
+        """Wayfinder 前沿:开放、未认领、无开放阻塞的子票,按子票顺序。"""
+
+        payload = self.fetch_tasks()
+        tasks = payload["tasks"]
+        by_id = {task["identity"]: task for task in tasks}
+        by_number = {task["issue_number"]: task for task in tasks}
+        mode = "native-sub-issues"
+        if parent_identity:
+            parent = by_id.get(parent_identity)
+            if parent is None:
+                raise GithubRecordsError(f"父任务不存在:{parent_identity}")
+            state, data = self._probe_get(
+                f"{repo_path(self.repo)}/issues/"
+                f"{parent['issue_number']}/sub_issues")
+            if state == "transient":
+                raise GithubRecordsError(
+                    f"读取原生子票失败({data});短暂错误不降级为正文约定")
+            if state == "available":
+                ordered = [parse_issue_payload(item, self.config["labels"])
+                           for item in (data or [])]
+                mode = "native-sub-issues"
+            else:
+                ordered = [
+                    task for task in tasks
+                    if parent_identity in (
+                        task.get("request") or {}).get("父任务", "")]
+                mode = "body-reference"
+        else:
+            ordered = list(tasks)
+        frontier = []
+        for task in ordered:
+            if parent_identity and task["identity"] == parent_identity:
+                continue
+            if task.get("state", "open") != "open":
+                continue
+            if task.get("assignees"):
+                continue
+            if int(task.get("open_blocker_count") or 0) > 0:
+                continue
+            parent_no = task.get("parent_issue_number")
+            parent_name = (by_number[parent_no]["identity"]
+                           if parent_no in by_number else None)
+            frontier.append({
+                "identity": task["identity"],
+                "title": task["title"],
+                "issue_number": task.get("issue_number"),
+                "triage": task.get("triage"),
+                "parent_identity": parent_name or parent_identity,
+            })
+        return {
+            "wrote": False,
+            "frontier": frontier,
+            "selected": frontier[0] if frontier else None,
+            "mode": mode,
+            "cached": bool(payload.get("cached")),
+            "note": ("前沿=地图子票中开放、未认领且无开放阻塞的任务;"
+                     "按子票顺序选择;认领后离开前沿;"
+                     "关闭不等于验收通过"),
+        }
 
     def close_task(self, identity: str, reason: str, note: str = "") -> dict:
         """关闭任务。关闭原因限定三类,分别表达:
@@ -525,6 +740,8 @@ class GithubBackend(GithubReadMixin):
                                       list(args.get("deps") or []))
         if op == "set_parent":
             return self.set_parent(str(args["identity"]), args.get("parent"))
+        if op == "claim_task":
+            return self.claim_task(str(args["identity"]), str(args.get("actor")))
         if op == "close_task":
             return self.close_task(str(args["identity"]), str(args.get("reason")),
                                    note=str(args.get("note", "")))

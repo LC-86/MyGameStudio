@@ -16,7 +16,7 @@ description: Game-Producer 游戏制作统筹。用户显式调用或已在当�
 - [管理技能合同](../../internal/contracts/management.md)中的 Game-Producer 一节
 - [共同合同](../../internal/contracts/common.md)**《共同执行规则》《写入与保障》**
 
-公开只读接缝：`<插件根>/records/mgs_records.py` 的 `status_report`、`list_tasks`、`startable_tasks`。查询本身不修改文件。项目接入后从 `docs/mygamestudio/INDEX.md` 读取现行规格与任务位置。
+公开只读接缝：`<插件根>/records/mgs_records.py` 的 `status_report`、`list_tasks`、`startable_tasks`、`frontier_tasks`。查询本身不修改文件。项目接入后从 `docs/mygamestudio/INDEX.md` 读取现行规格与任务位置；GitHub 模式下任务现行状态以远端 Issue 为准，本地草稿或缓存须标明身份。
 
 若当前上下文没有给出技能安装位置，在 `$CODEX_HOME` 下定位 `skills/game-producer/SKILL.md`，再取其包根（上级两级）。
 

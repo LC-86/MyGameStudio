@@ -54,4 +54,4 @@
 
 ---
 
-包内说明(issue #51):本包实现「新项目 + 本地 Markdown」与「接手已有项目 + 本地 Markdown」：只读现状分析、复用有效资料、选择本地 tracker、任务维护与只读状态查询;普通本地写入不经 mgs-gate。GitHub Issues 接入属后续票,未实现不声称。包内统一接口为 `records/mgs_records.py`。
+包内说明(issue #51/#52):本包实现「新项目或接手已有项目」下选择本地 Markdown 或 GitHub Issues 为唯一现行 tracker：只读现状分析、复用有效资料、任务维护与只读状态查询;普通工作不经 mgs-gate。GitHub 写入须 CONFIG 仓库级 issues-write 授权。包内统一接口为 `records/mgs_records.py`。

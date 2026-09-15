@@ -25,7 +25,7 @@
 
 ## 游戏入口与资料
 
-- `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。Game-Init 完成本地 Markdown 接入与任务维护;Game-Producer 只读查询真实记录。
+- `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。Game-Init 完成本地 Markdown 或 GitHub Issues 二选一接入与任务维护;Game-Producer 只读查询真实记录。
 - `internal/game/invocation.md`:调用合同(用户专用入口不得被统筹自动串调)。
 - `internal/game/stage-requirements.md`:按工作阶段组织的专业资料索引(唯一副本)。
 

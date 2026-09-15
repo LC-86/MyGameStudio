@@ -83,13 +83,26 @@ def build_task_body(title: str, identity: str, triage: str, progress: str,
 
 
 def parse_issue_payload(item: dict, label_map: dict) -> dict:
-    """GitHub Issue 原始对象 → 任务记录(parse_issue_body 的字典薄包装)。"""
+    """GitHub Issue 原始对象 → 任务记录(parse_issue_body 的字典薄包装)。
 
-    return parse_issue_body(
+    原生字段(负责人、父子、开放阻塞摘要)一并回读;认领以 assignees 为准。
+    """
+
+    record = parse_issue_body(
         item.get("number", 0), item.get("body") or "",
         [label.get("name", "") for label in item.get("labels", [])],
         item.get("state", "open"), item.get("state_reason"),
         label_map, issue_id=item.get("id"))
+    assignees = [entry.get("login") for entry in (item.get("assignees") or [])
+                 if entry.get("login")]
+    record["assignees"] = assignees
+    record["claim"] = assignees[0] if assignees else (record.get("claim") or "未认领")
+    parent = item.get("parent") or {}
+    record["parent_issue_number"] = parent.get("number")
+    summary = ((item.get("issue_dependencies_summary") or {}).get("blocked_by")
+               or {})
+    record["open_blocker_count"] = int(summary.get("total_count") or 0)
+    return record
 
 
 def parse_issue_body(number: int, body: str, labels: list[str],

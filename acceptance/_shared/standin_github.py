@@ -42,13 +42,16 @@ import re
 LOCK = threading.Lock()
 STATE_FILE = ""
 STATE = {
-    "issues": [],          # [{number,id,title,body,labels,state,state_reason}]
+    "issues": [],          # [{number,id,title,body,labels,state,state_reason,assignees}]
     "comments": {},        # number -> [{id, body, created_at}]
     "sub_issues": {},      # parent number -> [child issue id]
+    "blocked_by": {},      # child number -> [blocker issue id]
     "sub_issues_enabled": True,
+    "dependencies_enabled": True,
     "offline": False,
     "drop_next_create": False,
     "drop_next_comment": False,
+    "drop_next_blocked_by": False,
     "calls": [],           # [{method, path, auth}]
     "next_number": 1,
     "next_id": 1000,
@@ -77,6 +80,37 @@ def _load() -> None:
         STATE["comments"] = {int(k): v for k, v in STATE["comments"].items()}
         STATE["sub_issues"] = {int(k): v
                                for k, v in STATE["sub_issues"].items()}
+        STATE["blocked_by"] = {int(k): v
+                               for k, v in STATE.get("blocked_by", {}).items()}
+
+
+def _issue_by_id(issue_id) -> dict | None:
+    for item in STATE["issues"]:
+        if item.get("id") == issue_id:
+            return item
+    return None
+
+
+def _public_issue(issue: dict) -> dict:
+    number = issue["number"]
+    parent_number = next(
+        (parent for parent, children in STATE["sub_issues"].items()
+         if issue.get("id") in children),
+        None)
+    open_blockers = 0
+    for blocker_id in STATE["blocked_by"].get(number, []):
+        blocker = _issue_by_id(blocker_id)
+        if blocker and blocker.get("state", "open") == "open":
+            open_blockers += 1
+    payload = dict(issue)
+    payload["assignees"] = list(issue.get("assignees") or [])
+    payload["issue_dependencies_summary"] = {
+        "blocked_by": {"total_count": open_blockers}}
+    if parent_number:
+        parent = STATE["issues"][parent_number - 1]
+        payload["parent"] = {"id": parent["id"], "number": parent["number"],
+                             "title": parent["title"]}
+    return payload
 
 
 def _reply(handler, status: int, data) -> None:
@@ -126,6 +160,10 @@ class Handler(BaseHTTPRequestHandler):
                     STATE["drop_next_comment"] = bool(body["drop_next_comment"])
                 if "sub_issues" in body:
                     STATE["sub_issues_enabled"] = bool(body["sub_issues"])
+                if "dependencies" in body:
+                    STATE["dependencies_enabled"] = bool(body["dependencies"])
+                if "drop_next_blocked_by" in body:
+                    STATE["drop_next_blocked_by"] = bool(body["drop_next_blocked_by"])
                 _save()
             return _reply(self, 200, {"ok": True})
         # 凭据核对(真实 API 同样要求):无令牌且配置了期望令牌 → 401
@@ -147,7 +185,8 @@ class Handler(BaseHTTPRequestHandler):
         if rest == "issues":
             if method == "GET":
                 with LOCK:
-                    return _reply(self, 200, list(STATE["issues"]))
+                    return _reply(self, 200, [_public_issue(item)
+                                              for item in STATE["issues"]])
             if method == "POST":
                 body = self._read_body()
                 with LOCK:
@@ -157,6 +196,8 @@ class Handler(BaseHTTPRequestHandler):
                              "body": body.get("body", ""),
                              "labels": [{"name": n}
                                         for n in body.get("labels", [])],
+                             "assignees": [{"login": n}
+                                           for n in body.get("assignees", [])],
                              "state": "open", "state_reason": None,
                              "html_url": "https://standin.invalid/issues/"
                                          f"{STATE['next_number']}"}
@@ -170,8 +211,10 @@ class Handler(BaseHTTPRequestHandler):
                     _save()
                 if dropped:
                     return _timeout(self)  # 已创建但响应丢失
-                return _reply(self, 201, issue)
-        issue_match = re.fullmatch(r"issues/(\d+)(?:/(comments|sub_issues))?", rest)
+                return _reply(self, 201, _public_issue(issue))
+        issue_match = re.fullmatch(
+            r"issues/(\d+)(?:/(comments|sub_issues|dependencies/blocked_by))?",
+            rest)
         if issue_match:
             number = int(issue_match.group(1))
             kind = issue_match.group(2)
@@ -181,7 +224,8 @@ class Handler(BaseHTTPRequestHandler):
             if kind is None:
                 if method == "GET":
                     with LOCK:
-                        return _reply(self, 200, STATE["issues"][number - 1])
+                        return _reply(self, 200,
+                                      _public_issue(STATE["issues"][number - 1]))
                 if method == "PATCH":
                     body = self._read_body()
                     with LOCK:
@@ -192,8 +236,11 @@ class Handler(BaseHTTPRequestHandler):
                         if "labels" in body:
                             issue["labels"] = [{"name": n}
                                                for n in body["labels"]]
+                        if "assignees" in body:
+                            issue["assignees"] = [{"login": n}
+                                                  for n in body["assignees"]]
                         _save()
-                        return _reply(self, 200, issue)
+                        return _reply(self, 200, _public_issue(issue))
             if kind == "comments":
                 if method == "GET":
                     with LOCK:
@@ -223,15 +270,45 @@ class Handler(BaseHTTPRequestHandler):
                 if method == "GET":
                     with LOCK:
                         ids = STATE["sub_issues"].get(number, [])
-                        subs = [i for i in STATE["issues"] if i["id"] in ids]
+                        subs = [_public_issue(item) for item in STATE["issues"]
+                                if item["id"] in ids]
                         return _reply(self, 200, subs)
                 if method == "POST":
                     body = self._read_body()
                     with LOCK:
-                        STATE["sub_issues"].setdefault(number, []).append(
-                            body.get("sub_issue_id"))
+                        current = STATE["sub_issues"].setdefault(number, [])
+                        child_id = body.get("sub_issue_id")
+                        if child_id not in current:
+                            current.append(child_id)
                         _save()
                         return _reply(self, 201, {})
+            if kind == "dependencies/blocked_by":
+                with LOCK:
+                    if not STATE.get("dependencies_enabled", True):
+                        return _reply(
+                            self, 404,
+                            {"message": "Issue dependencies not available"})
+                if method == "GET":
+                    with LOCK:
+                        ids = STATE["blocked_by"].get(number, [])
+                        blockers = [_public_issue(item)
+                                    for item in STATE["issues"]
+                                    if item["id"] in ids]
+                        return _reply(self, 200, blockers)
+                if method == "POST":
+                    body = self._read_body()
+                    with LOCK:
+                        current = STATE["blocked_by"].setdefault(number, [])
+                        blocker_id = body.get("issue_id")
+                        if blocker_id not in current:
+                            current.append(blocker_id)
+                        dropped = STATE.get("drop_next_blocked_by")
+                        if dropped:
+                            STATE["drop_next_blocked_by"] = False
+                        _save()
+                    if dropped:
+                        return _timeout(self)
+                    return _reply(self, 201, {})
         if rest == "labels" and method == "GET":
             names = ("triage", "info", "agent-ready", "human-ready", "wont-do")
             return _reply(self, 200, [{"name": n} for n in names])
