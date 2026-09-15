@@ -173,8 +173,8 @@
     },
     {
       "path": "templates/work/task.md",
-      "sha256": "8f39459f42b7fd5bd7fffd5efb137f025ab058fa826b17fec46e1d3c71392364",
-      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
+      "sha256": "fb53996d586bb35eb14cd704663543743506c39d115e34eaccf8034882d3f0eb",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
