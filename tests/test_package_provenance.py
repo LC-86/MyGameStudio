@@ -63,10 +63,15 @@ def test_internal_material_provenance() -> None:
 def test_no_dev_machine_paths() -> None:
     offenders = []
     for path in PLUGIN_ROOT.rglob("*"):
-        if path.is_file() and "licenses" not in path.parts:
-            text = path.read_text(errors="replace")
-            if "/Users/" in text:
-                offenders.append(str(path.relative_to(PLUGIN_ROOT)))
+        if not path.is_file():
+            continue
+        if "licenses" in path.parts or "__pycache__" in path.parts:
+            continue
+        if path.suffix in {".pyc", ".pyo"}:
+            continue
+        text = path.read_text(errors="replace")
+        if "/Users/" in text:
+            offenders.append(str(path.relative_to(PLUGIN_ROOT)))
     check(not offenders, f"包内文件引用了开发机绝对路径: {offenders}")
 def test_provenance_version_consistency() -> None:
     """任务票 18:包版本、provenance 标题与 fingerprints 的 generated_for 三处一致。

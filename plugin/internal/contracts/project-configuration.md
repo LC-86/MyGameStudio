@@ -42,4 +42,4 @@ CONFIG.md 是协作配置,不是运行时权限凭证。具体执行仍由运行
 
 ---
 
-包内说明(任务票 17 更新):本包实现两种任务后端——本地 Markdown 与 GitHub Issues:`records/mgs_records.py` 提供读取配置/列出/读取任务/依赖/可开工/基线/回读核验的双后端统一接口;`records/mgs_github.py` 提供 GitHub Issues 后端适配(创建、安排更新、结果追加、关系与分流、关闭语义、离线缓存与未发布草稿、后端切换迁移清单与交接基线可达核对)。远端写入只在项目 CONFIG 按本合同记录明确仓库授权(`host/owner/repository:issues-write(说明)`)后执行;会话内经 mgs-gate 的 `mgs_remote` 受控通道(见 [受控写入协议](../protocols/gate-protocol.md)),凭据不进项目记录。真实远端写入验收仅在明确授权的测试仓库执行(未获授权时保留待办,不声称已验证)。CONFIG.md 按本合同与[项目目录模板](../proposals/project-layout.md)实例化。
+包内说明(issue #51):本包实现本地 Markdown 任务后端的读写与 GitHub Issues 后端适配。`records/mgs_records.py` 提供读取配置/列出/读取任务/依赖/可开工/基线/回读核验,以及本地写入(创建/更新/认领/关闭/结果)与只读状态查询;GitHub 远端写入仍须 CONFIG 仓库级 issues-write 授权。普通本地工作不经 mgs-gate。真实远端写入验收仅在明确授权的测试仓库执行。CONFIG.md 按本合同与[项目目录模板](../proposals/project-layout.md)实例化。

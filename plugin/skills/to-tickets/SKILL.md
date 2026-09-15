@@ -107,4 +107,4 @@ In either form, avoid specific file paths or code snippets: they go stale fast. 
 
 ## MyGameStudio stage materials
 
-When working in a MyGameStudio game project, read [stage requirements](../../internal/game/stage-requirements.md) for the current work stage before applying this skill's method. Reading those materials does not start production.
+When working in a MyGameStudio game project, read [stage requirements](../../internal/game/stage-requirements.md) for the current work stage before applying this skill's method. If `docs/mygamestudio/INDEX.md` exists, use it to locate this project's current-stage specs and tasks. Reading those materials does not start production.

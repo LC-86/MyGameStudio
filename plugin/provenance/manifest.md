@@ -18,14 +18,14 @@
 
 系统性适配(每项 `SKILL.md` 均记录 original 与 distributed 校验值):
 
-1. 在方法正文后追加 MyGameStudio 阶段资料指针,指向 `internal/game/stage-requirements.md`。读取该资料不是开始制作。
+1. 在方法正文后追加 MyGameStudio 阶段资料指针,指向 `internal/game/stage-requirements.md`。接入后的游戏项目再用 `docs/mygamestudio/INDEX.md` 定位现行规格与任务。读取该资料不是开始制作。
 2. `implement` 额外把无条件 `Commit your work to the current branch.` 改为:有提交授权才提交,否则保留未提交成果。
 
 除此以外不重写 Matt 方法。原始字节与分发字节不一致的文件必须带 `adaptation` 字段。
 
 ## 游戏入口与资料
 
-- `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。
+- `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。Game-Init 完成本地 Markdown 接入与任务维护;Game-Producer 只读查询真实记录。
 - `internal/game/invocation.md`:调用合同(用户专用入口不得被统筹自动串调)。
 - `internal/game/stage-requirements.md`:按工作阶段组织的专业资料索引(唯一副本)。
 

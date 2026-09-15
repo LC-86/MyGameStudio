@@ -23,7 +23,7 @@
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "bc85864455c82e383e3cb7d7e3753139dbd3cb9777ba88b47205c11d749ecb12",
+      "sha256": "9dc1d352d02d343bf3b100d917ddd8f0b7d5a334baf363fd0c884a22ffba2bc4",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -35,13 +35,13 @@
     },
     {
       "path": "internal/contracts/project-configuration.md",
-      "sha256": "a9afccc4837c5ed8d7bdc6b9ee6b37a2d0f940c5f506f605c8d55951f92cc1aa",
+      "sha256": "b0b29c508b5eb0af7422510c0aea0d4df94b0bfee29b30b0283b698482d3a0e0",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/records.md",
-      "sha256": "481d8f6359f000cb3b61696a4e9c639a456431d17dd016367ef4a55de57ad45f",
+      "sha256": "baaf06eaecf1899f965e03c81570cb61adbbda478a0646b676bda8193cb3315f",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -65,7 +65,7 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "74d886755bb31a782a8d51fd7de355dc9a4d021ecc897fd07257e3c02d887d46",
+      "sha256": "b20a2a93cf456459f4adf500aeac08c8d4e59dea35fb3d21a75d82eb7996cf7c",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -77,7 +77,7 @@
     },
     {
       "path": "internal/proposals/project-onboarding.md",
-      "sha256": "8f85b3d7ec94f5a213f93113173ad6acb2ca43898f702b9d2654f023eabb2c0e",
+      "sha256": "b432876681406834592a2502a4171d4b22f6537496f91d94c95f2822e7b29f86",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -476,7 +476,7 @@
     },
     {
       "path": "skills/game-init/SKILL.md",
-      "sha256": "63cb460b091239dc3a2cda1fefa03abca4f8afe9eec11b398c1c5675684e0f45",
+      "sha256": "d8bb4b7d7330f016a642a7e1ad9789d07b9be52c57c34179d13dd58643eebef3",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -488,7 +488,7 @@
     },
     {
       "path": "skills/game-producer/SKILL.md",
-      "sha256": "b176f576214617b62e11102b7f3a983e3b09f46fd42a62a534bb131e39777670",
+      "sha256": "e48d62140643b76bf4cd6c19788b07ef2fc674f9b51b6ab6947ebb568d1b7612",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -560,11 +560,11 @@
     },
     {
       "path": "skills/implement/SKILL.md",
-      "sha256": "fea9568f556aba1450709a696e55379870cf6b45f4fa719d7f831888657dfb01",
+      "sha256": "a6f53c764e89120d69214fe757165eb5cb3dcf03dee33038702bcd5ca8e774ea",
       "original_sha256": "6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/implement/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Replace unconditional commit ending with authorization-gated commit; append MyGameStudio stage-materials pointer. Upstream method otherwise unchanged."
+      "adaptation": "Replace unconditional commit ending with authorization-gated commit; append MyGameStudio stage-materials pointer. Upstream method otherwise unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
     },
     {
       "path": "skills/implement/agents/openai.yaml",
@@ -793,11 +793,11 @@
     },
     {
       "path": "skills/to-spec/SKILL.md",
-      "sha256": "3f5653886cfc6786da5e3decbaa77a41a32993934810fab24cc2d9074d258171",
+      "sha256": "d769f5fdc77bf9eea5d10108eafaf17f51665a2211e61f1d4794b49d5491c95f",
       "original_sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-spec/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
     },
     {
       "path": "skills/to-spec/agents/openai.yaml",
@@ -808,11 +808,11 @@
     },
     {
       "path": "skills/to-tickets/SKILL.md",
-      "sha256": "7edcbda1eb44875228a08e23bb226b1759352aaae41d60776a8d33fae2f862ec",
+      "sha256": "5c391298baa46be69ebdbd1e56254cccc92226839206317f11c73b73b865fbe6",
       "original_sha256": "5c9fba69845c2519b9b35b9af42ae5142c21f8ca15ac2123dc2722002c8058ae",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-tickets/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
     },
     {
       "path": "skills/to-tickets/agents/openai.yaml",

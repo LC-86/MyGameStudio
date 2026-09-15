@@ -220,6 +220,8 @@ def _parse_task_file(project_root: Path, task_dir: Path) -> dict | None:
         "title": record["title"],
         "triage": record["triage"],
         "progress": record["progress"],
+        "claim": record.get("claim") or "未认领",
+        "close_reason": record.get("close_reason") or "无",
         "directory": task_dir.name,
         "request": record["request"],
         "sections": record["sections"],

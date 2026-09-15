@@ -120,6 +120,8 @@ def parse_task_body(text: str) -> dict:
         "title": title,
         "triage": _field(header, "当前分流"),
         "progress": _field(header, "进度"),
+        "claim": _field(header, "认领") or "未认领",
+        "close_reason": _field(header, "关闭原因") or "无",
         "request": _bullets(sections.get("工作请求", [])),
         "sections": {name: bool(lines and any(l.strip() for l in lines))
                      for name, lines in sections.items()},

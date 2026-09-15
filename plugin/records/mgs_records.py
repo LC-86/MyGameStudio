@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""MyGameStudio 本地 Markdown 任务后端:统一回读接口(任务票 04,票 08/15 扩展,
-票 17 增加对 github-issues 后端的分发与写操作 CLI)。
+"""MyGameStudio 本地 Markdown 任务后端:统一回读与本地写入接口(任务票 04,票 08/15 扩展,
+票 17 增加对 github-issues 后端的分发与写操作 CLI;issue #51 补齐本地写入、
+接入与只读状态查询,普通本地工作不经 mgs-gate)。
 
 对应设计《工作记录合同》「后端接口」一节:读取配置、列出任务、读取任务与结果、
 回读核验(票 04);关系解析与循环检测、当前可开工集合(票 08);核心基线内容
@@ -10,15 +11,11 @@
 《项目目录模板》的默认布局)。
 
 边界:
-- 本地 Markdown 后端:本模块只做读取与核验,不提供写入。项目内写入一律经
-  运行保障受控通道(mgs-gate 的 mgs_write)完成;本模块的核验结果针对实际
-  落盘内容。
+- 本地 Markdown 后端:读取、核验与写入(创建/更新/认领/关闭/结果)均经本接口;
+  普通本地工作不经 mgs-gate。核验针对实际落盘内容。
 - GitHub Issues 后端(任务票 17):读取经 mgs_github 传输层(远端不可用回
-  注明时间与来源的缓存,不静默切本地);远端写操作(创建/安排更新/结果追加/
-  关系/分流/关闭)先核对 CONFIG 中明确到仓库的 issues-write 授权,经
-  `--api-base`/MGS_GH_API_BASE 可指向本地替身;会话内工作实例的远端写入走
-  mgs-gate 的 mgs_remote 受控通道,本 CLI 写入口供可信调度侧与已授权操作者
-  使用。真实远端写入仅在明确授权的测试仓库执行(票 17 保留待办)。
+  注明时间与来源的缓存,不静默切本地);远端写操作先核对 CONFIG 中明确到仓库
+  的 issues-write 授权。GitHub 原生接入的完整项目路径由后续票扩充。
 - 未实现的其他后端:明确报不支持,不静默降级。
 - 开工集合是「记录可核对的开工条件」判断,不是授权:ready-for-agent
   不等于依赖已完成或已获全部写入授权,开工前仍需按任务允许修改范围与
@@ -679,6 +676,196 @@ def verify_project(project_root: Path | str,
                          ";".join(dep_problems) if dep_problems
                          else "依赖关系可解析且无循环"))
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
+
+
+# ---------- 本地接入、任务写入与只读状态(issue #51) ----------
+
+def analyze_project(project_root: Path | str) -> dict:
+    """Game-Init 只读分析:不写入,也不开始制作。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.analyze_project(project_root)
+
+
+def plan_local_onboarding(project_root: Path | str) -> dict:
+    """选择本地 Markdown 为唯一现行 tracker,形成接入清单(不写入)。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.plan_local_onboarding(project_root)
+
+
+def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
+                           *, confirmed: bool = False) -> dict:
+    """按确认清单接入;不覆盖有效旧资料,普通路径不依赖 gate。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.apply_local_onboarding(
+        project_root, plan, confirmed=confirmed)
+
+
+def _backend_for(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
+                 *, transport=None, api_base: str | None = None,
+                 cache_dir: Path | str | None = None):
+    """按现行 CONFIG 构造可写后端(本地不经 gate;GitHub 仍走既有授权)。"""
+
+    config = load_config(project_root, config_rel)
+    if config["backend"] == "local-markdown":
+        import mgs_local_backend  # noqa: PLC0415
+
+        return mgs_local_backend.LocalMarkdownBackend(project_root, config)
+    if config["backend"] == "github-issues":
+        return _github_backend_for(
+            config, transport=transport, api_base=api_base, cache_dir=cache_dir)
+    raise RecordsError(
+        f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
+
+
+def create_task(project_root: Path | str, identity: str, title: str,
+                request: dict, *, triage: str = "needs-triage",
+                progress: str = "待执行",
+                config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                api_base: str | None = None,
+                cache_dir: Path | str | None = None) -> dict:
+    """记录一项任务。本地 Markdown 先回读再创建,已存在则收养。"""
+
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).create_task(
+            identity, title, request, triage=triage, progress=progress)
+
+
+def update_task(project_root: Path | str, identity: str, fields: dict, *,
+                expected_body_sha256: str | None = None,
+                change_note: str = "安排更新",
+                config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                api_base: str | None = None,
+                cache_dir: Path | str | None = None) -> dict:
+    """更新任务安排。expected_body_sha256 不符则保留双方成果并拒绝覆盖。"""
+
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).update_task(
+            identity, fields, expected_body_sha256=expected_body_sha256,
+            change_note=change_note)
+
+
+def set_triage(project_root: Path | str, identity: str, label: str, *,
+               config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+               api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).set_triage(identity, label)
+
+
+def set_relations(project_root: Path | str, identity: str, deps: list[str], *,
+                  config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                  api_base: str | None = None,
+                  cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).set_relations(identity, deps)
+
+
+def set_parent(project_root: Path | str, identity: str, parent_id: str | None,
+               *, config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+               api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).set_parent(identity, parent_id)
+
+
+def claim_task(project_root: Path | str, identity: str, actor: str, *,
+               config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+               api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    backend = _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+    if not hasattr(backend, "claim_task"):
+        raise RecordsError("当前后端本票不提供认领写接缝(GitHub 接入见后续票)")
+    return backend.claim_task(identity, actor)
+
+
+def append_result(project_root: Path | str, identity: str, result_markdown: str,
+                  *, config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                  api_base: str | None = None,
+                  cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).append_result(identity, result_markdown)
+
+
+def close_task(project_root: Path | str, identity: str, reason: str,
+               note: str = "", *, config_rel: str = DEFAULT_CONFIG_REL,
+               transport=None, api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).close_task(identity, reason, note=note)
+
+
+def cancel_operation(project_root: Path | str, op: str, identity: str, *,
+                     note: str = "", config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """登记已撤销动作;恢复时不得重放。"""
+
+    import mgs_local_backend  # noqa: PLC0415
+
+    config = load_config(project_root, config_rel)
+    if config["backend"] != "local-markdown":
+        raise RecordsError("本票只登记本地 Markdown 的撤销,不提前做 GitHub 接入")
+    return mgs_local_backend.LocalMarkdownBackend(
+        project_root, config).cancel_operation(op, identity, note=note)
+
+
+def status_report(project_root: Path | str,
+                  config_rel: str = DEFAULT_CONFIG_REL, *,
+                  transport=None, api_base: str | None = None,
+                  cache_dir: Path | str | None = None) -> dict:
+    """Game-Producer 只读状态:真实记录中的目标、进度、缺口和下一步。"""
+
+    root = Path(project_root)
+    config = load_config(root, config_rel)
+    tasks = list_tasks(root, config_rel, transport=transport,
+                       api_base=api_base, cache_dir=cache_dir)
+    ready = startable_tasks(root, config_rel, transport=transport,
+                            api_base=api_base, cache_dir=cache_dir)
+    gaps: list[str] = []
+    for row in config.get("docmap", []):
+        rel = row.get("path") or ""
+        if rel and not (root / rel).is_file():
+            gaps.append(f"缺项:{row.get('content')} → {rel}")
+    if not tasks:
+        gaps.append("缺项:尚无任务记录")
+    startable = ready.get("startable") or []
+    if startable:
+        first = startable[0]
+        next_step = (f"可开工 {first.get('identity')} {first.get('title')} "
+                     f"(分流 {first.get('triage')};可开工不等于已获授权)")
+    elif tasks:
+        next_step = "无记录层面可开工任务;见缺口与 blocked 原因"
+    else:
+        next_step = "尚未记录任务"
+    goals = ""
+    project_path = root / "docs/mygamestudio/PROJECT.md"
+    if project_path.is_file():
+        goals = project_path.read_text(encoding="utf-8")[:400]
+    return {
+        "wrote": False,
+        "backend": config["backend"],
+        "goals": goals,
+        "tasks": tasks,
+        "gaps": gaps,
+        "missing": gaps,
+        "startable": startable,
+        "blocked": ready.get("blocked") or [],
+        "next": next_step,
+        "note": ready.get("note", READY_NOTE),
+    }
 
 
 # ---------- 兼容入口 ----------

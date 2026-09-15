@@ -34,4 +34,4 @@
 
 ---
 
-包内说明(issue #50):有效管理入口为 Game-Producer 与 Game-Init。Game-Plan 通用职责交给 `to-tickets`;Game-Status 并入 Game-Producer。完整本地/GitHub 接入由后续票扩充。
+包内说明(issue #50/#51):有效管理入口为 Game-Producer 与 Game-Init。Game-Plan 通用职责交给 `to-tickets`;Game-Status 并入 Game-Producer。本地 Markdown 接入、任务维护与只读状态查询由本票实现;GitHub 接入由后续票扩充。

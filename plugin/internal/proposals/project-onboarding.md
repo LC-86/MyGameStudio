@@ -54,4 +54,4 @@
 
 ---
 
-包内说明(任务票 05 更新):本包已实现「新项目 + 本地 Markdown」与「接手已有项目 + 本地 Markdown」两条路径——只读现状分析(六类区分)、复用有效资料与任务来源、混合职责文档拆分、中断恢复、重复运行与模板升级;任务后端切换迁移与 GitHub Issues 后端属后续任务票,未实现不声称。包内统一回读接口为 `records/mgs_records.py`。
+包内说明(issue #51):本包实现「新项目 + 本地 Markdown」与「接手已有项目 + 本地 Markdown」：只读现状分析、复用有效资料、选择本地 tracker、任务维护与只读状态查询;普通本地写入不经 mgs-gate。GitHub Issues 接入属后续票,未实现不声称。包内统一接口为 `records/mgs_records.py`。
