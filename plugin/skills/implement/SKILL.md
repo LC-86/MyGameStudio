@@ -18,3 +18,5 @@ If commit authorization is present, commit your work to the current branch. If i
 ## MyGameStudio stage materials
 
 When working in a MyGameStudio game project, read [stage requirements](../../internal/game/stage-requirements.md) for the current work stage before applying this skill's method. If `docs/mygamestudio/INDEX.md` exists, use it to locate this project's current-stage specs and tasks. Reading those materials does not start production.
+
+For a playable slice after the developer invoked to-tickets, use the packaged seam `records/mgs_records.py`: `plan_playable_delivery` / `apply_playable_delivery` / `record_playable_result`. Default to a minimum loop in the formal project; add an isolated prototype only on explicit request. Record actual version, launch, and check scope on the task. Ordinary work does not use mgs-gate.

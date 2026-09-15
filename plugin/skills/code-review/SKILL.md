@@ -100,3 +100,5 @@ Reporting them separately stops one axis from masking the other.
 ## MyGameStudio stage materials
 
 When working in a MyGameStudio game project, read [stage requirements](../../internal/game/stage-requirements.md) for the current work stage before applying this skill's method. Reading those materials does not start production.
+
+Playable delivery reviews consume the same complete pending artifact as this skill. Agreed playtest that has not happened stays waiting on the task; do not close it as accepted.

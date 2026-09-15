@@ -2,7 +2,8 @@
 """MyGameStudio 本地 Markdown 任务后端:统一回读与本地写入接口(任务票 04,票 08/15 扩展,
 票 17 增加对 github-issues 后端的分发与写操作 CLI;issue #51 补齐本地写入、
 接入与只读状态查询;issue #52 补齐 GitHub 接入与原生关系;issue #53 补齐
-设计讨论与现行规格维护,issue #54 补齐正式版本设计快照归档,普通本地工作不经 mgs-gate)。
+设计讨论与现行规格维护,issue #54 补齐正式版本设计快照归档,issue #56 补齐
+可玩任务拆分与资源交付,普通本地工作不经 mgs-gate)。
 
 对应设计《工作记录合同》「后端接口」一节:读取配置、列出任务、读取任务与结果、
 回读核验(票 04);关系解析与循环检测、当前可开工集合(票 08);核心基线内容
@@ -1045,6 +1046,49 @@ def read_design_snapshots(project_root: Path | str,
     return mgs_snapshot.read_design_snapshots(
         project_root, config_rel, transport=transport, api_base=api_base,
         cache_dir=cache_dir)
+
+
+# ---------- 可玩任务拆分与交付(issue #56) ----------
+
+def plan_playable_delivery(project_root: Path | str, request: dict,
+                           config_rel: str = DEFAULT_CONFIG_REL, *,
+                           transport=None, api_base: str | None = None,
+                           cache_dir: Path | str | None = None) -> dict:
+    """开发者主动 to-tickets 后的可玩任务计划;默认正式工程,本阶段不写。"""
+
+    import mgs_playable  # noqa: PLC0415
+
+    return mgs_playable.plan_playable_delivery(
+        project_root, request, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_playable_delivery(project_root: Path | str, plan: dict, *,
+                            confirmed: bool = True,
+                            config_rel: str = DEFAULT_CONFIG_REL,
+                            transport=None, api_base: str | None = None,
+                            cache_dir: Path | str | None = None) -> dict:
+    """把可玩任务写入选定 tracker。未确认不写。"""
+
+    import mgs_playable  # noqa: PLC0415
+
+    return mgs_playable.apply_playable_delivery(
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
+
+
+def record_playable_result(project_root: Path | str, identity: str,
+                           result: dict,
+                           config_rel: str = DEFAULT_CONFIG_REL, *,
+                           transport=None, api_base: str | None = None,
+                           cache_dir: Path | str | None = None) -> dict:
+    """记录实际版本、启动方式、检查范围与反馈去向。"""
+
+    import mgs_playable  # noqa: PLC0415
+
+    return mgs_playable.record_playable_result(
+        project_root, identity, result, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------

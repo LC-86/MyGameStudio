@@ -17,8 +17,8 @@
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "64b02463408105ed924f0eab7eef7b1330088d2ec3edf0fc8261ad08a2a5ebbd",
-      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
+      "sha256": "9668707ae2c228a9ccac303139c98dcc0a3dc2913bc3eb5dff072218f8f0a5bd",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -29,8 +29,8 @@
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "b95d34d477377a36baf12d1b0078f3046ef8434acbc729b477ce60c8dbeac1d2",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "33061d2501e063d9a345eca8a530bfaf03a5191aca0ce0e2c54d8a84a69cd052",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -41,8 +41,8 @@
     },
     {
       "path": "internal/contracts/records.md",
-      "sha256": "4151a46862484953790019f9228f66c494c66f6eb5495afe7c5fe8b9b6291ce7",
-      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
+      "sha256": "e2398e467dadabe812f018d8fe7381c734852f99c54b4c21be2846b910577fa9",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -65,8 +65,8 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "ba87c7c1d8c505e1e6f8584286c84ee6851d830e87b73a8a0271449a3a4cbda3",
-      "source": "本项目自有内容(MIT); issue #55 完整待审成果",
+      "sha256": "1f3c26fe9d472a84ef9c3f033286edab4592b4b29e12e6821190fc533936d8c7",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -167,14 +167,14 @@
     },
     {
       "path": "templates/work/result.md",
-      "sha256": "c5fe7148536bfc465132de8539b6545730781a067bcc6beecb1cba563d18e9d2",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "56056ecc9dc835f304c8ed83f33710408e4970449a31b88edc3ac2db920a4560",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/work/task.md",
-      "sha256": "fb53996d586bb35eb14cd704663543743506c39d115e34eaccf8034882d3f0eb",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "8f39459f42b7fd5bd7fffd5efb137f025ab058fa826b17fec46e1d3c71392364",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -201,11 +201,11 @@
     },
     {
       "path": "skills/code-review/SKILL.md",
-      "sha256": "ac75e9d53d6295c1ecdb57b82feb2b5778da41d8c10fb0c6da1045cd7b5f3dbd",
+      "sha256": "8627d781e8baf70332515f34792d1a93a09148288f2f10e542448e71e8d580db",
       "original_sha256": "47f4e52c21694def9c7c11cbfbf891ca35eac7a93e395797515be3c8a409ae50",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/code-review/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer. Adapt capture so both axes review one complete pending deliverable (committed, staged, unstaged, new, deleted), excluding unrelated existing changes; content version is a hash, not a new commit. Upstream two-axis method otherwise unchanged."
+      "adaptation": "Append MyGameStudio stage-materials pointer. Adapt capture so both axes review one complete pending deliverable (committed, staged, unstaged, new, deleted), excluding unrelated existing changes; content version is a hash, not a new commit. Note playable delivery uses the same pending artifact. Upstream two-axis method otherwise unchanged."
     },
     {
       "path": "skills/code-review/agents/openai.yaml",
@@ -566,11 +566,11 @@
     },
     {
       "path": "skills/implement/SKILL.md",
-      "sha256": "a6f53c764e89120d69214fe757165eb5cb3dcf03dee33038702bcd5ca8e774ea",
+      "sha256": "0414365e49ccad66ba9d172e3e762506b00568b4f74d4ee321f0f0f986d3253c",
       "original_sha256": "6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/implement/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Replace unconditional commit ending with authorization-gated commit; append MyGameStudio stage-materials pointer. Upstream method otherwise unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
+      "adaptation": "Replace unconditional commit ending with authorization-gated commit; append MyGameStudio stage-materials pointer and playable-delivery seam. Upstream method otherwise unchanged."
     },
     {
       "path": "skills/implement/agents/openai.yaml",
@@ -610,11 +610,11 @@
     },
     {
       "path": "skills/prototype/SKILL.md",
-      "sha256": "5dfd8e87adb82a27b0f0e5da3533f1ffbecc51a27240b3ffb394edb9ebf2071f",
+      "sha256": "28124c494b02a2789d46029bcab179024bba3f21425fe269dc029fb2621e79bc",
       "original_sha256": "714de632d116bb73f65cdb5a882db15b9369a6713b9a47c0fad827848f0bfbe3",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/prototype/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+      "adaptation": "Append MyGameStudio stage-materials pointer and explicit-prototype / formal-reuse rules. Upstream method body unchanged."
     },
     {
       "path": "skills/prototype/UI.md",
@@ -814,11 +814,11 @@
     },
     {
       "path": "skills/to-tickets/SKILL.md",
-      "sha256": "5c391298baa46be69ebdbd1e56254cccc92226839206317f11c73b73b865fbe6",
+      "sha256": "843480dc69c6ad2d20dbcdfbb95ebcbee046121e51f272dea8b2f5ccb295abd7",
       "original_sha256": "5c9fba69845c2519b9b35b9af42ae5142c21f8ca15ac2123dc2722002c8058ae",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-tickets/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
+      "adaptation": "Append MyGameStudio stage-materials pointer and playable-delivery seam. Upstream method body unchanged."
     },
     {
       "path": "skills/to-tickets/agents/openai.yaml",
