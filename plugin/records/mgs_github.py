@@ -186,12 +186,15 @@ class GithubBackend(GithubReadMixin):
         import mgs_local_backend  # noqa: PLC0415
 
         root = Path(self.config.get("project_root") or ".")
-        for entry in mgs_local_backend.load_cancelled(root, self.config):
-            if (entry.get("op") == "create_task"
-                    and entry.get("identity") == identity
-                    and entry.get("status") == "cancelled"):
-                raise GithubRecordsError(
-                    f"操作已撤销:create_task {identity};不得恢复已撤销动作")
+        # 撤销检查与本地登记共用同一把撤销锁:并发撤销登记读到一半
+        # 不得当成完整账本。
+        with mgs_local_backend.cancelled_log_lock(root, self.config):
+            for entry in mgs_local_backend.load_cancelled(root, self.config):
+                if (entry.get("op") == "create_task"
+                        and entry.get("identity") == identity
+                        and entry.get("status") == "cancelled"):
+                    raise GithubRecordsError(
+                        f"操作已撤销:create_task {identity};不得恢复已撤销动作")
         if not identity or not mgs_record_model.IDENTITY_RE.fullmatch(identity):
             raise GithubRecordsError(
                 f"任务身份必须形如 NN-<slug>,当前 {identity!r}(身份跨后端保持稳定)")

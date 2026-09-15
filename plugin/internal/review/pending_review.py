@@ -251,8 +251,15 @@ def capture_pending_review(repo: Path | str, baseline: str,
             "error": f"基线无法解析:{baseline}",
         }
     baseline_sha = resolved.stdout.strip()
+    # 分支基线按分叉点(merge-base)比较,与已提交差异 baseline...HEAD
+    # 同语义:基线分支在分叉后前进时,直接两树对比会把基线上的无关
+    # 改动以反向补丁混进捕获产物并计入共享内容版本。
+    merged = _git(repo, "merge-base", baseline_sha, "HEAD")
+    base_sha = (merged.stdout or "").strip() if merged.returncode == 0 else ""
+    if not base_sha:
+        base_sha = baseline_sha
     committed_names = {
-        path for code, path in _name_status(repo, baseline_sha, "HEAD")
+        path for code, path in _name_status(repo, base_sha, "HEAD")
         if _in_scope(path, include, exclude)
     }
     status = _status_entries(repo)
@@ -291,13 +298,14 @@ def capture_pending_review(repo: Path | str, baseline: str,
         path = _norm(raw)
         if not path or not _in_scope(path, include, exclude):
             continue
-        if _ls_tree_mode(repo, baseline_sha, path) != _worktree_mode(repo, path):
+        if _ls_tree_mode(repo, base_sha, path) != _worktree_mode(repo, path):
             pending_paths.add(path)
     patches: list[str] = []
-    version_rows: list[str] = [f"baseline={baseline_sha}"]
+    version_rows: list[str] = [f"baseline={baseline_sha}",
+                               f"merge_base={base_sha}"]
     path_versions: dict[str, str] = {}
     for path in sorted(pending_paths):
-        before = _show_bytes(repo, f"{baseline_sha}:{path}")
+        before = _show_bytes(repo, f"{base_sha}:{path}")
         exists, after = _file_bytes(repo, path)
         tracked, staged_bytes = _index_bytes(repo, path)
         # 同时捕获 基线→暂存区 与 暂存区→工作区 两段状态:
@@ -310,7 +318,7 @@ def capture_pending_review(repo: Path | str, baseline: str,
                 after = None  # 暂存删除后工作区又还原,提交仍将删除
         current = after if exists else None
         hunk = _unified_bytes(path, before, current)
-        before_mode = _ls_tree_mode(repo, baseline_sha, path)
+        before_mode = _ls_tree_mode(repo, base_sha, path)
         after_mode = _worktree_mode(repo, path) if exists else None
         mode_hunk = _mode_hunk(path, before_mode, after_mode)
         if mode_hunk and hunk:
@@ -343,6 +351,7 @@ def capture_pending_review(repo: Path | str, baseline: str,
         "created_commit": False,
         "commit_authorized": bool(commit_authorized),
         "baseline": baseline_sha,
+        "merge_base": base_sha,
         "target_scope": {"include": include, "exclude": exclude},
         "content_version": content_version,
         "committed_diff_empty": committed_diff_empty,

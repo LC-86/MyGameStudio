@@ -13,6 +13,7 @@
   mgs_records.py create|update|append-result|set-triage|set-relations|
                 set-parent|claim|close ...
   GitHub 后端: publish-drafts|switch-plan|switch-apply|handover ...
+  安全切换: switch-check|switch-run|switch-rollback|switch-status ...
 """
 
 from __future__ import annotations
@@ -29,10 +30,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # 的模块级定义不反向导入本模块(仅旧脚本入口的脚本守卫延迟导入)。
 from mgs_records import (  # noqa: E402  (路径调整后导入)
     CANONICAL_LABELS, DEFAULT_CONFIG_REL, RecordsError, append_result,
-    apply_github_onboarding, apply_local_onboarding, analyze_project, baseline_report, claim_task,
-    close_task, create_task, frontier_tasks, list_tasks, load_config, plan_github_onboarding,
-    plan_local_onboarding,
-    read_task, set_parent, set_relations, set_triage, startable_tasks,
+    apply_github_onboarding, apply_local_onboarding, apply_safe_switch,
+    analyze_project, baseline_report, claim_task,
+    close_task, create_task, frontier_tasks, list_tasks, load_config,
+    plan_github_onboarding, plan_local_onboarding, plan_safe_switch,
+    read_safe_switch, read_task, rollback_safe_switch, set_parent,
+    set_relations, set_triage, startable_tasks,
     status_report, task_dependencies, update_task, verify_project)
 
 
@@ -163,6 +166,31 @@ def _cli() -> int:
     p_apply.add_argument("--emit-dir", required=True, help="产出目录")
     p_apply.add_argument("--confirmed", action="store_true",
                          help="确认标记(未确认则拒绝执行)")
+    p_check = sub.add_parser(
+        "switch-check", parents=[common],
+        help="安全切换只读核对(资料/证据/用户修改/指纹;不写入)")
+    p_check.add_argument("--client-home", default=None,
+                         help="客户端主目录(技能来源切换;缺省仅核对项目资料)")
+    p_check.add_argument("--package-root", default=None,
+                         help="新包根目录(提供切换后的技能来源)")
+    p_check.add_argument("--peer-project", action="append", default=[],
+                         help="共用同一客户端的同侪项目根,可重复")
+    p_run = sub.add_parser(
+        "switch-run", parents=[common],
+        help="执行已确认的安全切换(现行指针与技能来源)")
+    p_run.add_argument("--plan", default=None,
+                       help="switch-check 产出的计划 JSON;"
+                            "缺省时在执行前即时重算并核对")
+    p_run.add_argument("--confirmed", action="store_true",
+                       help="确认标记(未确认则拒绝执行)")
+    p_rollback = sub.add_parser(
+        "switch-rollback", parents=[common],
+        help="回退已执行的安全切换(先保留切换后新增成果)")
+    p_rollback.add_argument("--plan", default=None, help="可选计划 JSON")
+    p_rollback.add_argument("--confirmed", action="store_true",
+                            help="确认标记(未确认则拒绝执行)")
+    sub.add_parser("switch-status", parents=[common],
+                   help="回读安全切换状态、现行来源与恢复去向")
 
     args = parser.parse_args()
     root = Path(args.project)
@@ -305,6 +333,22 @@ def _cli() -> int:
                 args.plan, confirmed=args.confirmed, emit_dir=args.emit_dir,
                 project_root=root, transport=transport,
                 cache_dir=args.cache_dir)
+        elif args.cmd == "switch-check":
+            payload = plan_safe_switch(
+                root, client_home=args.client_home,
+                package_root=args.package_root,
+                peer_projects=args.peer_project, **remote)
+        elif args.cmd in {"switch-run", "switch-rollback"}:
+            plan_data = None
+            if args.plan:
+                plan_data = json.loads(
+                    Path(args.plan).read_text(encoding="utf-8"))
+            action = (apply_safe_switch if args.cmd == "switch-run"
+                      else rollback_safe_switch)
+            payload = action(root, plan_data, confirmed=args.confirmed,
+                             **remote)
+        elif args.cmd == "switch-status":
+            payload = read_safe_switch(root, **remote)
         else:  # pragma: no cover - 子命令已穷举
             raise RecordsError(f"未知子命令 {args.cmd}")
     except RecordsError as exc:

@@ -228,6 +228,29 @@ def plan_playable_delivery(project_root: Path | str, request: dict,
     }
 
 
+def _adoption_conflicts(readback: dict | None, title: str,
+                        fields: dict) -> list[str]:
+    """收养既有工单前核对内容与本计划一致;不一致按身份碰撞上报。
+
+    防重复收养只应覆盖「同一工单重复应用」:另一份计划复用同一身份
+    (尤其是默认 02-playable)时,旧工单内容与新交付要求不是同一件事,
+    不得把收养当成本计划已应用。"""
+
+    if not isinstance(readback, dict):
+        return ["收养回读缺失,无法核对既有工单内容"]
+    conflicts: list[str] = []
+    if str(readback.get("title") or "") != str(title):
+        conflicts.append(
+            f"标题不符:{readback.get('title')!r} != 计划 {title!r}")
+    request = readback.get("request") or {}
+    for key, value in fields.items():
+        if not str(value):
+            continue
+        if str(request.get(key) or "") != str(value):
+            conflicts.append(f"{key} 不符")
+    return conflicts
+
+
 def apply_playable_delivery(project_root: Path | str, plan: dict, *,
                             confirmed: bool = True,
                             config_rel: str = DEFAULT_CONFIG_REL,
@@ -259,16 +282,26 @@ def apply_playable_delivery(project_root: Path | str, plan: dict, *,
             triage="ready-for-agent",
             config_rel=config_rel, transport=transport, api_base=api_base,
             cache_dir=cache_dir)
-        created.append({
+        entry = {
             "identity": identity,
             "created": result.get("created"),
             "adopted": result.get("adopted"),
             "published": result.get("published", True),
-        })
-    # 工单未全部到达现行账本(离线草稿/部分创建失败)时如实上报:
-    # 调用方不能在缺少权威工作项的情况下继续宣称拆票已应用。
+        }
+        if result.get("adopted") and not result.get("created"):
+            # 收养必须核对既有工单与本计划一致;身份复用但内容不同
+            # 按碰撞失败闭合,不得计为本计划已应用。
+            conflicts = _adoption_conflicts(result.get("readback"),
+                                            title, fields)
+            if conflicts:
+                entry["identity_collision"] = True
+                entry["collision_detail"] = conflicts
+        created.append(entry)
+    # 工单未全部到达现行账本(离线草稿/部分创建失败/身份碰撞)时如实
+    # 上报:调用方不能在缺少权威工作项的情况下继续宣称拆票已应用。
     unreached = [item["identity"] for item in created
-                 if not (item.get("created") or item.get("adopted"))
+                 if item.get("identity_collision")
+                 or not (item.get("created") or item.get("adopted"))
                  or item.get("published") is False]
     all_published = bool(created) and not unreached
     outcome = {
@@ -279,9 +312,17 @@ def apply_playable_delivery(project_root: Path | str, plan: dict, *,
         "created": created,
     }
     if not all_published:
-        outcome["reason"] = (
-            f"工单未全部到达现行账本(离线草稿或创建失败):{', '.join(unreached)};"
-            "远端可用后重试或重放草稿,不按已应用继续")
+        collisions = [item["identity"] for item in created
+                      if item.get("identity_collision")]
+        if collisions:
+            outcome["reason"] = (
+                "工单身份已存在且内容与本计划不符(身份碰撞):"
+                f"{', '.join(collisions)};须先处理既有工单或更换身份,"
+                "不得把收养当成本计划已应用")
+        else:
+            outcome["reason"] = (
+                f"工单未全部到达现行账本(离线草稿或创建失败):{', '.join(unreached)};"
+                "远端可用后重试或重放草稿,不按已应用继续")
     return outcome
 
 

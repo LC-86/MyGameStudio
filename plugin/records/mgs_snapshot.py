@@ -664,29 +664,56 @@ def _associate_game_version(project_root, plan, *, config_rel, transport,
         meta = meta_path.read_text(encoding="utf-8") if meta_path.is_file() else ""
         versions = _field_list(meta, "游戏版本")
         game = str(plan.get("game_version") or "")
+        patched = meta
+        changed = False
         if game and game not in versions:
             versions.append(game)
             patched = re.sub(
                 r"游戏版本\s*[:：]\s*.+",
                 f"游戏版本:{', '.join(versions)}",
-                meta, count=1)
-            if plan.get("implementation"):
-                patched = re.sub(
-                    r"实现\s*[:：]\s*.+",
-                    f"实现:{plan.get('implementation')}", patched, count=1)
-            if plan.get("release"):
-                patched = re.sub(
-                    r"发布\s*[:：]\s*.+",
-                    f"发布:{plan.get('release')}", patched, count=1)
+                patched, count=1)
+            changed = True
+        # 版本已登记时同样要补齐实现/发布元数据:跳过替换却返回
+        # complete 会让归档永远停在「未实现/未发布」。
+        if plan.get("implementation") and _meta_field(
+                patched, "实现") != str(plan.get("implementation")):
+            patched = re.sub(
+                r"实现\s*[:：]\s*.+",
+                f"实现:{plan.get('implementation')}", patched, count=1)
+            changed = True
+        if plan.get("release") and _meta_field(
+                patched, "发布") != str(plan.get("release")):
+            patched = re.sub(
+                r"发布\s*[:：]\s*.+",
+                f"发布:{plan.get('release')}", patched, count=1)
+            changed = True
+        if changed:
             meta_path.write_text(patched, encoding="utf-8")
+        back = meta_path.read_text(encoding="utf-8") if meta_path.is_file() else ""
+        verified = (
+            (not game or game in _field_list(back, "游戏版本"))
+            and (not plan.get("implementation")
+                 or _meta_field(back, "实现") == str(plan.get("implementation")))
+            and (not plan.get("release")
+                 or _meta_field(back, "发布") == str(plan.get("release"))))
+        if not verified:
+            return {
+                "ok": False, "wrote": changed, "complete": False,
+                "reuse": True, "design_id": plan.get("design_id"),
+                "revision": match.get("revision"),
+                "reason": "快照元数据回读未确认,不宣告关联完成",
+                "backend": "local-markdown",
+                "gate_required": False,
+            }
         _ensure_overall_index(root, config, plan, rev_dir)
         return {
             "ok": True, "wrote": True, "complete": True, "reuse": True,
             "design_id": plan.get("design_id"),
             "revision": match.get("revision"),
             "game_version": game,
-            "implementation": plan.get("implementation"),
-            "release": plan.get("release"),
+            "implementation": _meta_field(back, "实现")
+            or plan.get("implementation"),
+            "release": _meta_field(back, "发布") or plan.get("release"),
             "backend": "local-markdown",
             "gate_required": False,
         }
@@ -1046,43 +1073,57 @@ def _associate_github_version(root, config, plan, *, transport, api_base,
     body = match.get("body") or ""
     versions = _field_list(body, "游戏版本")
     game = str(plan.get("game_version") or "")
+    patched = body
     if game and game not in versions:
         versions.append(game)
-        body = re.sub(
+        patched = re.sub(
             r"游戏版本\s*[:：]\s*.+",
             f"游戏版本:{', '.join(versions)}",
-            body, count=1)
-        if plan.get("implementation"):
-            body = re.sub(
-                r"实现\s*[:：]\s*.+",
-                f"实现:{plan.get('implementation')}", body, count=1)
-        if plan.get("release"):
-            body = re.sub(
-                r"发布\s*[:：]\s*.+",
-                f"发布:{plan.get('release')}", body, count=1)
-        try:
+            patched, count=1)
+    # 与本地路径同规则:版本已登记时也要补齐实现/发布字段。
+    if plan.get("implementation") and _meta_field(
+            patched, "实现") != str(plan.get("implementation")):
+        patched = re.sub(
+            r"实现\s*[:：]\s*.+",
+            f"实现:{plan.get('implementation')}", patched, count=1)
+    if plan.get("release") and _meta_field(
+            patched, "发布") != str(plan.get("release")):
+        patched = re.sub(
+            r"发布\s*[:：]\s*.+",
+            f"发布:{plan.get('release')}", patched, count=1)
+    try:
+        if patched != body:
             status, _payload = backend.transport.request(
                 "PATCH",
                 f"{mgs_spec.repo_path(backend.repo)}/issues/{match['number']}",
-                {"body": body})
+                {"body": patched})
             if status not in (200, 201):
                 raise mgs_spec.TransportError(
                     "bad_response", f"associate snapshot HTTP {status}")
-            back = backend.transport.request(
-                "GET",
-                f"{mgs_spec.repo_path(backend.repo)}/issues/{match['number']}")[1]
-            if (back or {}).get("body") != body:
-                raise mgs_spec.TransportError(
-                    "bad_response", "associate snapshot 回读失败")
-        except mgs_spec.TransportError as exc:
-            draft = mgs_spec._draft(
-                backend, "apply_design_snapshot",
-                {"design_id": plan.get("design_id"),
-                 "game_version": game, "reuse": True},
-                str(exc))
-            draft.update({"ok": False, "wrote": False, "complete": False,
-                          "published": False})
-            return draft
+        back = backend.transport.request(
+            "GET",
+            f"{mgs_spec.repo_path(backend.repo)}/issues/{match['number']}")[1]
+        final_body = str((back or {}).get("body") or "")
+        verified = (
+            (not game or game in _field_list(final_body, "游戏版本"))
+            and (not plan.get("implementation")
+                 or _meta_field(final_body, "实现")
+                 == str(plan.get("implementation")))
+            and (not plan.get("release")
+                 or _meta_field(final_body, "发布")
+                 == str(plan.get("release"))))
+        if not verified:
+            raise mgs_spec.TransportError(
+                "bad_response", "associate snapshot 元数据回读未确认")
+    except mgs_spec.TransportError as exc:
+        draft = mgs_spec._draft(
+            backend, "apply_design_snapshot",
+            {"design_id": plan.get("design_id"),
+             "game_version": game, "reuse": True},
+            str(exc))
+        draft.update({"ok": False, "wrote": False, "complete": False,
+                      "published": False})
+        return draft
     index_ok = _ensure_github_index(backend, plan, match.get("number"))
     if not index_ok:
         return {
@@ -1097,11 +1138,12 @@ def _associate_github_version(root, config, plan, *, transport, api_base,
     return {
         "ok": True, "wrote": True, "complete": True, "reuse": True,
         "design_id": plan.get("design_id"),
-        "revision": plan.get("revision") or _meta_field(body, "修订"),
+        "revision": plan.get("revision") or _meta_field(final_body, "修订"),
         "issue_number": match.get("number"),
         "backend": "github-issues",
-        "implementation": plan.get("implementation"),
-        "release": plan.get("release"),
+        "implementation": _meta_field(final_body, "实现")
+        or plan.get("implementation"),
+        "release": _meta_field(final_body, "发布") or plan.get("release"),
         "gate_required": False, "published": True,
     }
 

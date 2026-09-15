@@ -49,6 +49,39 @@ MATT_USER_ONLY = (
     "wait-what",
     "wayfinder",
 )
+# 承诺的完整公开技能集合(Matt 正式 25 项 + game-producer/game-init/
+# game-design 三个游戏入口)。包/清单被从残缺目录重建时,只查
+# 「非空且不重名」发现不了缺项;发现面必须与固定期望逐一对账。
+EXPECTED_PUBLIC_SKILLS = (
+    "ask-matt",
+    "code-review",
+    "codebase-design",
+    "diagnosing-bugs",
+    "domain-modeling",
+    "game-design",
+    "game-init",
+    "game-producer",
+    "grill-me",
+    "grill-with-docs",
+    "grilling",
+    "handoff",
+    "implement",
+    "improve-codebase-architecture",
+    "prototype",
+    "research",
+    "resolving-merge-conflicts",
+    "setup-matt-pocock-skills",
+    "tdd",
+    "teach",
+    "to-questionnaire",
+    "to-spec",
+    "to-tickets",
+    "triage",
+    "wait-what",
+    "wayfinder",
+    "wizard",
+    "writing-for-agents",
+)
 
 
 def _root(path: Path | str) -> Path:
@@ -186,11 +219,19 @@ def _discovery(plugin: Path) -> dict:
             contract.read_text(encoding="utf-8"), "Must not auto-invoke")
     unique = len(skills) == len(set(skills))
     user_only_ok = sorted(forbidden) == sorted(MATT_USER_ONLY)
-    local_ok = bool(skills) and unique and contract.is_file() and user_only_ok
+    expected = sorted(EXPECTED_PUBLIC_SKILLS)
+    missing_skills = sorted(set(expected) - set(skills))
+    unexpected_skills = sorted(set(skills) - set(expected))
+    expected_ok = not missing_skills and not unexpected_skills
+    local_ok = (bool(skills) and unique and contract.is_file() and user_only_ok
+                and expected_ok)
     return {
         "public_skills": skills,
         "unique_names": unique,
         "user_only_not_auto_invoked": user_only_ok,
+        "expected_skills_match": expected_ok,
+        "missing_skills": missing_skills,
+        "unexpected_skills": unexpected_skills,
         "local_package_surface": "passed" if local_ok else "failed",
         "install_session": "not-executed",
     }

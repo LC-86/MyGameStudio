@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 try:
@@ -83,6 +84,25 @@ def _save_cancelled(root: Path, config: dict, entries: list[dict]) -> None:
                     encoding="utf-8")
 
 
+@contextmanager
+def cancelled_log_lock(root: Path, config: dict):
+    """串行化撤销登记与受其约束的任务操作(GitHub 后端撤销检查共用)。
+
+    撤销日志是读-改-写的共享文件:两个并发撤销各读各写会互相覆盖丢
+    条目;「检查未撤销 → 写入」与并发撤销交错也会让已撤销动作在检查
+    之后落地。撤销与任务写必须持同一把锁完成;任务写侧的加锁顺序
+    固定为 任务文件锁 → 撤销锁,撤销侧只持撤销锁,无死锁环。"""
+
+    path = Path(str(_cancelled_path(root, config)) + ".lock")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        _lock_exclusive(handle)
+        try:
+            yield
+        finally:
+            handle.flush()
+
+
 class LocalMarkdownBackend:
     """本地 Markdown 任务写 adapter。调用方经 mgs_records 公开接缝使用。"""
 
@@ -116,42 +136,52 @@ class LocalMarkdownBackend:
     def create_task(self, identity: str, title: str, request: dict, *,
                     triage: str = "needs-triage",
                     progress: str = "待执行") -> dict:
-        self._assert_not_cancelled("create_task", identity)
         if not identity or not IDENTITY_RE.fullmatch(identity):
             raise RecordsError(
                 f"任务身份必须形如 NN-<slug>,当前 {identity!r}")
         if triage not in CANONICAL_LABELS:
             raise RecordsError(f"分流 {triage!r} 不在五类之内")
-        path = self._task_path(identity)
-        if path.is_file():
-            existing = self.read_task(identity)
-            return {"created": False, "adopted": True,
-                    "duplicate_avoided": True, "readback": existing,
-                    "attempts": [{"step": "read-first", "outcome": "exists"}]}
-        body = render_task_body(title, identity, triage, progress, request)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            # 排他创建:并发同名任务只有一个真正落盘,其余收养胜者,
-            # 不得双方都宣称 created(检查后写入存在竞态窗口)。
-            with path.open("x", encoding="utf-8") as handle:
-                handle.write(body)
-        except FileExistsError:
-            existing = self.read_task(identity)
-            return {"created": False, "adopted": True,
-                    "duplicate_avoided": True, "readback": existing,
-                    "attempts": [{"step": "create-race", "outcome": "exists"}]}
+        # 撤销检查与排他创建同锁:检查之后、落盘之前的并发撤销不得
+        # 让已撤销动作恢复落地。
+        with cancelled_log_lock(self.root, self.config):
+            self._assert_not_cancelled("create_task", identity)
+            path = self._task_path(identity)
+            if path.is_file():
+                existing = self.read_task(identity)
+                return {"created": False, "adopted": True,
+                        "duplicate_avoided": True, "readback": existing,
+                        "attempts": [{"step": "read-first", "outcome": "exists"}]}
+            body = render_task_body(title, identity, triage, progress, request)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                # 排他创建:并发同名任务只有一个真正落盘,其余收养胜者,
+                # 不得双方都宣称 created(检查后写入存在竞态窗口)。
+                with path.open("x", encoding="utf-8") as handle:
+                    handle.write(body)
+            except FileExistsError:
+                existing = self.read_task(identity)
+                return {"created": False, "adopted": True,
+                        "duplicate_avoided": True, "readback": existing,
+                        "attempts": [{"step": "create-race", "outcome": "exists"}]}
         return {"created": True, "adopted": False, "duplicate_avoided": False,
                 "readback": self.read_task(identity),
                 "attempts": [{"step": "create-1", "outcome": "created"}]}
 
-    def _locked_write(self, identity: str, transform) -> dict:
-        """同一文件锁内完成 读→变换→写;变换抛错则正文保持不变。"""
+    def _locked_write(self, identity: str, transform, *,
+                      op: str | None = None) -> dict:
+        """同一文件锁内完成 读→变换→写;变换抛错则正文保持不变。
+
+        传入 op 时,撤销检查在同一任务文件锁内、再持撤销锁完成:
+        检查通过到正文落盘之间不得插入并发撤销。"""
 
         path = self._task_path(identity)
         if not path.is_file():
             raise RecordsError(f"任务不存在或缺少 task.md:{path}")
         with path.open("r+", encoding="utf-8") as handle:
             _lock_exclusive(handle)
+            if op:
+                with cancelled_log_lock(self.root, self.config):
+                    self._assert_not_cancelled(op, identity)
             current = handle.read()
             new_body = transform(current)
             handle.seek(0)
@@ -164,7 +194,6 @@ class LocalMarkdownBackend:
     def update_task(self, identity: str, fields: dict, *,
                     expected_body_sha256: str | None = None,
                     change_note: str = "安排更新") -> dict:
-        self._assert_not_cancelled("update_task", identity)
 
         def transform(current: str) -> str:
             current_sha = _sha(current)
@@ -188,7 +217,7 @@ class LocalMarkdownBackend:
                 current, header=header_updates, request=request_updates,
                 append_change=f"{today()} {change_note}:{'、'.join(fields)}")
 
-        return self._locked_write(identity, transform)
+        return self._locked_write(identity, transform, op="update_task")
 
     def set_triage(self, identity: str, label: str) -> dict:
         if label not in CANONICAL_LABELS:
@@ -222,7 +251,6 @@ class LocalMarkdownBackend:
         return result
 
     def claim_task(self, identity: str, actor: str) -> dict:
-        self._assert_not_cancelled("update_task", identity)
 
         def transform(current: str) -> str:
             # 认领检查必须与写入同锁:先读后写会把未认领判断建立在
@@ -235,19 +263,22 @@ class LocalMarkdownBackend:
             return edit_body(current, header={"认领": actor},
                              append_change=f"{today()} 认领")
 
-        return self._locked_write(identity, transform)
+        return self._locked_write(identity, transform, op="update_task")
 
     def append_result(self, identity: str, result_markdown: str) -> dict:
         """追加结果。文件名分配、结果写入与索引更新持同一任务锁完成:
         并发投递不得算出同一文件名互相覆盖,也不得丢失对方的索引行。"""
 
-        self._assert_not_cancelled("append_result", identity)
         task_dir = self._task_dir(identity)
         task_path = self._task_path(identity)
         if not task_path.is_file():
             raise RecordsError(f"任务不存在或缺少 task.md:{task_path}")
         with task_path.open("r+", encoding="utf-8") as handle:
             _lock_exclusive(handle)
+            # 撤销检查与结果写入同锁(任务文件锁 → 撤销锁):
+            # 检查之后、写入之前的并发撤销必须生效。
+            with cancelled_log_lock(self.root, self.config):
+                self._assert_not_cancelled("append_result", identity)
             current = handle.read()
             parsed = parse_task_body(current)
             stamp = today()
@@ -295,10 +326,12 @@ class LocalMarkdownBackend:
 
     def cancel_operation(self, op: str, identity: str, *,
                          note: str = "") -> dict:
-        entries = load_cancelled(self.root, self.config)
-        entries.append({"op": op, "identity": identity, "status": "cancelled",
-                        "at": today(), "note": note})
-        _save_cancelled(self.root, self.config, entries)
+        # 读-追加-写全程持锁:两个并发撤销不得互相覆盖丢条目。
+        with cancelled_log_lock(self.root, self.config):
+            entries = load_cancelled(self.root, self.config)
+            entries.append({"op": op, "identity": identity, "status": "cancelled",
+                            "at": today(), "note": note})
+            _save_cancelled(self.root, self.config, entries)
         path = self._task_path(identity)
         preserved = path.is_file()
         return {"cancelled": True, "op": op, "identity": identity,

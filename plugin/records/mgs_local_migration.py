@@ -640,14 +640,10 @@ def apply_local_material_migration(project_root: Path | str,
     duplicate_ids = {
         ident for ident in identities if ident and identities.count(ident) > 1}
     runnable: list[dict] = []
-    # 完整性基数沿用计划登记的全量盘点;受限范围缩小的是转换集。
-    source_inventory: dict[str, int] = {
-        str(kind): int(count)
-        for kind, count in (plan.get("source_inventory") or {}).items()}
-    if not source_inventory:
-        for item in items:
-            kind = str(item.get("kind") or "")
-            source_inventory[kind] = source_inventory.get(kind, 0) + 1
+    # 完整性基数沿用计划登记的全量盘点,并按当前实况取大:准备之后
+    # 新增的来源不得因为旧清单非空而被漏算(受限范围缩小的是转换集)。
+    source_inventory = _full_source_inventory(
+        root, plan.get("source_inventory"), items)
     for item in items:
         identity = str(item.get("identity") or "")
         kind = str(item.get("kind") or "")
@@ -834,6 +830,27 @@ def _count_source_items(root: Path) -> dict[str, int]:
     return counts
 
 
+def _full_source_inventory(root: Path, recorded: dict | None,
+                           fallback_items: list | None = None) -> dict[str, int]:
+    """全量来源基数:登记数与当前实况逐类取大,准备期新增来源不得漏算。
+
+    计划/状态里登记的清单可能落后于实况(准备之后又新增了决策、成果、
+    任务等);只信旧清单会把未转换的新来源当成已覆盖,进而放行全局
+    切换。实况多于登记按实况计;登记多于实况(准备后来源被删)按登记
+    计,由来源指纹核对另行暴露。旧清单为空时退回条目自数。
+    """
+
+    counts = {str(kind): int(number)
+              for kind, number in (recorded or {}).items()}
+    if not counts:
+        for item in fallback_items or []:
+            kind = str(item.get("kind") or "")
+            counts[kind] = counts.get(kind, 0) + 1
+    for kind, number in _count_source_items(root).items():
+        counts[kind] = max(counts.get(kind, 0), number)
+    return counts
+
+
 def _row_unverified(root: Path, staging: Path, row: dict) -> str:
     """逐行核实映射产物仍在原位且字节未变;无指纹的行按未核实处理。"""
 
@@ -880,9 +897,8 @@ def _incomplete_reason(root: Path, status: dict) -> list[str]:
     mapping = status.get("correspondence") or {}
     # 对应关系按来源盘点比较:来源里本就没有的类别(如只有开放任务、
     # 尚无结果与证据的新项目)不作为缺口,否则切换闸门永远打不开。
-    inventory = dict(status.get("source_inventory") or {})
-    if not inventory:
-        inventory = _count_source_items(root)
+    # 盘点始终重扫实况并与登记取大;登记非空不再豁免重扫。
+    inventory = _full_source_inventory(root, status.get("source_inventory"))
     labels = {"specs": "规格", "decisions": "决定", "tasks": "任务",
               "results": "结果", "evidence": "证据"}
     for group, label in labels.items():
@@ -898,6 +914,40 @@ def _incomplete_reason(root: Path, status: dict) -> list[str]:
             reason = _row_unverified(root, staging, row)
             if reason:
                 missing.append(f"{label}映射未核实:{reason}")
+    # 准备期新增来源逐项发现:迁移准备之后新出现的源记录若不在对应
+    # 关系里,数量取大可能仍数不出来(如新增一条决定同时删了一条),
+    # 必须按来源身份逐个比对。config/gate-history/recovery 属于侧车
+    # 与留档材料,不进入五类对应关系,不在此核对。
+    try:
+        live_items = _discover_items(
+            root, _config_or_local(root))
+    except RecordsError:
+        live_items = []
+    covered_sources: set[str] = set()
+    covered_identities: set[str] = set()
+    for rows in mapping.values():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            old = str(row.get("old") or "")
+            if old:
+                covered_sources.add(old)
+            ident = str(row.get("identity") or "")
+            if ident:
+                covered_identities.add(ident)
+    mapped_kinds = set(_KIND_SOURCE.values())
+    for item in live_items:
+        if str(item.get("kind") or "") not in mapped_kinds:
+            continue
+        if item.get("kind") == "task":
+            ident = str(item.get("identity") or "")
+            if ident and ident not in covered_identities:
+                missing.append(f"准备期间新增任务未转换:{ident}")
+            continue
+        src = str(item.get("source") or "")
+        if src and src not in covered_sources:
+            missing.append(
+                f"准备期间新增{item.get('kind') or '来源'}未转换:{src}")
     if not converted.get("modules"):
         missing.append("缺少可读取模块")
     return missing

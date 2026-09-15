@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mgs_github_issue import (  # noqa: E402
     PENDING_SWITCH_MARK, authorization_for, build_task_body, is_pending_switch,
     parse_issue_payload)
-from mgs_github_transport import TransportError, repo_path  # noqa: E402
+from mgs_github_transport import TransportError, repo_path, request_2xx  # noqa: E402
 from mgs_record_model import IDENTITY_RE, RecordsError, parse_task_body, today  # noqa: E402
 from mgs_record_model import _parse_dep_ids  # noqa: E402
 from mgs_record_source import DEFAULT_CONFIG_REL, WRITE_OP, load_config  # noqa: E402
@@ -560,17 +560,18 @@ def _ensure_parent(backend, parent: dict, child: dict) -> bool:
     if child_id in existing:
         return True
     try:
-        status, _payload = backend.transport.request(
-            "POST", path, {"sub_issue_id": child_id})
-        if status in (200, 201, 422):
-            return True
+        # 与 _ensure_blocked_by 同理:422 只代表请求已送达,不代表关系
+        # 落地;成功与否一律以回读核实为准。
+        backend.transport.request("POST", path, {"sub_issue_id": child_id})
     except TransportError:
         pass
     try:
-        _status, data = backend.transport.request("GET", path)
+        data = request_2xx(backend.transport, "GET", path)
     except TransportError:
         return False
-    existing = {item.get("id") for item in (data or []) if isinstance(item, dict)}
+    if data is None:
+        return False
+    existing = {item.get("id") for item in data if isinstance(item, dict)}
     return child_id in existing
 
 
@@ -586,17 +587,19 @@ def _ensure_blocked_by(backend, child: dict, blocker: dict) -> bool:
     if blocker_id in existing:
         return True
     try:
-        status, _payload = backend.transport.request(
-            "POST", path, {"issue_id": blocker_id})
-        if status in (200, 201, 422):
-            return True
+        # 422 与 2xx 一样只代表「请求已送达」:服务端可能以 422 拒绝
+        # (无效引用、自阻塞等),不得凭状态码宣告关系成立。
+        backend.transport.request("POST", path, {"issue_id": blocker_id})
     except TransportError:
         pass
+    # 一律回读核实关系真实存在;非 2xx 读取同样视为未确认。
     try:
-        _status, data = backend.transport.request("GET", path)
+        data = request_2xx(backend.transport, "GET", path)
     except TransportError:
         return False
-    existing = {item.get("id") for item in (data or []) if isinstance(item, dict)}
+    if data is None:
+        return False
+    existing = {item.get("id") for item in data if isinstance(item, dict)}
     return blocker_id in existing
 
 
@@ -1088,19 +1091,34 @@ def apply_github_material_migration(project_root: Path | str,
         except TransportError:
             paused.append(f"task:{identity}(结果索引未改写为新评论引用)")
 
+    intended_relations: dict[str, dict] = {}
     for identity, issue in new_tasks.items():
         source = next((item for item in tasks if item.get("identity") == identity),
                       {})
         parent_id = _parent_identity(str(source.get("parent") or ""))
         deps = _parse_dep_ids(str(source.get("deps") or ""))
-        rel = {"parent_identity": "", "blocked_by": []}
+        intended: dict[str, Any] = {"parent_identity": "", "blocked_by": []}
         if parent_id and parent_id in new_tasks:
+            intended["parent_identity"] = parent_id
+        for dep in deps:
+            if dep in new_tasks:
+                intended["blocked_by"].append(dep)
+        intended_relations[identity] = intended
+        rel = {"parent_identity": "", "blocked_by": []}
+        if intended["parent_identity"]:
             if _ensure_parent(backend, new_tasks[parent_id], issue):
                 rel["parent_identity"] = parent_id
-        for dep in deps:
-            if dep in new_tasks and _ensure_blocked_by(
-                    backend, issue, new_tasks[dep]):
+            else:
+                # 原生关系未确认时按冲突暂停该项:迁移记录与回读都不得
+                # 把缺失的父子/依赖顺序当作已落地。
+                paused.append(
+                    f"task:{identity}(父关系 {parent_id} 原生落地未确认)")
+        for dep in intended["blocked_by"]:
+            if _ensure_blocked_by(backend, issue, new_tasks[dep]):
                 rel["blocked_by"].append(dep)
+            else:
+                paused.append(
+                    f"task:{identity}(依赖 {dep} 原生落地未确认)")
         native_relations[identity] = rel
 
     for item in evidence_items:
@@ -1137,6 +1155,7 @@ def apply_github_material_migration(project_root: Path | str,
         "pending_root": str(staging),
         "correspondence": mapping,
         "native_relations": native_relations,
+        "intended_relations": intended_relations,
         "paused": paused,
         "missing_evidence": sorted(set(missing_evidence)),
         "gate_history": GATE_HISTORY_REL,
@@ -1163,6 +1182,7 @@ def apply_github_material_migration(project_root: Path | str,
         "gate_as_permission": False,
         "correspondence": mapping,
         "native_relations": native_relations,
+        "intended_relations": intended_relations,
     }
 
 
@@ -1237,6 +1257,7 @@ def read_github_material_migration(project_root: Path | str, *,
             "gate_as_permission": False,
         }
     native = dict(status.get("native_relations") or {})
+    relation_gaps: list[str] = []
     overall_comments: list[dict] = []
     if backend and status.get("overall_issue"):
         overall_comments = _list_comments(backend, int(status["overall_issue"]))
@@ -1249,18 +1270,29 @@ def read_github_material_migration(project_root: Path | str, *,
             rel = dict(native.get(identity) or {})
             try:
                 parent_no = None
-                _st, issue = backend.transport.request(
-                    "GET", f"{repo_path(backend.repo)}/issues/{number}")
+                issue = request_2xx(
+                    backend.transport, "GET",
+                    f"{repo_path(backend.repo)}/issues/{number}")
+                if issue is None:
+                    native[identity] = rel
+                    relation_gaps.append(
+                        f"任务 {identity} 原生关系回读未确认(读取非 2xx)")
+                    continue
                 parent = (issue or {}).get("parent") or {}
                 parent_no = parent.get("number")
                 if parent_no:
                     for other in mapping.get("tasks") or []:
                         if other.get("new_issue") == parent_no:
                             rel["parent_identity"] = other.get("identity")
-                _st, blockers = backend.transport.request(
-                    "GET",
+                blockers = request_2xx(
+                    backend.transport, "GET",
                     f"{repo_path(backend.repo)}/issues/{number}"
                     "/dependencies/blocked_by")
+                if blockers is None:
+                    native[identity] = rel
+                    relation_gaps.append(
+                        f"任务 {identity} 依赖关系回读未确认(读取非 2xx)")
+                    continue
                 blocked = []
                 if isinstance(blockers, list):
                     for blocker in blockers:
@@ -1272,6 +1304,19 @@ def read_github_material_migration(project_root: Path | str, *,
             native[identity] = rel
     missing = _incomplete_reason(root, status, backend) if backend else [
         "没有待切换的完整资料转换"]
+    # 回读时把重建出的原生关系与迁移时登记的意图逐一对照:缺失的
+    # 父子/依赖顺序必须成为完整性缺口,不得在全局切换时静默丢失。
+    missing.extend(relation_gaps)
+    for identity, want in (status.get("intended_relations") or {}).items():
+        got = native.get(str(identity)) or {}
+        if want.get("parent_identity") and \
+                got.get("parent_identity") != want.get("parent_identity"):
+            missing.append(
+                f"任务 {identity} 的原生父关系未确认:"
+                f"{want.get('parent_identity')}")
+        for dep in want.get("blocked_by") or []:
+            if dep not in (got.get("blocked_by") or []):
+                missing.append(f"任务 {identity} 的原生依赖未确认:{dep}")
     # 决定完整性按映射逐条核对历史评论存在,而不是要求至少一条"已采纳":
     # 全部未决/试验/被否决的决定同样是有效的决定历史。
     decision_rows = (status.get("correspondence") or {}).get("decisions") or []

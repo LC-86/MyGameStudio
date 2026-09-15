@@ -590,6 +590,40 @@ def plan_spec_adoption(project_root: Path | str, adopted: dict,
     }
 
 
+def _stale_spec_plan(plan: dict, live: dict, history_line: str,
+                     slugs: dict, intended_modules: dict) -> str:
+    """核对计划记录的规格基线与现行文档;过期返回原因,新鲜返回空串。
+
+    现行只允许两种状态:等于计划基线(首次执行),或等于按计划基线推导
+    的确定性预期结果(上次执行后/幂等恢复)。其他差异说明计划与确认
+    之间规格被另行修改,过期计划不得覆盖新修改。模块按 slug 比对,
+    只约束本计划涉及的模块;未记录基线指纹的计划一律拒绝执行。
+    """
+
+    baseline_overall = plan.get("current_overall")
+    baseline_modules = plan.get("current_modules")
+    if not isinstance(baseline_overall, str) \
+            or not isinstance(baseline_modules, dict):
+        return "计划未记录规格基线指纹,须重新规划后执行"
+    intended_overall = _merge_overall(
+        baseline_overall,
+        {"overall": plan.get("overall_update")
+         or (plan.get("adopted") or {}).get("overall") or {}},
+        history_line)
+    live_overall = str(live.get("overall") or "")
+    if live_overall not in (baseline_overall, intended_overall):
+        return "现行规格在计划后已变化,与本计划基线不一致,须重新规划"
+    live_modules = live.get("modules") or {}
+    for name in (plan.get("modules") or {}):
+        slug = str(slugs.get(str(name)) or "")
+        live_mod = str(live_modules.get(slug) or "")
+        base_mod = str(baseline_modules.get(slug) or "")
+        intended_mod = str(intended_modules.get(str(name)) or "")
+        if live_mod and live_mod not in (base_mod, intended_mod):
+            return f"模块 {name} 在计划后已变化,与本计划基线不一致,须重新规划"
+    return ""
+
+
 def apply_spec_adoption(project_root: Path | str, plan: dict, *,
                         confirmed: bool = True,
                         config_rel: str = DEFAULT_CONFIG_REL,
@@ -736,13 +770,28 @@ def _history_line(plan: dict, *, include_replaces: bool = False) -> str:
     return "；".join(parts)
 
 
+def _intended_local_module_content(name: str, body, slug: str,
+                                   history_line: str) -> str:
+    content = body if isinstance(body, str) else _render_spec_body(
+        title=str(body.get("title") or name),
+        identity=slug,
+        version=str(body.get("version") or "v1"),
+        core_play=str(body.get("core_play") or ""),
+        rules=list(body.get("rules") or []),
+        modules={},
+        change_index=[history_line],
+        kind="模块规格",
+    )
+    if SPEC_MARK not in content:
+        content = f"{SPEC_MARK}{slug}。种类:模块规格。\n\n" + content
+    return content
+
+
 def _apply_local_spec(root: Path, config: dict, plan: dict, *,
                       config_rel: str) -> dict:
     rel = _design_rel(config)
     path = root / rel
-    current = path.read_text(encoding="utf-8") if path.is_file() else ""
     history_line = _history_line(plan)
-    adopted = plan.get("adopted") or {}
     slugs, collisions = _module_slugs(plan.get("modules") or {})
     if collisions:
         return {
@@ -750,8 +799,24 @@ def _apply_local_spec(root: Path, config: dict, plan: dict, *,
             "reason": f"模块身份碰撞:{', '.join(collisions)}",
             "gate_required": False,
         }
+    intended_modules = {
+        name: _intended_local_module_content(
+            name, body, slugs[str(name)], history_line)
+        for name, body in (plan.get("modules") or {}).items()}
+    # 计划基线指纹必须与现行文档一致(或等于本计划的确定性预期结果,
+    # 支持执行后的幂等恢复);过期计划不得覆盖确认之间落下的新修改。
+    stale = _stale_spec_plan(
+        plan, _read_local_design(root, config), history_line,
+        slugs, intended_modules)
+    if stale:
+        return {
+            "ok": False, "wrote": False, "reason": stale,
+            "replan_required": True, "gate_required": False,
+        }
     new_overall = _merge_overall(
-        current, {"overall": plan.get("overall_update") or adopted.get("overall") or {}},
+        str(plan.get("current_overall") or ""),
+        {"overall": plan.get("overall_update")
+         or (plan.get("adopted") or {}).get("overall") or {}},
         history_line)
     # Keep unadopted / trial values out
     for item in plan.get("trial_values") or []:
@@ -763,22 +828,10 @@ def _apply_local_spec(root: Path, config: dict, plan: dict, *,
     if path.read_text(encoding="utf-8") != new_overall:
         return {"ok": False, "reason": "现行规格回读失败"}
     module_paths = {}
-    for name, body in (plan.get("modules") or {}).items():
+    for name, content in intended_modules.items():
         slug = slugs[str(name)]
         mpath = root / MODULE_DIR / f"{slug}.md"
         mpath.parent.mkdir(parents=True, exist_ok=True)
-        content = body if isinstance(body, str) else _render_spec_body(
-            title=str(body.get("title") or name),
-            identity=slug,
-            version=str(body.get("version") or "v1"),
-            core_play=str(body.get("core_play") or ""),
-            rules=list(body.get("rules") or []),
-            modules={},
-            change_index=[history_line],
-            kind="模块规格",
-        )
-        if SPEC_MARK not in content:
-            content = f"{SPEC_MARK}{slug}。种类:模块规格。\n\n" + content
         mpath.write_text(content, encoding="utf-8")
         if mpath.read_text(encoding="utf-8") != content:
             return {"ok": False, "reason": f"模块 {name} 回读失败"}
@@ -846,8 +899,6 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
             "reason": f"模块身份碰撞:{', '.join(collisions)}",
             "gate_required": False,
         }
-    current = ""
-    overall_number = None
     try:
         items = _list_github_items(backend)
     except TransportError as exc:
@@ -857,14 +908,31 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
             str(exc))
         draft.update({"ok": False, "wrote": False, "published": False})
         return draft
+    current = ""
+    overall_number = None
+    live_modules: dict[str, str] = {}
     for item in items:
         body = item.get("body") or ""
         if _is_live_overall(body):
             current = body
             overall_number = item.get("number")
-            break
+        elif _is_live_spec(body) and _spec_identity(body):
+            live_modules[_spec_identity(body)] = body
+    intended_modules = _intended_module_bodies(plan, slugs, history_line)
+    # 与本地路径同一新鲜度门:过期计划不得覆盖确认之间的新修改;
+    # 现行等于计划基线或本计划的确定性预期结果才允许继续。
+    stale = _stale_spec_plan(
+        plan, {"overall": current, "modules": live_modules},
+        history_line, slugs, intended_modules)
+    if stale:
+        return {
+            "ok": False, "wrote": False, "reason": stale,
+            "replan_required": True, "gate_required": False,
+        }
     new_overall = _merge_overall(
-        current, {"overall": plan.get("overall_update") or adopted.get("overall") or {}},
+        str(plan.get("current_overall") or ""),
+        {"overall": plan.get("overall_update")
+         or adopted.get("overall") or {}},
         history_line)
     payload = {"title": (plan.get("overall_update") or adopted.get("overall") or {}).get(
         "title") or "整体设计", "body": new_overall}
@@ -919,8 +987,7 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                               "权威规格已更新但历史未确认,不宣告采用完成",
                 }
         module_issues = {}
-        for name, content in _intended_module_bodies(
-                plan, slugs, history_line).items():
+        for name, content in intended_modules.items():
             slug = slugs[str(name)]
             existing_mod = None
             for item in _list_github_items(backend):

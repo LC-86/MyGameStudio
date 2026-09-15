@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_github_issue import (  # noqa: E402
     HISTORY_MARK, PENDING_SWITCH_MARK, authorization_for, skip_from_current_reads)
-from mgs_github_transport import repo_path  # noqa: E402
+from mgs_github_transport import repo_path, request_2xx  # noqa: E402
 from mgs_record_model import RecordsError, today  # noqa: E402
 from mgs_record_source import (  # noqa: E402
     DEFAULT_CONFIG_REL, WRITE_OP, load_config)
@@ -152,7 +152,8 @@ def _converted_overall(root: Path, report: dict, *, transport=None,
     try:
         backend = _github_backend(
             root, transport=transport, api_base=api_base, cache_dir=cache_dir)
-        return _read_issue_body(backend, int(overall_no))
+        read_ok, body = _read_issue_body(backend, int(overall_no))
+        return body if read_ok else ""
     except (RecordsError, OSError, TypeError, ValueError):
         return ""
 
@@ -509,6 +510,7 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
     user_skills = _skill_dirs(current)
     paused: list[str] = []
     decisions: list[str] = []
+    added: list[str] = []
     paused_shared_files: dict[str, list[str]] = {}
     for name, pkg_dir in pkg_skills.items():
         user_dir = user_skills.get(name)
@@ -552,6 +554,7 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
                 dest.write_bytes(data)
         else:
             shutil.copytree(pkg_dir, current / name)
+            added.append(name)
     # 新包已退役的旧入口(如 1.x 的 game-art/game-status):归档后退出
     # 活动目录;不在退役清单里的无关用户技能保持原样。否则切换宣称
     # client_complete 后旧入口仍可被发现,与新包并存两套入口。
@@ -584,6 +587,7 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
         "old_environment_kept": False,
         "retired_skills": retired_done,
         "paused_shared_files": paused_shared_files,
+        "added_skills": added,
     }
 
 
@@ -638,6 +642,9 @@ def _switch_local(root: Path, plan: dict) -> dict:
         "developer_decisions": skills.get("developer_decisions") or [],
         "retired_skills": skills.get("retired_skills") or [],
         "paused_shared_files": skills.get("paused_shared_files") or {},
+        "added_skills": skills.get("added_skills") or [],
+        "client_home": str(plan.get("client_home") or ""),
+        "package_root": str(plan.get("package_root") or ""),
     }
     _save_json(_status_path(root), payload)
     return {
@@ -751,10 +758,63 @@ def _patch_issue_body(backend, number: int, body: str) -> tuple[bool, str]:
     return status in (200, 201), ""
 
 
-def _read_issue_body(backend, number: int) -> str:
-    _status, issue = backend.transport.request(
-        "GET", f"{repo_path(backend.repo)}/issues/{number}")
-    return (issue or {}).get("body") or ""
+def _read_issue_body(backend, number: int) -> tuple[bool, str]:
+    """读取 issue 正文;仅 HTTP 2xx 视为已确认,否则返回 (False, "")。
+
+    丢弃状态码会把「读不到」当成「标记已不在」,让远端读取失败被误判为
+    切换完成;调用方必须按 ok=False 失败闭合,不得当作空正文参与判定。"""
+
+    payload = request_2xx(
+        backend.transport, "GET",
+        f"{repo_path(backend.repo)}/issues/{number}")
+    if payload is None:
+        return False, ""
+    return True, (payload or {}).get("body") or ""
+
+
+def _marker_steps(backend, steps: list[dict]) -> tuple[list[str], list[int], list[str]]:
+    """逐项执行远端标记迁移;后续失败时回补全部已成功步骤并核实。
+
+    每步字段:number、target(目标正文)、revert(变更前正文)、
+    verify(目标状态回读判定)、patch_fail/readback_fail(两种失败的
+    说明文案)。任一步失败时,已 PATCH 成功的步骤按 revert 正文回补,
+    回补再回读核实;回补失败必须如实上报(远端停留混合状态)。
+    返回 (failures, compensated, compensation_failures)。
+    """
+
+    failures: list[str] = []
+    applied: list[tuple[int, str, str]] = []
+    for step in steps:
+        number = step["number"]
+        ok, denied = _patch_issue_body(backend, number, step["target"])
+        if not ok:
+            failures.append(_marker_failure(
+                number, step["patch_fail"], denied))
+            continue
+        read_ok, back = _read_issue_body(backend, number)
+        if not read_ok or not step["verify"](back):
+            failures.append(_marker_failure(number, step["readback_fail"]))
+            applied.append((number, step["revert"], step["patch_fail"]))
+            continue
+        applied.append((number, step["revert"], step["patch_fail"]))
+    compensated: list[int] = []
+    compensation_failures: list[str] = []
+    if failures:
+        # 部分成功不得留在远端:回补已成功的标记,再逐项回读核实,
+        # 否则 GitHub 停在「一半新一半旧」的混合权威状态。
+        for number, revert, what in applied:
+            ok, denied = _patch_issue_body(backend, number, revert)
+            if not ok:
+                compensation_failures.append(_marker_failure(
+                    number, f"{what}回补未确认", denied))
+                continue
+            read_ok, back = _read_issue_body(backend, number)
+            if not read_ok or back != revert:
+                compensation_failures.append(_marker_failure(
+                    number, f"{what}回补回读未确认"))
+                continue
+            compensated.append(number)
+    return failures, compensated, compensation_failures
 
 
 def _switch_github(root: Path, plan: dict, *, transport=None,
@@ -788,39 +848,54 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
     # 不写 switch-status。先提升再打标记会让本地指向新源而 GitHub
     # 仍停留旧源或混合源。
     marker_failures: list[str] = []
+    steps: list[dict] = []
     for number in _current_new_issue_numbers(correspondence):
-        body = _read_issue_body(backend, number)
+        read_ok, body = _read_issue_body(backend, number)
+        if not read_ok:
+            marker_failures.append(_marker_failure(
+                number, "pending-switch 读取未确认"))
+            continue
         if PENDING_SWITCH_MARK in body:
-            target = _strip_mark(body, PENDING_SWITCH_MARK)
-            ok, denied = _patch_issue_body(backend, number, target)
-            if not ok:
-                marker_failures.append(_marker_failure(
-                    number, "pending-switch 移除未确认", denied))
-                continue
-            if PENDING_SWITCH_MARK in _read_issue_body(backend, number):
-                marker_failures.append(_marker_failure(
-                    number, "pending-switch 回读仍在"))
+            steps.append({
+                "number": number,
+                "target": _strip_mark(body, PENDING_SWITCH_MARK),
+                "revert": body,
+                "verify": lambda back: PENDING_SWITCH_MARK not in back,
+                "patch_fail": "pending-switch 移除未确认",
+                "readback_fail": "pending-switch 回读仍在",
+            })
     for number in _old_issue_numbers(correspondence):
-        body = _read_issue_body(backend, number)
+        read_ok, body = _read_issue_body(backend, number)
+        if not read_ok:
+            marker_failures.append(_marker_failure(
+                number, "readonly-history 读取未确认"))
+            continue
         if not skip_from_current_reads(body) or PENDING_SWITCH_MARK in body:
-            target = _with_mark(
-                _strip_mark(body, PENDING_SWITCH_MARK), HISTORY_MARK)
-            ok, denied = _patch_issue_body(backend, number, target)
-            if not ok:
-                marker_failures.append(_marker_failure(
-                    number, "readonly-history 写入未确认", denied))
-                continue
-            back = _read_issue_body(backend, number)
-            if HISTORY_MARK not in back or PENDING_SWITCH_MARK in back:
-                marker_failures.append(_marker_failure(
-                    number, "readonly-history 回读失败"))
+            steps.append({
+                "number": number,
+                "target": _with_mark(
+                    _strip_mark(body, PENDING_SWITCH_MARK), HISTORY_MARK),
+                "revert": body,
+                "verify": lambda back: (HISTORY_MARK in back
+                                        and PENDING_SWITCH_MARK not in back),
+                "patch_fail": "readonly-history 写入未确认",
+                "readback_fail": "readonly-history 回读失败",
+            })
+    compensated: list[int] = []
+    if not marker_failures:
+        step_failures, compensated, compensation_failures = _marker_steps(
+            backend, steps)
+        marker_failures.extend(step_failures)
+        marker_failures.extend(compensation_failures)
     if marker_failures:
         return {
             "ok": False,
             "wrote": False,
             "status": "pending-switch",
-            "reason": "远端标记更新未全部确认,本地保持旧来源,不宣告切换完成",
+            "reason": "远端标记更新未全部确认,本地保持旧来源,不宣告切换完成;"
+                      "已成功步骤已按变更前正文回补",
             "marker_failures": marker_failures,
+            "compensated_markers": compensated,
             "tracker": "github-issues",
             "backend": "github-issues",
             "history_root": HISTORY_REL,
@@ -853,6 +928,9 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         "developer_decisions": skills.get("developer_decisions") or [],
         "retired_skills": skills.get("retired_skills") or [],
         "paused_shared_files": skills.get("paused_shared_files") or {},
+        "added_skills": skills.get("added_skills") or [],
+        "client_home": str(plan.get("client_home") or ""),
+        "package_root": str(plan.get("package_root") or ""),
         "new_issues": _current_new_issue_numbers(correspondence),
         "old_issues": _old_issue_numbers(correspondence),
     }
@@ -1081,6 +1159,78 @@ def _restore_history(root: Path) -> int:
     return restored
 
 
+def _skills_dir_matches(live: Path, hist: Path) -> bool:
+    rels = _skill_file_rels(hist)
+    if _skill_file_rels(live) != rels:
+        return False
+    return all((live / rel).read_bytes() == (hist / rel).read_bytes()
+               for rel in rels)
+
+
+def _restore_switched_skills(status: dict) -> dict:
+    """把客户端技能恢复到切换前状态;无法恢复时如实报告不完整。
+
+    恢复依据是切换时留档的 skills-history(被替换/被退役技能的切换前
+    副本)与 added_skills(切换新装、此前不存在的入口)。暂停的技能
+    保留用户现行内容,不恢复。切换后到回滚前的用户新修改先保存到
+    skills-preserved-after-rollback,不用快照静默覆盖。旧状态文件未
+    记录 client_home 时无法定位客户端,按回滚不完整上报。
+    """
+
+    if "client_home" not in status:
+        return {"restored": [], "unresolved": [
+            "switch-status 未记录 client_home,客户端技能无法随回滚恢复,"
+            "须人工核对客户端技能目录"]}
+    home_raw = str(status.get("client_home") or "").strip()
+    if not home_raw:
+        return {"restored": [], "unresolved": []}
+    home = Path(home_raw)
+    current = home / "skills"
+    history = home / "skills-history"
+    if not history.is_dir() and not (status.get("added_skills") or []):
+        return {"restored": [], "unresolved": []}
+    paused = set(status.get("paused_skills") or []) \
+        | set(status.get("developer_decisions") or [])
+    preserve_root = home / "skills-preserved-after-rollback"
+    restored: list[str] = []
+    unresolved: list[str] = []
+    for hist in sorted(history.iterdir()) if history.is_dir() else []:
+        if not hist.is_dir() or not (hist / "SKILL.md").is_file():
+            continue
+        name = hist.name
+        if name in paused:
+            continue
+        live = current / name
+        if live.is_dir():
+            if _skills_dir_matches(live, hist):
+                restored.append(name)
+                continue
+            dest = preserve_root / name
+            if not dest.exists():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(live, dest)
+        if live.exists():
+            shutil.rmtree(live)
+        shutil.copytree(hist, current / name)
+        if current.joinpath(name).is_dir() and _skills_dir_matches(
+                current / name, hist):
+            restored.append(name)
+        else:
+            unresolved.append(f"skills:{name} 恢复后回读与切换前留档不一致")
+    for name in status.get("added_skills") or []:
+        live = current / name
+        if not live.exists():
+            continue
+        dest = preserve_root / name
+        if not dest.exists():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(live, dest)
+        shutil.rmtree(live)
+        if live.exists():
+            unresolved.append(f"skills:{name} 切换新装入口移除失败")
+    return {"restored": restored, "unresolved": unresolved}
+
+
 def rollback_safe_switch(project_root: Path | str,
                          plan: dict | None = None, *,
                          confirmed: bool = False,
@@ -1151,41 +1301,56 @@ def rollback_safe_switch(project_root: Path | str,
         # 新增任务只进 preserved 不打标记,会在恢复旧权威后同时留在
         # 现行读取集里。
         marker_failures: list[str] = []
+        steps: list[dict] = []
         old_numbers = set(_old_issue_numbers(correspondence))
         for number in dict.fromkeys(
                 issue for issue in known if isinstance(issue, int)):
             if number in old_numbers:
                 continue
-            body = _read_issue_body(backend, number)
-            target = _with_mark(
-                _strip_mark(body, HISTORY_MARK), PENDING_SWITCH_MARK)
-            ok, denied = _patch_issue_body(backend, number, target)
-            if not ok:
+            read_ok, body = _read_issue_body(backend, number)
+            if not read_ok:
                 marker_failures.append(_marker_failure(
-                    number, "pending-switch 恢复未确认", denied))
+                    number, "pending-switch 读取未确认"))
                 continue
-            back = _read_issue_body(backend, number)
-            if HISTORY_MARK in back or PENDING_SWITCH_MARK not in back:
-                marker_failures.append(_marker_failure(
-                    number, "pending-switch 回读失败"))
+            steps.append({
+                "number": number,
+                "target": _with_mark(
+                    _strip_mark(body, HISTORY_MARK), PENDING_SWITCH_MARK),
+                "revert": body,
+                "verify": lambda back: (PENDING_SWITCH_MARK in back
+                                        and HISTORY_MARK not in back),
+                "patch_fail": "pending-switch 恢复未确认",
+                "readback_fail": "pending-switch 回读失败",
+            })
         for number in _old_issue_numbers(correspondence):
-            body = _read_issue_body(backend, number)
-            target = _strip_mark(body, HISTORY_MARK)
-            ok, denied = _patch_issue_body(backend, number, target)
-            if not ok:
+            read_ok, body = _read_issue_body(backend, number)
+            if not read_ok:
                 marker_failures.append(_marker_failure(
-                    number, "readonly-history 移除未确认", denied))
+                    number, "readonly-history 读取未确认"))
                 continue
-            if HISTORY_MARK in _read_issue_body(backend, number):
-                marker_failures.append(_marker_failure(
-                    number, "readonly-history 回读仍在"))
+            steps.append({
+                "number": number,
+                "target": _strip_mark(body, HISTORY_MARK),
+                "revert": body,
+                "verify": lambda back: HISTORY_MARK not in back,
+                "patch_fail": "readonly-history 移除未确认",
+                "readback_fail": "readonly-history 回读仍在",
+            })
+        compensated: list[int] = []
+        if not marker_failures:
+            step_failures, compensated, compensation_failures = _marker_steps(
+                backend, steps)
+            marker_failures.extend(step_failures)
+            marker_failures.extend(compensation_failures)
         if marker_failures:
             return {
                 "ok": False,
                 "wrote": False,
                 "status": "switched",
-                "reason": "远端标记回退未全部确认,保持已切换状态,不回退本地",
+                "reason": "远端标记回退未全部确认,保持已切换状态,不回退本地;"
+                          "已成功步骤已按变更前正文回补",
                 "marker_failures": marker_failures,
+                "compensated_markers": compensated,
                 "preserved": preserved,
                 "correspondence": correspondence,
                 "history_root": HISTORY_REL,
@@ -1195,20 +1360,46 @@ def rollback_safe_switch(project_root: Path | str,
                 "real_migration_authorized": False,
                 "recovery_destination": GATE_HISTORY_REL,
             }
+    skills_state = _restore_switched_skills(current)
     restored = _restore_history(root)
     payload = dict(current)
     payload.update({
-        "status": "rolled-back",
         "preserved": preserved,
         "preserve_root": PRESERVE_REL,
         "rolled_back_on": today(),
+        "skills_restored": skills_state["restored"],
+        "skills_unresolved": skills_state["unresolved"],
     })
+    if skills_state["unresolved"]:
+        # 客户端技能没有全部恢复:项目记录已回到旧权威,客户端不能停在
+        # 可能不兼容的新技能集上被宣告 rolled-back,按回滚不完整上报。
+        payload["status"] = "rolled-back-incomplete"
+        _save_json(_status_path(root), payload)
+        return {
+            "ok": False,
+            "wrote": restored > 0 or bool(preserved),
+            "status": "rolled-back-incomplete",
+            "reason": "客户端技能未能全部恢复到切换前状态,回滚不完整:"
+                      + ";".join(skills_state["unresolved"]),
+            "preserved": preserved,
+            "skills_restored": skills_state["restored"],
+            "skills_unresolved": skills_state["unresolved"],
+            "correspondence": correspondence,
+            "history_root": HISTORY_REL,
+            "preserve_root": PRESERVE_REL,
+            "gate_required": False,
+            "gate_as_permission": False,
+            "real_migration_authorized": False,
+            "recovery_destination": GATE_HISTORY_REL,
+        }
+    payload["status"] = "rolled-back"
     _save_json(_status_path(root), payload)
     return {
         "ok": True,
         "wrote": restored > 0 or bool(preserved),
         "status": "rolled-back",
         "preserved": preserved,
+        "skills_restored": skills_state["restored"],
         "correspondence": correspondence,
         "history_root": HISTORY_REL,
         "preserve_root": PRESERVE_REL,
