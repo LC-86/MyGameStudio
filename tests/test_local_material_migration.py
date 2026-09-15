@@ -40,6 +40,7 @@ FAILURES, check = make_checker()
 USER_RULE = "只接金色星星"
 CORE_PLAY_V2 = "玩家左右移动接住落下的金色星星。接到一颗得 1 分。漏接三次结束。"
 CORE_PLAY_V1 = "玩家左右移动接住落下的星星。接到一颗得 1 分。漏接三次结束。"
+CORE_PLAY_V0 = "最早版本用鼠标点击接星，尚未改成方向键。"
 RESULT_TEXT = "实际成果:src/player.js 左右移动。已执行验证:代码级检查通过。"
 EVIDENCE_TEXT = "开发者试玩:移动跟手,可以进入跳跃。"
 TRIAL_NOTE = "试验跳跃高度 12,未经采纳。"
@@ -166,6 +167,18 @@ v2(2026-09-07):改为只接金色星星。v1(2026-09-05):初版,见 records/GAME
 
 - 得分：每颗星星 1 分。
 - 结束：漏接 3 颗后本局结束。
+""",
+        "docs/mygamestudio/records/GAME_DESIGN-v0.md": f"""# star-catcher：当前游戏需求与设计
+
+维护责任：方案设计。基线版本：v0。适用范围：试验稿。
+
+## 玩家体验与需求
+
+{CORE_PLAY_V0}
+
+## 当前规则与流程
+
+- 操作：鼠标点击接星。
 """,
         "docs/mygamestudio/records/decision-adopted.md": """# 核心循环:接星星
 
@@ -436,6 +449,8 @@ def test_full_conversion_maps_all_kinds_and_stays_pending_switch() -> None:
             for item in snaps.get("snapshots") or [])
         check(CORE_PLAY_V1 in snap_text or CORE_PLAY_V1 in (converted.get("history") or ""),
               "历史规格版本必须可经快照或历史记录核对")
+        check(CORE_PLAY_V0 in snap_text,
+              "不同历史规格版本必须各自可经快照接缝读取,不能互相覆盖")
 
         # T11: 只创建任务或附旧链接不能通过完整迁移检查
         fake = Path(tmp) / "tasks-only"

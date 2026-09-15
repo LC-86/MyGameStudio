@@ -351,13 +351,36 @@ def _ensure_spec_mark(body: str, identity: str, version: str, kind: str) -> str:
     return insert + "\n\n" + (body or "")
 
 
+def _design_id_for(version: str, fallback: int) -> str:
+    match = re.search(r"(\d+)", str(version or ""))
+    if match:
+        return f"ds-{int(match.group(1))}"
+    return f"ds-{fallback}"
+
+
+def _snapshot_line(item: dict, *, fallback: int) -> str:
+    version = item.get("version") or "v1"
+    design_id = _design_id_for(version, fallback)
+    return (
+        f"游戏版本 {version}：设计 {design_id} 修订 r1"
+        f"（{SNAPSHOT_DIR}/{design_id}/r1；实现:未实现；发布:未发布）"
+    )
+
+
 def _append_modules_and_snapshots(body: str, *, module_ref: str,
-                                  snapshot_line: str) -> str:
+                                  snapshot_lines: list[str]) -> str:
     text = body.rstrip()
     if "## 模块" not in text:
         text += f"\n\n## 模块\n\n- 规则与数值：{module_ref}\n"
-    if SNAPSHOT_HEADING not in text and snapshot_line:
-        text += f"\n\n## {SNAPSHOT_HEADING}\n\n- {snapshot_line}\n"
+    if snapshot_lines:
+        if SNAPSHOT_HEADING not in text:
+            text += f"\n\n## {SNAPSHOT_HEADING}\n\n"
+            text += "".join(f"- {line}\n" for line in snapshot_lines)
+        else:
+            for line in snapshot_lines:
+                bullet = f"- {line}"
+                if bullet not in text:
+                    text = text.rstrip() + f"\n{bullet}\n"
     return text + "\n"
 
 
@@ -372,14 +395,12 @@ def _convert_current_spec(root: Path, staging: Path, item: dict,
     module_body = _ensure_spec_mark(
         f"# 规则与数值\n\n## 当前规则与流程\n\n{rules or '见整体规格。'}\n",
         "rules", version, "模块规格")
-    snapshot_line = ""
-    hist = next((row for row in historical if row.get("role") == "historical"), None)
-    if hist:
-        snapshot_line = (
-            f"游戏版本 {hist.get('version')}：设计 ds-1 修订 r1"
-            f"（{SNAPSHOT_DIR}/ds-1/r1；实现:未实现；发布:未发布）")
+    snapshot_lines = [
+        _snapshot_line(row, fallback=index + 1)
+        for index, row in enumerate(historical)
+    ]
     marked = _append_modules_and_snapshots(
-        marked, module_ref=module_rel, snapshot_line=snapshot_line)
+        marked, module_ref=module_rel, snapshot_lines=snapshot_lines)
     wrote_overall = _write(staging / "docs/mygamestudio/GAME_DESIGN.md", marked)
     wrote_module = _write(staging / module_rel, module_body)
     return {
@@ -392,15 +413,17 @@ def _convert_current_spec(root: Path, staging: Path, item: dict,
     }
 
 
-def _convert_historical_spec(root: Path, staging: Path, item: dict) -> dict:
+def _convert_historical_spec(root: Path, staging: Path, item: dict,
+                             *, fallback: int) -> dict:
     body = _read(root / item["source"])
     version = item.get("version") or "v1"
     overall = _ensure_spec_mark(body, "overall", version, "历史规格")
-    rev = staging / SNAPSHOT_DIR / "ds-1" / "r1"
+    design_id = _design_id_for(version, fallback)
+    rev = staging / SNAPSHOT_DIR / design_id / "r1"
     meta = "\n".join([
-        f"# {SNAPSHOT_HEADING} ds-1 r1",
+        f"# {SNAPSHOT_HEADING} {design_id} r1",
         "",
-        f"{SNAPSHOT_MARK}ds-1。修订:r1。种类:归档快照。不是现行规格。",
+        f"{SNAPSHOT_MARK}{design_id}。修订:r1。种类:归档快照。不是现行规格。",
         f"游戏版本:{version}",
         f"形成时间:{today()}",
         f"来源:{item['source']}",
@@ -602,8 +625,8 @@ def apply_local_material_migration(project_root: Path | str,
         converted.append(row)
         created += int(row["wrote"])
         skipped += int(not row["wrote"])
-    for item in historical:
-        row = _convert_historical_spec(root, staging, item)
+    for index, item in enumerate(historical):
+        row = _convert_historical_spec(root, staging, item, fallback=index + 1)
         converted.append(row)
         created += int(row["wrote"])
         skipped += int(not row["wrote"])
