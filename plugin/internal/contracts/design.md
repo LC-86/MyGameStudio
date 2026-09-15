@@ -32,4 +32,4 @@
 
 ## 包内说明
 
-当前包的有效设计入口是 Game-Design。`to-spec` / `prototype` 为 Matt 公开技能,不再作为游戏侧独立入口。设计讨论与现行规格维护的公开接缝是 `records/mgs_records.py` 的 `read_current_design`、`plan_design_discussion`、`apply_design_discussion`、`plan_spec_adoption`、`apply_spec_adoption`。本地 Markdown 以整体设计文件与追加历史为现行来源;GitHub Issues 以规格 Issue 正文与评论为现行来源。每项目只维护一种 tracker。普通工作不经 mgs-gate。
+当前包的有效设计入口是 Game-Design。`to-spec` / `prototype` 为 Matt 公开技能,不再作为游戏侧独立入口。设计讨论与现行规格维护的公开接缝是 `records/mgs_records.py` 的 `read_current_design`、`plan_design_discussion`、`apply_design_discussion`、`plan_spec_adoption`、`apply_spec_adoption`。正式版本设计快照的公开接缝是同一文件的 `plan_design_snapshot`、`apply_design_snapshot`、`read_design_snapshots`：另存归档,不改写现行正文。本地 Markdown 以整体设计文件与追加历史为现行来源;GitHub Issues 以规格 Issue 正文与评论为现行来源。每项目只维护一种 tracker。普通工作不经 mgs-gate。

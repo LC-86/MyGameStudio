@@ -2,7 +2,7 @@
 """MyGameStudio 本地 Markdown 任务后端:统一回读与本地写入接口(任务票 04,票 08/15 扩展,
 票 17 增加对 github-issues 后端的分发与写操作 CLI;issue #51 补齐本地写入、
 接入与只读状态查询;issue #52 补齐 GitHub 接入与原生关系;issue #53 补齐
-设计讨论与现行规格维护,普通本地工作不经 mgs-gate)。
+设计讨论与现行规格维护,issue #54 补齐正式版本设计快照归档,普通本地工作不经 mgs-gate)。
 
 对应设计《工作记录合同》「后端接口」一节:读取配置、列出任务、读取任务与结果、
 回读核验(票 04);关系解析与循环检测、当前可开工集合(票 08);核心基线内容
@@ -1003,6 +1003,48 @@ def apply_spec_adoption(project_root: Path | str, plan: dict, *,
     return mgs_spec.apply_spec_adoption(
         project_root, plan, confirmed=confirmed, config_rel=config_rel,
         transport=transport, api_base=api_base, cache_dir=cache_dir)
+
+
+# ---------- 正式版本设计快照(issue #54) ----------
+
+def plan_design_snapshot(project_root: Path | str, request: dict,
+                         config_rel: str = DEFAULT_CONFIG_REL, *,
+                         transport=None, api_base: str | None = None,
+                         cache_dir: Path | str | None = None) -> dict:
+    """正式版本节点的归档计划;日常修改不强制生成。"""
+
+    import mgs_snapshot  # noqa: PLC0415
+
+    return mgs_snapshot.plan_design_snapshot(
+        project_root, request, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_design_snapshot(project_root: Path | str, plan: dict, *,
+                          confirmed: bool = True,
+                          config_rel: str = DEFAULT_CONFIG_REL,
+                          transport=None, api_base: str | None = None,
+                          cache_dir: Path | str | None = None) -> dict:
+    """把现行规格另存为归档。不改写现行正文,只追加版本索引。"""
+
+    import mgs_snapshot  # noqa: PLC0415
+
+    return mgs_snapshot.apply_design_snapshot(
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
+
+
+def read_design_snapshots(project_root: Path | str,
+                          config_rel: str = DEFAULT_CONFIG_REL, *,
+                          transport=None, api_base: str | None = None,
+                          cache_dir: Path | str | None = None) -> dict:
+    """只读归档快照与版本索引。历史快照不参与现行同步。"""
+
+    import mgs_snapshot  # noqa: PLC0415
+
+    return mgs_snapshot.read_design_snapshots(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------

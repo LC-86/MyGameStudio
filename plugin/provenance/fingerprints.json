@@ -17,8 +17,8 @@
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "2b9ef0e4425193c3ae8028eaffd2e720a30e9ec6978736436b431aa924126144",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "64b02463408105ed924f0eab7eef7b1330088d2ec3edf0fc8261ad08a2a5ebbd",
+      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -41,8 +41,8 @@
     },
     {
       "path": "internal/contracts/records.md",
-      "sha256": "b75117535f3a8d5aee6c16551f9ea24c50110f0f166b138c243e810f46ac3737",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "4151a46862484953790019f9228f66c494c66f6eb5495afe7c5fe8b9b6291ce7",
+      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -65,8 +65,8 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "3b9acfedd2bcf6b6c41ca232bbf80f0ada87caa62c0d7c82f72a9fad3135eb59",
-      "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
+      "sha256": "941b156dd742a0b6c7c7dd582a8f41105738ffafb59e03bc6a7f88b8d59b60b5",
+      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -290,8 +290,8 @@
     },
     {
       "path": "skills/game-design/SKILL.md",
-      "sha256": "30c3810c3694d0af12289a38b34a3a8910dd96991e486b4009f53d763cab824d",
-      "source": "本项目自有内容(MIT); issue #53 设计讨论与现行规格",
+      "sha256": "6d05f80e5b6f02d43997d7196fb261a7722478ca9cc2c41e7297aa924f0db88c",
+      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -793,11 +793,11 @@
     },
     {
       "path": "skills/to-spec/SKILL.md",
-      "sha256": "b92e5f9e012ecb2c7c47d9f5e0fd836f7061ba0801969c2e55be656ca12795ce",
+      "sha256": "9ba73c688a7aa0436098d2c271d65b98b16d445219bf7d1904c829ce53706094",
       "original_sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-spec/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer and current-spec adoption seam. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
+      "adaptation": "Append MyGameStudio stage-materials pointer and current-spec adoption seam. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials. Issue #54: point at formal-version design snapshot seam."
     },
     {
       "path": "skills/to-spec/agents/openai.yaml",

@@ -559,6 +559,9 @@ def _merge_overall(current: str, adopted: dict, history_line: str) -> str:
         extra["持久状态恢复"] = str(overall["progress_guard"])
     elif _section(current, "持久状态恢复"):
         extra["持久状态恢复"] = _section(current, "持久状态恢复")
+    snapshot_index = _section(current, "正式版本设计快照")
+    if snapshot_index:
+        extra["正式版本设计快照"] = snapshot_index
     modules = dict(overall.get("module_index") or {})
     change = [history_line] if history_line else []
     existing_index = _section(current, "变更索引")
