@@ -7,10 +7,10 @@
 ## Game-Design
 
 - 输入:本轮问题、当前产品要求、相关反馈、资源与投入约束。
-- 工作:处理玩法、数值和体验讨论。局部问题复用公开技能 `grilling` 与 `domain-modeling`。大型不清晰路线提示开发者调用 `wayfinder`，不自动串调。读取[阶段资料入口](../game/stage-requirements.md)不是开始制作。
-- 输出:候选方案、取舍、需要验证的问题与用户已作出的决定。
-- 写入:本轮设计过程和决定记录;明确采纳的内容通过 `to-spec` 同步基线。
-- 完成:本轮问题得到决定或形成明确验证工作,剩余问题有去向;助手建议不冒充用户决定。
+- 工作:处理玩法、数值和体验讨论。局部问题复用公开技能 `grilling` 与 `domain-modeling`，按已具备前提的问题成组提问。三句话说明核心玩法后围绕最小闭环深入。专业模块按真实影响读取。大型不清晰路线提示开发者调用 `wayfinder`，不自动串调。读取[阶段资料入口](../game/stage-requirements.md)不是开始制作。
+- 输出:候选方案、取舍、需要验证的问题、试验数值与用户已作出的决定。
+- 写入:本轮设计过程和决定记录，不把未采纳提议或试验值写入正式规则；明确采纳的内容由开发者主动调用 `to-spec` 同步整体入口及按需模块。
+- 完成:本轮问题得到决定或形成明确验证工作,剩余问题有去向;助手建议不冒充用户决定。无显式请求不增加隔离原型，不安排外部玩家。
 
 ## Game-Spec
 
@@ -32,4 +32,4 @@
 
 ## 包内说明
 
-当前包的有效设计入口是 Game-Design。`to-spec` / `prototype` 为 Matt 公开技能,不再作为游戏侧独立入口。Game-Design 的后续保存、成稿与变更流程由对应实施票扩充。普通工作不经 mgs-gate。
+当前包的有效设计入口是 Game-Design。`to-spec` / `prototype` 为 Matt 公开技能,不再作为游戏侧独立入口。设计讨论与现行规格维护的公开接缝是 `records/mgs_records.py` 的 `read_current_design`、`plan_design_discussion`、`apply_design_discussion`、`plan_spec_adoption`、`apply_spec_adoption`。本地 Markdown 以整体设计文件与追加历史为现行来源;GitHub Issues 以规格 Issue 正文与评论为现行来源。每项目只维护一种 tracker。普通工作不经 mgs-gate。

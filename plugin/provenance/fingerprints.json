@@ -11,13 +11,13 @@
   "files": [
     {
       "path": "internal/contracts/common.md",
-      "sha256": "67dbbba1974ea123a4749ea34de19a9844fb0dea414711012fe5ce4c44c14bd6",
+      "sha256": "921b0f01f0345689aa0a0348e704e833224baf0fac363b9f5af0a67f284b2cd2",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "2cbad75ccc3f48524583af9fea53eeaab63c9c47b45f75a0418cc84ee6f6f83f",
+      "sha256": "2b9ef0e4425193c3ae8028eaffd2e720a30e9ec6978736436b431aa924126144",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -41,7 +41,7 @@
     },
     {
       "path": "internal/contracts/records.md",
-      "sha256": "baaf06eaecf1899f965e03c81570cb61adbbda478a0646b676bda8193cb3315f",
+      "sha256": "b75117535f3a8d5aee6c16551f9ea24c50110f0f166b138c243e810f46ac3737",
       "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
@@ -65,7 +65,7 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "b4653e85d20f1c8756bc2d317b4c53aa4310436947a6bcd0c42c14c0c04b483c",
+      "sha256": "3b9acfedd2bcf6b6c41ca232bbf80f0ada87caa62c0d7c82f72a9fad3135eb59",
       "source": "本项目自有内容(MIT); issue #52 GitHub 接入",
       "license": "本项目自有内容(MIT)"
     },
@@ -290,8 +290,8 @@
     },
     {
       "path": "skills/game-design/SKILL.md",
-      "sha256": "8694bdd605f439697f9e5c41733ccee88778d70face1d2ec51e5f080789b3bf9",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "30c3810c3694d0af12289a38b34a3a8910dd96991e486b4009f53d763cab824d",
+      "source": "本项目自有内容(MIT); issue #53 设计讨论与现行规格",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -793,11 +793,11 @@
     },
     {
       "path": "skills/to-spec/SKILL.md",
-      "sha256": "d769f5fdc77bf9eea5d10108eafaf17f51665a2211e61f1d4794b49d5491c95f",
+      "sha256": "b92e5f9e012ecb2c7c47d9f5e0fd836f7061ba0801969c2e55be656ca12795ce",
       "original_sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088",
       "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-spec/SKILL.md",
       "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
-      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
+      "adaptation": "Append MyGameStudio stage-materials pointer and current-spec adoption seam. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials."
     },
     {
       "path": "skills/to-spec/agents/openai.yaml",

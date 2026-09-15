@@ -78,3 +78,5 @@ Any further notes about the feature.
 ## MyGameStudio stage materials
 
 When working in a MyGameStudio game project, read [stage requirements](../../internal/game/stage-requirements.md) for the current work stage before applying this skill's method. If `docs/mygamestudio/INDEX.md` exists, use it to locate this project's current-stage specs and tasks. Reading those materials does not start production.
+
+When the developer explicitly uses this skill to adopt game design, write through `<插件根>/records/mgs_records.py` (`plan_spec_adoption` / `apply_spec_adoption` / `read_current_design`). Adopted rules enter the overall design entry and modules as needed; unadopted ideas, trial values and unpublished drafts stay out of the current spec. Keep source, reason and replacement in history (GitHub comments or local append records). Update affected task citations. A small change does not require a new decision ticket. Each project uses only its chosen tracker. If a write result is unknown, reread and fill missing items only. This paragraph does not change the upstream spec method above.

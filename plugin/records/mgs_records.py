@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """MyGameStudio 本地 Markdown 任务后端:统一回读与本地写入接口(任务票 04,票 08/15 扩展,
 票 17 增加对 github-issues 后端的分发与写操作 CLI;issue #51 补齐本地写入、
-接入与只读状态查询,普通本地工作不经 mgs-gate)。
+接入与只读状态查询;issue #52 补齐 GitHub 接入与原生关系;issue #53 补齐
+设计讨论与现行规格维护,普通本地工作不经 mgs-gate)。
 
 对应设计《工作记录合同》「后端接口」一节:读取配置、列出任务、读取任务与结果、
 回读核验(票 04);关系解析与循环检测、当前可开工集合(票 08);核心基线内容
@@ -933,6 +934,75 @@ def status_report(project_root: Path | str,
         "next": next_step,
         "note": ready.get("note", READY_NOTE),
     }
+
+
+# ---------- 设计讨论与现行规格(issue #53) ----------
+
+def read_current_design(project_root: Path | str,
+                        config_rel: str = DEFAULT_CONFIG_REL, *,
+                        transport=None, api_base: str | None = None,
+                        cache_dir: Path | str | None = None) -> dict:
+    """只读现行规格。读取不是制作。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.read_current_design(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def plan_design_discussion(project_root: Path | str, request: dict,
+                           config_rel: str = DEFAULT_CONFIG_REL, *,
+                           transport=None, api_base: str | None = None,
+                           cache_dir: Path | str | None = None) -> dict:
+    """Game-Design:成组提问、影响模块与试验值;不写入正式规则。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.plan_design_discussion(
+        project_root, request, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_design_discussion(project_root: Path | str, plan: dict,
+                            answers: dict | None = None,
+                            config_rel: str = DEFAULT_CONFIG_REL, *,
+                            transport=None, api_base: str | None = None,
+                            cache_dir: Path | str | None = None) -> dict:
+    """保存讨论过程。未走 to-spec 时不改正式规则。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.apply_design_discussion(
+        project_root, plan, answers, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def plan_spec_adoption(project_root: Path | str, adopted: dict,
+                       config_rel: str = DEFAULT_CONFIG_REL, *,
+                       transport=None, api_base: str | None = None,
+                       cache_dir: Path | str | None = None) -> dict:
+    """开发者主动 to-spec 的写入计划;未确认不写。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.plan_spec_adoption(
+        project_root, adopted, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_spec_adoption(project_root: Path | str, plan: dict, *,
+                        confirmed: bool = True,
+                        config_rel: str = DEFAULT_CONFIG_REL,
+                        transport=None, api_base: str | None = None,
+                        cache_dir: Path | str | None = None) -> dict:
+    """把已采纳设计写入整体入口与按需模块,并同步受影响任务引用。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.apply_spec_adoption(
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------

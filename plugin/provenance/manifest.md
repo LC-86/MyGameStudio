@@ -25,11 +25,11 @@
 
 ## 游戏入口与资料
 
-- `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。Game-Init 完成本地 Markdown 或 GitHub Issues 二选一接入与任务维护;Game-Producer 只读查询真实记录。
+- `skills/game-producer/`、`skills/game-init/`、`skills/game-design/`:本项目自有内容(MIT)。Game-Init 完成本地 Markdown 或 GitHub Issues 二选一接入与任务维护;Game-Producer 只读查询真实记录。Game-Design 处理玩法讨论;已采纳规则由开发者主动调用 `to-spec` 写入现行规格。公开接缝 `records/mgs_records.py`。
 - `internal/game/invocation.md`:调用合同(用户专用入口不得被统筹自动串调)。
 - `internal/game/stage-requirements.md`:按工作阶段组织的专业资料索引(唯一副本)。
 
-`game-design/` 目录内仍保留既有设计讨论 Python 模块,供既有检查与后续设计票使用;新版 `SKILL.md` 不把它们或 mgs-gate 当作普通路径。
+`game-design/` 目录内仍保留既有设计讨论 Python 模块,供既有检查使用;新版普通路径以 `records/mgs_records.py` 的设计/规格接缝为准,不经 mgs-gate。
 
 ## internal/ 与 templates/
 

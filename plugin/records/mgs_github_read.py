@@ -90,7 +90,10 @@ class GithubReadMixin:
                     "fetched_at": cached["fetched_at"],
                     "source": cached["source"], "note": OFFLINE_NOTE}
         tasks = [parse_issue_payload(item, self.config["labels"])
-                 for item in data if "pull_request" not in item]
+                 for item in data
+                 if "pull_request" not in item
+                 and "规格身份:" not in (item.get("body") or "")
+                 and "讨论身份:" not in (item.get("body") or "")]
         payload = {
             "tasks": tasks,
             "cached": False,
