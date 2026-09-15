@@ -49,6 +49,10 @@
 - 包内新版有效入口不引用开发机绝对路径。
 - 安装包由 `dist/build-package.sh` 从 `plugin/` 构建,内容与源码可核对。
 
+## 上游升级评估
+
+准备发版时经 `provenance/mgs_upstream_upgrade.py` 的 `evaluate_upstream_upgrade` / `apply_upstream_upgrade` / `read_upstream_adoption` 比较钉住候选与当前固定版本。比较正式集合、调用声明、依赖引用、许可与每项适配,记录仍需要、已由上游解决或冲突。先留下可复查差异和验证结果,通过且确认后才采用;不直接覆盖成 `latest`。集合新增、退役或实验转正,以及后续新资料,都要明确评估后才进入最终交付。断裂引用、声明变化、来源冲突或检查失败时保留已采用版本和原因。复用现有包检查与调用边界;不是持续更新服务,也不扩大客户端、引擎或工具范围。
+
 ## 未包含
 
 - misc 与 in-progress 技能。
