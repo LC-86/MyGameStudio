@@ -463,6 +463,42 @@ def test_same_name_skill_unique_source_and_stage_reads() -> None:
                   f"{skill_md.parent.name} 切换后必须仍能读取阶段要求")
 
 
+def test_skill_switch_keeps_ordinary_user_edits_or_pauses() -> None:
+    """AC2: 普通正文追加与自建附件必须保留;无法安全合并时暂停该技能切换。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        ready = _write_old_local_project(Path(tmp) / "ready-game")
+        _convert_local(ready)
+        home = Path(tmp) / "isolated-codex"
+        skills = _write_isolated_client(home)
+        implement = skills / "implement" / "SKILL.md"
+        implement.write_text(
+            implement.read_text(encoding="utf-8")
+            + "\n本项目约定:只接金色星星,不接红色星星。\n",
+            encoding="utf-8")
+        note = skills / "implement" / "notes" / "project-rule.md"
+        note.parent.mkdir(parents=True, exist_ok=True)
+        note.write_text("自建附件:金色星星判定口径。\n", encoding="utf-8")
+        package = Path(tmp) / "package-skills"
+        shutil.copytree(PLUGIN_SKILLS, package)
+        plan = mgs_records.plan_safe_switch(
+            ready, client_home=home, package_root=package)
+        applied = mgs_records.apply_safe_switch(ready, plan, confirmed=True)
+        live = home / "skills" / "implement" / "SKILL.md"
+        live_text = live.read_text(encoding="utf-8") if live.is_file() else ""
+        live_note = home / "skills" / "implement" / "notes" / "project-rule.md"
+        paused = [str(item) for item in (applied.get("paused") or [])]
+        kept_body = "只接金色星星" in live_text
+        kept_note = live_note.is_file() and "金色星星判定口径" in live_note.read_text(
+            encoding="utf-8")
+        if "implement" in paused:
+            check(kept_body and kept_note,
+                  "无法安全合并时必须暂停该技能并保留用户正文与附件")
+        else:
+            check(kept_body, "适用的正文追加必须迁入唯一有效来源,不得只进历史目录")
+            check(kept_note, "自建附件必须留在活动技能来源中")
+
+
 def test_shared_client_unready_keeps_old_environment() -> None:
     """AC3/T12: 共用客户端未就绪项目保留可用旧环境;
     不能仅因某个项目转换完成就宣称全部完成。
@@ -540,6 +576,37 @@ def test_rollback_preserves_new_additions() -> None:
               "回退必须保留新旧对应关系")
         check(report.get("status") in ("rolled-back", "pending-switch"),
               f"回退后状态应可恢复,实际 {report.get('status')}")
+
+
+def test_rollback_preserves_edits_to_migrated_tasks() -> None:
+    """AC4: 回退覆盖旧快照前,必须保留既有已迁移任务的新修改。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "star-catcher")
+        _convert_local(root)
+        plan = mgs_records.plan_safe_switch(root)
+        mgs_records.apply_safe_switch(root, plan, confirmed=True)
+        new_goal = "加入带缓冲的跳跃手感"
+        mgs_records.update_task(
+            root, "02-jump", {"当前目标": new_goal},
+            change_note="切换后修改既有任务")
+        rolled = mgs_records.rollback_safe_switch(root, plan, confirmed=True)
+        check(rolled.get("ok") is True, f"确认后应能回退:{rolled}")
+        preserved_blob = ""
+        preserve = root / "docs/mygamestudio/records/preserved-after-rollback"
+        if preserve.is_dir():
+            for path in preserve.rglob("*"):
+                if path.is_file():
+                    preserved_blob += path.read_text(encoding="utf-8")
+        project_blob = ""
+        for path in root.rglob("*"):
+            if path.is_file():
+                try:
+                    project_blob += path.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    continue
+        check(new_goal in preserved_blob or new_goal in project_blob,
+              "既有任务在切换后的新目标必须留下保留副本,不得被迁移前快照抹掉")
 
 
 def test_prep_change_and_partial_do_not_switch() -> None:
@@ -634,8 +701,10 @@ def main() -> int:
             test_incomplete_and_unconfirmed_do_not_switch,
             test_complete_check_then_switch_makes_new_current,
             test_same_name_skill_unique_source_and_stage_reads,
+            test_skill_switch_keeps_ordinary_user_edits_or_pauses,
             test_shared_client_unready_keeps_old_environment,
             test_rollback_preserves_new_additions,
+            test_rollback_preserves_edits_to_migrated_tasks,
             test_prep_change_and_partial_do_not_switch,
             test_github_switch_makes_new_current_and_can_roll_back,
         ),

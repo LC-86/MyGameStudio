@@ -25,6 +25,11 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
         capture_output=True, text=True)
 
 
+def _git_bytes(repo: Path, *args: str) -> bytes:
+    return subprocess.run(
+        ["git", *args], cwd=repo, check=False, capture_output=True).stdout or b""
+
+
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -34,6 +39,10 @@ def _norm(rel: str) -> str:
     while text.startswith("./"):
         text = text[2:]
     return text
+
+
+def _decode_git_path(raw: bytes) -> str:
+    return _norm(raw.decode("utf-8", errors="surrogateescape"))
 
 
 def _matches(rel: str, prefix: str) -> bool:
@@ -52,29 +61,51 @@ def _in_scope(rel: str, include: list[str], exclude: list[str]) -> bool:
 
 
 def _status_entries(repo: Path) -> list[tuple[str, str]]:
-    result = _git(repo, "status", "--porcelain=v1", "-uall")
+    data = _git_bytes(repo, "status", "--porcelain=v1", "-uall", "-z")
+    parts = data.split(b"\0")
     entries: list[tuple[str, str]] = []
-    for line in result.stdout.splitlines():
-        if len(line) < 4:
+    index = 0
+    while index < len(parts) and parts[index]:
+        rec = parts[index]
+        if len(rec) < 3:
+            index += 1
             continue
-        path = line[3:]
-        if " -> " in path:
-            path = path.split(" -> ", 1)[1]
-        entries.append((line[:2], _norm(path)))
+        code = rec[:2].decode("ascii", errors="replace")
+        path = _decode_git_path(rec[3:] if rec[2:3] == b" " else rec[2:])
+        if code[:1] in {"R", "C"}:
+            index += 1
+            orig = _decode_git_path(parts[index]) if index < len(parts) else ""
+            entries.append((code, path))
+            if orig:
+                entries.append((code, orig))
+        else:
+            entries.append((code, path))
+        index += 1
     return entries
 
 
 def _name_status(repo: Path, *rev_args: str) -> list[tuple[str, str]]:
-    result = _git(repo, "diff", "--name-status", *rev_args)
+    data = _git_bytes(repo, "diff", "-z", "--name-status", *rev_args)
+    parts = data.split(b"\0")
     rows: list[tuple[str, str]] = []
-    for line in result.stdout.splitlines():
-        if not line.strip():
+    index = 0
+    while index < len(parts) and parts[index]:
+        status = parts[index].decode("ascii", errors="replace")
+        index += 1
+        if index >= len(parts):
+            break
+        if status[:1] in {"R", "C"}:
+            old = _decode_git_path(parts[index])
+            index += 1
+            new = _decode_git_path(parts[index]) if index < len(parts) else ""
+            index += 1
+            if old:
+                rows.append((status, old))
+            if new:
+                rows.append((status, new))
             continue
-        parts = line.split("\t")
-        if len(parts) < 2:
-            continue
-        path = parts[-1]
-        rows.append((parts[0].strip(), _norm(path)))
+        rows.append((status, _decode_git_path(parts[index])))
+        index += 1
     return rows
 
 

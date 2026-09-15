@@ -359,6 +359,48 @@ def test_tospec_adopts_into_overall_module_and_task_refs_local() -> None:
         check(work, "本地进度必须仍在选定 tracker 的任务记录中")
 
 
+def test_chinese_module_names_do_not_collide_or_overwrite() -> None:
+    """已采纳设计进入按需模块时,中文模块名称不得撞成同一身份并互相覆盖。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "star-catcher", design=CORE_DESIGN)
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "reason": "规则与成长同时落地",
+            "overall": {
+                "title": "star-catcher：当前游戏需求与设计",
+                "version": "v2",
+                "core_play": "接星星。接到得 1 分。商店用金币升级。",
+                "rules": [
+                    "得分：每颗星星 1 分。",
+                    "商店：用金币买移动速度。",
+                ],
+            },
+            "modules": {
+                "规则与数值": {
+                    "title": "规则与数值",
+                    "rules": ["每颗星星 1 分。"],
+                },
+                "成长经济": {
+                    "title": "成长经济",
+                    "rules": ["金币可在商店购买升级。"],
+                },
+            },
+        })
+        applied = mgs_records.apply_spec_adoption(root, plan, confirmed=True)
+        check(applied.get("ok") is True, f"两个专业模块应能同时写入:{applied}")
+        current = mgs_records.read_current_design(root)
+        modules = current.get("modules") or {}
+        blob = "\n".join(modules.values())
+        check("每颗星星 1 分" in blob, "规则与数值模块内容必须保留")
+        check("金币可在商店购买升级" in blob, "成长经济模块内容必须保留")
+        check(len(modules) >= 2, f"两个模块必须有各自身份,实际 {list(modules)}")
+        identities = list(modules)
+        check(len(identities) == len(set(identities)),
+              f"模块身份不得碰撞,实际 {identities}")
+
+
 def test_new_feature_resume_partial_update_and_progress_guard() -> None:
     """AC5: 覆盖新功能、已定规则修改、已有进度保障、部分更新与新会话恢复。
     """
@@ -526,6 +568,88 @@ def test_github_tracker_adopts_spec_and_keeps_history_in_comments() -> None:
               "本项目必须只使用选定的 GitHub tracker")
 
 
+def _github_list_newest_first(fake: FakeTransport) -> None:
+    """Match GitHub's default issue list: newest number first."""
+
+    original = fake.request
+
+    def request(method, path, body=None, *, auth=None):
+        status, data = original(method, path, body, auth=auth)
+        clean = path.split("?", 1)[0]
+        if method == "GET" and clean.endswith("/issues") and isinstance(data, list):
+            return status, list(reversed(data))
+        return status, data
+
+    fake.request = request  # type: ignore[method-assign]
+
+
+def test_github_live_spec_update_does_not_rewrite_archive() -> None:
+    """D6: 更新现行规格不得覆盖归档快照,即使列表把新 Issue 排在前面。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "star-catcher")
+        fake = FakeTransport()
+        _github_list_newest_first(fake)
+        cache = root / "docs/mygamestudio/records/cache"
+        first = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "reason": "冻结 0.1 设计",
+            "overall": {
+                "title": "star-catcher 整体设计",
+                "version": "v1",
+                "core_play": "接星星。接到一颗得 1 分。漏接三颗结束。",
+                "rules": ["得分：每颗星星 1 分。"],
+            },
+        }, transport=fake, cache_dir=cache)
+        mgs_records.apply_spec_adoption(
+            root, first, confirmed=True, transport=fake, cache_dir=cache)
+        snap = mgs_records.apply_design_snapshot(root, mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+        }, transport=fake, cache_dir=cache), confirmed=True, transport=fake, cache_dir=cache)
+        check(snap.get("ok") is True, f"归档快照应先保存:{snap}")
+        archives_before = [item for item in fake.issues
+                           if "快照身份:" in (item.get("body") or "")]
+        check(archives_before, "本用例需要一份归档 Issue")
+        later = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "正式改为 3 分",
+            "replaces": "每颗星星 1 分",
+            "overall": {
+                "title": "star-catcher 整体设计",
+                "version": "v2",
+                "core_play": "接星星。接到一颗得 3 分。漏接三颗结束。",
+                "rules": ["得分：每颗星星 3 分。"],
+                "replace_rules": ["每颗星星 1 分"],
+            },
+        }, transport=fake, cache_dir=cache)
+        applied = mgs_records.apply_spec_adoption(
+            root, later, confirmed=True, transport=fake, cache_dir=cache)
+        check(applied.get("ok") is True, f"后续现行规格更新应成功:{applied}")
+        archives = [item for item in fake.issues
+                    if "快照身份:" in (item.get("body") or "")]
+        check(archives, "更新现行规格后归档 Issue 必须仍在")
+        if not archives:
+            return
+        check(len(archives) == len(archives_before),
+              "更新现行规格不得改写或吞掉归档 Issue")
+        check("快照身份:" in (archives[0].get("body") or ""),
+              "归档身份不得被现行规格覆盖")
+        check("每颗星星 1 分" in (archives[0].get("body") or ""),
+              "旧快照正文必须保留当时规则")
+        check("每颗星星 3 分" not in (archives[0].get("body") or ""),
+              "后续现行设计变化不得写入旧快照")
+        current = mgs_records.read_current_design(
+            root, transport=fake, cache_dir=cache)
+        check("每颗星星 3 分" in (current.get("overall") or ""),
+              "现行规格必须更新到新规则")
+        check("快照身份:" not in (current.get("overall") or ""),
+              "现行读取不得把归档 Issue 当成现行规格")
+
+
 def test_github_unknown_write_rereads_and_keeps_unpublished_draft() -> None:
     """AC5: 保存未知时回读后补缺,不重复创建;未发布草稿保持原状态。
     """
@@ -587,8 +711,10 @@ if __name__ == "__main__":
         test_core_play_then_min_loop_questions,
         test_small_change_reuses_decisions_and_keeps_trial_values_out,
         test_tospec_adopts_into_overall_module_and_task_refs_local,
+        test_chinese_module_names_do_not_collide_or_overwrite,
         test_new_feature_resume_partial_update_and_progress_guard,
         test_github_tracker_adopts_spec_and_keeps_history_in_comments,
+        test_github_live_spec_update_does_not_rewrite_archive,
         test_github_unknown_write_rereads_and_keeps_unpublished_draft,
     )
     sys.exit(run_theme("游戏设计讨论与现行规格维护(#53 T2/T3/T5)", TESTS, FAILURES))

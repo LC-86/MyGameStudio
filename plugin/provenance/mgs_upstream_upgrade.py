@@ -249,13 +249,6 @@ def _classify_adaptations(plugin: Path, candidate: Path,
     return items
 
 
-def _append_stage_pointer(path: Path) -> None:
-    text = path.read_text(encoding="utf-8")
-    if STAGE_REL in text or STAGE_POINTER in text:
-        return
-    path.write_text(text.rstrip() + STAGE_BLOCK, encoding="utf-8")
-
-
 def _mgs_tail(text: str) -> str:
     marker = "## MyGameStudio stage materials"
     index = text.find(marker)
@@ -264,8 +257,47 @@ def _mgs_tail(text: str) -> str:
     return text[index:].strip()
 
 
+COMMIT_AUTH = (
+    "If commit authorization is present, commit your work to the "
+    "current branch. If it is not, leave the work uncommitted."
+)
+
+
+def _has_commit_authorization(text: str) -> bool:
+    lower = (text or "").lower()
+    return (
+        "commit authorization is present" in lower
+        and "leave the work uncommitted" in lower
+    )
+
+
+def _strip_unconditional_commit(text: str) -> str:
+    lines = []
+    for line in (text or "").splitlines():
+        if re.fullmatch(r"Commit your work to the current branch\.?", line.strip()):
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _merge_adaptations(candidate: str, previous: str) -> str:
+    text = _strip_unconditional_commit(candidate)
+    if _has_commit_authorization(previous) and not _has_commit_authorization(text):
+        marker = "## MyGameStudio stage materials"
+        if marker in text:
+            text = text.replace(marker, COMMIT_AUTH + "\n\n" + marker, 1)
+        else:
+            text = text.rstrip() + "\n\n" + COMMIT_AUTH + "\n"
+    tail = _mgs_tail(previous)
+    if tail and tail not in text:
+        text = text.rstrip() + "\n\n" + tail + "\n"
+    elif STAGE_REL not in text and STAGE_POINTER not in text:
+        text = text.rstrip() + STAGE_BLOCK
+    return text if text.endswith("\n") else text + "\n"
+
+
 def _keep_existing_adaptations(dest: Path, previous: str, original_hash: str) -> None:
-    """Keep current adaptations when the candidate is still the same original."""
+    """Keep current adaptations when the candidate still needs them."""
 
     if not dest.is_file():
         return
@@ -273,11 +305,9 @@ def _keep_existing_adaptations(dest: Path, previous: str, original_hash: str) ->
     if original_hash and candidate_hash == original_hash and previous:
         dest.write_text(previous, encoding="utf-8")
         return
-    _append_stage_pointer(dest)
-    tail = _mgs_tail(previous)
-    current = dest.read_text(encoding="utf-8")
-    if tail and tail not in current:
-        dest.write_text(current.rstrip() + "\n\n" + tail + "\n", encoding="utf-8")
+    dest.write_text(
+        _merge_adaptations(dest.read_text(encoding="utf-8"), previous),
+        encoding="utf-8")
 
 
 def _public_skills(plugin: Path) -> list[str]:
@@ -453,14 +483,13 @@ def _adopt_candidate(plugin: Path, evaluation: dict) -> dict:
     sha = evaluation["candidate"]["sha"]
     version = evaluation["candidate"]["version"]
     official_files, _dupes = _candidate_skills(candidate, OFFICIAL_BUCKETS)
-    by_status = {
-        item.get("skill"): item.get("status")
-        for item in evaluation.get("adaptations") or []
-    }
     fingerprints = _fingerprints(plugin)
     by_path = _fingerprint_by_path(fingerprints)
+    decisions = evaluation.get("collection_decisions") or {}
     for name, skill_md in official_files.items():
         if name in GAME_ENTRIES:
+            continue
+        if decisions.get(name) in {"reject", "defer"}:
             continue
         dest_dir = plugin / "skills" / name
         dest_dir.mkdir(parents=True, exist_ok=True)
@@ -475,10 +504,8 @@ def _adopt_candidate(plugin: Path, evaluation: dict) -> dict:
             shutil.copy2(src, dest)
         dest_skill = dest_dir / "SKILL.md"
         original_hash = _sha256(dest_skill)
-        if by_status.get(name) == "still-needed":
+        if previous:
             _keep_existing_adaptations(dest_skill, previous, previous_original)
-        elif by_status.get(name) == "resolved-by-upstream":
-            pass
         rel = f"skills/{name}/SKILL.md"
         try:
             source_rel = str(skill_md.relative_to(candidate))

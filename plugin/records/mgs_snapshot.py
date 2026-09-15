@@ -258,7 +258,7 @@ def _load_local_revision(root: Path, design_id: str, rev_dir: Path) -> dict | No
         "attachments": attachments,
         "meta": meta,
         "path": str(rev_dir.relative_to(root)),
-        "complete": True,
+        "complete": bool(_meta_field(meta, "形成时间")),
     }
 
 
@@ -353,12 +353,44 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
     rev_dir = root / SNAPSHOT_DIR / design_id / revision
     existing = rev_dir.is_dir() and (rev_dir / "overall.md").is_file()
     if existing and not plan.get("correction"):
-        attachments = {}
-        for rel in plan.get("attachments") or []:
-            text, err = _read_attachment(root, rel)
-            if not err:
+        if _revision_is_complete(rev_dir, plan):
+            _ensure_overall_index(root, config, plan, rev_dir)
+            return {
+                "ok": True, "wrote": True, "complete": True,
+                "filled_gap_only": True,
+                "design_id": design_id, "revision": revision,
+                "backend": "local-markdown", "gate_required": False,
+                "path": str(rev_dir.relative_to(root)),
+            }
+        expected = plan.get("source_sha256")
+        actual = _source_fingerprint(current)
+        saved_overall = (rev_dir / "overall.md").read_text(encoding="utf-8")
+        source_ok = (not expected or expected == actual) and saved_overall == overall
+        if source_ok:
+            attachments = {}
+            for rel in plan.get("attachments") or []:
+                text, err = _read_attachment(root, rel)
+                if err:
+                    return {
+                        "ok": False, "wrote": True, "complete": False,
+                        "reason": err, "gate_required": False,
+                        "design_id": design_id, "revision": revision,
+                    }
                 attachments[_attachment_name(rel)] = text or ""
-        _fill_local_gaps(root, rev_dir, overall, modules, attachments)
+            _fill_local_gaps(root, rev_dir, overall, modules, attachments)
+            meta_path = rev_dir / "meta.md"
+            meta_text = meta_path.read_text(encoding="utf-8") if meta_path.is_file() else ""
+            if not _meta_field(meta_text, "形成时间"):
+                meta_path.parent.mkdir(parents=True, exist_ok=True)
+                meta_path.write_text(_render_meta(plan, formed_at=today()),
+                                     encoding="utf-8")
+        if not source_ok or not _revision_is_complete(rev_dir, plan):
+            return {
+                "ok": False, "wrote": True, "complete": False,
+                "reason": "生成期间来源改变,不能保存混合修订并宣称完整",
+                "design_id": design_id, "revision": revision,
+                "gate_required": False,
+            }
         _ensure_overall_index(root, config, plan, rev_dir)
         return {
             "ok": True, "wrote": True, "complete": True,
@@ -422,6 +454,19 @@ def _apply_local_snapshot(root: Path, config: dict, plan: dict, *,
         "release": plan.get("release"),
         "gate_required": False,
     }
+
+
+def _revision_is_complete(rev_dir: Path, plan: dict) -> bool:
+    overall = rev_dir / "overall.md"
+    meta = rev_dir / "meta.md"
+    if not overall.is_file() or not overall.read_text(encoding="utf-8").strip():
+        return False
+    if not meta.is_file() or not _meta_field(meta.read_text(encoding="utf-8"), "形成时间"):
+        return False
+    for rel in plan.get("attachments") or []:
+        if not (rev_dir / "attachments" / _attachment_name(rel)).is_file():
+            return False
+    return True
 
 
 def _fill_local_gaps(root: Path, rev_dir: Path, overall: str,
@@ -590,11 +635,28 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
             current = mgs_spec.read_current_design(
                 root, config_rel, transport=transport, api_base=api_base,
                 cache_dir=cache_dir)
+            expected = plan.get("source_sha256")
+            if expected and expected != _source_fingerprint(current):
+                return {
+                    "ok": False, "wrote": True, "complete": False,
+                    "reason": "生成期间来源改变,不能保存混合修订并宣称完整",
+                    "design_id": plan.get("design_id"),
+                    "revision": plan.get("revision"),
+                    "issue_number": number,
+                    "gate_required": False,
+                }
             attachments = {}
             for rel in plan.get("attachments") or []:
                 text, err = _read_attachment(root, rel)
-                if not err:
-                    attachments[_attachment_name(rel)] = text or ""
+                if err:
+                    return {
+                        "ok": False, "wrote": True, "complete": False,
+                        "reason": err, "gate_required": False,
+                        "design_id": plan.get("design_id"),
+                        "revision": plan.get("revision"),
+                        "issue_number": number,
+                    }
+                attachments[_attachment_name(rel)] = text or ""
             body = _render_github_body(
                 plan, current.get("overall") or "",
                 dict(current.get("modules") or {}), attachments,
@@ -751,8 +813,7 @@ def _ensure_github_index(backend, plan, snapshot_number) -> bool:
     overall = None
     for item in items:
         body = item.get("body") or ""
-        if (mgs_spec.SPEC_MARK in body
-                and mgs_spec._spec_identity(body) == mgs_spec.OVERALL_ID):
+        if mgs_spec._is_live_overall(body):
             overall = item
             break
     if overall is None:

@@ -29,6 +29,7 @@ from mgs_github_transport import TransportError, repo_path  # noqa: E402
 
 SPEC_MARK = "规格身份:"
 DISCUSSION_MARK = "讨论身份:"
+SNAPSHOT_MARK = "快照身份:"
 OVERALL_ID = "overall"
 DEFAULT_DESIGN_REL = "docs/mygamestudio/GAME_DESIGN.md"
 DISCUSSION_REL = "docs/mygamestudio/records/design-discussion.md"
@@ -46,6 +47,18 @@ PROFESSIONAL_MODULES = (
     "持久状态恢复",
     "商业化发行运营",
 )
+
+MODULE_IDENTITIES = {
+    "玩家体验": "player-experience",
+    "规则与数值": "rules",
+    "成长经济": "growth-economy",
+    "关卡内容叙事": "level-content",
+    "操作界面引导": "controls-ui",
+    "美术动画声音": "art-audio",
+    "技术设备性能": "tech-performance",
+    "持久状态恢复": "persistence",
+    "商业化发行运营": "live-ops",
+}
 
 MODULE_HINTS = {
     "玩家体验": ("体验", "手感", "反馈"),
@@ -90,6 +103,27 @@ def _spec_identity(body: str) -> str:
         return match.group(1)
     match = re.search(r"讨论身份\s*[:：]\s*([A-Za-z0-9_-]+)", body or "")
     return match.group(1) if match else ""
+
+
+def _archive_header(body: str) -> str:
+    text = body or ""
+    header = text.split("```", 1)[0]
+    return header.split("## 整体设计", 1)[0]
+
+
+def _is_archive_snapshot(body: str) -> bool:
+    header = _archive_header(body)
+    return SNAPSHOT_MARK in header or "种类:归档快照" in header
+
+
+def _is_live_spec(body: str) -> bool:
+    if _is_archive_snapshot(body):
+        return False
+    return SPEC_MARK in (body or "")
+
+
+def _is_live_overall(body: str) -> bool:
+    return _is_live_spec(body) and _spec_identity(body) == OVERALL_ID
 
 
 def _github(config: dict, *, transport=None, api_base: str | None = None,
@@ -163,7 +197,7 @@ def _read_github_design(backend) -> dict[str, Any]:
     for item in items:
         body = item.get("body") or ""
         identity = _spec_identity(body)
-        if SPEC_MARK in body and identity == OVERALL_ID:
+        if _is_live_overall(body):
             overall = body
             overall_number = item.get("number")
             history_bits = []
@@ -171,7 +205,7 @@ def _read_github_design(backend) -> dict[str, Any]:
             for comment in backend.transport.request("GET", comments_path)[1] or []:
                 history_bits.append(comment.get("body") or "")
             history = "\n\n".join(history_bits)
-        elif SPEC_MARK in body and identity and identity != OVERALL_ID:
+        elif _is_live_spec(body) and identity and identity != OVERALL_ID:
             modules[identity] = body
             module_numbers[identity] = item.get("number")
         elif DISCUSSION_MARK in body:
@@ -610,6 +644,28 @@ def _history_fields(plan: dict) -> dict[str, str]:
     }
 
 
+def _module_slug(name: str) -> str:
+    mapped = MODULE_IDENTITIES.get(name)
+    if mapped:
+        return mapped
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "-", str(name)).strip("-")
+    return slug or "module"
+
+
+def _module_slugs(modules: dict) -> tuple[dict[str, str], list[str]]:
+    assigned: dict[str, str] = {}
+    used: dict[str, str] = {}
+    collisions: list[str] = []
+    for name in modules:
+        slug = _module_slug(str(name))
+        if slug in used and used[slug] != name:
+            collisions.append(str(name))
+            continue
+        used[slug] = str(name)
+        assigned[str(name)] = slug
+    return assigned, collisions
+
+
 def _history_line(plan: dict, *, include_replaces: bool = False) -> str:
     fields = _history_fields(plan)
     parts = [f"{fields['version']}：来源 {fields['source']}"]
@@ -627,6 +683,13 @@ def _apply_local_spec(root: Path, config: dict, plan: dict, *,
     current = path.read_text(encoding="utf-8") if path.is_file() else ""
     history_line = _history_line(plan)
     adopted = plan.get("adopted") or {}
+    slugs, collisions = _module_slugs(plan.get("modules") or {})
+    if collisions:
+        return {
+            "ok": False, "wrote": False,
+            "reason": f"模块身份碰撞:{', '.join(collisions)}",
+            "gate_required": False,
+        }
     new_overall = _merge_overall(
         current, {"overall": plan.get("overall_update") or adopted.get("overall") or {}},
         history_line)
@@ -641,7 +704,7 @@ def _apply_local_spec(root: Path, config: dict, plan: dict, *,
         return {"ok": False, "reason": "现行规格回读失败"}
     module_paths = {}
     for name, body in (plan.get("modules") or {}).items():
-        slug = re.sub(r"[^A-Za-z0-9_-]+", "-", name).strip("-") or "module"
+        slug = slugs[str(name)]
         mpath = root / MODULE_DIR / f"{slug}.md"
         mpath.parent.mkdir(parents=True, exist_ok=True)
         content = body if isinstance(body, str) else _render_spec_body(
@@ -715,6 +778,13 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                       cache_dir=cache_dir)
     history_line = _history_line(plan)
     adopted = plan.get("adopted") or {}
+    slugs, collisions = _module_slugs(plan.get("modules") or {})
+    if collisions:
+        return {
+            "ok": False, "wrote": False,
+            "reason": f"模块身份碰撞:{', '.join(collisions)}",
+            "gate_required": False,
+        }
     current = ""
     overall_number = None
     try:
@@ -728,7 +798,7 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
         return draft
     for item in items:
         body = item.get("body") or ""
-        if SPEC_MARK in body and _spec_identity(body) == OVERALL_ID:
+        if _is_live_overall(body):
             current = body
             overall_number = item.get("number")
             break
@@ -770,7 +840,7 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                 {"body": comment})
         module_issues = {}
         for name, body in (plan.get("modules") or {}).items():
-            slug = re.sub(r"[^A-Za-z0-9_-]+", "-", name).strip("-") or "module"
+            slug = slugs[str(name)]
             content = body if isinstance(body, str) else _render_spec_body(
                 title=str(body.get("title") or name), identity=slug,
                 version=str(body.get("version") or "v1"),
@@ -781,7 +851,8 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
                 content = f"{SPEC_MARK}{slug}。种类:模块规格。\n\n" + content
             existing_mod = None
             for item in _list_github_items(backend):
-                if _spec_identity(item.get("body") or "") == slug:
+                item_body = item.get("body") or ""
+                if _is_live_spec(item_body) and _spec_identity(item_body) == slug:
                     existing_mod = item
                     break
             if existing_mod is None:
@@ -808,8 +879,7 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
         existing = None
         try:
             for item in _list_github_items(backend):
-                if SPEC_MARK in (item.get("body") or "") \
-                        and _spec_identity(item.get("body") or "") == OVERALL_ID:
+                if _is_live_overall(item.get("body") or ""):
                     existing = item
                     break
         except TransportError:

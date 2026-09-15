@@ -89,7 +89,7 @@
     },
     {
       "path": "internal/review/pending_review.py",
-      "sha256": "a9c8dc2490c72a29675915048d45b0923c45396f6235737b840286018b2483f9",
+      "sha256": "0aa983f9bc5adba92bdb6f46cd2014b2c9abef1e3730bec9179ef91fb110cc88",
       "source": "本项目自有内容(MIT); issue #55 完整待审成果",
       "license": "本项目自有内容(MIT)"
     },

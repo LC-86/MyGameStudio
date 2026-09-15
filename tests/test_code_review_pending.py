@@ -322,6 +322,53 @@ def test_binary_in_scope_is_captured_without_writing() -> None:
               "无关草稿仍须排除")
 
 
+def test_quoted_non_ascii_paths_are_captured() -> None:
+    """D7: Git 引用转义的中文路径必须进入同一份实际待交付成果。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, baseline = _mixed_repo(Path(tmp))
+        _write(repo, "原文件.md", "中文正文\n")
+        _write(repo, "other.md", "ascii body\n")
+        captured = _run_capture(
+            repo, baseline, include=["原文件.md", "other.md"])
+        if not captured:
+            return
+        check(captured.get("complete") is True, "指定范围内有改动时必须标为完整")
+        patch = captured.get("patch") or ""
+        paths = captured.get("path_versions") or {}
+        check("中文正文" in patch or any("原文件.md" in str(name) for name in paths),
+              "中文文件必须被纳入待审成果,不得因 Git 路径引号而漏审")
+        check("ascii body" in patch or "other.md" in paths,
+              "同时指定的 ascii 文件仍须覆盖")
+
+
+def test_rename_includes_old_and_new_paths() -> None:
+    """D7: 重命名必须同时覆盖原路径删除与新路径内容。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "renames"
+        repo.mkdir()
+        _git(repo, "init", "-b", "main")
+        _git(repo, "config", "user.email", "t8@example.test")
+        _git(repo, "config", "user.name", "T8 Fixture")
+        _write(repo, "ascii.md", "old name body\n")
+        _git(repo, "add", "ascii.md")
+        _git(repo, "commit", "-m", "baseline")
+        baseline = _head(repo)
+        _git(repo, "mv", "ascii.md", "renamed.md")
+        captured = _run_capture(repo, baseline, include=["ascii.md", "renamed.md"])
+        if not captured:
+            return
+        patch = captured.get("patch") or ""
+        deleted = [str(item).replace("\\", "/")
+                   for item in ((captured.get("paths") or {}).get("deleted") or [])]
+        check("old name body" in patch, "原路径删除内容必须进入待审补丁")
+        check("renamed.md" in patch or "renamed.md" in str(captured.get("path_versions") or {}),
+              "重命名后的新路径必须进入待审成果")
+        check("ascii.md" in deleted or "ascii.md" in patch,
+              f"原路径删除必须被收集,实际 deleted={deleted}")
+
+
 if __name__ == "__main__":
     TESTS = (
         test_mixed_git_states_cover_scope_keep_unrelated_and_stay_readonly,
@@ -329,6 +376,8 @@ if __name__ == "__main__":
         test_review_does_not_commit_to_obtain_an_identifier,
         test_content_change_during_review_invalidates_only_affected_scope,
         test_binary_in_scope_is_captured_without_writing,
+        test_quoted_non_ascii_paths_are_captured,
+        test_rename_includes_old_and_new_paths,
     )
     raise SystemExit(run_theme(
         "完整待审成果双轴评审(#55 T8)", TESTS, FAILURES))

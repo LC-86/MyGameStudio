@@ -583,6 +583,93 @@ def test_missing_license_keeps_current_version() -> None:
               "许可检查失败时必须保留当前有效版本")
 
 
+def test_changed_candidate_keeps_commit_authorization_adaptation() -> None:
+    """D8/D10: 候选变化时仍须保留并验证阶段资料节之前的提交授权适配。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
+        plugin = _write_current_plugin(Path(tmp) / "plugin")
+        original = _matt_original("implement")
+        adapted = (
+            original.rstrip()
+            + "\n\nIf commit authorization is present, commit your work to the "
+            "current branch. If it is not, leave the work uncommitted.\n\n"
+            "## MyGameStudio stage materials\n\n"
+            "When working in a MyGameStudio game project, read "
+            f"[stage requirements]({STAGE_POINTER}) for the current work stage "
+            "before applying this skill's method. Reading those materials does "
+            "not start production.\n\n"
+            "For a playable slice after the developer invoked to-tickets, use "
+            "the packaged seam `records/mgs_records.py`: "
+            "`plan_playable_delivery` / `apply_playable_delivery` / "
+            "`record_playable_result`.\n"
+        )
+        impl_path = plugin / "skills" / "implement" / "SKILL.md"
+        impl_path.write_text(adapted, encoding="utf-8")
+        data = json.loads((plugin / "provenance" / "fingerprints.json").read_text(
+            encoding="utf-8"))
+        for entry in data.get("files") or []:
+            if entry.get("path") == "skills/implement/SKILL.md":
+                entry["sha256"] = _sha_file(impl_path)
+                entry["original_sha256"] = _sha_text(original)
+        (plugin / "provenance" / "fingerprints.json").write_text(
+            json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        bodies = {name: _matt_original(name) for name in MATT_OFFICIAL}
+        bodies["implement"] = _matt_original("implement") + (
+            "Commit your work to the current branch.\n\n"
+            "## MyGameStudio stage materials\n\n"
+            "When working in a MyGameStudio game project, read "
+            f"[stage requirements]({STAGE_POINTER}) for the current work stage "
+            "before applying this skill's method. Reading those materials does "
+            "not start production.\n"
+        )
+        candidate = _write_candidate(Path(tmp) / "candidate", skills=bodies)
+        evaluation = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate,
+            candidate_version=PINNED_VERSION,
+            candidate_sha=PINNED_SHA,
+        )
+        check(evaluation.get("decision") == "adopt",
+              f"仍需适配的兼容候选应能通过评估,实际 {evaluation.get('decision')}"
+              f" reason={evaluation.get('retain_reason')}")
+        mgs_upstream_upgrade.apply_upstream_upgrade(
+            plugin, evaluation, confirmed=True)
+        text = (plugin / "skills" / "implement" / "SKILL.md").read_text(encoding="utf-8")
+        check("leave the work uncommitted" in text.lower(),
+              "候选变化后必须保留 implement 提交授权条件")
+        check(_stage_loadable(plugin, "implement"),
+              "提交授权适配之外仍须保留阶段资料指针")
+        check("If commit authorization is present" in text,
+              "不得把有条件提交恢复成无条件提交指令")
+        check("plan_playable_delivery" in text,
+              "候选变化后必须保留阶段资料节中的既有接缝适配")
+
+
+def test_rejected_official_skill_is_not_installed() -> None:
+    """D10: 集合新增经明确拒绝后不得进入有效目录。"""
+
+    with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
+        plugin = _write_current_plugin(Path(tmp) / "plugin")
+        extra = {
+            "skills/engineering/rejected-skill/SKILL.md": _matt_original("rejected-skill"),
+        }
+        candidate = _write_candidate(Path(tmp) / "candidate", extra_files=extra)
+        evaluation = mgs_upstream_upgrade.evaluate_upstream_upgrade(
+            plugin, candidate,
+            candidate_version=PINNED_VERSION,
+            candidate_sha=PINNED_SHA,
+            collection_decisions={"rejected-skill": "reject"},
+        )
+        check(evaluation.get("decision") == "adopt",
+              f"明确拒绝新增后其余兼容变更应能采用,实际 {evaluation.get('decision')}"
+              f" reason={evaluation.get('retain_reason')}")
+        mgs_upstream_upgrade.apply_upstream_upgrade(
+            plugin, evaluation, confirmed=True)
+        check(not (plugin / "skills" / "rejected-skill").exists(),
+              "被拒绝的候选技能不得进入有效技能目录")
+        check(_adopted_pin(plugin) == (PINNED_VERSION, PINNED_SHA),
+              "明确拒绝后其余通过项仍应切换到来源")
+
+
 TESTS = (
     test_unpinned_latest_is_not_adopted,
     test_evaluation_records_collection_invocation_refs_license_and_adaptations,
@@ -595,6 +682,8 @@ TESTS = (
     test_upgrade_stays_codex_only_and_is_not_a_service,
     test_live_package_keeps_the_fixed_upstream_pin,
     test_missing_license_keeps_current_version,
+    test_changed_candidate_keeps_commit_authorization_adaptation,
+    test_rejected_official_skill_is_not_installed,
 )
 
 

@@ -555,6 +555,44 @@ def test_interrupt_and_source_change_do_not_claim_complete_archive() -> None:
               "补缺不得覆盖已有修订正文")
 
 
+def test_interrupted_snapshot_does_not_mix_source_revisions() -> None:
+    """D6: 中断恢复不得用当前模块补旧整体,也不得在缺形成时间时宣称完整。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "star-catcher")
+        plan = mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.1.0",
+            "source": "正式版本设计确定",
+            "attachments": ["docs/mygamestudio/design/loop-chart.md"],
+        })
+        design_id = plan.get("design_id") or "ds-1"
+        revision = plan.get("revision") or "r1"
+        rev_dir = root / "docs/mygamestudio/records/design-snapshots" / design_id / revision
+        rev_dir.mkdir(parents=True, exist_ok=True)
+        (rev_dir / "overall.md").write_text(
+            mgs_records.read_current_design(root).get("overall") or "",
+            encoding="utf-8")
+        (root / "docs/mygamestudio/design/rules.md").write_text(
+            MODULE_RULES.replace("1 分", "99 分"),
+            encoding="utf-8")
+        resumed = mgs_records.apply_design_snapshot(root, plan, confirmed=True)
+        check(resumed.get("complete") is not True,
+              "中断恢复不得把旧整体与新模块拼成完整快照")
+        check(resumed.get("ok") is not True,
+              "混合修订不得报告成功")
+        listed = mgs_records.read_design_snapshots(root)
+        snaps = [item for item in (listed.get("snapshots") or [])
+                 if item.get("design_id") == design_id]
+        if snaps:
+            overall = snaps[0].get("overall") or ""
+            modules = "\n".join((snaps[0].get("modules") or {}).values())
+            mixed = "1 分" in overall and "99 分" in modules
+            check(not mixed, "归档不得同时含旧整体 1 分和新模块 99 分")
+            check(snaps[0].get("formed_at"),
+                  "宣称完整前必须有形成时间") if resumed.get("complete") else None
+
+
 if __name__ == "__main__":
     TESTS = (
         test_version_freeze_archives_full_content_daily_does_not,
@@ -562,6 +600,7 @@ if __name__ == "__main__":
         test_current_design_change_keeps_old_snapshot_correction_is_new_revision,
         test_github_archive_issue_holds_full_content_not_a_live_link,
         test_interrupt_and_source_change_do_not_claim_complete_archive,
+        test_interrupted_snapshot_does_not_mix_source_revisions,
     )
     raise SystemExit(run_theme(
         "正式版本设计快照(#54 T6/T7)", TESTS, FAILURES))

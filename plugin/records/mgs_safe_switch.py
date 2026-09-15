@@ -371,6 +371,53 @@ def _user_edit_block(text: str) -> str:
     return marker + (text or "").split(marker, 1)[1]
 
 
+def _without_user_edit_block(text: str) -> str:
+    marker = "## 用户修改"
+    if marker not in (text or ""):
+        return (text or "").rstrip()
+    return (text or "").split(marker, 1)[0].rstrip()
+
+
+def _skill_file_rels(skill_dir: Path) -> set[str]:
+    rels: set[str] = set()
+    if not skill_dir.is_dir():
+        return rels
+    for path in skill_dir.rglob("*"):
+        if path.is_file():
+            rels.add(str(path.relative_to(skill_dir)).replace("\\", "/"))
+    return rels
+
+
+def _additive_user_skill_text(user_text: str, pkg_text: str) -> str | None:
+    """Return extra user SKILL.md text that can be appended, or None if unsafe."""
+
+    user_core = _without_user_edit_block(user_text)
+    pkg_core = (pkg_text or "").rstrip()
+    extra_parts: list[str] = []
+    if user_core == pkg_core:
+        pass
+    elif pkg_core and pkg_core in user_core:
+        extra = user_core.replace(pkg_core, "", 1).strip()
+        if extra:
+            extra_parts.append(extra)
+    else:
+        return None
+    block = _user_edit_block(user_text)
+    if block:
+        extra_parts.append(block)
+    return "\n\n".join(extra_parts)
+
+
+def _restore_extra_skill_files(src_dir: Path, dest_dir: Path,
+                               extra_rels: set[str]) -> None:
+    for rel in extra_rels:
+        src = src_dir / rel
+        dest = dest_dir / rel
+        if src.is_file():
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dest)
+
+
 def _ensure_stage_pointer(text: str) -> str:
     pointer = "../../internal/game/stage-requirements.md"
     if "stage-requirements.md" in (text or ""):
@@ -433,7 +480,9 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
         pkg_text = _read(pkg_dir / "SKILL.md")
         if user_dir is not None:
             user_text = _read(user_dir / "SKILL.md")
-            if _meaning_conflict(user_text, pkg_text):
+            extra_rels = _skill_file_rels(user_dir) - _skill_file_rels(pkg_dir)
+            extra_text = _additive_user_skill_text(user_text, pkg_text)
+            if _meaning_conflict(user_text, pkg_text) or extra_text is None:
                 _write(user_dir / "SKILL.md", _ensure_stage_pointer(user_text))
                 paused.append(name)
                 decisions.append(name)
@@ -444,10 +493,10 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
                 shutil.copytree(user_dir, hist)
             shutil.rmtree(user_dir)
             shutil.copytree(pkg_dir, user_dir)
-            extra = _user_edit_block(user_text)
             installed = _read(user_dir / "SKILL.md")
-            if extra and extra not in installed:
-                _write(user_dir / "SKILL.md", installed.rstrip() + "\n\n" + extra)
+            if extra_text and extra_text not in installed:
+                _write(user_dir / "SKILL.md", installed.rstrip() + "\n\n" + extra_text)
+            _restore_extra_skill_files(hist, user_dir, extra_rels)
         else:
             shutil.copytree(pkg_dir, current / name)
     _copy_stage_index(home, package)
@@ -730,6 +779,40 @@ def _known_task_ids(correspondence: dict) -> set[str]:
             if row.get("identity")}
 
 
+def _copy_preserved(src: Path, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_dir():
+        if dest.exists():
+            return
+        shutil.copytree(src, dest)
+        return
+    if src.is_file():
+        shutil.copy2(src, dest)
+
+
+def _preserve_overwritten_live_files(root: Path, preserve_root: Path) -> list[str]:
+    """Keep current bytes of every live file history restore would replace."""
+
+    history = root / HISTORY_REL
+    live_docs = root / "docs" / "mygamestudio"
+    preserved: list[str] = []
+    if not history.is_dir() or not live_docs.is_dir():
+        return preserved
+    for src in history.rglob("*"):
+        if not src.is_file():
+            continue
+        live = live_docs / src.relative_to(history)
+        if not live.is_file():
+            continue
+        if live.read_bytes() == src.read_bytes():
+            continue
+        rel = str(live.relative_to(live_docs)).replace("\\", "/")
+        dest = preserve_root / rel
+        _copy_preserved(live, dest)
+        preserved.append(rel)
+    return preserved
+
+
 def _preserve_new_additions(root: Path, correspondence: dict) -> list[str]:
     import mgs_records  # noqa: PLC0415
 
@@ -748,17 +831,18 @@ def _preserve_new_additions(root: Path, correspondence: dict) -> list[str]:
         src = work / identity
         dest = preserve_root / identity
         if src.is_dir() and not dest.exists():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(src, dest)
+            _copy_preserved(src, dest)
             preserved.append(identity)
         elif identity not in preserved:
             preserved.append(identity)
     live_design = root / "docs/mygamestudio/GAME_DESIGN.md"
     if live_design.is_file() and "规格身份:overall" in _read(live_design):
         dest = preserve_root / "GAME_DESIGN.md"
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(live_design, dest)
+        _copy_preserved(live_design, dest)
         preserved.append("GAME_DESIGN.md")
+    for rel in _preserve_overwritten_live_files(root, preserve_root):
+        if rel not in preserved:
+            preserved.append(rel)
     return preserved
 
 
