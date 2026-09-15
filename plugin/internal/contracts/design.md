@@ -7,9 +7,9 @@
 ## Game-Design
 
 - 输入:本轮问题、当前产品要求、相关反馈、资源与投入约束。
-- 工作:围绕当前问题讨论方案。局部需求复用 grill-with-docs(包内方法:`internal/methods/grill-with-docs/SKILL.md`);多项未决问题按需要复用 wayfinder(包内方法:`internal/methods/wayfinder/SKILL.md`);外部事实由研究能力调查。玩法、系统、数值、关卡、叙事、交互、视听方向及市场运营方案按实际任务选分支。
+- 工作:处理玩法、数值和体验讨论。局部问题复用公开技能 `grilling` 与 `domain-modeling`。大型不清晰路线提示开发者调用 `wayfinder`，不自动串调。读取[阶段资料入口](../game/stage-requirements.md)不是开始制作。
 - 输出:候选方案、取舍、需要验证的问题与用户已作出的决定。
-- 写入:本轮设计过程和决定记录;明确采纳的内容通过 Game-Spec 或等效的明确文档步骤同步基线。
+- 写入:本轮设计过程和决定记录;明确采纳的内容通过 `to-spec` 同步基线。
 - 完成:本轮问题得到决定或形成明确验证工作,剩余问题有去向;助手建议不冒充用户决定。
 
 ## Game-Spec
@@ -32,4 +32,4 @@
 
 ## 包内说明
 
-当前包已实现的入口:Game-Prototype 完整入口(任务票 02 建立最小入口,任务票 07 升级为完整原型工作流:确认问题/范围/方法/输出位置、最小可检验实现、会话工作区运行观察、四类结论区分与 Game-Spec/Game-Implement 交接,隔离原型区受控写入);Game-Design 最小入口(任务票 06,质询与决策地图两分支,内部方法 grill-with-docs/grilling/domain-modeling/wayfinder/research 已随包按需读取);Game-Spec 最小入口(任务票 06,把采纳决定整理为可执行规格并同步产品设计基线,含版本与采纳依据纪律、格式修正不触发新版本、目标或范围变化输出统筹同步交接)。实际写入一律经运行保障通道,见[受控写入协议](../protocols/gate-protocol.md)。
+当前包的有效设计入口是 Game-Design。`to-spec` / `prototype` 为 Matt 公开技能,不再作为游戏侧独立入口。Game-Design 的后续保存、成稿与变更流程由对应实施票扩充。普通工作不经 mgs-gate。

@@ -17,12 +17,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-from plugin_package_support import PLUGIN_ROOT, make_checker, run_theme
+from plugin_package_support import PLUGIN_ROOT, REPO_ROOT, make_checker, run_theme
 from runtime_gate_support import GateService
 
 FAILURES, check = make_checker()
 
 SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
+LEGACY_DESIGN_ENTRY = REPO_ROOT / "legacy" / "game-design-discussion-entry.md"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
@@ -856,7 +857,7 @@ def test_cli_runs_through_real_gate_channel() -> None:
 def test_game_design_entry_points_to_change_seam() -> None:
     """Game-Design 入口说明变更接缝与纪律,不改公共入口集合。"""
 
-    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    text = LEGACY_DESIGN_ENTRY.read_text(encoding="utf-8")
     for needle in ("change_flow.py", "change_impact.py", "change_input.py",
                    "change_render.py", "change_report.py",
                    "change_flow_cli.py"):

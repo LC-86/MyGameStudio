@@ -22,12 +22,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-from plugin_package_support import PLUGIN_ROOT, make_checker, run_theme
+from plugin_package_support import PLUGIN_ROOT, REPO_ROOT, make_checker, run_theme
 from runtime_gate_support import GateService
 
 FAILURES, check = make_checker()
 
 SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
+LEGACY_DESIGN_ENTRY = REPO_ROOT / "legacy" / "game-design-discussion-entry.md"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
@@ -976,7 +977,7 @@ def test_measure_counts_actual_events() -> None:
 def test_game_design_entry_points_to_checks_seam() -> None:
     """Game-Design 入口说明检查时机与复用接缝,不新增公共入口。"""
 
-    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    text = LEGACY_DESIGN_ENTRY.read_text(encoding="utf-8")
     for needle in ("checks.py", "begin", "plan_reads", "before_save",
                    "after_save", "converge", "invalidate"):
         check(needle in text, f"入口应指向 {needle}")

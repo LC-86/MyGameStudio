@@ -25,16 +25,20 @@ def test_internal_material_provenance() -> None:
     """internal/ 与 templates/ 的适配材料必须与 fingerprints.json 一一对应。"""
 
     fingerprints = load_fingerprints()
-    adapted_roots = (PLUGIN_ROOT / "internal", PLUGIN_ROOT / "templates")
+    tracked_roots = (
+        PLUGIN_ROOT / "internal",
+        PLUGIN_ROOT / "templates",
+        PLUGIN_ROOT / "skills",
+    )
     adapted_files = sorted(
         str(path.relative_to(PLUGIN_ROOT))
-        for root in adapted_roots
+        for root in tracked_roots
         for path in root.rglob("*")
-        if path.is_file()
+        if path.is_file() and "__pycache__" not in path.parts and path.name != ".DS_Store"
     )
     check(
         set(adapted_files) == set(fingerprints),
-        "internal/ + templates/ 的文件与 provenance/fingerprints.json 记录不一致:"
+        "internal/ + templates/ + skills/ 的文件与 provenance/fingerprints.json 记录不一致:"
         f"\n  仅在目录中: {sorted(set(adapted_files) - set(fingerprints))}"
         f"\n  仅在记录中: {sorted(set(fingerprints) - set(adapted_files))}",
     )

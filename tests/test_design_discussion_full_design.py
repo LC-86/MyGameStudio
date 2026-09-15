@@ -17,12 +17,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-from plugin_package_support import PLUGIN_ROOT, make_checker, run_theme
+from plugin_package_support import PLUGIN_ROOT, REPO_ROOT, make_checker, run_theme
 from runtime_gate_support import GateService
 
 FAILURES, check = make_checker()
 
 SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
+LEGACY_DESIGN_ENTRY = REPO_ROOT / "legacy" / "game-design-discussion-entry.md"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
@@ -1012,7 +1013,7 @@ def test_cli_smoke_full_design_entry() -> None:
 def test_skill_entry_documents_full_design_flow() -> None:
     """Game-Design 入口须说明成稿流程与接缝。"""
 
-    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    text = LEGACY_DESIGN_ENTRY.read_text(encoding="utf-8")
     for needle in ("coverage_map.py", "journey.py", "full_design.py",
                    "full_design_cli.py", "十二", "覆盖地图", "完整愿景",
                    "当前成稿版本", "后续方向", "范围外", "四类交付",

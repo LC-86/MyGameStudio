@@ -17,12 +17,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-from plugin_package_support import PLUGIN_ROOT, make_checker, run_theme
+from plugin_package_support import PLUGIN_ROOT, REPO_ROOT, make_checker, run_theme
 from runtime_gate_support import GateService, mcp_gate
 
 FAILURES, check = make_checker()
 
 SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
+LEGACY_DESIGN_ENTRY = REPO_ROOT / "legacy" / "game-design-discussion-entry.md"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
@@ -809,7 +810,7 @@ def test_cli_smoke_and_entry_points_to_seam() -> None:
         check((project / RECORD_REL).read_text(encoding="utf-8")
               == revised_record, "被拒写入不得改动实际记录")
 
-    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    text = LEGACY_DESIGN_ENTRY.read_text(encoding="utf-8")
     for needle in ("decisions.py", "decision_records.py", "decisions_cli.py",
                    "plan_save", "apply_save", "plan_sync",
                    "restore_from_records", "回读", "待同步", "未保存"):

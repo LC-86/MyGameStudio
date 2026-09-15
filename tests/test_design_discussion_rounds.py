@@ -19,6 +19,7 @@ from plugin_package_support import PLUGIN_ROOT, REPO_ROOT, make_checker, run_the
 FAILURES, check = make_checker()
 
 SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
+LEGACY_DESIGN_ENTRY = REPO_ROOT / "legacy" / "game-design-discussion-entry.md"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
@@ -556,7 +557,7 @@ def test_authorized_local_tweak_skips_questions() -> None:
 def test_game_design_entry_points_to_rounds_seam() -> None:
     """现有高层入口须指向 rounds 接缝;仅 Skill 含关键词不能代替交互核对。"""
 
-    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    text = LEGACY_DESIGN_ENTRY.read_text(encoding="utf-8")
     check("rounds.py" in text, "Game-Design 入口须指向 rounds.py")
     check("run_round" in text, "Game-Design 入口须使用 run_round")
     check("inspect_reply" in text, "Game-Design 入口须用 inspect_reply 核对可见回复")

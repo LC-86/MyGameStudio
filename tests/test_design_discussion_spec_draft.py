@@ -17,12 +17,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-from plugin_package_support import PLUGIN_ROOT, make_checker, run_theme
+from plugin_package_support import PLUGIN_ROOT, REPO_ROOT, make_checker, run_theme
 from runtime_gate_support import GateService
 
 FAILURES, check = make_checker()
 
 SKILL_DIR = PLUGIN_ROOT / "skills" / "game-design"
+LEGACY_DESIGN_ENTRY = REPO_ROOT / "legacy" / "game-design-discussion-entry.md"
+LEGACY_SPEC_ENTRY = REPO_ROOT / "legacy" / "plugin-skills" / "game-spec" / "SKILL.md"
 if str(SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(SKILL_DIR))
 
@@ -892,13 +894,12 @@ def test_cli_smoke_handoff_entry() -> None:
         check(read(DESIGN_REL) == before_design,
               "被拒后基线不得出现半写状态")
 
-    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    text = LEGACY_DESIGN_ENTRY.read_text(encoding="utf-8")
     for needle in ("spec_draft.py", "spec_draft_cli.py", "plan_handoff",
                    "apply_handoff", "九类", "Game-Spec", "统筹同步交接",
                    "未完成", "候选试验值", "不自动启动制作", "回读"):
         check(needle in text, f"Game-Design 入口须说明 {needle}")
-    spec_skill = (PLUGIN_ROOT / "skills" / "game-spec" / "SKILL.md").read_text(
-        encoding="utf-8")
+    spec_skill = LEGACY_SPEC_ENTRY.read_text(encoding="utf-8")
     for needle in ("模块规格", "版本", "指纹", "格式修正", "统筹同步交接"):
         check(needle in spec_skill, f"Game-Spec 入口须覆盖 {needle}")
 
