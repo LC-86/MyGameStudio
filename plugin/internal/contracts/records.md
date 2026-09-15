@@ -25,7 +25,7 @@
 
 现行规格正文保存当前有效规则,不与任务进度混写。本地 Markdown 以整体设计文件及追加历史为规格来源;GitHub Issues 以规格 Issue 正文及评论为规格来源。讨论记录、试验值与未发布草稿不是现行规格。正式版本设计快照是归档,经 `mgs_records.plan_design_snapshot` / `apply_design_snapshot` / `read_design_snapshots` 另存完整内容;整体设计入口提供版本索引。历史快照不参与现行内容同步,也不进入任务列表。
 
-本地 Markdown 旧项目的完整资料迁移公开接缝是 `mgs_records.plan_local_material_migration` / `apply_local_material_migration` / `read_local_material_migration`。转换覆盖现行与历史规格、决定、全部任务、结果与证据索引,保留旧原件与身份对应;成果先处于待切换,旧资料仍为现行来源。只创建任务或附旧链接不算完整。gate 历史留存且不是新版权限。GitHub 旧项目不走本入口。普通工作不经 mgs-gate。
+本地 Markdown 旧项目的完整资料迁移公开接缝是 `mgs_records.plan_local_material_migration` / `apply_local_material_migration` / `read_local_material_migration`。GitHub 旧项目的完整资料迁移公开接缝是 `mgs_records.plan_github_material_migration` / `apply_github_material_migration` / `read_github_material_migration`。转换覆盖现行与历史规格、决定、全部任务、结果与证据索引,保留旧原件与身份对应;GitHub 目标恢复原生父子和阻塞关系。成果先处于待切换,旧资料仍为现行来源。只创建任务或附旧链接不算完整。gate 历史留存且不是新版权限。每项目只走所选 tracker 的入口。普通工作不经 mgs-gate。
 
 ## 本地 Markdown 后端
 

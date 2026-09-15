@@ -3,7 +3,7 @@
 
 把获准范围内的规格、决定、任务、结果和证据索引转换成可核对的新版成果。
 旧原件保留;转换成果写入待切换树,不切换现行指针。普通路径不经 mgs-gate。
-GitHub 旧项目不在本入口(见后续票)。
+GitHub 旧项目不在本入口(见 plan_github_material_migration)。
 
 公开 interface(经 mgs_records 再导出):
   plan_local_material_migration(project_root, ...) -> dict
@@ -35,7 +35,7 @@ IDENTITY_NAME = "identity-map.json"
 GATE_HISTORY_REL = "docs/mygamestudio/records/gate-history.md"
 HISTORY_REL = "docs/mygamestudio/records/spec-history.md"
 SNAPSHOT_DIR = "docs/mygamestudio/records/design-snapshots"
-GITHUB_HINT = "GitHub 旧项目完整资料迁移不在本入口,见后续票"
+GITHUB_HINT = "GitHub 旧项目完整资料迁移不在本入口,见 plan_github_material_migration"
 
 
 def _sha_file(path: Path) -> str:

@@ -3,7 +3,7 @@
 票 17 增加对 github-issues 后端的分发与写操作 CLI;issue #51 补齐本地写入、
 接入与只读状态查询;issue #52 补齐 GitHub 接入与原生关系;issue #53 补齐
 设计讨论与现行规格维护,issue #54 补齐正式版本设计快照归档,issue #56 补齐
-可玩任务拆分与资源交付,issue #57 补齐本地旧项目完整资料迁移,普通本地工作不经 mgs-gate)。
+可玩任务拆分与资源交付,issue #57 补齐本地旧项目完整资料迁移,issue #58 补齐 GitHub 旧项目完整资料迁移,普通本地工作不经 mgs-gate)。
 
 对应设计《工作记录合同》「后端接口」一节:读取配置、列出任务、读取任务与结果、
 回读核验(票 04);关系解析与循环检测、当前可开工集合(票 08);核心基线内容
@@ -1120,6 +1120,47 @@ def read_local_material_migration(project_root: Path | str) -> dict:
     import mgs_local_migration  # noqa: PLC0415
 
     return mgs_local_migration.read_local_material_migration(project_root)
+
+
+# ---------- GitHub 旧项目完整资料迁移(issue #58) ----------
+
+def plan_github_material_migration(project_root: Path | str, *,
+                                   scope: dict | None = None,
+                                   transport=None, api_base: str | None = None,
+                                   cache_dir: Path | str | None = None) -> dict:
+    """只读整理 GitHub 旧资料转换清单。不写入,不切换现行来源。"""
+
+    import mgs_github_material_migration  # noqa: PLC0415
+
+    return mgs_github_material_migration.plan_github_material_migration(
+        project_root, scope=scope, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def apply_github_material_migration(project_root: Path | str,
+                                    plan: dict | None = None, *,
+                                    confirmed: bool = False,
+                                    transport=None, api_base: str | None = None,
+                                    cache_dir: Path | str | None = None) -> dict:
+    """转换成待切换 GitHub 成果。未确认不写;冲突只暂停相关步骤;回读后只补缺项。"""
+
+    import mgs_github_material_migration  # noqa: PLC0415
+
+    return mgs_github_material_migration.apply_github_material_migration(
+        project_root, plan, confirmed=confirmed, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def read_github_material_migration(project_root: Path | str, *,
+                                   transport=None, api_base: str | None = None,
+                                   cache_dir: Path | str | None = None) -> dict:
+    """回读待切换 GitHub 迁移成果与新旧对应。只建任务或附旧链接不算完整。"""
+
+    import mgs_github_material_migration  # noqa: PLC0415
+
+    return mgs_github_material_migration.read_github_material_migration(
+        project_root, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------

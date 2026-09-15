@@ -33,6 +33,14 @@ import mgs_record_source  # noqa: E402
 from mgs_record_model import CANONICAL_LABELS, RecordsError, today  # noqa: E402
 from mgs_github_transport import GithubRecordsError  # noqa: E402
 
+PENDING_SWITCH_MARK = "迁移状态:pending-switch"
+
+
+def is_pending_switch(body: str) -> bool:
+    """待切换迁移成果:现行读取应跳过,不能充当当前来源。"""
+
+    return PENDING_SWITCH_MARK in (body or "")
+
 
 def authorization_for(config: dict, op: str) -> tuple[bool, str]:
     """核对本项目 CONFIG 是否对目标仓库授权了 op(issues-write)。
