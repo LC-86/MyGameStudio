@@ -7,7 +7,7 @@ python3 -m compileall -q plugin tests
 for t in tests/test_*.py; do python3 -B "$t"; done
 ```
 
-覆盖:正式 25 项加三个游戏入口、包结构与指纹、记录/草稿/回读、无 gate 配置的普通路径、dist 三方一致。旧 mgs-gate 确定性检查已移出有效套件,历史材料在仓库 `legacy/`。下列 0.18.0 验收步骤只作历史复现,不作为新版有效能力证明,也不启停既有长期服务。
+覆盖:正式 25 项加三个游戏入口、包结构与指纹、记录/草稿/回读、无 gate 配置的普通路径、dist 三方一致。issue #62 本地技术证据见 `dist/issue-62-technical-evidence.json` 与 `dist/issue-62-handover.md`。旧 mgs-gate 确定性检查已移出有效套件,历史材料在仓库 `legacy/`。下列 0.18.0 验收步骤只作历史复现,不作为新版有效能力证明,也不启停既有长期服务。发布、真实安装与新会话核验仍等待额外授权。
 
 ## 0.18.0 历史验收复现
 

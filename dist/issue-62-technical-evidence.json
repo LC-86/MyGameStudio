@@ -1,0 +1,205 @@
+{
+  "ok": true,
+  "package": {
+    "name": "mygamestudio",
+    "version": "2.0.0",
+    "tarball": "mygamestudio-2.0.0.tar.gz",
+    "sha256": "b9d39cf213f0ed245e90ae7b238733ce522714555bf1fbf56261acac6c7515ed"
+  },
+  "upstream": {
+    "name": "mattpocock/skills",
+    "version": "1.2.3",
+    "sha": "3cca18b368ae95cdbdebbff572ccafa662551015",
+    "license": "MIT",
+    "decision": "retain",
+    "new_candidate_authorized": false,
+    "retain_reason": "no-new-candidate-authorized"
+  },
+  "environment": {
+    "system": "macOS 26.5.1 arm64",
+    "python": "3.14.4",
+    "check_client": "local-python-tests",
+    "codex_client": "codex-cli 0.154.0",
+    "codex_client_note": "host CLI present; install-state and new-session verification not executed",
+    "package_version": "2.0.0"
+  },
+  "package_consistency": {
+    "passed": true,
+    "tarball": "mygamestudio-2.0.0.tar.gz",
+    "tarball_sha256": "b9d39cf213f0ed245e90ae7b238733ce522714555bf1fbf56261acac6c7515ed",
+    "missing": [],
+    "mismatches": []
+  },
+  "provenance": {
+    "passed": true
+  },
+  "discovery": {
+    "public_skills": [
+      "ask-matt",
+      "code-review",
+      "codebase-design",
+      "diagnosing-bugs",
+      "domain-modeling",
+      "game-design",
+      "game-init",
+      "game-producer",
+      "grill-me",
+      "grill-with-docs",
+      "grilling",
+      "handoff",
+      "implement",
+      "improve-codebase-architecture",
+      "prototype",
+      "research",
+      "resolving-merge-conflicts",
+      "setup-matt-pocock-skills",
+      "tdd",
+      "teach",
+      "to-questionnaire",
+      "to-spec",
+      "to-tickets",
+      "triage",
+      "wait-what",
+      "wayfinder",
+      "wizard",
+      "writing-for-agents"
+    ],
+    "unique_names": true,
+    "user_only_not_auto_invoked": true,
+    "local_package_surface": "passed",
+    "install_session": "not-executed"
+  },
+  "pending_review": {
+    "present": true,
+    "complete": true,
+    "committed_only_complete": false,
+    "created_commit": false,
+    "excluded_unrelated": true,
+    "axes_share_content_version": true,
+    "content_version": "2e5c1917832e124fc00991fb1439e19dd3d75dd89833a8dfd6c472f4b74bf55e",
+    "baseline": "a3a44783e5d34ef7644a5fa50c4bf10dac4673aa",
+    "gate_required": false
+  },
+  "technical_behaviors": [
+    {
+      "check": "T1",
+      "status": "passed",
+      "scope": "local-package"
+    },
+    {
+      "check": "T2",
+      "status": "local-passed",
+      "install_session": "not-executed"
+    },
+    {
+      "check": "T3",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 53
+    },
+    {
+      "check": "T4",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 51
+    },
+    {
+      "check": "T5",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 53
+    },
+    {
+      "check": "T6",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 54
+    },
+    {
+      "check": "T7",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 54
+    },
+    {
+      "check": "T8",
+      "status": "passed"
+    },
+    {
+      "check": "T9",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 56
+    },
+    {
+      "check": "T10",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 61
+    },
+    {
+      "check": "T11",
+      "status": "contract-evidenced",
+      "live_migration": "not-executed"
+    },
+    {
+      "check": "T12",
+      "status": "contract-evidenced",
+      "live_switch": "not-executed"
+    },
+    {
+      "check": "T13",
+      "status": "evidenced-by-prior-ticket",
+      "ticket": 60
+    },
+    {
+      "check": "T14",
+      "status": "local-recorded",
+      "install_session": "not-executed"
+    }
+  ],
+  "acceptance": {
+    "technical_behavior_evidence": "passed",
+    "standards_spec_pending_review": "passed",
+    "package_consistency": "passed",
+    "versions_recorded": "passed",
+    "publish": "not-executed",
+    "install-real-codex": "not-executed",
+    "new-session-verification": "not-executed",
+    "live-migration": "not-executed",
+    "live-switch": "not-executed",
+    "plugin-experience-signoff": "not-scheduled",
+    "efficiency-comparison": "not-scheduled"
+  },
+  "not_executed": [
+    {
+      "item": "publish",
+      "status": "not-executed",
+      "reason": "按既有有效授权发布（git push、PR、正式版本标签、插件发布）"
+    },
+    {
+      "item": "install-real-codex",
+      "status": "not-executed",
+      "reason": "安装到真实 Codex / 用户日常技能目录"
+    },
+    {
+      "item": "new-session-verification",
+      "status": "not-executed",
+      "reason": "安装后用新会话核验发现、同名来源、调用与资料加载"
+    },
+    {
+      "item": "live-migration",
+      "status": "not-executed",
+      "reason": "真实个人项目迁移"
+    },
+    {
+      "item": "live-switch",
+      "status": "not-executed",
+      "reason": "用户环境切换 / 真实技能来源切换"
+    },
+    {
+      "item": "plugin-experience-signoff",
+      "status": "not-scheduled",
+      "reason": "插件体验签收"
+    },
+    {
+      "item": "efficiency-comparison",
+      "status": "not-scheduled",
+      "reason": "效率对照"
+    }
+  ],
+  "false_pass": []
+}

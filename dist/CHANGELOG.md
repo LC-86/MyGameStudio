@@ -1,18 +1,19 @@
 # MyGameStudio 安装包变更说明(dist/)
 
-本目录当前提供 **2.0.0** 候选组合包（issue #50/#61）。1.0.0 / 0.18.x 安装包保留为历史文件。
+本目录当前提供 **2.0.0** 候选组合包（issue #50–#62 本地技术检查）。1.0.0 / 0.18.x 安装包保留为历史文件。
 安装包、逐文件清单与校验和由
 `dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致,经
 `dist/verify-reproducible.sh` 干净副本隔离重建验证);
 `tests/test_plugin_package.py` 持续核对清单、校验和与源码三方一致。
 
-## 2.0.0（2026-09-15，issue #50/#61 候选包）
+## 2.0.0（2026-09-15，issue #50–#62 候选包）
 
-- 固定上游 Matt Pocock skills **1.2.3**（提交 `3cca18b368ae95cdbdebbff572ccafa662551015`）。
+- 固定上游 Matt Pocock skills **1.2.3**（提交 `3cca18b368ae95cdbdebbff572ccafa662551015`）。issue #60/#62 按升级流程确认当前采用该钉住版本；本会话无新候选，决定 retain。
 - 公开集合：正式 25 项加 Game-Producer、Game-Init、Game-Design。
 - 保留 MIT 许可、原始与分发校验值、适配记录；`implement` 无授权不提交；阶段资料指针可读且不启动制作。
 - 插件清单不注册 mgs-gate。issue #61 已将旧 runtime、强制通道和已退役入口移出安装包；去向见包内 `internal/game/retired-entries.md`。
-- 不安装到用户日常技能目录。真实 Codex 安装与发版由后续票处理。
+- issue #62 汇总本地技术证据：`dist/issue-62-technical-evidence.json` 与交接 `dist/issue-62-handover.md`。
+- 本会话未发布、未打正式版本标签、未安装到真实 Codex / 用户日常技能目录。这些项等待额外授权，不标通过。
 
 ## 1.0.0（2026-09-15）
 
@@ -29,38 +30,32 @@
 | `mygamestudio-2.0.0.tar.gz` | 当前候选安装包(plugin/ 全量) |
 | `package-manifest.txt` | 包内逐文件 SHA-256 清单 |
 | `SHA256SUMS.txt` | 上两项的校验和 |
+| `issue-62-technical-evidence.json` | issue #62 本地技术证据（含未执行项） |
+| `issue-62-handover.md` | 发布/安装/新会话核验交接 |
 | `CHANGELOG.md` | 本文件:版本历史与当前变更说明 |
-| `ACCEPTANCE-RESULTS.md` | 0.18.0 历史验收结果；当前发布决定见本轮收尾记录 |
+| `ACCEPTANCE-RESULTS.md` | 0.18.0 历史验收结果；不作为 2.0.0 已安装证明 |
 | `REPRODUCE.md` | 确定性检查与历史专项验收复现步骤 |
 | `build-package.sh` | 可复现构建脚本 |
 | `verify-reproducible.sh` | 字节可复现性验证(干净副本隔离重建+逐字节比对;审查修复票 03) |
 
-## 安装(供后续用户决定后执行;本票未自动安装)
+## 安装(等待额外授权;本会话未执行)
 
-历史实测宿主为 codex CLI 0.151.0。0.18.1 未重跑隔离宿主验收，用户选择进入正常使用并通过反馈处理问题。
+当前候选包宿主记录见 `issue-62-technical-evidence.json`。本会话只做本地技术检查，未执行真实安装或新会话核验。历史 0.18.x 隔离验收不证明 2.0.0 已安装。
+
+后续获授权后建议步骤（尚未执行，不得标通过）：
 
 ```bash
 # 1) 解包审阅(内容与仓库 plugin/ 逐字节一致,可先核对校验和)
 cd dist && shasum -a 256 -c SHA256SUMS.txt
-tar -xzf mygamestudio-1.0.0.tar.gz
-
-# 2) 以本地 marketplace 方式接入(与验收所用方式一致):
-#    把解包出的 plugin/ 放到自选目录,例如 ~/.agents-plugins/mygamestudio,
-#    并在 ~/.agents/plugins/marketplace.json 登记本地来源:
-#      { "name": "personal", "plugins": [ { "name": "mygamestudio",
-#        "source": { "source": "local", "path": "<该目录>" },
-#        "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" } } ] }
-# 3) codex plugin list --json --available   # 确认可发现
-#    codex plugin add mygamestudio@personal # 安装
-#    python3 acceptance/18-complete-package-acceptance/appserver_client.py skills --cwd <任意目录>
-#    # 应列出恰好 14 个 mygamestudio:game-* 技能
+tar -tzf mygamestudio-2.0.0.tar.gz | head
+# 2) 按当时有效的 Codex 插件安装方式接入解包出的 plugin/
+# 3) 用新会话核验：发现正式 25 项加三个游戏入口、同名唯一、
+#    用户专用入口不被自动串调、资料读取不启动制作
 ```
 
 安装只解决插件可发现与内部依赖可读取;具体项目接入由 `$game-init` 完成
 (新项目或接手已有项目,任务后端本地 Markdown 或 GitHub Issues)。
-运行保障(mgs-gate 受控写入)需要宿主设置 `MGS_RUNTIME_ROOT` 环境变量
-指向受信任调度侧维护的运行根(见 `plugin/internal/protocols/gate-protocol.md`
-与 `plugin/runtime/mgsrt_admin.py`);安装完成不等于运行保障已启用。
+新版普通工作不经 mgs-gate。安装操作成功也不代表运行行为已验证。
 
 ## 升级(0.17.0 → 0.18.0,已实测)
 
