@@ -110,7 +110,7 @@ def _risk_decision(request: dict) -> dict[str, Any]:
         "fix_target": fix_target,
         "demo_game_required": False,
         "keep_waiting": keep_waiting,
-        "close_as_accepted": False if keep_waiting else False,
+        "close_as_accepted": False,
         "playtest_required": playtest_required,
         "playtest_done": playtest_done,
     }
@@ -156,7 +156,7 @@ def _resource_tickets(request: dict) -> tuple[str, list[dict[str, Any]]]:
 
 
 def _task_fields(ticket: dict, request: dict) -> dict[str, str]:
-    return {
+    fields = {
         "当前目标": ticket.get("title") or request.get("title") or "",
         "输入与基线": str(request.get("baseline") or "GAME_DESIGN.md 现行规格"),
         "本次交付": ticket.get("成果") or "",

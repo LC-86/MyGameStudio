@@ -335,6 +335,12 @@ def test_resources_together_versus_independent_file_and_in_game_checks() -> None
         integrate_task = mgs_records.read_task(root, game_ticket["identity"])
         check((resource_task.get("request") or {}).get("成果"),
               "资源任务写入后仍可回读成果")
+        check((resource_task.get("request") or {}).get("format") == "png",
+              "独立资源任务写入后必须仍可回读格式")
+        check((resource_task.get("request") or {}).get("source") == "手工绘制",
+              "独立资源任务写入后必须仍可回读来源")
+        check((resource_task.get("request") or {}).get("preview") == "open assets/star.png",
+              "独立资源任务写入后必须仍可回读预览或播放")
         check((integrate_task.get("request") or {}).get("检查责任"),
               "接入任务写入后仍可回读检查责任")
 
