@@ -287,6 +287,72 @@ def test_native_claim_frontier_parent_and_blocking() -> None:
               "结果与任务不得落到本地第二套现行账本")
 
 
+def test_clearing_deps_and_parent_removes_native_relations() -> None:
+    """T4: 正文改为无依赖/无父任务时,原生 blocked_by 与 sub-issues 必须同步移除。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "detach")
+        fake = FakeTransport()
+        mgs_records.create_task(
+            root, "00-map", "地图", _task_request("索引"),
+            triage="ready-for-agent", transport=fake)
+        mgs_records.create_task(
+            root, "01-alpha", "甲", _task_request("阻塞者"),
+            triage="ready-for-agent", transport=fake)
+        mgs_records.create_task(
+            root, "02-beta", "乙", _task_request("被阻塞"),
+            triage="ready-for-agent", transport=fake)
+        mgs_records.set_parent(root, "02-beta", "00-map", transport=fake)
+        mgs_records.set_relations(root, "02-beta", ["01-alpha"], transport=fake)
+        beta_no = mgs_records.read_task(root, "02-beta", transport=fake)["issue_number"]
+        map_no = mgs_records.read_task(root, "00-map", transport=fake)["issue_number"]
+        beta_id = next(item["id"] for item in fake.issues
+                       if item["number"] == beta_no)
+        cleared = mgs_records.set_relations(root, "02-beta", [], transport=fake)
+        check(cleared.get("mode") == "native-blocked-by",
+              f"清空依赖必须走原生移除,实际 {cleared}")
+        check(not fake.blocked_by.get(beta_no),
+              f"原生 blocked_by 必须清空,实际 {fake.blocked_by}")
+        still_blocked = mgs_records.frontier_tasks(
+            root, parent_identity="00-map", transport=fake)
+        check("02-beta" in [i["identity"] for i in still_blocked.get("frontier") or []],
+              "去掉阻塞后乙应能进入父任务前沿")
+        detached = mgs_records.set_parent(root, "02-beta", None, transport=fake)
+        check(detached.get("mode") == "native-sub-issues",
+              f"解除父任务必须走原生移除,实际 {detached}")
+        check(beta_id not in (fake.sub_issues.get(map_no) or []),
+              f"原生子 Issue 必须删除,实际 {fake.sub_issues}")
+        after = mgs_records.frontier_tasks(
+            root, parent_identity="00-map", transport=fake)
+        check("02-beta" not in [i["identity"] for i in after.get("frontier") or []],
+              "解除父任务后不得仍出现在原父任务前沿")
+
+
+def test_github_onboard_does_not_succeed_over_local_tracker() -> None:
+    """D5: 已有本地 Markdown tracker 时,GitHub 接入不得报成功却仍写本地。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "already-local"
+        root.mkdir()
+        (root / "README.md").write_text("# already-local\n", encoding="utf-8")
+        mgs_records.apply_local_onboarding(
+            root, mgs_records.plan_local_onboarding(root), confirmed=True)
+        check(mgs_records.load_config(root)["backend"] == "local-markdown",
+              "前置必须已是本地 Markdown tracker")
+        plan = mgs_records.plan_github_onboarding(
+            root, repo=REPO, authorization=AUTH)
+        check(plan.get("ok") is not True,
+              f"计划必须拒绝 tracker 冲突,实际 {plan}")
+        applied = mgs_records.apply_github_onboarding(
+            root, plan, confirmed=True)
+        check(applied.get("ok") is not True,
+              f"不得把 GitHub 接入报成成功,实际 {applied}")
+        check(applied.get("wrote") is not True,
+              "冲突接入不得写入")
+        check(mgs_records.load_config(root)["backend"] == "local-markdown",
+              "现行 tracker 必须仍是本地 Markdown")
+
+
 def test_transient_error_does_not_downgrade_native_relations() -> None:
     """AC4: 短暂错误不得自行降级为正文约定;确认不可用才回退。"""
 
@@ -558,6 +624,8 @@ TESTS = (
     test_github_onboard_then_create_and_query_one_task,
     test_producer_and_matt_entries_read_stage_materials_after_github_onboard,
     test_native_claim_frontier_parent_and_blocking,
+    test_clearing_deps_and_parent_removes_native_relations,
+    test_github_onboard_does_not_succeed_over_local_tracker,
     test_transient_error_does_not_downgrade_native_relations,
     test_auth_lost_response_offline_draft_cancel_and_dedup,
     test_cli_github_onboard_status_and_create_without_gate,

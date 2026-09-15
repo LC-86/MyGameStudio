@@ -650,6 +650,55 @@ def test_github_live_spec_update_does_not_rewrite_archive() -> None:
               "现行读取不得把归档 Issue 当成现行规格")
 
 
+def test_github_spec_recovery_does_not_claim_success_without_modules() -> None:
+    """T10: 现行整体已在时,模块写入失败不得把未完成采纳报成已发布。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "partial-spec")
+        fake = FakeTransport()
+        cache = root / "docs/mygamestudio/records/cache"
+        first_plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "reason": "先写下最小闭环",
+            "overall": {
+                "title": "partial 整体设计",
+                "version": "v1",
+                "core_play": "接星星。",
+                "rules": ["得分：每颗星星 1 分。"],
+            },
+        }, transport=fake, cache_dir=cache)
+        first = mgs_records.apply_spec_adoption(
+            root, first_plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(first.get("ok") is True, f"首次采纳应成功:{first}")
+        second_plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "补规则模块",
+            "overall": {
+                "title": "partial 整体设计",
+                "version": "v2",
+                "core_play": "接星星。",
+                "rules": ["得分：每颗星星 3 分。"],
+            },
+            "modules": {
+                "规则与数值": {"title": "规则与数值", "rules": ["每颗星星 3 分。"]},
+            },
+        }, transport=fake, cache_dir=cache)
+        fake.fail("POST", "/issues", "timeout")
+        second = mgs_records.apply_spec_adoption(
+            root, second_plan, confirmed=True, transport=fake, cache_dir=cache)
+        check(second.get("ok") is not True,
+              f"模块未落地不得报告成功:{second}")
+        check(second.get("published") is not True,
+              f"未完成采纳不得标已发布:{second}")
+        current = mgs_records.read_current_design(
+            root, transport=fake, cache_dir=cache)
+        modules = current.get("modules") or {}
+        check("规则与数值" not in modules and "rules" not in modules,
+              "失败路径不得假装模块已采纳")
+
+
 def test_github_unknown_write_rereads_and_keeps_unpublished_draft() -> None:
     """AC5: 保存未知时回读后补缺,不重复创建;未发布草稿保持原状态。
     """
@@ -715,6 +764,7 @@ if __name__ == "__main__":
         test_new_feature_resume_partial_update_and_progress_guard,
         test_github_tracker_adopts_spec_and_keeps_history_in_comments,
         test_github_live_spec_update_does_not_rewrite_archive,
+        test_github_spec_recovery_does_not_claim_success_without_modules,
         test_github_unknown_write_rereads_and_keeps_unpublished_draft,
     )
     sys.exit(run_theme("游戏设计讨论与现行规格维护(#53 T2/T3/T5)", TESTS, FAILURES))

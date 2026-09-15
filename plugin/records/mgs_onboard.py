@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_record_model import RecordsError, today  # noqa: E402
 from mgs_record_source import (  # noqa: E402
-    DEFAULT_CONFIG_REL, DEFAULT_TASK_ROOT, parse_repo_location)
+    DEFAULT_CONFIG_REL, DEFAULT_TASK_ROOT, load_config, parse_repo_location)
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATE_ROOT = PLUGIN_ROOT / "templates"
@@ -155,11 +155,38 @@ def plan_local_onboarding(project_root: Path | str) -> dict:
     }
 
 
+def _current_backend(root: Path) -> str | None:
+    if not (root / CONFIG_REL).is_file():
+        return None
+    try:
+        return str(load_config(root).get("backend") or "") or None
+    except RecordsError:
+        return None
+
+
+def _tracker_mismatch(root: Path, wanted: str) -> str | None:
+    current = _current_backend(root)
+    if current and current != wanted:
+        return (
+            f"已有 {current} tracker,改用 {wanted} 须走迁移与切换,"
+            "不能把接入报成成功")
+    return None
+
+
 def plan_github_onboarding(project_root: Path | str, *, repo: str,
                            authorization: str = "") -> dict:
     """形成 GitHub Issues 接入清单;不写入,也不把本地 Markdown 升为现行账本。"""
 
     root = Path(project_root)
+    mismatch = _tracker_mismatch(root, "github-issues")
+    if mismatch is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": _current_backend(root) or "",
+            "reason": mismatch,
+            "items": [],
+        }
     parsed = parse_repo_location(repo)
     repo_value = f"{parsed['host']}/{parsed['owner']}/{parsed['repo']}"
     analysis = analyze_project(root)
@@ -414,8 +441,25 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
     root = Path(project_root)
     if not confirmed:
         raise RecordsError("未确认接入清单,不写入")
+    mismatch = _tracker_mismatch(root, "github-issues")
+    if mismatch is not None:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": _current_backend(root) or "",
+            "reason": mismatch,
+            "items": [],
+        }
     plan = plan or plan_github_onboarding(
         root, repo=repo or "", authorization=authorization)
+    if plan.get("ok") is False:
+        return {
+            "ok": False,
+            "wrote": False,
+            "backend": plan.get("backend") or _current_backend(root) or "",
+            "reason": plan.get("reason") or "接入前置条件未满足",
+            "items": [],
+        }
     if plan.get("backend") != "github-issues":
         raise RecordsError("本入口只接入 GitHub Issues tracker")
     if not plan.get("repo"):

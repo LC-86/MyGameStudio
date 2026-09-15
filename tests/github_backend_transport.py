@@ -138,6 +138,28 @@ class FakeTransport:
                 if self._dropped(method, path):
                     raise mgs_github.TransportError("timeout", "injected drop (sub_issues)")
                 return 201, {}
+        if match and rest == "/sub_issue" and method == "DELETE":
+            if not self.sub_issues_supported:
+                return 404, {"message": "Sub-issues API not available (stand-in)"}
+            child_id = (body or {}).get("sub_issue_id")
+            current = self.sub_issues.setdefault(number, [])
+            if child_id in current:
+                current.remove(child_id)
+            if self._dropped(method, path):
+                raise mgs_github.TransportError("timeout", "injected drop (sub_issue)")
+            return 200, {}
+        if match and rest.startswith("/dependencies/blocked_by/"):
+            if not self.dependencies_supported:
+                return 404, {"message": "Issue dependencies not available (stand-in)"}
+            blocker_id = int(rest.rsplit("/", 1)[-1])
+            if method == "DELETE":
+                current = self.blocked_by.setdefault(number, [])
+                if blocker_id in current:
+                    current.remove(blocker_id)
+                if self._dropped(method, path):
+                    raise mgs_github.TransportError(
+                        "timeout", "injected drop (blocked_by)")
+                return 200, {}
         if match and rest == "/dependencies/blocked_by":
             if not self.dependencies_supported:
                 return 404, {"message": "Issue dependencies not available (stand-in)"}

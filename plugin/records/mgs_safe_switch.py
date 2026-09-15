@@ -122,6 +122,7 @@ def _prep_changed(root: Path, expected: dict[str, str]) -> list[str]:
     for rel, digest in expected.items():
         path = root / rel
         if not path.is_file():
+            changed.append(rel)
             continue
         if _sha_file(path) != digest:
             changed.append(rel)

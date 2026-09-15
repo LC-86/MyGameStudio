@@ -434,6 +434,31 @@ class GithubBackend(GithubReadMixin):
                     return self._save_draft(
                         "set_relations", draft_args,
                         f"写入原生阻塞关系结果未知({exc});先回读再补缺项")
+            desired_ids = {by_id[dep].get("issue_id") for dep in deps}
+            extra_ids = [issue_id for issue_id in existing_ids
+                         if issue_id and issue_id not in desired_ids]
+            for issue_id in extra_ids:
+                try:
+                    status, _payload = self.transport.request(
+                        "DELETE", f"{probe_path}/{issue_id}")
+                    if status == 404:
+                        return self._save_draft(
+                            "set_relations", draft_args,
+                            "删除原生阻塞关系 HTTP 404,探测时能力仍在;"
+                            "不自行降级为正文约定")
+                    if status not in (200, 204):
+                        raise TransportError(
+                            "bad_response", f"blocked_by DELETE HTTP {status}")
+                except TransportError as exc:
+                    landed, landed_exc = self._probe_get(probe_path)
+                    if landed == "available":
+                        landed_ids = {item.get("id") for item in (landed_exc or [])
+                                      if isinstance(item, dict)}
+                        if issue_id not in landed_ids:
+                            continue
+                    return self._save_draft(
+                        "set_relations", draft_args,
+                        f"删除原生阻塞关系结果未知({exc});先回读再补缺项")
             result = self.update_task(identity, {"依赖": value},
                                       change_note="设置依赖(原生)")
             result["mode"] = "native-blocked-by"
@@ -458,10 +483,47 @@ class GithubBackend(GithubReadMixin):
         except TransportError as exc:
             return self._save_draft("set_parent", draft_args, str(exc))
         if parent_id is None:
+            parent_no = parsed.get("parent_issue_number")
+            child_id = parsed.get("issue_id")
+            mode = "body-reference"
+            if parent_no and child_id:
+                probe_path = (f"{repo_path(self.repo)}/issues/"
+                              f"{parent_no}/sub_issues")
+                state, data = self._probe_get(probe_path)
+                if state == "transient":
+                    return self._save_draft(
+                        "set_parent", draft_args,
+                        f"探测原生父子关系失败({data});不自行降级")
+                if state == "available":
+                    try:
+                        status, _data = self.transport.request(
+                            "DELETE",
+                            f"{repo_path(self.repo)}/issues/{parent_no}/sub_issue",
+                            {"sub_issue_id": child_id})
+                        if status == 404:
+                            return self._save_draft(
+                                "set_parent", draft_args,
+                                "删除原生子 Issue HTTP 404,探测时能力仍在;"
+                                "不自行降级为正文约定")
+                        if status not in (200, 204):
+                            raise TransportError(
+                                "bad_response", f"sub-issue DELETE HTTP {status}")
+                    except TransportError as exc:
+                        landed, payload = self._probe_get(probe_path)
+                        still_child = (
+                            landed == "available"
+                            and any(isinstance(item, dict)
+                                    and item.get("id") == child_id
+                                    for item in (payload or [])))
+                        if still_child:
+                            return self._save_draft(
+                                "set_parent", draft_args,
+                                f"删除原生子 Issue 结果未知({exc});先回读再补缺项")
+                    mode = "native-sub-issues"
             body_change = {"父任务": "无"}
             result = self.update_task(identity, body_change,
                                       change_note="解除父任务")
-            result["mode"] = "body-reference"
+            result["mode"] = mode
             return result
         parent = self._find_by_identity(parent_id)
         if parent is None:

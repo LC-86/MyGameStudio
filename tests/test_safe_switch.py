@@ -647,6 +647,24 @@ def test_prep_change_and_partial_do_not_switch() -> None:
               "来源变化后不得切换现行指针")
 
 
+def test_deleted_source_during_prep_blocks_switch() -> None:
+    """AC1/T12: 准备期间删除已指纹来源必须阻止切换,不能当没变化。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "deleted-source")
+        _convert_local(root)
+        plan = mgs_records.plan_safe_switch(root)
+        check(plan.get("ready") is True, f"转换完整后应可切换:{plan}")
+        (root / "docs/mygamestudio/GAME_DESIGN.md").unlink()
+        blocked = mgs_records.apply_safe_switch(root, plan, confirmed=True)
+        check(blocked.get("ok") is not True,
+              f"删除来源后不得切换,实际 {blocked}")
+        check(blocked.get("wrote") is not True, "准备期间删除必须挡住写入")
+        check("规格身份:overall" not in mgs_records.read_current_design(
+            root).get("overall", ""),
+              "删除来源后现行指针必须仍是旧原件")
+
+
 def test_github_switch_makes_new_current_and_can_roll_back() -> None:
     """AC1/AC4: GitHub 待切换在核对通过后成为唯一现行来源;
     旧 Issue 为只读历史;回退保留对应关系。
@@ -706,6 +724,7 @@ def main() -> int:
             test_rollback_preserves_new_additions,
             test_rollback_preserves_edits_to_migrated_tasks,
             test_prep_change_and_partial_do_not_switch,
+            test_deleted_source_during_prep_blocks_switch,
             test_github_switch_makes_new_current_and_can_roll_back,
         ),
         FAILURES)

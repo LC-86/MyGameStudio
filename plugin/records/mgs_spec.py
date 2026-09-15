@@ -885,11 +885,20 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
         except TransportError:
             existing = None
         if existing is not None:
+            if _github_adoption_complete(
+                    backend, existing, new_overall, plan, slugs):
+                return {
+                    "ok": True, "wrote": True, "backend": "github-issues",
+                    "overall_issue": existing.get("number"),
+                    "filled_gap_only": True, "gate_required": False,
+                    "published": True,
+                }
             return {
-                "ok": True, "wrote": True, "backend": "github-issues",
+                "ok": False, "wrote": True, "backend": "github-issues",
                 "overall_issue": existing.get("number"),
                 "filled_gap_only": True, "gate_required": False,
-                "published": True,
+                "published": False,
+                "reason": "部分保存,未回读到完整采纳结果",
             }
         draft = _draft(
             backend, "apply_spec_adoption",
@@ -897,6 +906,29 @@ def _apply_github_spec(root: Path, config: dict, plan: dict, *,
             str(exc))
         draft.update({"ok": False, "wrote": False, "published": False})
         return draft
+
+
+def _github_adoption_complete(backend, existing: dict, new_overall: str,
+                              plan: dict, slugs: dict) -> bool:
+    if (existing.get("body") or "") != new_overall:
+        return False
+    try:
+        items = _list_github_items(backend)
+        comments = backend.transport.request(
+            "GET",
+            f"{repo_path(backend.repo)}/issues/{existing.get('number')}/comments")[1] or []
+    except TransportError:
+        return False
+    history_line = _history_line(plan, include_replaces=True)
+    if history_line and not any(
+            history_line in (item.get("body") or "") for item in comments):
+        return False
+    found = {
+        _spec_identity(item.get("body") or "")
+        for item in items
+        if _is_live_spec(item.get("body") or "")
+    }
+    return all(slug in found for slug in slugs.values())
 
 
 def _sync_github_tasks(root: Path, config: dict, plan: dict, spec_number: int,
