@@ -26,7 +26,6 @@
 - 已采用 GitHub Issues 的旧项目，经同一文件的 `plan_github_material_migration` / `apply_github_material_migration` / `read_github_material_migration` 转换规格、决定、任务、结果与证据索引，并恢复原生父子与阻塞关系；成果待切换，旧 Issue 仍为现行来源，不盘点仓库外真实个人项目
 - 核对来源、版本、用户修改、转换完整性、证据可达和准备期间新增变更后，经同一文件的 `plan_safe_switch` / `apply_safe_switch` / `read_safe_switch` / `rollback_safe_switch` 切换现行指针与对应技能来源；同名技能只保留一个明确有效来源，共用客户端未就绪项目保留旧环境，回退先保留新版新增成果。技能来源切换用隔离目录演示合同，不安装到真实 Codex / 用户日常技能目录
 - 通用分流标签与领域文档布局：开发者调用 `setup-matt-pocock-skills`，本入口不另维护同义配置流程
-- 通用分流标签与领域文档布局：开发者调用 `setup-matt-pocock-skills`，本入口不另维护同义配置流程
 - 游戏侧补齐指向本索引的短指针，以及现有项目中仍有效的设计/工程/资源位置；接入后项目 `docs/mygamestudio/INDEX.md` 是现行资料入口
 
 **读取资料不是开始制作。**

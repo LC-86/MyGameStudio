@@ -59,8 +59,8 @@
     },
     {
       "path": "internal/game/invocation.md",
-      "sha256": "9339a8cf0166d25869d74c34f07bde26ff9c11d70f53835d2399c9970243e0d8",
-      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "sha256": "5a41c90e55563569343cc28d89fa2b056795c73f7684850341fb32452c0e977f",
+      "source": "本项目自有内容(MIT); issue #73 Standards 清理(去重)",
       "license": "本项目自有内容(MIT)"
     },
     {
@@ -71,8 +71,8 @@
     },
     {
       "path": "internal/game/stage-requirements.md",
-      "sha256": "fd0c34ac4c10c3f305ef1788006e9993105e5ea6c03a5ccd1b28f3426e8735db",
-      "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
+      "sha256": "fd3da0d5b52fbbce33662247c3d28a5eef4df393c837e6126c6f90d3e61ed310",
+      "source": "本项目自有内容(MIT); issue #73 Standards 清理(去重)",
       "license": "本项目自有内容(MIT)"
     },
     {
