@@ -39,6 +39,7 @@ import mgs_records  # noqa: E402
 from test_github_material_migration import (  # noqa: E402
     _write_old_github_project)
 from test_design_version_snapshot import _onboard_github  # noqa: E402
+from test_safe_switch import _convert_local, _write_old_local_project  # noqa: E402
 
 FAILURES, check = make_checker()
 
@@ -391,6 +392,41 @@ def test_r11_4_partially_staged_states_enter_artifact() -> None:
               "暂存区变化后旧工件不得判定为仍然有效")
 
 
+def test_r11_5_second_switch_refreshes_rollback_baseline() -> None:
+    """R11-5: 二轮切换必须重记回退基线;二次回退不得恢复上一轮旧快照。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _write_old_local_project(Path(tmp) / "two-cycles")
+        _convert_local(root)
+        first_plan = mgs_records.plan_safe_switch(root)
+        check(first_plan.get("ready") is True,
+              f"前置:首轮应就绪:{first_plan.get('blockers')}")
+        mgs_records.apply_safe_switch(root, first_plan, confirmed=True)
+        rolled_first = mgs_records.rollback_safe_switch(
+            root, first_plan, confirmed=True)
+        check(rolled_first.get("ok") is True, f"前置:首轮回退应成功:{rolled_first}")
+        # 两轮之间,开发者在旧来源上继续编辑。
+        design = root / "docs/mygamestudio/GAME_DESIGN.md"
+        edited = design.read_text(encoding="utf-8").rstrip() \
+            + "\n\n回退后修订:漏接两次即结束。\n"
+        design.write_text(edited, encoding="utf-8")
+        _convert_local(root)
+        second_plan = mgs_records.plan_safe_switch(root)
+        check(second_plan.get("ready") is True,
+              f"二轮应可再切换:{second_plan.get('blockers')}")
+        second = mgs_records.apply_safe_switch(
+            root, second_plan, confirmed=True)
+        check(second.get("ok") is True, f"二轮切换应成功:{second}")
+        rolled = mgs_records.rollback_safe_switch(
+            root, second_plan, confirmed=True)
+        check(rolled.get("ok") is True, f"二次回退应成功:{rolled}")
+        after = (root / "docs/mygamestudio/GAME_DESIGN.md").read_text(
+            encoding="utf-8")
+        check("回退后修订:漏接两次即结束。" in after,
+              "二次回退必须恢复第二轮切换前的现场,不得回到第一轮旧快照"
+              "丢失两轮之间的编辑")
+
+
 if __name__ == "__main__":
     raise SystemExit(run_theme(
         "PR #67 R11 发版门挡发项修复回归",
@@ -402,6 +438,7 @@ if __name__ == "__main__":
             test_r11_3_snapshot_reports_each_missing_identity_module,
             test_r11_3_existing_snapshot_reuse_validates_full_content,
             test_r11_4_partially_staged_states_enter_artifact,
+            test_r11_5_second_switch_refreshes_rollback_baseline,
         ),
         FAILURES,
     ))

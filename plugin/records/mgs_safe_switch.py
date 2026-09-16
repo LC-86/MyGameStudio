@@ -305,9 +305,10 @@ def _archive_originals(root: Path, staging: Path) -> list[str]:
             continue
         dest = history / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
-        if not dest.exists():
-            shutil.copy2(live, dest)
-            archived.append(str(dest.relative_to(root)).replace("\\", "/"))
+        # 每次切换都以切换前字节替换回退基线:第二轮切换沿用第一轮留档
+        # 会让二次回退恢复上一轮旧快照,丢失两轮之间的编辑。
+        shutil.copy2(live, dest)
+        archived.append(str(dest.relative_to(root)).replace("\\", "/"))
     return archived
 
 
