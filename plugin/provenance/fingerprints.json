@@ -1,245 +1,759 @@
 {
-  "version": 1,
-  "generated_for": "mygamestudio 1.0.0",
+  "version": 2,
+  "generated_for": "mygamestudio 2.0.0",
+  "upstream": {
+    "name": "mattpocock/skills",
+    "version": "1.2.3",
+    "sha": "3cca18b368ae95cdbdebbff572ccafa662551015",
+    "license": "MIT",
+    "url": "https://github.com/mattpocock/skills/tree/3cca18b368ae95cdbdebbff572ccafa662551015"
+  },
   "files": [
     {
       "path": "internal/contracts/common.md",
-      "sha256": "83cdbda4a3f82d4f4a763ec6b73186df65f16c42353d8b0b78a6aac5af4d2ee1",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/common.md(适配版;任务票 23 增补《共同规则的权威位置》与《共同执行规则(唯一权威)》标注及三处权威引用锚点)",
+      "sha256": "914f2ed94029a42846b65aeaefebc71c1f88fe3552b31427e86a1293c4d97620",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/design.md",
-      "sha256": "ca94489fd6e1502d9a3b60d2f182dc165ff1f9af8d456ca75150d1a5eedc4532",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/design.md(适配版)",
+      "sha256": "41469e827d843382cbaf435c6a6b51f702e67349f6412f3f44c974909f5822de",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/management.md",
-      "sha256": "c5e46466cdd13dc34643f90209b881c489b19817ea4fe24ccd473aef7ced2213",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/management.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 15 更新包内说明为已实现 Game-Producer 影响检查/指纹核对/占用协调/中断恢复流程),任务票 16 更新包内说明为已实现 Game-Producer 三种入口分类/闭环组织/完成判定流程",
+      "sha256": "1e5cb6d01a0764f92e463038d60784980c2fe3f06af7f5e24feb860fc257d240",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/production.md",
-      "sha256": "b95d34d477377a36baf12d1b0078f3046ef8434acbc729b477ce60c8dbeac1d2",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/production.md(适配版;任务票 04 更新 Game-Init 节链接为包内路径,任务票 05 更新包内说明为已实现接手入口,任务票 08 更新包内说明为已实现 Game-Plan 拆单入口,任务票 09/10 更新包内说明为已实现 Game-Implement/Game-Code/Game-Art,任务票 11 更新为已实现 Game-Audio,任务票 12 更新为已实现 Game-Build,任务票 13 更新包内说明为已实现 Game-Review 并改链包内审查与试玩合同,任务票 14 更新为 Review 与 Playtest 均已实现)",
+      "sha256": "42d44840df3b2cb011378e734664ee4638313ce156a13ad1105898394823ad61",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/project-configuration.md",
-      "sha256": "a9afccc4837c5ed8d7bdc6b9ee6b37a2d0f940c5f506f605c8d55951f92cc1aa",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/project-configuration.md(适配版,任务票 04 随包;任务票 17 更新包内说明为双后端已实现:GitHub Issues 适配、仓库级授权边界与 mgs_remote 受控通道)",
+      "sha256": "aceef52454aab806c21c3146543a001460e711e9a99640764ebc2e5824333fd3",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/records.md",
-      "sha256": "481d8f6359f000cb3b61696a4e9c639a456431d17dd016367ef4a55de57ad45f",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/records.md(适配版)",
+      "sha256": "314fa6962e0752822fb0ac44d16172016ef0baaf3c25b7a324b9e08afe2b2da7",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/task-triage.md",
       "sha256": "a361620eda15b1eddbcac08d185222fb48ea28d3468984a1099843c66d10c56c",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/task-triage.md(适配版)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/contracts/verification.md",
-      "sha256": "6d0e1f1fa8a1a8bccfe33a4f54a6c4530dc5e6f10fcbb040d60702c100716e82",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/contracts/verification.md(适配版;任务票 14 更新包内说明为 Game-Playtest 已实现)",
+      "sha256": "e40654b09b42e2564573594d0614635d2c8fe403c73778dd5a504fee7505e4cc",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
-      "path": "internal/methods/domain-modeling/ADR-FORMAT.md",
-      "sha256": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
-      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+      "path": "internal/game/invocation.md",
+      "sha256": "9339a8cf0166d25869d74c34f07bde26ff9c11d70f53835d2399c9970243e0d8",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
     },
     {
-      "path": "internal/methods/domain-modeling/CONTEXT-FORMAT.md",
-      "sha256": "17ab16ce783e4d2801ee52fd9acdf550cbf44de65ae76797a93943bbedf22a13",
-      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+      "path": "internal/game/retired-entries.md",
+      "sha256": "e39ba3c4da7e608dfe25af5ce3c2e4917a81fe84b76ea991b4d20d453e0a2526",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
+      "license": "本项目自有内容(MIT)"
     },
     {
-      "path": "internal/methods/domain-modeling/SKILL.md",
-      "sha256": "327a2b50620e2fd70abc6893cd6965e76b20f8d0adb0dc2c8d5eb3845efb643e",
-      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/domain-modeling/agents/openai.yaml",
-      "sha256": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b",
-      "source": "本机 ~/.agents/skills/domain-modeling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/grill-with-docs/SKILL.md",
-      "sha256": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe",
-      "source": "本机 ~/.agents/skills/grill-with-docs 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/grill-with-docs/agents/openai.yaml",
-      "sha256": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9",
-      "source": "本机 ~/.agents/skills/grill-with-docs 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/grilling/SKILL.md",
-      "sha256": "10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2",
-      "source": "本机 ~/.agents/skills/grilling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/grilling/agents/openai.yaml",
-      "sha256": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b",
-      "source": "本机 ~/.agents/skills/grilling 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/research/SKILL.md",
-      "sha256": "985569f15739c713d6784887c3d186d4ef9ac85bec5ad9c068d25bf0739928e4",
-      "source": "本机 ~/.agents/skills/research 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/research/agents/openai.yaml",
-      "sha256": "9b4c470d63221c1f68f22df70b83e2f12401b317babe0d1b7b5f24a974474d0d",
-      "source": "本机 ~/.agents/skills/research 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/wayfinder/SKILL.md",
-      "sha256": "fee6e1d0c50f0e736b4ef8a599060c959afae904c9a97d82c97f049fcc3aa0f1",
-      "source": "本机 ~/.agents/skills/wayfinder 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/wayfinder/agents/openai.yaml",
-      "sha256": "88bc81a11a6d52ac67aeaa76b8b619e387020d47c5133a4dd4927fd15c4ad073",
-      "source": "本机 ~/.agents/skills/wayfinder 逐字节副本(指纹与设计仓库《内部通用方法的最小依赖闭包》研究记录一致;上游 github.com/mattpocock/skills,上游提交级核对未在本票重复执行)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/writing-for-agents/SKILL-MECHANICS.md",
-      "sha256": "c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059",
-      "source": "github.com/mattpocock/skills @ 321658273cb1d20b76026717d027d505790106d4 skills/productivity/writing-for-agents/SKILL-MECHANICS.md(逐字节副本)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/writing-for-agents/SKILL.md",
-      "sha256": "551adca942227b44192edba88acd4e8db911f0121ce58ad16944ccf6a896a74a",
-      "source": "github.com/mattpocock/skills @ 321658273cb1d20b76026717d027d505790106d4 skills/productivity/writing-for-agents/SKILL.md(逐字节副本)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
-    },
-    {
-      "path": "internal/methods/writing-for-agents/agents/openai.yaml",
-      "sha256": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
-      "source": "github.com/mattpocock/skills @ 321658273cb1d20b76026717d027d505790106d4 skills/productivity/writing-for-agents/agents/openai.yaml(逐字节副本)",
-      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+      "path": "internal/game/stage-requirements.md",
+      "sha256": "fd0c34ac4c10c3f305ef1788006e9993105e5ea6c03a5ccd1b28f3426e8735db",
+      "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
+      "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/proposals/project-layout.md",
-      "sha256": "101886bb77f6d6f66289e11aaf35b81eac85dbbeb0fd226834fd75f4b92bcd53",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/project-layout.md(适配版,任务票 04 随包)",
+      "sha256": "6635f0f392adf0cd1b4c04abf0597186c233e40ee074b74027036ef4ee0f68af",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "internal/proposals/project-onboarding.md",
-      "sha256": "8f85b3d7ec94f5a213f93113173ad6acb2ca43898f702b9d2654f023eabb2c0e",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/proposals/project-onboarding.md(适配版,任务票 04 随包,任务票 05 更新包内说明为已实现接手路径)",
+      "sha256": "6a960e00c23d7b982825f5e7adbe6dc3f2a8838888e5c4bfc2a9715945a3af59",
+      "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
       "license": "本项目自有内容(MIT)"
     },
     {
-      "path": "internal/protocols/gate-protocol.md",
-      "sha256": "ebcbacfde410f1fffd4405c0cee06e71ca2813c109ec0bbc614483917d718aee",
-      "source": "本项目自有内容(任务票 02 新写;任务票 11 补充二进制资源载荷 content_base64 用法;任务票 17 增加受控远端任务操作 mgs_remote 一节;任务票 23 增补越界探针(边界核对)与唯一权威声明)",
+      "path": "internal/review/pending_review.py",
+      "sha256": "2b263bd1a8ad3ee271afb0389829dd82f738621a70a8660bf9ba01bfa5501cf6",
+      "source": "本项目自有内容(MIT); issue #55 完整待审成果; PR #67 审查修复: 暂存区与工作区状态分离捕获;符号链接按链接文本捕获不跟随目标; R10 审查修复: 分支基线按 merge-base 比较,基线上的无关改动不混入捕获产物与内容版本; R11 发版门修复: 部分暂存文件记录基线→暂存区与暂存区→工作区两段状态,内容版本纳入暂存态",
       "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "skills/ask-matt/PHASE-BOUNDARIES.md",
+      "sha256": "a8aa20158609ef39e2b308b6ba0660c91066838d07a867202e63a7744a88a3ed",
+      "original_sha256": "a8aa20158609ef39e2b308b6ba0660c91066838d07a867202e63a7744a88a3ed",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/ask-matt/PHASE-BOUNDARIES.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/ask-matt/SKILL.md",
+      "sha256": "52f46a31d3c1e98c8db6a4ca8f9f86403dbbbecd51eae28195eb26b0c02088c6",
+      "original_sha256": "b25d86fb36b1d294eeead5d7db529f86135f9671f2afcd607579a63bb2213769",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/ask-matt/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/ask-matt/agents/openai.yaml",
+      "sha256": "bdffbc5a0a99ed1b6ef3253d251d755fd18162b9845972e380007f844b09b05c",
+      "original_sha256": "bdffbc5a0a99ed1b6ef3253d251d755fd18162b9845972e380007f844b09b05c",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/ask-matt/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/code-review/SKILL.md",
+      "sha256": "8627d781e8baf70332515f34792d1a93a09148288f2f10e542448e71e8d580db",
+      "original_sha256": "47f4e52c21694def9c7c11cbfbf891ca35eac7a93e395797515be3c8a409ae50",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/code-review/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Adapt capture so both axes review one complete pending deliverable (committed, staged, unstaged, new, deleted), excluding unrelated existing changes; content version is a hash, not a new commit. Note playable delivery uses the same pending artifact. Upstream two-axis method otherwise unchanged."
+    },
+    {
+      "path": "skills/code-review/agents/openai.yaml",
+      "sha256": "8229ca854e11dc8e6aef2131ee03f31fb1561cf905fab9ccc325180cf3331352",
+      "original_sha256": "8229ca854e11dc8e6aef2131ee03f31fb1561cf905fab9ccc325180cf3331352",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/code-review/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/codebase-design/DEEPENING.md",
+      "sha256": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1",
+      "original_sha256": "f3dd099ce99289bd213914d8ee3e2429b78309c3957ca4583f7659551b1d53c1",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/codebase-design/DEEPENING.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/codebase-design/DESIGN-IT-TWICE.md",
+      "sha256": "8e740bf98446dbd4dfdc132ac4346d9a7eedaf93de6a495889171cf7f99f16bd",
+      "original_sha256": "8e740bf98446dbd4dfdc132ac4346d9a7eedaf93de6a495889171cf7f99f16bd",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/codebase-design/DESIGN-IT-TWICE.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/codebase-design/SKILL.md",
+      "sha256": "5a7d0509828092977caddeb2ae87ebe77f189eed0fcda4c8122fd50e0764101c",
+      "original_sha256": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/codebase-design/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/codebase-design/agents/openai.yaml",
+      "sha256": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f",
+      "original_sha256": "edebc9e4fcfe102114012575eaa9600b9b5fd08c311664f389c36e7bc717740f",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/codebase-design/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/diagnosing-bugs/SKILL.md",
+      "sha256": "bdef105b6bd0f9f13ed124624b76540b8538ec0e2fef01133e381a9a0051e8d3",
+      "original_sha256": "77f3cf31bc99b2f49af943222526531fcc9fc41d047626d3640e875e85af3e84",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/diagnosing-bugs/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/diagnosing-bugs/agents/openai.yaml",
+      "sha256": "3e430dbe4334a87597488c060cb3dc3786bb00c9182877d6f5ec41f62490e90b",
+      "original_sha256": "3e430dbe4334a87597488c060cb3dc3786bb00c9182877d6f5ec41f62490e90b",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/diagnosing-bugs/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/diagnosing-bugs/scripts/hitl-loop.template.sh",
+      "sha256": "35103539fc36873eea36074769ad454f9379d6fc8b2dc0e26ce987fd3bfe5503",
+      "original_sha256": "35103539fc36873eea36074769ad454f9379d6fc8b2dc0e26ce987fd3bfe5503",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/diagnosing-bugs/scripts/hitl-loop.template.sh",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/domain-modeling/ADR-FORMAT.md",
+      "sha256": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
+      "original_sha256": "944c92aa790e8fbdc9199640b170979abb8a34ba8d0fe18c2a01a63bce140ca0",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/domain-modeling/ADR-FORMAT.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/domain-modeling/CONTEXT-FORMAT.md",
+      "sha256": "17ab16ce783e4d2801ee52fd9acdf550cbf44de65ae76797a93943bbedf22a13",
+      "original_sha256": "17ab16ce783e4d2801ee52fd9acdf550cbf44de65ae76797a93943bbedf22a13",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/domain-modeling/CONTEXT-FORMAT.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/domain-modeling/SKILL.md",
+      "sha256": "66fe726c06a0cd7654353bce889e763568cd8ac91feca85713b6e577f3a7d5ed",
+      "original_sha256": "327a2b50620e2fd70abc6893cd6965e76b20f8d0adb0dc2c8d5eb3845efb643e",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/domain-modeling/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/domain-modeling/agents/openai.yaml",
+      "sha256": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b",
+      "original_sha256": "f6bf2aa996c6e6f53fdd0708e18a0d16a56aed8322cca59fedbe3c0d2c75f06b",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/domain-modeling/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/game-design/SKILL.md",
+      "sha256": "6d05f80e5b6f02d43997d7196fb261a7722478ca9cc2c41e7297aa924f0db88c",
+      "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "skills/game-design/agents/openai.yaml",
+      "sha256": "8082b16fad817beeddc0c9abeafc1d054a10b2158c5ecfe294dd9bd6c52531af",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "skills/game-init/SKILL.md",
+      "sha256": "98788d97b8ee502b846660d7818e3cef92f31029bef5355c031be509b8b1f859",
+      "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "skills/game-init/agents/openai.yaml",
+      "sha256": "35bf5cd5f32f418cf6569d6de785233fdf97123c0bf2d6c22de7b0687a3fc397",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "skills/game-producer/SKILL.md",
+      "sha256": "405be1bd03fdee982664298df1911e2c2a72e6da88b16a04383493e93d63bbc7",
+      "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "skills/game-producer/agents/openai.yaml",
+      "sha256": "b20ccc63d047dc9b0e068db8afc940a78aff839dc6af804712f7e8668144b1bb",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
+      "license": "本项目自有内容(MIT)"
+    },
+    {
+      "path": "skills/grill-me/SKILL.md",
+      "sha256": "e5d996a404adcfce23e8962ffc765731354342b42c803e275c86e9b80655d31c",
+      "original_sha256": "caaf8b8de1684f96e26b28f3c29189db5c89cce4b73e1c93d86164f66ef88637",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/grill-me/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/grill-me/agents/openai.yaml",
+      "sha256": "c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b",
+      "original_sha256": "c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/grill-me/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/grill-with-docs/SKILL.md",
+      "sha256": "65bbead3bf82492d80739b26c140674cbe442fba21daaf3c7fffdf5846c17397",
+      "original_sha256": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/grill-with-docs/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/grill-with-docs/agents/openai.yaml",
+      "sha256": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9",
+      "original_sha256": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/grill-with-docs/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/grilling/SKILL.md",
+      "sha256": "741afa53c50788e909f888049ea0615fa3db2971c47a12b5f600a6d15ee6b113",
+      "original_sha256": "10ff989e7498b23b5acb49d5048f11dcd906757d2f79c5cdf8a00001381296f2",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/grilling/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/grilling/agents/openai.yaml",
+      "sha256": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b",
+      "original_sha256": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/grilling/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/handoff/SKILL.md",
+      "sha256": "be85410345836d28cdf6d68f2fab43cce6f60222c5b0975d5a654d8917e167c3",
+      "original_sha256": "7c62de979fdc7ac32fb5ddb2146156c917f80ee070d30fadc9d40343c4b6ed25",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/handoff/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/handoff/agents/openai.yaml",
+      "sha256": "5c479fd562c691851690e8b18c8501045bef0943c10743d636b2fae26add1d28",
+      "original_sha256": "5c479fd562c691851690e8b18c8501045bef0943c10743d636b2fae26add1d28",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/handoff/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/implement/SKILL.md",
+      "sha256": "0414365e49ccad66ba9d172e3e762506b00568b4f74d4ee321f0f0f986d3253c",
+      "original_sha256": "6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/implement/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Replace unconditional commit ending with authorization-gated commit; append MyGameStudio stage-materials pointer and playable-delivery seam. Upstream method otherwise unchanged."
+    },
+    {
+      "path": "skills/implement/agents/openai.yaml",
+      "sha256": "8970a8596ade0c28ab427f41a4ea242d6bdf6186c59ebf55e1238dbecaab79dc",
+      "original_sha256": "8970a8596ade0c28ab427f41a4ea242d6bdf6186c59ebf55e1238dbecaab79dc",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/implement/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/improve-codebase-architecture/HTML-REPORT.md",
+      "sha256": "581e8bb5a521e46bbda8ca7e19b15948bed882187108092ebb90c62513b77528",
+      "original_sha256": "581e8bb5a521e46bbda8ca7e19b15948bed882187108092ebb90c62513b77528",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/improve-codebase-architecture/HTML-REPORT.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/improve-codebase-architecture/SKILL.md",
+      "sha256": "63d436b8db53b682fd3b75e4ed1ac15e54f9c3509795d0df5fc67fd43bf241d7",
+      "original_sha256": "d1ac25511a936ff4250a48dbcefda363837d6bb9321b3cba73df99fa37270a75",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/improve-codebase-architecture/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/improve-codebase-architecture/agents/openai.yaml",
+      "sha256": "c8cb20f68ebf0edb4e497bc11ae5fcaa196004e661cd189015b04f4109ced7f1",
+      "original_sha256": "c8cb20f68ebf0edb4e497bc11ae5fcaa196004e661cd189015b04f4109ced7f1",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/improve-codebase-architecture/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/prototype/LOGIC.md",
+      "sha256": "f61c7d249e786a79ef289018901c348271e1798dd0b0bc5607b5c6f4d4a01ab9",
+      "original_sha256": "f61c7d249e786a79ef289018901c348271e1798dd0b0bc5607b5c6f4d4a01ab9",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/prototype/LOGIC.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/prototype/SKILL.md",
+      "sha256": "28124c494b02a2789d46029bcab179024bba3f21425fe269dc029fb2621e79bc",
+      "original_sha256": "714de632d116bb73f65cdb5a882db15b9369a6713b9a47c0fad827848f0bfbe3",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/prototype/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer and explicit-prototype / formal-reuse rules. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/prototype/UI.md",
+      "sha256": "723211e878acbc7b6ff09755263f3295cde724ba902ff0064da41eed51d45ad3",
+      "original_sha256": "723211e878acbc7b6ff09755263f3295cde724ba902ff0064da41eed51d45ad3",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/prototype/UI.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/prototype/agents/openai.yaml",
+      "sha256": "5af65e43ab41a350436697b81e27b7f848d36782043b73c322bb2c9fa9cc55dc",
+      "original_sha256": "5af65e43ab41a350436697b81e27b7f848d36782043b73c322bb2c9fa9cc55dc",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/prototype/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/research/SKILL.md",
+      "sha256": "08bdf724638b131747d354c9a86396a2430903a8d6b62cc42438d15eff743215",
+      "original_sha256": "985569f15739c713d6784887c3d186d4ef9ac85bec5ad9c068d25bf0739928e4",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/research/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/research/agents/openai.yaml",
+      "sha256": "9b4c470d63221c1f68f22df70b83e2f12401b317babe0d1b7b5f24a974474d0d",
+      "original_sha256": "9b4c470d63221c1f68f22df70b83e2f12401b317babe0d1b7b5f24a974474d0d",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/research/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/resolving-merge-conflicts/SKILL.md",
+      "sha256": "c974f317b53913be03b871c079d177337d1912aa1936124b8fd7b1ef690d2ddd",
+      "original_sha256": "9d8114f8ef0b31f535a265fc05c364bd8cf2e2895a830040e06c22acb11f54b0",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/resolving-merge-conflicts/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/resolving-merge-conflicts/agents/openai.yaml",
+      "sha256": "a1f4f96838f2ed6282eb28abbbf99029cb8fadce552baf53da90a025b8bffddf",
+      "original_sha256": "a1f4f96838f2ed6282eb28abbbf99029cb8fadce552baf53da90a025b8bffddf",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/resolving-merge-conflicts/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/setup-matt-pocock-skills/SKILL.md",
+      "sha256": "cc7aa9e0f3152649eab319a9ec7c0ebc44b00c9d407bb92fd58cf81c87bf161f",
+      "original_sha256": "2bcd89e97777cdb705914424e39c97d5db524c8eb4eafac8120778a07774f0ec",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/setup-matt-pocock-skills/agents/openai.yaml",
+      "sha256": "9527de0110541c45712319025155aeab8dc7d77c6ed6e5e83271bab1851ab939",
+      "original_sha256": "9527de0110541c45712319025155aeab8dc7d77c6ed6e5e83271bab1851ab939",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/setup-matt-pocock-skills/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/setup-matt-pocock-skills/domain.md",
+      "sha256": "edc6d6131fdffc4b7135704f5262124fc43355c95f61b7399dc5a4db643e28ca",
+      "original_sha256": "edc6d6131fdffc4b7135704f5262124fc43355c95f61b7399dc5a4db643e28ca",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/setup-matt-pocock-skills/domain.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/setup-matt-pocock-skills/issue-tracker-github.md",
+      "sha256": "afd6852a80185217bd28aa5cbe456bef1e85be25be7bd1fba382d5b8ee428325",
+      "original_sha256": "afd6852a80185217bd28aa5cbe456bef1e85be25be7bd1fba382d5b8ee428325",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/setup-matt-pocock-skills/issue-tracker-github.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/setup-matt-pocock-skills/issue-tracker-gitlab.md",
+      "sha256": "ea175f73d193b3f55819c0ed9bbccf6ee0e70ad8f928e3d7607596c53380acd6",
+      "original_sha256": "ea175f73d193b3f55819c0ed9bbccf6ee0e70ad8f928e3d7607596c53380acd6",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/setup-matt-pocock-skills/issue-tracker-gitlab.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/setup-matt-pocock-skills/issue-tracker-local.md",
+      "sha256": "7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e",
+      "original_sha256": "7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/setup-matt-pocock-skills/issue-tracker-local.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/setup-matt-pocock-skills/triage-labels.md",
+      "sha256": "4f53c9b40ce2651e3611aa090eaedbd6dbc9b71ef8c5f7e65eac0d8263190d0d",
+      "original_sha256": "4f53c9b40ce2651e3611aa090eaedbd6dbc9b71ef8c5f7e65eac0d8263190d0d",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/setup-matt-pocock-skills/triage-labels.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/tdd/SKILL.md",
+      "sha256": "4473f108c7139ac2e1847e0d37f94d3759ecfdf9e604950567f5dbada1330e18",
+      "original_sha256": "cb01f66bebfaa25fa1f88e6b7e769cd9fd9f35b1120b8563749820738814c927",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/tdd/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/tdd/agents/openai.yaml",
+      "sha256": "ea6f01cf1b8c06a4b0f5b649d74b1b8ce8685e72af1b38d70d877693e092af0b",
+      "original_sha256": "ea6f01cf1b8c06a4b0f5b649d74b1b8ce8685e72af1b38d70d877693e092af0b",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/tdd/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/tdd/mocking.md",
+      "sha256": "3ceb807fdf4a47d6a93d4d9a891e5ba6d362a6247bd08adc451feebfc17361ef",
+      "original_sha256": "3ceb807fdf4a47d6a93d4d9a891e5ba6d362a6247bd08adc451feebfc17361ef",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/tdd/mocking.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/tdd/tests.md",
+      "sha256": "859f9e592c188fda4fc7277dd180e4ce9c7a2e13f6efe1f6f29eccc9d28c106a",
+      "original_sha256": "859f9e592c188fda4fc7277dd180e4ce9c7a2e13f6efe1f6f29eccc9d28c106a",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/tdd/tests.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/teach/GLOSSARY-FORMAT.md",
+      "sha256": "9b99859ec28437668130d8f2ce5a342938970f8a1ed4fd38c3eab4f4b5fff210",
+      "original_sha256": "9b99859ec28437668130d8f2ce5a342938970f8a1ed4fd38c3eab4f4b5fff210",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/teach/GLOSSARY-FORMAT.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/teach/LEARNING-RECORD-FORMAT.md",
+      "sha256": "701fa34b6748aa89e6c960ffb815257f481a7d77fb2900f9028f7edf3fdd6052",
+      "original_sha256": "701fa34b6748aa89e6c960ffb815257f481a7d77fb2900f9028f7edf3fdd6052",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/teach/LEARNING-RECORD-FORMAT.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/teach/MISSION-FORMAT.md",
+      "sha256": "8cacbb3c0644d3ae0ea4965564797099401a6930a23f7cf462918576587f2418",
+      "original_sha256": "8cacbb3c0644d3ae0ea4965564797099401a6930a23f7cf462918576587f2418",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/teach/MISSION-FORMAT.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/teach/RESOURCES-FORMAT.md",
+      "sha256": "e9cacf34026e11a8d1c8f9de88abe5bcbf654f4ebdb25cae8c0de0d5f48f44ec",
+      "original_sha256": "e9cacf34026e11a8d1c8f9de88abe5bcbf654f4ebdb25cae8c0de0d5f48f44ec",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/teach/RESOURCES-FORMAT.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/teach/SKILL.md",
+      "sha256": "a07d0fb576afd61cf6ac6048939000f7a2e9b916a3366ca7253c3dc4e6691a88",
+      "original_sha256": "a32df9dcdfc0c4fdc1c98e1ed3940c5f56b84c1aa90ff60346f32b8b53915b43",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/teach/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/teach/agents/openai.yaml",
+      "sha256": "5856f3ae8aec742f1499c640aecdd5f1d6af5fa210a7c6ec794de8263a6f733f",
+      "original_sha256": "5856f3ae8aec742f1499c640aecdd5f1d6af5fa210a7c6ec794de8263a6f733f",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/teach/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/to-questionnaire/SKILL.md",
+      "sha256": "80941a8c585f7f036dc85a88288bacc4853fe2f82d170824af5aba18b06a5a8c",
+      "original_sha256": "b5eb929842ee0e93d867c5e906d183d350f2f2d149eaeaa86967d94d8eda1d3b",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/to-questionnaire/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/to-questionnaire/agents/openai.yaml",
+      "sha256": "9e8a06c38c8842eea8d4922cb9d1ead8e3ace647bab259b943c994a1b4742bc2",
+      "original_sha256": "9e8a06c38c8842eea8d4922cb9d1ead8e3ace647bab259b943c994a1b4742bc2",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/to-questionnaire/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/to-spec/SKILL.md",
+      "sha256": "9ba73c688a7aa0436098d2c271d65b98b16d445219bf7d1904c829ce53706094",
+      "original_sha256": "43ad9cf318e5e7d3d1fa360253a37021796dc87a0c2e595ad262661a10f85088",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-spec/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer and current-spec adoption seam. Upstream method body unchanged; Also point at project docs/mygamestudio/INDEX.md for current-stage game materials. Issue #54: point at formal-version design snapshot seam."
+    },
+    {
+      "path": "skills/to-spec/agents/openai.yaml",
+      "sha256": "1c5b4d1e3d8e52287ef19cc2742fdbbfae1914ac75d33af3e4c8174f08cc55bb",
+      "original_sha256": "1c5b4d1e3d8e52287ef19cc2742fdbbfae1914ac75d33af3e4c8174f08cc55bb",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-spec/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/to-tickets/SKILL.md",
+      "sha256": "843480dc69c6ad2d20dbcdfbb95ebcbee046121e51f272dea8b2f5ccb295abd7",
+      "original_sha256": "5c9fba69845c2519b9b35b9af42ae5142c21f8ca15ac2123dc2722002c8058ae",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-tickets/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer and playable-delivery seam. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/to-tickets/agents/openai.yaml",
+      "sha256": "21bc6215fffcd7614e9f772bb1760e87cc5fc7dcc707e7d282bc9414267a6090",
+      "original_sha256": "21bc6215fffcd7614e9f772bb1760e87cc5fc7dcc707e7d282bc9414267a6090",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/to-tickets/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/triage/AGENT-BRIEF.md",
+      "sha256": "7f5f87fed3033df1b06e083c480f3e847b1fbb0647746b8a4c6a50f9f26ef44f",
+      "original_sha256": "7f5f87fed3033df1b06e083c480f3e847b1fbb0647746b8a4c6a50f9f26ef44f",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/triage/AGENT-BRIEF.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/triage/OUT-OF-SCOPE.md",
+      "sha256": "1fbf9b432130c6380aa65813b55553cfda150309b27c595e183f8e335b8a190d",
+      "original_sha256": "1fbf9b432130c6380aa65813b55553cfda150309b27c595e183f8e335b8a190d",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/triage/OUT-OF-SCOPE.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/triage/SKILL.md",
+      "sha256": "40f9c656a76d32c2d031bcae556f281c6e1ec0faacfbd278041b8f9dad601c3f",
+      "original_sha256": "623a2ed692bdc77d2090e2a3dea3b627dd722ad3bbaca0be83aada75292c8fc4",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/triage/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/triage/agents/openai.yaml",
+      "sha256": "2e683717720cf456d165d0bb1a68bb600d0b6a8ccb61841c172e50d26f95351c",
+      "original_sha256": "2e683717720cf456d165d0bb1a68bb600d0b6a8ccb61841c172e50d26f95351c",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/triage/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/wait-what/SKILL.md",
+      "sha256": "4017dd41594833cf90eddf446ff82eb1cd9607533eee7cd6836d1e8da64c48ff",
+      "original_sha256": "e3f44e3ccbc0e7b62f20ba70b295fc9c9f4aa3f96c77168faee1c71bacbf4215",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/wait-what/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/wait-what/agents/openai.yaml",
+      "sha256": "b41faadf741d51e4ea184148b2d1854d93f947aaf754c7844f70a00f04194999",
+      "original_sha256": "b41faadf741d51e4ea184148b2d1854d93f947aaf754c7844f70a00f04194999",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/wait-what/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/wayfinder/SKILL.md",
+      "sha256": "a822411d6405f9b8e7bf81229bcc36e8654b0331a65374c2c82d859ffe406778",
+      "original_sha256": "fee6e1d0c50f0e736b4ef8a599060c959afae904c9a97d82c97f049fcc3aa0f1",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/wayfinder/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/wayfinder/agents/openai.yaml",
+      "sha256": "88bc81a11a6d52ac67aeaa76b8b619e387020d47c5133a4dd4927fd15c4ad073",
+      "original_sha256": "88bc81a11a6d52ac67aeaa76b8b619e387020d47c5133a4dd4927fd15c4ad073",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/wayfinder/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/wizard/SKILL.md",
+      "sha256": "bfdf8bc78b4819909c48455efc4e8a4f66712e5e23b3b4447b4f9097e896f265",
+      "original_sha256": "bdf31d48211ea559878f95a4f344aeabf8d85897488ba564382bab0b000daac1",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/wizard/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/wizard/agents/openai.yaml",
+      "sha256": "98f44d682d58e262f160dc59a8befc365e0aa65820dd0261864af26aa8e59d83",
+      "original_sha256": "98f44d682d58e262f160dc59a8befc365e0aa65820dd0261864af26aa8e59d83",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/wizard/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/wizard/template.sh",
+      "sha256": "33cbe9dfb1d0e9185b60248a52aabed14bc64785a00cac695e302e739dd6c153",
+      "original_sha256": "33cbe9dfb1d0e9185b60248a52aabed14bc64785a00cac695e302e739dd6c153",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/engineering/wizard/template.sh",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/writing-for-agents/SKILL-MECHANICS.md",
+      "sha256": "c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059",
+      "original_sha256": "c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/writing-for-agents/SKILL-MECHANICS.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
+    },
+    {
+      "path": "skills/writing-for-agents/SKILL.md",
+      "sha256": "9301f9e24aa7d3d43c1d6c5c0a784de29d880a186478bc7b928d22d364fbf157",
+      "original_sha256": "551adca942227b44192edba88acd4e8db911f0121ce58ad16944ccf6a896a74a",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/writing-for-agents/SKILL.md",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt",
+      "adaptation": "Append MyGameStudio stage-materials pointer. Upstream method body unchanged."
+    },
+    {
+      "path": "skills/writing-for-agents/agents/openai.yaml",
+      "sha256": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
+      "original_sha256": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
+      "source": "github.com/mattpocock/skills @ 3cca18b368ae95cdbdebbff572ccafa662551015 skills/productivity/writing-for-agents/agents/openai.yaml",
+      "license": "MIT,见 licenses/mattpocock-skills-LICENSE.txt"
     },
     {
       "path": "templates/README.md",
-      "sha256": "3491a78a19ef96cba5219d164f2d663c6e86acd0faf01e4e6e0850dc30e95c82",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/README.md(适配版:链接改为包内路径)",
+      "sha256": "bccbbc96cb7f8884558e303207572ce7c871b001d0eb9f18661333aa42b52c4a",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包; PR #67 审查修复: writing-for-agents 路径改指 skills/",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/evidence/playtest.md",
       "sha256": "ee4b8d41dcd89b3a45630dbf784b916a8aec92e5ff69054594e33403052acd1e",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/evidence/playtest.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/evidence/review.md",
       "sha256": "a2c74c273ccf69b21148fe2aee546594769ebb1fb9477faa6a05c873f96ad59b",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/evidence/review.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/project/CONFIG.md",
       "sha256": "90e3010d9ff11207200899bfd85d09905583c6a0a5a2806f3976173e61b9c500",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/CONFIG.md(适配版:0.18.0 起外部访问行占位说明补充 issues-write 授权记录格式,任务票 17 合同要求)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/project/CONTEXT.md",
       "sha256": "14fc717a39288d1434df1ad4fdaa3948062efbf7aced178d9fbd4a5a37b5d9b8",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/CONTEXT.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/project/GAME_DESIGN.md",
       "sha256": "d7dbe67822ac74ee58cd5f08e8fa2a04c5713e4b0dc8fc6054d27c56e1b038a7",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/GAME_DESIGN.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/project/INDEX.md",
       "sha256": "e964065e9406159854dfa86334638b31f007f0bfaf1c38805fdbbc4b0afd8fa4",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/INDEX.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/project/PROJECT.md",
       "sha256": "66a87fbd738ff54a1d5a206e048dd710378181620fab0035c4622e6267660a38",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/PROJECT.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/project/TECH_DESIGN.md",
       "sha256": "4cc9cf8ded8706fffee35b445339ff1b9610b36ff8de1cdab3784632909f110c",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/project/TECH_DESIGN.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/records/decision.md",
       "sha256": "bbf880ec350c73d1c581acbc9de080caff36b25e6308a7602c03321d8d06e1d9",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/records/decision.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/records/onboarding.md",
       "sha256": "b5531d1a39ae7900c2b72e20db6e9fd54ff6faf6c537df66bf73a904057598df",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/records/onboarding.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/records/research.md",
       "sha256": "176d8027cf4f5db1d0f8eeaedc22bdd81da9f4ca4dd238cdd6a504417fa9d0e6",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/records/research.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/work/result.md",
-      "sha256": "c5fe7148536bfc465132de8539b6545730781a067bcc6beecb1cba563d18e9d2",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/work/result.md(适配版;任务票 23 复审修复在既有字段列表前增补《结果字段》小节标题,作为五入口引用的权威锚点,字段与结构未改)",
+      "sha256": "56056ecc9dc835f304c8ed83f33710408e4970449a31b88edc3ac2db920a4560",
+      "source": "本项目自有内容(MIT); issue #56 可玩任务拆分与交付",
       "license": "本项目自有内容(MIT)"
     },
     {
       "path": "templates/work/task.md",
       "sha256": "fb53996d586bb35eb14cd704663543743506c39d115e34eaccf8034882d3f0eb",
-      "source": "插件设计仓库 .scratch/mygamestudio-framework/templates/work/task.md(逐字节副本)",
+      "source": "本项目自有内容(MIT); issue #50 改版组合包",
       "license": "本项目自有内容(MIT)"
     }
   ]

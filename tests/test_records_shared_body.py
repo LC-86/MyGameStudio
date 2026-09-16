@@ -213,32 +213,17 @@ def test_dependency_direction_static() -> None:
               f"实际 {sorted(imported)}")
 
 
-def test_runtime_entrypoint_uses_public_draft_seam() -> None:
-    """票 20:受控运行入口不直接依赖后端私有草稿保存细节。
+def test_unpublished_draft_seam_is_kept_without_gate() -> None:
+    """Issue #61/AC3: unpublished drafts stay on the records backend, not gate."""
 
-    静态证明受控运行入口不再出现私有草稿名 ``_save_draft``(含带 noqa 的
-    调用),并实际经后端**公开**草稿接缝 ``record_unpublished_draft`` 兜底
-    离线草稿;同时确认该公开接缝在后端存在。票 22 起受控远端事务(即运行
-    入口的兜底草稿调用处)集中在 ``runtime/mgs_remote_write.py``,故扫描
-    该文件与门面 ``runtime/mgs_runtime.py``——断言含义与票 20 相同,只是
-    覆盖职责迁移后的实际文件。行为侧由 test_runtime_gate_remote 的离线
-    草稿回报检查固定。
-    """
-
-    runtime_paths = [REPO_ROOT / "plugin" / "runtime" / "mgs_runtime.py",
-                     REPO_ROOT / "plugin" / "runtime" / "mgs_remote_write.py"]
-    source = "\n".join(path.read_text(encoding="utf-8")
-                       for path in runtime_paths)
-    check("_save_draft" not in source,
-          "扫描的 mgs_runtime 与 mgs_remote_write 并集不得直接调用后端私有草稿"
-          "保存细节 _save_draft")
-    check("record_unpublished_draft" in source,
-          "扫描的 mgs_runtime 与 mgs_remote_write 并集应经公开草稿接缝 "
-          "record_unpublished_draft 兜底离线草稿")
     import mgs_github
     check(callable(getattr(mgs_github.GithubBackend,
                            "record_unpublished_draft", None)),
           "GithubBackend 应提供公开草稿接缝 record_unpublished_draft")
+    check(callable(getattr(mgs_github.GithubBackend, "publish_drafts", None)),
+          "GithubBackend 应提供草稿发布接缝 publish_drafts")
+    check(not (REPO_ROOT / "plugin" / "runtime").exists(),
+          "草稿接缝不得再依赖 plugin/runtime")
 
 
 def test_source_shared_with_query_and_import_orders() -> None:
@@ -310,7 +295,7 @@ def test_loaded_config_local_read_is_same_source() -> None:
 TESTS = (
     test_record_model_shared_body_and_error_identity,
     test_dependency_direction_static,
-    test_runtime_entrypoint_uses_public_draft_seam,
+    test_unpublished_draft_seam_is_kept_without_gate,
     test_source_shared_with_query_and_import_orders,
     test_loaded_config_local_read_is_same_source,
 )

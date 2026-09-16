@@ -85,6 +85,27 @@ def test_task_dependencies_unresolved_and_cycle() -> None:
         check(report["ok"] is False, "存在循环时 deps 不应 ok")
 
 
+def test_frontier_excludes_unresolved_dependencies() -> None:
+    """未解析依赖必须挡住前沿,不能因为任务不存在就当成未阻塞。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio" / "work"
+        path = docs / "02-beta" / "task.md"
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(
+                "- 依赖:01-alpha", "- 依赖:99-missing"),
+            encoding="utf-8")
+        report = mgs_records.frontier_tasks(root)
+        ids = [item["identity"] for item in report.get("frontier") or []]
+        check("02-beta" not in ids,
+              f"缺失依赖的任务不得进入前沿,实际 {ids}")
+        ready = mgs_records.startable_tasks(root)
+        startable_ids = [item["identity"] for item in ready.get("startable") or []]
+        check("02-beta" not in startable_ids,
+              "缺失依赖的任务也不得进入可开工集合")
+
+
 def test_startable_tasks_set() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = make_plan_project(Path(tmp))
@@ -108,6 +129,29 @@ def test_startable_tasks_set() -> None:
               f"基线引用 v1 而当前 v2 应给出版本漂移原因,实际 {blocked['06-zeta']['reasons']}")
         check("授权" in report["note"],
               "ready 输出必须声明可开工不等于已获写入授权")
+
+
+def test_covered_completion_satisfies_dependencies() -> None:
+    """以「已有成果覆盖」关闭的前置任务同样算依赖完成:
+    可开工分类与本地前沿都不得继续阻塞其下游任务。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_plan_project(Path(tmp))
+        docs = root / "docs" / "mygamestudio" / "work"
+        (docs / "01-alpha" / "task.md").write_text(
+            (docs / "01-alpha" / "task.md").read_text(encoding="utf-8").replace(
+                "进度:待执行", "进度:已完成(已有成果覆盖)").replace(
+                "关闭原因:无", "关闭原因:已有成果覆盖"),
+            encoding="utf-8")
+        ready = mgs_records.startable_tasks(root)
+        startable = {item["identity"] for item in ready.get("startable") or []}
+        check("02-beta" in startable,
+              f"前置被已有成果覆盖后下游应可开工,实际 {sorted(startable)}")
+        frontier = mgs_records.frontier_tasks(root)
+        frontier_ids = [item["identity"]
+                        for item in frontier.get("frontier") or []]
+        check("02-beta" in frontier_ids,
+              f"本地前沿同样不得阻塞已覆盖完成的下游,实际 {frontier_ids}")
 
 
 def test_capability_negation_not_flagged() -> None:
@@ -389,7 +433,9 @@ TESTS = (
     test_parse_dep_ids_ignores_dates,
     test_task_dependencies_graph,
     test_task_dependencies_unresolved_and_cycle,
+    test_frontier_excludes_unresolved_dependencies,
     test_startable_tasks_set,
+    test_covered_completion_satisfies_dependencies,
     test_capability_negation_not_flagged,
     test_startable_ignores_done_and_wontfix,
     test_verify_deps_consistent,

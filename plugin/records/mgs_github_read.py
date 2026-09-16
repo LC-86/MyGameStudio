@@ -24,7 +24,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import mgs_record_model  # noqa: E402
-from mgs_github_issue import parse_issue_payload  # noqa: E402
+from mgs_github_issue import (  # noqa: E402
+    is_record_carrier, parse_issue_payload, skip_from_current_reads)
 from mgs_github_transport import (  # noqa: E402
     GithubRecordsError, TransportError, repo_path, repo_str)
 from mgs_record_model import CANONICAL_LABELS  # noqa: E402
@@ -90,7 +91,10 @@ class GithubReadMixin:
                     "fetched_at": cached["fetched_at"],
                     "source": cached["source"], "note": OFFLINE_NOTE}
         tasks = [parse_issue_payload(item, self.config["labels"])
-                 for item in data if "pull_request" not in item]
+                 for item in data
+                 if "pull_request" not in item
+                 and not skip_from_current_reads(item.get("body") or "")
+                 and not is_record_carrier(item.get("body") or "")]
         payload = {
             "tasks": tasks,
             "cached": False,
@@ -145,6 +149,22 @@ class GithubReadMixin:
             parsed["body_sha256"] = hashlib.sha256(
                 (issue.get("body") or "").encode("utf-8")).hexdigest()
             parsed["html_url"] = issue.get("html_url")
+            by_number = {task["issue_number"]: task for task in payload["tasks"]}
+            parent_no = parsed.get("parent_issue_number")
+            if parent_no and parent_no in by_number:
+                parsed["parent_identity"] = by_number[parent_no]["identity"]
+            try:
+                rel_status, blockers = self.transport.request(
+                    "GET",
+                    f"{repo_path(self.repo)}/issues/{parsed['issue_number']}"
+                    "/dependencies/blocked_by")
+            except TransportError:
+                rel_status, blockers = None, None
+            if rel_status == 200 and isinstance(blockers, list):
+                parsed["blocked_by_identities"] = [
+                    parse_issue_payload(item, self.config["labels"])["identity"]
+                    for item in blockers]
+                parsed["blocked_by"] = parsed["blocked_by_identities"]
         else:
             parsed["body_sha256"] = hashlib.sha256(
                 (parsed.get("body") or "").encode("utf-8")).hexdigest()

@@ -2,7 +2,7 @@
 
 ### 议题追踪器
 
-议题和规格通过 `.scratch/` 下的本地 Markdown 文件追踪。参见 `docs/agents/issue-tracker.md`。
+议题、规格与 Wayfinder 地图在 `LC-86/MyGameStudio` 的 GitHub Issues 中追踪。进行 tracker 操作前，先阅读 `docs/agents/issue-tracker.md`。
 
 ### Triage 标签
 

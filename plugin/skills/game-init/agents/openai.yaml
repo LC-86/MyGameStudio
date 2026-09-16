@@ -1,6 +1,6 @@
 interface:
   display_name: "Game-Init"
-  short_description: "显式调用的项目初始化与协作配置"
-  default_prompt: "Use $game-init to initialize this game project with local task records."
+  short_description: "Analyze an existing game and fill needed studio materials"
+  default_prompt: "Use $game-init to analyze this game project and list the materials still needed to join the MyGameStudio workflow."
 policy:
   allow_implicit_invocation: false

@@ -47,6 +47,16 @@ PLAN_REQUEST_KEYS = ("当前目标", "输入与基线", "本次交付", "允许�
 IDENTITY_RE = re.compile(r"(?<![\d-])\d{1,3}-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*")
 
 
+# 完成类进度:直接完成与「已有成果覆盖」都满足依赖(关闭原因另见正文头部)。
+COMPLETED_PROGRESS = ("已完成", "已完成(已有成果覆盖)")
+
+
+def is_completed_progress(value: str) -> bool:
+    """进度值是否属于完成类(依赖判定与前沿共用的单一口径)。"""
+
+    return str(value or "") in COMPLETED_PROGRESS
+
+
 class RecordsError(Exception):
     """配置缺失、后端不支持或任务记录无法解析。
 
@@ -120,6 +130,8 @@ def parse_task_body(text: str) -> dict:
         "title": title,
         "triage": _field(header, "当前分流"),
         "progress": _field(header, "进度"),
+        "claim": _field(header, "认领") or "未认领",
+        "close_reason": _field(header, "关闭原因") or "无",
         "request": _bullets(sections.get("工作请求", [])),
         "sections": {name: bool(lines and any(l.strip() for l in lines))
                      for name, lines in sections.items()},
@@ -279,6 +291,17 @@ def label_mapping_checks(labels: dict) -> list[dict]:
     ]
 
 
+def is_local_doc_path(path: str) -> bool:
+    """本地权威位置是仓库内文档路径;远端规格位置不按文件存在性核验。"""
+
+    text = (path or "").strip()
+    if not text:
+        return False
+    if any(mark in text for mark in ("GitHub", "规格 Issue", "github:")):
+        return False
+    return text.endswith(".md") or text.startswith("docs/")
+
+
 def docmap_checks(root, docmap: list[dict]) -> list[dict]:
     """核心文档映射:三类齐全、每类唯一当前维护位置且实际存在。"""
 
@@ -290,7 +313,8 @@ def docmap_checks(root, docmap: list[dict]) -> list[dict]:
     unique_ok = not duplicate_types and not duplicate_paths
     missing_paths = [row["path"] for row in
                      (grouped["goal"] + grouped["design"] + grouped["tech"])
-                     if not (root / row["path"]).is_file()]
+                     if is_local_doc_path(row["path"])
+                     and not (root / row["path"]).is_file()]
     return [
         check_item("docmap-core-rows", not core_missing,
                f"缺少核心文档行:{core_missing}" if core_missing

@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues and specs are tracked as local Markdown under `.scratch/`. See `docs/agents/issue-tracker.md`.
+Issues, specs, and Wayfinder maps are tracked in GitHub Issues for `LC-86/MyGameStudio`. Before tracker operations, read `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

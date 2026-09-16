@@ -83,11 +83,22 @@ def test_cli_github_write_ops() -> None:
             server.stop()
 
 
-def test_cli_local_backend_refuses_write_subcommands() -> None:
-    result = run_cli("create", "--project", str(REPO_ROOT / "samples" / "role-scope-demo"),
-                     "--identity", "09-x", "--title", "x")
-    check(result.returncode != 0 and "mgs-gate" in result.stdout,
-          f"本地后端写子命令应指向受控通道:{result.stdout[:200]}")
+def test_cli_local_backend_writes_without_gate_and_handover_stays_github() -> None:
+    """issue #51/D8: 本地 Markdown 普通写入不经 gate;handover 仍仅 github。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "local-cli"
+        root.mkdir()
+        (root / "README.md").write_text("# local-cli\n", encoding="utf-8")
+        onboard = run_cli("onboard", "--project", str(root), "--confirmed")
+        check(onboard.returncode == 0, f"本地接入 CLI 应成功:{onboard.stdout[:200]}")
+        result = run_cli("create", "--project", str(root),
+                         "--identity", "09-x", "--title", "x")
+        check(result.returncode == 0, f"本地后端写子命令应直接落盘:{result.stdout[:200]}")
+        data = json.loads(result.stdout)
+        check(data.get("created") is True, f"本地 create 应成功,实际 {data}")
+        check("mgs-gate" not in result.stdout,
+              "普通本地写入不得再要求 mgs-gate")
     result = run_cli("handover", "--project",
                      str(REPO_ROOT / "samples" / "role-scope-demo"))
     check(result.returncode != 0 and "github" in result.stdout,
@@ -171,7 +182,7 @@ def test_cli_reverse_migration_real_entry() -> None:
 
 TESTS = (
     test_cli_github_write_ops,
-    test_cli_local_backend_refuses_write_subcommands,
+    test_cli_local_backend_writes_without_gate_and_handover_stays_github,
     test_cli_github_handover_end_to_end,
     test_cli_reverse_migration_real_entry,
 )

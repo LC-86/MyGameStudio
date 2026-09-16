@@ -40,22 +40,24 @@ def test_manifest() -> None:
     ):
         check(bool(interface.get(field)), f"plugin.json interface 缺少 {field}")
 def test_explicit_skills() -> None:
+    """Issue #50: public skills are Matt official 25 + three game entries.
+
+    Detailed collection/uniqueness checks live in test_package_redesign_bundle.py.
+    This theme keeps the loadable-entry shape: SKILL.md, name, description, yaml.
+    Game entries keep allow_implicit_invocation false so ordinary chat does not
+    trigger them. Matt invocation flags stay with the upstream copies.
+    """
+
+    from redesign_bundle_contract import GAME_ENTRIES, PUBLIC_SKILLS
+
     skills_root = PLUGIN_ROOT / "skills"
     if not skills_root.is_dir():
         check(False, "缺少 skills/ 目录")
         return
-    expected = [
-        "game-art", "game-audio", "game-build", "game-code", "game-design",
-        "game-implement", "game-init", "game-plan", "game-playtest",
-        "game-producer", "game-prototype", "game-review", "game-spec",
-        "game-status",
-    ]
     skill_dirs = sorted(p.name for p in skills_root.iterdir() if p.is_dir())
-    check(
-        skill_dirs == expected,
-        f"任务票 14 后包内技能入口应为 {expected},实际为 {skill_dirs}",
-    )
-    for skill_name in expected:
+    check(skill_dirs == sorted(PUBLIC_SKILLS),
+          f"公开技能入口应为 {sorted(PUBLIC_SKILLS)},实际为 {skill_dirs}")
+    for skill_name in PUBLIC_SKILLS:
         skill_md = skills_root / skill_name / "SKILL.md"
         check(skill_md.is_file(), f"{skill_name} 缺少 SKILL.md")
         if not skill_md.is_file():
@@ -66,7 +68,7 @@ def test_explicit_skills() -> None:
         if match:
             frontmatter = match.group(1)
             check(
-                re.search(rf"^name:\s*{skill_name}\s*$", frontmatter, re.MULTILINE)
+                re.search(rf"^name:\s*{re.escape(skill_name)}\s*$", frontmatter, re.MULTILINE)
                 is not None,
                 f"{skill_name} frontmatter name 必须是 {skill_name}",
             )
@@ -76,36 +78,25 @@ def test_explicit_skills() -> None:
             )
         openai_yaml = skills_root / skill_name / "agents" / "openai.yaml"
         check(openai_yaml.is_file(), f"{skill_name} 缺少 agents/openai.yaml")
-        if openai_yaml.is_file():
+        if skill_name in GAME_ENTRIES and openai_yaml.is_file():
             yaml_text = openai_yaml.read_text()
             check(
                 re.search(r"allow_implicit_invocation:\s*false", yaml_text) is not None,
                 f"{skill_name} 必须 allow_implicit_invocation: false(关闭普通对话自动触发)",
             )
-    reference = skills_root / "game-status" / "references" / "status-check.md"
-    check(reference.is_file(), "game-status 缺少 references/status-check.md")
 def test_mcp_gate_config() -> None:
-    mcp_path = PLUGIN_ROOT / ".mcp.json"
-    check(mcp_path.is_file(), "缺少插件根 .mcp.json(mgs-gate 通道声明)")
-    if not mcp_path.is_file():
-        return
-    config = json.loads(mcp_path.read_text())
-    server = config.get("mcpServers", {}).get("mgs-gate")
-    check(server is not None, ".mcp.json 必须声明 mgs-gate 服务器")
-    if server is None:
-        return
-    check(server.get("command") == "python3", "mgs-gate command 应为 python3(按 PATH 解析)")
-    check(server.get("args") == ["runtime/mcp_gate.py"],
-          f"mgs-gate args 应为 runtime/mcp_gate.py,实际 {server.get('args')}")
-    check(server.get("cwd") == ".", "mgs-gate cwd 应为 .(解析为插件根,使相对 args 可用)")
-    check("MGS_RUNTIME_ROOT" in (server.get("env_vars") or []),
-          "mgs-gate 必须经 env_vars 透传 MGS_RUNTIME_ROOT(不在包内硬编码绝对路径)")
-    check(server.get("default_tools_approval_mode") == "approve",
-          "mgs-gate 工具应为预先批准模式(拦截由服务端策略承担,而非逐次审批)")
-    for rel in ("runtime/mcp_gate.py", "runtime/mgs_runtime.py", "runtime/mgsrt_admin.py"):
-        check((PLUGIN_ROOT / rel).is_file(), f"缺少运行保障组件 {rel}")
-    protocol = PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md"
-    check(protocol.is_file(), "缺少 internal/protocols/gate-protocol.md(受控写入协议)")
+    """Issue #61/D8: gate is retired; the installable plugin has no optional mode."""
+
+    manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text())
+    check("mcpServers" not in manifest, "plugin.json 不得注册 mcpServers")
+    check(not (PLUGIN_ROOT / ".mcp.json").is_file(),
+          "插件根不得再放 .mcp.json")
+    check(not (PLUGIN_ROOT / "runtime").exists(),
+          "安装包不得再带 runtime/ 作为可执行 gate")
+    check(not (PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md").is_file(),
+          "安装包不得再把 gate-protocol 当作有效能力")
+    dest = PLUGIN_ROOT / "internal" / "game" / "retired-entries.md"
+    check(dest.is_file(), "缺少旧入口与 gate 去向说明")
 def test_records_backend_module() -> None:
     module = PLUGIN_ROOT / "records" / "mgs_records.py"
     check(module.is_file(), "缺少 records/mgs_records.py(本地 Markdown 后端统一接口)")
@@ -121,7 +112,16 @@ def test_records_backend_module() -> None:
         import mgs_records
         for name in ("load_config", "list_tasks", "read_task",
                      "task_dependencies", "startable_tasks",
-                     "verify_project"):
+                     "verify_project", "plan_local_material_migration",
+                     "apply_local_material_migration",
+                     "read_local_material_migration",
+                     "plan_github_material_migration",
+                     "apply_github_material_migration",
+                     "read_github_material_migration",
+                     "plan_safe_switch",
+                     "apply_safe_switch",
+                     "read_safe_switch",
+                     "rollback_safe_switch"):
             check(callable(getattr(mgs_records, name, None)),
                   f"records/mgs_records.py 缺少可用公开接缝 {name}")
         for name in ("load_config", "local_list_tasks", "local_read_task",
@@ -149,102 +149,69 @@ def test_templates_and_game_init() -> None:
     if skill_md.is_file():
         text = skill_md.read_text()
         for ref in (
+            "../../internal/game/stage-requirements.md",
             "../../internal/contracts/project-configuration.md",
             "../../internal/proposals/project-onboarding.md",
             "../../internal/proposals/project-layout.md",
             "../../templates/README.md",
-            "../../internal/methods/writing-for-agents/SKILL.md",
-            "../../internal/protocols/gate-protocol.md",
         ):
             check(ref in text, f"game-init SKILL.md 应引用包内依据 {ref}")
-        check("不逐文件重复询问" in text, "game-init 应约定同一确认范围内不逐文件重复询问")
-        check("文档接入就绪" in text and "运行保障就绪" in text,
-              "game-init 报告结构应区分文档接入就绪与运行保障就绪")
+        check("setup-matt-pocock-skills" in text,
+              "game-init 应将通用 tracker/标签/领域文档交给上游 setup")
         check("规格拆单" in text, "game-init 应声明不做规格拆单")
-        # 任务票 05:接手已有项目的技能纪律
         for concept in (
-            "已有项目",          # 已有项目分析分支
-            "实际行为", "已采纳", "历史内容", "缺口", "冲突", "未验证",  # 六类现状区分
-            "待决定",            # 矛盾交开发者决定
-            "混合",              # 混合职责文档
-            "拆分",              # 拆分或受控应用方案
-            "恢复", "重复运行",   # 中断恢复与重复运行
-            "模板升级",          # 模板升级流程
+            "已有项目",
+            "实际行为", "已采纳", "历史内容", "缺口", "冲突", "未验证",
+            "待决定",
         ):
             check(concept in text, f"game-init SKILL.md 应覆盖接手已有项目概念:{concept}")
-        check("不自动" in text or "不得" in text,
-              "game-init 应明确不自动把实现采纳为产品意图")
 def test_internal_methods_closure() -> None:
-    """任务票 06:设计分支内部方法随包闭包,且不注册为公共技能入口。"""
+    """Issue #50: Matt methods are public skills, not a second internal copy."""
 
     methods_root = PLUGIN_ROOT / "internal" / "methods"
-    expected_methods = {
+    check(not methods_root.exists(),
+          "internal/methods 不得再保留与公开技能同名的第二份副本")
+    promoted = {
         "domain-modeling", "grill-with-docs", "grilling",
         "research", "wayfinder", "writing-for-agents",
     }
-    actual_methods = (
-        {p.name for p in methods_root.iterdir() if p.is_dir()}
-        if methods_root.is_dir() else set()
-    )
-    check(
-        actual_methods == expected_methods,
-        f"internal/methods 应为依赖闭包 {sorted(expected_methods)},实际 {sorted(actual_methods)}",
-    )
-    for name in sorted(expected_methods):
-        skill_md = methods_root / name / "SKILL.md"
-        check(skill_md.is_file(), f"内部方法 {name} 缺少 SKILL.md")
-    for rel in ("domain-modeling/CONTEXT-FORMAT.md", "domain-modeling/ADR-FORMAT.md"):
-        check((methods_root / rel).is_file(), f"内部方法闭包缺少 {rel}")
-    # 内部方法不得出现在公共技能目录(不额外暴露公共通用入口)
     skills_root = PLUGIN_ROOT / "skills"
-    public_leak = expected_methods & {p.name for p in skills_root.iterdir()}
-    check(not public_leak, f"内部方法被注册为公共技能入口:{sorted(public_leak)}")
+    missing = sorted(name for name in promoted if not (skills_root / name / "SKILL.md").is_file())
+    check(not missing, f"已提升为公开技能的方法缺少 SKILL.md: {missing}")
+    for rel in ("domain-modeling/CONTEXT-FORMAT.md", "domain-modeling/ADR-FORMAT.md"):
+        check((skills_root / rel).is_file(), f"公开技能闭包缺少 {rel}")
 def test_internal_references_resolve() -> None:
     """任务票 18(AC1):包内自研材料的 Markdown 相对链接可解析到实际文件。
 
-    范围不含 internal/methods/(上游逐字节副本,其文内示例路径如
-    ./src/ordering/CONTEXT.md 是方法示例,不是包运行引用;provenance 已注明)。
+    范围不含上游格式模板中的示例路径(如 CONTEXT-FORMAT.md 的
+    ./src/ordering/CONTEXT.md,以及 wayfinder 地图示例中的 ](link))。
     """
 
     external_prefixes = ("http://", "https://", "mailto:")
+    example_link = re.compile(r"^(link|./src/)")
     for md in sorted(PLUGIN_ROOT.rglob("*.md")):
-        if "internal" in md.parts and "methods" in md.parts:
-            continue  # 上游逐字节副本,示例路径不构成包内运行引用
+        if md.name == "CONTEXT-FORMAT.md":
+            continue  # 上游格式示例路径不是包运行引用
         text = md.read_text()
         for target in re.findall(r"\]\(([^)\s]+)\)", text):
             if target.startswith(external_prefixes) or target.startswith("#"):
                 continue
             rel = target.split("#", 1)[0]
-            if not rel:
+            if not rel or example_link.match(rel):
                 continue
             resolved = (md.parent / rel).resolve()
             check(resolved.exists(),
                   f"{md.relative_to(PLUGIN_ROOT)} 引用的 {target} 无法在包内解析")
-ALL_SKILLS = (
-    "game-art", "game-audio", "game-build", "game-code", "game-design",
-    "game-implement", "game-init", "game-plan", "game-playtest",
-    "game-producer", "game-prototype", "game-review", "game-spec",
-    "game-status",
-)
 
 
 def test_skill_authority_references() -> None:
-    """任务票 23/24:共同执行规则/受控写入协议/结果字段各有唯一权威,十四入口引用可达。
+    """Issue #50: remaining game entries share common.md and result fields; no gate."""
 
-    校验:(1)被引用的小节名在目标权威文件中有对应**完整标题行**文本(《共同执行
-    规则》《写入与保障》→ common.md,《越界探针》《执行凭据》→ gate-protocol.md,
-    《结果字段》→ result.md),锚点失配(含标题被改坏、去名)即失败,不以关键词
-    子串出现代替小节存在;(2)票 24 起十四个业务入口全部同时引用三处权威且解析到
-    实文件(引用不悬空);(3)入口文本指向上述权威小节而非内联共同规程——并断言
-    票 23 之前的「不把执行凭据写入任何文件或报告正文」内联复制已在全部入口清零
-    (共同规则只引用不复制)。
-    """
+    from redesign_bundle_contract import GAME_ENTRIES
 
     authority_sections = {
         PLUGIN_ROOT / "internal" / "contracts" / "common.md": (
             "共同规则的权威位置", "共同执行规则", "写入与保障"),
-        PLUGIN_ROOT / "internal" / "protocols" / "gate-protocol.md": (
-            "越界探针", "执行凭据"),
         PLUGIN_ROOT / "templates" / "work" / "result.md": (
             "结果字段",),
     }
@@ -253,9 +220,6 @@ def test_skill_authority_references() -> None:
         if doc.is_file():
             text = doc.read_text()
             for section in sections:
-                # 小节名必须作为完整 Markdown 标题行出现(允许标题后接括号说明),
-                # 而不是仅作为任意位置的子串——否则「共同执行规则X」这类被改坏的
-                # 锚点会假绿(/tmp 变异验证覆盖此点)。
                 heading_ok = re.search(
                     rf"^##\s+{re.escape(section)}(\s*\(|$)", text, re.MULTILINE)
                 check(heading_ok is not None,
@@ -267,14 +231,9 @@ def test_skill_authority_references() -> None:
             check(field in text,
                   f"结果字段权威 templates/work/result.md 应含字段「{field}」")
 
-    authorities = ("../../internal/contracts/common.md",
-                   "../../internal/protocols/gate-protocol.md",
-                   "../../templates/work/result.md")
-    authority_anchors = ("共同执行规则", "写入与保障", "受控写入协议",
-                         "越界探针", "结果字段")
-    # 票 23 之前各入口内联复制的凭据纪律原句;票 24 迁移后应改为引用《执行凭据》。
-    inline_credential_copy = "不把执行凭据写入任何文件或报告正文"
-    for name in ALL_SKILLS:
+    authorities = ("../../internal/contracts/common.md",)
+    authority_anchors = ("共同执行规则", "写入与保障")
+    for name in GAME_ENTRIES:
         skill_md = PLUGIN_ROOT / "skills" / name / "SKILL.md"
         check(skill_md.is_file(), f"缺少 skills/{name}/SKILL.md")
         if not skill_md.is_file():
@@ -287,8 +246,8 @@ def test_skill_authority_references() -> None:
                   f"{name} SKILL.md 引用的 {ref} 悬空(解析为 {resolved})")
         for anchor in authority_anchors:
             check(anchor in text, f"{name} SKILL.md 应指向《{anchor}》权威小节")
-        check(inline_credential_copy not in text,
-              f"{name} SKILL.md 仍内联复制共同凭据规则,应改为引用协议《执行凭据》")
+        check("gate-protocol" not in text and "mgs-gate" not in text,
+              f"{name} 新版入口不得再把 gate 当作共同权威")
 
 
 def test_config_template_adaptation() -> None:

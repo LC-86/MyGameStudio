@@ -1,7 +1,7 @@
 {
   "name": "mygamestudio",
-  "version": "1.0.0",
-  "description": "MyGameStudio 独立游戏开发工作流插件。十四个业务入口均仅显式触发:Game-Status 只读状态检查;Game-Producer 制作统筹;Game-Init 项目初始化与已有项目接手;Game-Plan 规格拆单;Game-Design/Game-Spec/Game-Prototype 设计讨论、规格整理与隔离原型;Game-Implement/Game-Code/Game-Art/Game-Audio/Game-Build 制作执行组织与代码、视听资源、构建交付;Game-Review/Game-Playtest 独立审查与试玩。任务后端支持本地 Markdown 与 GitHub Issues;项目写入统一经 mgs-gate 受控通道(角色、任务、用途与实际授权取交集);共同执行规则、受控写入协议与结果字段各有唯一权威位置,入口引用不复制。",
+  "version": "2.0.0",
+  "description": "MyGameStudio 独立游戏开发工作流插件。通用流程使用固定版本 Matt 正式 25 项技能；游戏侧公开入口为 Game-Producer、Game-Init、Game-Design。普通工作不注册 mgs-gate。",
   "author": {
     "name": "MyGameStudio"
   },
@@ -9,35 +9,21 @@
   "keywords": [
     "gamedev",
     "workflow",
-    "project-status",
-    "role-scoped-writes",
-    "project-init",
-    "design-discussion",
-    "spec-baseline",
-    "design-prototype",
-    "spec-to-tasks",
-    "code-task-delivery",
-    "visual-asset-delivery",
-    "audio-asset-delivery",
-    "build-and-run-delivery",
-    "independent-deliverable-review",
-    "playtest-and-human-feedback",
-    "goal-change-concurrency-recovery",
-    "producer-complete-loop",
-    "github-issues-backend",
-    "complete-package-acceptance"
+    "matt-pocock-skills",
+    "game-producer",
+    "game-init",
+    "game-design"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "MyGameStudio",
-    "shortDescription": "独立游戏开发工作流(十四个显式业务入口)",
-    "longDescription": "覆盖游戏开发全流程的十四个显式业务入口,按角色分工,只在用户显式调用或制作统筹明确委派时触发,普通对话不触发。制作统筹:Game-Producer 维护项目管理资料,按请求区分仅讨论、已有规格制作与直接专业调用后的状态同步并从合适环节组织闭环,按需委派下游入口(Game-Implement 管本次制作、设计原型保持隔离),协调并发写入占用、目标变化影响检查与中断恢复,核对基线内容指纹;约定检查与独立审查完成且无需人判断时按实际证据标记完成,需要人的验收保持待验收。状态与初始化:Game-Status 只读核对进度、阻塞与缺口;Game-Init 建立新项目资料或接手已有项目(先只读分析并归入六类现状,复用有效资料,提出可审阅的补齐/拆分/升级清单,确认后按角色应用并回读核对,支持中断恢复、重复运行与模板升级)。计划:Game-Plan 把已采纳的当前规格拆成可独立核验的原子任务,逐项记录稳定身份、完成标准、执行与验收责任、真实依赖与结果入口,按五类分流,远期保持粗粒度,重复拆解更新既有任务不新建重复。设计:Game-Design 组织方案讨论(局部功能走质询分支、多项未决走决策地图分支,严格区分研究事实、助手建议、候选方案与用户实际决定);Game-Spec 把已采纳决定整理为本轮可执行规格并同步产品设计基线(实质变化递增版本并记录采纳依据,格式修正不触发,目标或范围变化输出统筹同步交接);Game-Prototype 针对明确的设计不确定性制作隔离原型(最小可检验实现,结论区分原型观察、设计判断、尚未验证与需要人的体验反馈)。制作:Game-Implement 组织本任务专业工作、集成与验证交接;Game-Code 实施代码变更并运行与变更风险匹配的行为层检查,未运行的检查明确列出;Game-Art/Game-Audio 按项目实际能力制作、编辑或整理视觉与音频资源,规格检查真实运行并给出可定位预览或播放方式,人工审美与听感验收保留待验收;Game-Build 从项目实际配置确定构建、导出与运行方式,实际构建并记录产物与源成果版本对应、日志与运行检查结果,不把存在文件等同于本次构建成功。独立验证:Game-Review 以独立于原执行上下文的同专业实例对照当前规范与需求直接读取实际成果,先固定待审版本与文件清单及 SHA-256 指纹,代码按 Standards 与 Spec 两轴独立执行、分别呈现,每项问题关联具体证据与影响并区分明确规则违背、专业判断与未能检查,审查实例仅写审查记录与证据;Game-Playtest 针对明确版本与运行入口制定必要场景并实际执行可用检查,结果以 SHA-256 指纹绑定实际测试版本,人工结论只来自实际反馈并保留来源。任务后端支持本地 Markdown 与 GitHub Issues(同一套任务合同、受控远端操作、离线缓存与未发布草稿、后端切换迁移与远端交接核对);项目写入一律经 mgs-gate 受控通道,按角色、任务、用途与实际授权取交集,允许与拒绝均留审计,失败的本地事务回滚、已发生的远端结果如实披露;文档写入统一采用包内 writing-for-agents 方法;共同执行规则、受控写入协议、结果模板三处共同权威各有唯一维护位置,各入口只引用不复制专业差异。",
+    "shortDescription": "Matt 正式 25 项加三个游戏入口",
+    "longDescription": "以 Matt Pocock skills 1.2.3（提交 3cca18b368ae95cdbdebbff572ccafa662551015）的正式 25 项承担通用流程，组合分发 Game-Producer、Game-Init、Game-Design。制作统筹只读查询并按调用合同路由，不自动串调用户专用入口。项目接入补齐游戏资料指针；设计入口处理玩法、数值与体验讨论。读取专业资料不会自行启动制作。普通调用不需要 gate 配置。",
     "developerName": "MyGameStudio",
     "category": "Productivity",
     "capabilities": [
       "Interactive"
     ],
-    "defaultPrompt": "Use $game-init to initialize a new game project with local task records."
+    "defaultPrompt": "Use $game-init to analyze this game project, or $ask-matt to choose a general workflow skill."
   }
 }

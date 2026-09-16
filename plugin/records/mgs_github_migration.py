@@ -279,7 +279,8 @@ def apply_backend_switch(plan_path: Path | str, *, confirmed: bool,
 
     - 不删除、不改写旧记录(保留只读历史);
     - 不直接改写项目 CONFIG:新 CONFIG 内容产出到 emit_dir/CONFIG.md,
-      由经确认的应用步骤(统筹经 mgs-gate 受控通道)写入,保证唯一当前来源;
+      由经确认的应用步骤落地(安全切换 switch-check/switch-run,或开发
+      者确认写入),保证唯一当前来源;不经已退役的 mgs-gate;
     - 目标为 GitHub 时,要求当前项目 CONFIG 已记录目标仓库的 issues-write
       授权(apply 侧再核对一次,不自我授权)。
     """
@@ -346,6 +347,8 @@ def apply_backend_switch(plan_path: Path | str, *, confirmed: bool,
         encoding="utf-8")
     result["config_emitted"] = str(emit / "CONFIG.md")
     result["note"] = ("apply 只创建目标侧任务并产出新 CONFIG 内容;项目 CONFIG "
-                      "由经确认的应用步骤经 mgs-gate 写入(唯一当前来源),"
-                      "旧记录保留为只读历史,身份映射已留档。")
+                      "由经确认的应用步骤写入(安全切换 switch-check/"
+                      "switch-run 或开发者确认写入,唯一当前来源),"
+                      "旧记录保留为只读历史,身份映射已留档;"
+                      "不经已退役的 mgs-gate。")
     return result

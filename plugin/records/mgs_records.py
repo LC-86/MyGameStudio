@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""MyGameStudio 本地 Markdown 任务后端:统一回读接口(任务票 04,票 08/15 扩展,
-票 17 增加对 github-issues 后端的分发与写操作 CLI)。
+"""MyGameStudio 本地 Markdown 任务后端:统一回读与本地写入接口(任务票 04,票 08/15 扩展,
+票 17 增加对 github-issues 后端的分发与写操作 CLI;issue #51 补齐本地写入、
+接入与只读状态查询;issue #52 补齐 GitHub 接入与原生关系;issue #53 补齐
+设计讨论与现行规格维护,issue #54 补齐正式版本设计快照归档,issue #56 补齐
+可玩任务拆分与资源交付,issue #57 补齐本地旧项目完整资料迁移,issue #58 补齐 GitHub 旧项目完整资料迁移,issue #59 补齐用户修改、同名来源与安全切换,普通本地工作不经 mgs-gate)。
 
 对应设计《工作记录合同》「后端接口」一节:读取配置、列出任务、读取任务与结果、
 回读核验(票 04);关系解析与循环检测、当前可开工集合(票 08);核心基线内容
@@ -10,15 +13,12 @@
 《项目目录模板》的默认布局)。
 
 边界:
-- 本地 Markdown 后端:本模块只做读取与核验,不提供写入。项目内写入一律经
-  运行保障受控通道(mgs-gate 的 mgs_write)完成;本模块的核验结果针对实际
-  落盘内容。
-- GitHub Issues 后端(任务票 17):读取经 mgs_github 传输层(远端不可用回
-  注明时间与来源的缓存,不静默切本地);远端写操作(创建/安排更新/结果追加/
-  关系/分流/关闭)先核对 CONFIG 中明确到仓库的 issues-write 授权,经
-  `--api-base`/MGS_GH_API_BASE 可指向本地替身;会话内工作实例的远端写入走
-  mgs-gate 的 mgs_remote 受控通道,本 CLI 写入口供可信调度侧与已授权操作者
-  使用。真实远端写入仅在明确授权的测试仓库执行(票 17 保留待办)。
+- 本地 Markdown 后端:读取、核验与写入(创建/更新/认领/关闭/结果)均经本接口;
+  普通本地工作不经 mgs-gate。核验针对实际落盘内容。
+- GitHub Issues 后端(任务票 17 / issue #52):读取经 mgs_github 传输层(远端不可用回
+  注明时间与来源的缓存,不静默切本地);远端写操作先核对 CONFIG 中明确到仓库
+  的 issues-write 授权。认领走原生负责人,父子与阻塞走原生关系;普通工作不经
+  mgs-gate。
 - 未实现的其他后端:明确报不支持,不静默降级。
 - 开工集合是「记录可核对的开工条件」判断,不是授权:ready-for-agent
   不等于依赖已完成或已获全部写入授权,开工前仍需按任务允许修改范围与
@@ -56,7 +56,8 @@ from mgs_record_model import (  # noqa: E402  (路径调整后导入)
     CANONICAL_LABELS, CORE_DOC_KEYS, IDENTITY_RE, PLAN_REQUEST_KEYS,
     RecordsError, TASK_REQUEST_KEYS, _bullets, _core_rows, _field,
     _find_cycles, _parse_dep_ids, _sections, check_item, dependency_problems,
-    docmap_checks, label_mapping_checks, parse_task_body, task_core_problems)
+    docmap_checks, is_completed_progress, is_local_doc_path,
+    label_mapping_checks, parse_task_body, task_core_problems)
 
 # 协作配置与本地任务来源的唯一定义在 mgs_record_source:本模块(查询组织)
 # 从这里取配置、本地列举与按目录读取,并重导出既有公开名字;GitHub adapter
@@ -70,7 +71,7 @@ from mgs_record_source import (  # noqa: E402
 
 READY_NOTE = ("可开工=分流 ready 且记录字段完整且未完成依赖为空;这是开工条件核对,"
               "不等于依赖已全部完成或已获全部写入授权——开工前按任务「允许修改范围」"
-              "与运行保障核对授权;能力与授权以实际执行环境为准。")
+              "及宿主/项目已有授权核对;能力与授权以实际执行环境为准。")
 
 
 # ---------- 逻辑操作(公开接缝) ----------
@@ -411,7 +412,7 @@ def _ready_classification(tasks: list[dict], graph: dict,
             for dep in graph["edges"].get(identity, []):
                 if dep not in by_id:
                     reasons.append(f"依赖未解析:{dep}(任务不存在)")
-                elif by_id[dep]["progress"] != "已完成":
+                elif not is_completed_progress(by_id[dep]["progress"]):
                     reasons.append(
                         f"依赖未完成:{dep}(进度:{by_id[dep]['progress'] or '缺失'})")
             missing_fields = [key for key in PLAN_REQUEST_KEYS
@@ -520,6 +521,18 @@ def baseline_report(project_root: Path | str,
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
     texts = _doc_texts(root, config, config_text=config_text)
+    if config.get("backend") == "github-issues":
+        current = read_current_design(
+            root, config_rel, transport=transport, api_base=api_base,
+            cache_dir=cache_dir)
+        overall = current.get("overall") or ""
+        if overall:
+            for row in config.get("docmap") or []:
+                rel = row.get("path") or ""
+                content = row.get("content") or ""
+                if rel and not is_local_doc_path(rel) and any(
+                        word in content for word in CORE_DOC_KEYS["design"]):
+                    texts[rel] = overall
     versions = _versions_from_texts(config, texts)
     grouped = _core_rows(config["docmap"])
     docs: list[dict] = []
@@ -532,6 +545,8 @@ def baseline_report(project_root: Path | str,
             seen_paths.add(rel)
             text = texts.get(rel)
             if text is None:
+                if not is_local_doc_path(rel):
+                    continue
                 docs.append({"path": rel, "content": row["content"],
                              "role": row["role"], "declared_version": None,
                              "recorded_fingerprint": None,
@@ -679,6 +694,569 @@ def verify_project(project_root: Path | str,
                          ";".join(dep_problems) if dep_problems
                          else "依赖关系可解析且无循环"))
     return {"ok": all(item["ok"] for item in checks), "checks": checks}
+
+
+# ---------- 本地接入、任务写入与只读状态(issue #51) ----------
+
+def analyze_project(project_root: Path | str,
+                    config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """Game-Init 只读分析:不写入,也不开始制作。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.analyze_project(project_root, config_rel)
+
+
+def plan_local_onboarding(project_root: Path | str,
+                          config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """选择本地 Markdown 为唯一现行 tracker,形成接入清单(不写入)。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.plan_local_onboarding(project_root, config_rel)
+
+
+def apply_local_onboarding(project_root: Path | str, plan: dict | None = None,
+                           *, confirmed: bool = False,
+                           config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """按确认清单接入;不覆盖有效旧资料,普通路径不依赖 gate。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.apply_local_onboarding(
+        project_root, plan, confirmed=confirmed, config_rel=config_rel)
+
+
+def plan_github_onboarding(project_root: Path | str, *, repo: str,
+                           authorization: str = "",
+                           config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """选择 GitHub Issues 为唯一现行 tracker,形成接入清单(不写入)。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.plan_github_onboarding(
+        project_root, repo=repo, authorization=authorization,
+        config_rel=config_rel)
+
+
+def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
+                            *, confirmed: bool = False, repo: str | None = None,
+                            authorization: str = "",
+                            config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """按确认清单接入 GitHub;不覆盖有效旧资料,普通路径不依赖 gate。"""
+
+    import mgs_onboard  # noqa: PLC0415
+
+    return mgs_onboard.apply_github_onboarding(
+        project_root, plan, confirmed=confirmed, repo=repo,
+        authorization=authorization, config_rel=config_rel)
+
+
+def _backend_for(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
+                 *, transport=None, api_base: str | None = None,
+                 cache_dir: Path | str | None = None):
+    """按现行 CONFIG 构造可写后端(本地不经 gate;GitHub 仍走既有授权)。"""
+
+    config = load_config(project_root, config_rel)
+    if config["backend"] == "local-markdown":
+        import mgs_local_backend  # noqa: PLC0415
+
+        return mgs_local_backend.LocalMarkdownBackend(project_root, config)
+    if config["backend"] == "github-issues":
+        return _github_backend_for(
+            config, transport=transport, api_base=api_base, cache_dir=cache_dir)
+    raise RecordsError(
+        f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
+
+
+def create_task(project_root: Path | str, identity: str, title: str,
+                request: dict, *, triage: str = "needs-triage",
+                progress: str = "待执行",
+                config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                api_base: str | None = None,
+                cache_dir: Path | str | None = None) -> dict:
+    """记录一项任务。本地 Markdown 先回读再创建,已存在则收养。"""
+
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).create_task(
+            identity, title, request, triage=triage, progress=progress)
+
+
+def update_task(project_root: Path | str, identity: str, fields: dict, *,
+                expected_body_sha256: str | None = None,
+                change_note: str = "安排更新",
+                config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                api_base: str | None = None,
+                cache_dir: Path | str | None = None) -> dict:
+    """更新任务安排。expected_body_sha256 不符则保留双方成果并拒绝覆盖。"""
+
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).update_task(
+            identity, fields, expected_body_sha256=expected_body_sha256,
+            change_note=change_note)
+
+
+def set_triage(project_root: Path | str, identity: str, label: str, *,
+               config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+               api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).set_triage(identity, label)
+
+
+def set_relations(project_root: Path | str, identity: str, deps: list[str], *,
+                  config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                  api_base: str | None = None,
+                  cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).set_relations(identity, deps)
+
+
+def set_parent(project_root: Path | str, identity: str, parent_id: str | None,
+               *, config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+               api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).set_parent(identity, parent_id)
+
+
+def claim_task(project_root: Path | str, identity: str, actor: str, *,
+               config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+               api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    backend = _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+    if not hasattr(backend, "claim_task"):
+        raise RecordsError("当前后端本票不提供认领写接缝(GitHub 接入见后续票)")
+    return backend.claim_task(identity, actor)
+
+
+def frontier_tasks(project_root: Path | str, parent_identity: str | None = None,
+                   *, config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                   api_base: str | None = None,
+                   cache_dir: Path | str | None = None) -> dict:
+    """前沿查询:开放、未认领、无开放阻塞的子票(只读)。"""
+
+    backend = _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+    if hasattr(backend, "frontier_tasks"):
+        return backend.frontier_tasks(parent_identity)
+    tasks = list_tasks(project_root, config_rel, transport=transport,
+                       api_base=api_base, cache_dir=cache_dir)
+    children = []
+    for task in tasks:
+        parent = (task.get("request") or {}).get("父任务", "")
+        if parent_identity and parent_identity not in parent:
+            continue
+        children.append(task)
+    frontier = []
+    by_id = {task["identity"]: task for task in tasks}
+    for task in children:
+        if parent_identity and task["identity"] == parent_identity:
+            continue
+        if task.get("progress") not in ("", "待执行", "执行中"):
+            continue
+        claim = task.get("claim") or (task.get("request") or {}).get("认领") or "未认领"
+        if claim not in ("", "未认领"):
+            continue
+        blocked = False
+        for dep in _parse_dep_ids((task.get("request") or {}).get("依赖", "")):
+            other = by_id.get(dep)
+            if other is None:
+                blocked = True
+                break
+            if not is_completed_progress(other.get("progress")):
+                if other.get("progress") != "不再执行":
+                    blocked = True
+                    break
+        if blocked:
+            continue
+        frontier.append({"identity": task["identity"], "title": task["title"],
+                         "triage": task.get("triage")})
+    return {"wrote": False, "frontier": frontier,
+            "selected": frontier[0] if frontier else None,
+            "mode": "body-reference"}
+
+
+def append_result(project_root: Path | str, identity: str, result_markdown: str,
+                  *, config_rel: str = DEFAULT_CONFIG_REL, transport=None,
+                  api_base: str | None = None,
+                  cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).append_result(identity, result_markdown)
+
+
+def close_task(project_root: Path | str, identity: str, reason: str,
+               note: str = "", *, config_rel: str = DEFAULT_CONFIG_REL,
+               transport=None, api_base: str | None = None,
+               cache_dir: Path | str | None = None) -> dict:
+    return _backend_for(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir).close_task(identity, reason, note=note)
+
+
+def cancel_operation(project_root: Path | str, op: str, identity: str, *,
+                     note: str = "", config_rel: str = DEFAULT_CONFIG_REL) -> dict:
+    """登记已撤销动作;恢复时不得重放。本地草稿目录明确标识,不是现行任务账本。"""
+
+    import mgs_local_backend  # noqa: PLC0415
+
+    root = Path(project_root)
+    config = load_config(root, config_rel)
+    return mgs_local_backend.LocalMarkdownBackend(
+        root, config).cancel_operation(op, identity, note=note)
+
+
+def status_report(project_root: Path | str,
+                  config_rel: str = DEFAULT_CONFIG_REL, *,
+                  transport=None, api_base: str | None = None,
+                  cache_dir: Path | str | None = None) -> dict:
+    """Game-Producer 只读状态:真实记录中的目标、进度、缺口和下一步。"""
+
+    root = Path(project_root)
+    config = load_config(root, config_rel)
+    tasks = list_tasks(root, config_rel, transport=transport,
+                       api_base=api_base, cache_dir=cache_dir)
+    ready = startable_tasks(root, config_rel, transport=transport,
+                            api_base=api_base, cache_dir=cache_dir)
+    gaps: list[str] = []
+    design = None
+    if config.get("backend") == "github-issues":
+        design = read_current_design(
+            root, config_rel, transport=transport, api_base=api_base,
+            cache_dir=cache_dir)
+    for row in config.get("docmap", []):
+        rel = row.get("path") or ""
+        if not rel:
+            continue
+        content = row.get("content") or ""
+        if not is_local_doc_path(rel):
+            if any(word in content for word in CORE_DOC_KEYS["design"]):
+                if design and (design.get("overall") or "").strip():
+                    continue
+                gaps.append(f"缺项:{content} → {rel}")
+            continue
+        if not (root / rel).is_file():
+            gaps.append(f"缺项:{content} → {rel}")
+    if not tasks:
+        gaps.append("缺项:尚无任务记录")
+    startable = ready.get("startable") or []
+    if startable:
+        first = startable[0]
+        next_step = (f"可开工 {first.get('identity')} {first.get('title')} "
+                     f"(分流 {first.get('triage')};可开工不等于已获授权)")
+    elif tasks:
+        next_step = "无记录层面可开工任务;见缺口与 blocked 原因"
+    else:
+        next_step = "尚未记录任务"
+    goals = ""
+    project_path = root / "docs/mygamestudio/PROJECT.md"
+    if project_path.is_file():
+        goals = project_path.read_text(encoding="utf-8")[:400]
+    return {
+        "wrote": False,
+        "backend": config["backend"],
+        "goals": goals,
+        "tasks": tasks,
+        "gaps": gaps,
+        "missing": gaps,
+        "startable": startable,
+        "blocked": ready.get("blocked") or [],
+        "next": next_step,
+        "note": ready.get("note", READY_NOTE),
+    }
+
+
+# ---------- 设计讨论与现行规格(issue #53) ----------
+
+def read_current_design(project_root: Path | str,
+                        config_rel: str = DEFAULT_CONFIG_REL, *,
+                        transport=None, api_base: str | None = None,
+                        cache_dir: Path | str | None = None) -> dict:
+    """只读现行规格。读取不是制作。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.read_current_design(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def plan_design_discussion(project_root: Path | str, request: dict,
+                           config_rel: str = DEFAULT_CONFIG_REL, *,
+                           transport=None, api_base: str | None = None,
+                           cache_dir: Path | str | None = None) -> dict:
+    """Game-Design:成组提问、影响模块与试验值;不写入正式规则。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.plan_design_discussion(
+        project_root, request, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_design_discussion(project_root: Path | str, plan: dict,
+                            answers: dict | None = None,
+                            config_rel: str = DEFAULT_CONFIG_REL, *,
+                            transport=None, api_base: str | None = None,
+                            cache_dir: Path | str | None = None) -> dict:
+    """保存讨论过程。未走 to-spec 时不改正式规则。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.apply_design_discussion(
+        project_root, plan, answers, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def plan_spec_adoption(project_root: Path | str, adopted: dict,
+                       config_rel: str = DEFAULT_CONFIG_REL, *,
+                       transport=None, api_base: str | None = None,
+                       cache_dir: Path | str | None = None) -> dict:
+    """开发者主动 to-spec 的写入计划;未确认不写。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.plan_spec_adoption(
+        project_root, adopted, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_spec_adoption(project_root: Path | str, plan: dict, *,
+                        confirmed: bool = True,
+                        config_rel: str = DEFAULT_CONFIG_REL,
+                        transport=None, api_base: str | None = None,
+                        cache_dir: Path | str | None = None) -> dict:
+    """把已采纳设计写入整体入口与按需模块,并同步受影响任务引用。"""
+
+    import mgs_spec  # noqa: PLC0415
+
+    return mgs_spec.apply_spec_adoption(
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
+
+
+# ---------- 正式版本设计快照(issue #54) ----------
+
+def plan_design_snapshot(project_root: Path | str, request: dict,
+                         config_rel: str = DEFAULT_CONFIG_REL, *,
+                         transport=None, api_base: str | None = None,
+                         cache_dir: Path | str | None = None) -> dict:
+    """正式版本节点的归档计划;日常修改不强制生成。"""
+
+    import mgs_snapshot  # noqa: PLC0415
+
+    return mgs_snapshot.plan_design_snapshot(
+        project_root, request, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_design_snapshot(project_root: Path | str, plan: dict, *,
+                          confirmed: bool = True,
+                          config_rel: str = DEFAULT_CONFIG_REL,
+                          transport=None, api_base: str | None = None,
+                          cache_dir: Path | str | None = None) -> dict:
+    """把现行规格另存为归档。不改写现行正文,只追加版本索引。"""
+
+    import mgs_snapshot  # noqa: PLC0415
+
+    return mgs_snapshot.apply_design_snapshot(
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
+
+
+def read_design_snapshots(project_root: Path | str,
+                          config_rel: str = DEFAULT_CONFIG_REL, *,
+                          transport=None, api_base: str | None = None,
+                          cache_dir: Path | str | None = None) -> dict:
+    """只读归档快照与版本索引。历史快照不参与现行同步。"""
+
+    import mgs_snapshot  # noqa: PLC0415
+
+    return mgs_snapshot.read_design_snapshots(
+        project_root, config_rel, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+# ---------- 可玩任务拆分与交付(issue #56) ----------
+
+def plan_playable_delivery(project_root: Path | str, request: dict,
+                           config_rel: str = DEFAULT_CONFIG_REL, *,
+                           transport=None, api_base: str | None = None,
+                           cache_dir: Path | str | None = None) -> dict:
+    """开发者主动 to-tickets 后的可玩任务计划;默认正式工程,本阶段不写。"""
+
+    import mgs_playable  # noqa: PLC0415
+
+    return mgs_playable.plan_playable_delivery(
+        project_root, request, config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def apply_playable_delivery(project_root: Path | str, plan: dict, *,
+                            confirmed: bool = True,
+                            config_rel: str = DEFAULT_CONFIG_REL,
+                            transport=None, api_base: str | None = None,
+                            cache_dir: Path | str | None = None) -> dict:
+    """把可玩任务写入选定 tracker。未确认不写。"""
+
+    import mgs_playable  # noqa: PLC0415
+
+    return mgs_playable.apply_playable_delivery(
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
+
+
+def record_playable_result(project_root: Path | str, identity: str,
+                           result: dict,
+                           config_rel: str = DEFAULT_CONFIG_REL, *,
+                           transport=None, api_base: str | None = None,
+                           cache_dir: Path | str | None = None) -> dict:
+    """记录实际版本、启动方式、检查范围与反馈去向。"""
+
+    import mgs_playable  # noqa: PLC0415
+
+    return mgs_playable.record_playable_result(
+        project_root, identity, result, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
+
+
+# ---------- 本地旧项目完整资料迁移(issue #57) ----------
+
+def plan_local_material_migration(project_root: Path | str, *,
+                                  scope: dict | None = None) -> dict:
+    """只读整理本地 Markdown 旧资料转换清单。不写入,不切换现行来源。"""
+
+    import mgs_local_migration  # noqa: PLC0415
+
+    return mgs_local_migration.plan_local_material_migration(
+        project_root, scope=scope)
+
+
+def apply_local_material_migration(project_root: Path | str,
+                                   plan: dict | None = None, *,
+                                   confirmed: bool = False) -> dict:
+    """转换成待切换成果。未确认不写;冲突只暂停相关步骤;回读后只补缺项。"""
+
+    import mgs_local_migration  # noqa: PLC0415
+
+    return mgs_local_migration.apply_local_material_migration(
+        project_root, plan, confirmed=confirmed)
+
+
+def read_local_material_migration(project_root: Path | str) -> dict:
+    """回读待切换迁移成果与新旧对应。只建任务或附旧链接不算完整。"""
+
+    import mgs_local_migration  # noqa: PLC0415
+
+    return mgs_local_migration.read_local_material_migration(project_root)
+
+
+# ---------- GitHub 旧项目完整资料迁移(issue #58) ----------
+
+def plan_github_material_migration(project_root: Path | str, *,
+                                   scope: dict | None = None,
+                                   transport=None, api_base: str | None = None,
+                                   cache_dir: Path | str | None = None) -> dict:
+    """只读整理 GitHub 旧资料转换清单。不写入,不切换现行来源。"""
+
+    import mgs_github_material_migration  # noqa: PLC0415
+
+    return mgs_github_material_migration.plan_github_material_migration(
+        project_root, scope=scope, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def apply_github_material_migration(project_root: Path | str,
+                                    plan: dict | None = None, *,
+                                    confirmed: bool = False,
+                                    transport=None, api_base: str | None = None,
+                                    cache_dir: Path | str | None = None) -> dict:
+    """转换成待切换 GitHub 成果。未确认不写;冲突只暂停相关步骤;回读后只补缺项。"""
+
+    import mgs_github_material_migration  # noqa: PLC0415
+
+    return mgs_github_material_migration.apply_github_material_migration(
+        project_root, plan, confirmed=confirmed, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def read_github_material_migration(project_root: Path | str, *,
+                                   transport=None, api_base: str | None = None,
+                                   cache_dir: Path | str | None = None) -> dict:
+    """回读待切换 GitHub 迁移成果与新旧对应。只建任务或附旧链接不算完整。"""
+
+    import mgs_github_material_migration  # noqa: PLC0415
+
+    return mgs_github_material_migration.read_github_material_migration(
+        project_root, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+# ---------- 用户修改、同名来源与安全切换(issue #59) ----------
+
+def plan_safe_switch(project_root: Path | str, *,
+                     client_home: Path | str | None = None,
+                     package_root: Path | str | None = None,
+                     peer_projects: list | None = None,
+                     transport=None, api_base: str | None = None,
+                     cache_dir: Path | str | None = None) -> dict:
+    """只读核对照切换条件。不写入,不切换现行指针或技能来源。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.plan_safe_switch(
+        project_root, client_home=client_home, package_root=package_root,
+        peer_projects=peer_projects, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def apply_safe_switch(project_root: Path | str,
+                      plan: dict | None = None, *,
+                      confirmed: bool = False,
+                      transport=None, api_base: str | None = None,
+                      cache_dir: Path | str | None = None) -> dict:
+    """核对通过且确认后切换现行指针与技能来源。未确认不写。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.apply_safe_switch(
+        project_root, plan, confirmed=confirmed, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
+
+
+def read_safe_switch(project_root: Path | str, *,
+                     transport=None, api_base: str | None = None,
+                     cache_dir: Path | str | None = None) -> dict:
+    """回读切换状态、现行来源与恢复去向。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.read_safe_switch(
+        project_root, transport=transport, api_base=api_base,
+        cache_dir=cache_dir)
+
+
+def rollback_safe_switch(project_root: Path | str,
+                         plan: dict | None = None, *,
+                         confirmed: bool = False,
+                         transport=None, api_base: str | None = None,
+                         cache_dir: Path | str | None = None) -> dict:
+    """回退前先保留新版新增成果,不用迁移前快照覆盖。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    return mgs_safe_switch.rollback_safe_switch(
+        project_root, plan, confirmed=confirmed, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------

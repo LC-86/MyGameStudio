@@ -93,6 +93,18 @@ def repo_str(repo: dict) -> str:
     return f"{repo['host']}/{repo['owner']}/{repo['repo']}"
 
 
+def request_2xx(transport, method: str, path: str,
+                body: dict | None = None) -> object | None:
+    """执行请求并要求 2xx;非 2xx 一律返回 None(未确认),不当作空数据。
+
+    状态码丢弃类缺陷的统一收口:调用方以 ``is None`` 判定失败并失败闭合,
+    不得把错误载荷读成「内容为空」。TransportError 仍原样抛出,由调用方
+    按其 kind 走既有恢复路径。"""
+
+    status, payload = transport.request(method, path, body)
+    return payload if status in (200, 201) else None
+
+
 # ---------- 传输层 ----------
 
 class UrllibTransport:

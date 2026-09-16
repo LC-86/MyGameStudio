@@ -54,4 +54,4 @@
 
 ---
 
-包内说明(任务票 05 更新):本包已实现「新项目 + 本地 Markdown」与「接手已有项目 + 本地 Markdown」两条路径——只读现状分析(六类区分)、复用有效资料与任务来源、混合职责文档拆分、中断恢复、重复运行与模板升级;任务后端切换迁移与 GitHub Issues 后端属后续任务票,未实现不声称。包内统一回读接口为 `records/mgs_records.py`。
+包内说明(issue #51/#52/#57/#58/#59):本包实现「新项目或接手已有项目」下选择本地 Markdown 或 GitHub Issues 为唯一现行 tracker：只读现状分析、复用有效资料、任务维护与只读状态查询;已有本地 Markdown 项目的规格、决定、任务、结果与证据可经 `plan_local_material_migration` / `apply_local_material_migration` / `read_local_material_migration` 转换成待切换成果;已有 GitHub 项目经 `plan_github_material_migration` / `apply_github_material_migration` / `read_github_material_migration` 转换并恢复原生关系;核对完整后经 `plan_safe_switch` / `apply_safe_switch` / `read_safe_switch` / `rollback_safe_switch` 切换现行指针与技能来源。普通工作不经 mgs-gate。GitHub 写入须 CONFIG 仓库级 issues-write 授权。包内统一接口为 `records/mgs_records.py`。

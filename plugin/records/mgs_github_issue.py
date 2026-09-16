@@ -23,6 +23,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -32,6 +33,39 @@ import mgs_record_model  # noqa: E402
 import mgs_record_source  # noqa: E402
 from mgs_record_model import CANONICAL_LABELS, RecordsError, today  # noqa: E402
 from mgs_github_transport import GithubRecordsError  # noqa: E402
+
+HISTORY_MARK = "迁移状态:readonly-history"
+PENDING_SWITCH_MARK = "迁移状态:pending-switch"
+
+_RECORD_HEADER_RE = re.compile(r"^(?:规格身份|讨论身份|快照身份):", re.M)
+
+
+def is_record_carrier(body: str) -> bool:
+    """正文以行首正式元数据头承载规格/讨论/快照记录。
+
+    只认元数据头,不认正文任意位置的子串:普通任务的工作请求里
+    出现 ``规格身份:overall`` 这类字样时,任务本身仍是任务。
+    """
+
+    return bool(_RECORD_HEADER_RE.search(body or ""))
+
+
+def is_pending_switch(body: str) -> bool:
+    """待切换迁移成果:现行读取应跳过,不能充当当前来源。"""
+
+    return PENDING_SWITCH_MARK in (body or "")
+
+
+def is_historical_source(body: str) -> bool:
+    """切换后的旧原件:只读历史,不能充当当前来源。"""
+
+    return HISTORY_MARK in (body or "")
+
+
+def skip_from_current_reads(body: str) -> bool:
+    """现行读取跳过待切换成果与只读历史原件。"""
+
+    return is_pending_switch(body) or is_historical_source(body)
 
 
 def authorization_for(config: dict, op: str) -> tuple[bool, str]:
@@ -83,13 +117,26 @@ def build_task_body(title: str, identity: str, triage: str, progress: str,
 
 
 def parse_issue_payload(item: dict, label_map: dict) -> dict:
-    """GitHub Issue 原始对象 → 任务记录(parse_issue_body 的字典薄包装)。"""
+    """GitHub Issue 原始对象 → 任务记录(parse_issue_body 的字典薄包装)。
 
-    return parse_issue_body(
+    原生字段(负责人、父子、开放阻塞摘要)一并回读;认领以 assignees 为准。
+    """
+
+    record = parse_issue_body(
         item.get("number", 0), item.get("body") or "",
         [label.get("name", "") for label in item.get("labels", [])],
         item.get("state", "open"), item.get("state_reason"),
         label_map, issue_id=item.get("id"))
+    assignees = [entry.get("login") for entry in (item.get("assignees") or [])
+                 if entry.get("login")]
+    record["assignees"] = assignees
+    record["claim"] = assignees[0] if assignees else (record.get("claim") or "未认领")
+    parent = item.get("parent") or {}
+    record["parent_issue_number"] = parent.get("number")
+    summary = ((item.get("issue_dependencies_summary") or {}).get("blocked_by")
+               or {})
+    record["open_blocker_count"] = int(summary.get("total_count") or 0)
+    return record
 
 
 def parse_issue_body(number: int, body: str, labels: list[str],
@@ -117,6 +164,9 @@ def parse_issue_body(number: int, body: str, labels: list[str],
         "title": record["title"],
         "triage": triage_label or triage_body or "",
         "progress": record["progress"],
+        # 关闭原因与进度一样随正文持久化并回读:两类 completed
+        # (完成/已有成果覆盖)只能靠它区分,GitHub 状态本身不承载。
+        "close_reason": record["close_reason"],
         "issue_number": number,
         "issue_id": issue_id,
         "state": state,
