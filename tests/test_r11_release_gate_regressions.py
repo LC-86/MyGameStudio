@@ -18,7 +18,9 @@
 
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -323,6 +325,72 @@ def test_r11_3_existing_snapshot_reuse_validates_full_content() -> None:
               f"恢复后按回读结果宣告完整:{repaired}")
 
 
+CAPTURE_CLI = REPO_ROOT / "plugin" / "internal" / "review" / "pending_review.py"
+
+
+def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", *args], cwd=repo, check=True,
+                          capture_output=True, text=True)
+
+
+def _write(repo: Path, rel: str, text: str) -> None:
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _capture(repo: Path, baseline: str) -> dict:
+    result = subprocess.run(
+        [sys.executable, "-B", str(CAPTURE_CLI), "capture",
+         "--repo", str(repo), "--baseline", baseline,
+         "--include", "src"],
+        capture_output=True, text=True)
+    check(result.returncode == 0,
+          f"capture 退出码应为 0,实际 {result.returncode}:{result.stderr}")
+    return json.loads(result.stdout or "{}")
+
+
+def test_r11_4_partially_staged_states_enter_artifact() -> None:
+    """R11-4: 部分暂存的两段状态都进入工件;只改暂存区也使结论失效。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "partial-stage"
+        repo.mkdir()
+        _git(repo, "init", "-b", "main")
+        _git(repo, "config", "user.email", "r11@example.test")
+        _git(repo, "config", "user.name", "R11 Fixture")
+        _write(repo, "src/game.py", "line-b\n")
+        _git(repo, "add", "src")
+        _git(repo, "commit", "-m", "baseline")
+        baseline = _git(repo, "rev-parse", "HEAD").stdout.strip()
+        # 部分暂存:暂存内容与工作区内容都不同于基线且互不相同。
+        _write(repo, "src/game.py", "line-s\n")
+        _git(repo, "add", "src/game.py")
+        _write(repo, "src/game.py", "line-w\n")
+        first = _capture(repo, baseline)
+        patch = first.get("patch") or ""
+        check(first.get("complete") is True, "部分暂存是真实待审差异,不得为空")
+        check("line-s" in patch,
+              "暂存区独有的行必须进入待审成果,否则下次提交携带未受审内容")
+        check("line-w" in patch, "工作区状态必须进入待审成果")
+        staged = (first.get("paths") or {}).get("staged") or []
+        check("src/game.py" in staged, "该路径必须归入暂存集合")
+        # 工作区不动、只改暂存区:内容版本必须变化,旧结论不得继续沿用。
+        _write(repo, "src/game.py", "line-s2\n")
+        _git(repo, "add", "src/game.py")
+        _write(repo, "src/game.py", "line-w\n")
+        second = _capture(repo, baseline)
+        check(second.get("content_version") != first.get("content_version"),
+              "只改暂存区也必须使既有评审结论失效")
+        rechecked = json.loads(subprocess.run(
+            [sys.executable, "-B", str(CAPTURE_CLI), "recheck",
+             "--repo", str(repo), "--artifact", json.dumps(first)],
+            capture_output=True, text=True,
+        ).stdout or "{}")
+        check(rechecked.get("stale_conclusions") is True,
+              "暂存区变化后旧工件不得判定为仍然有效")
+
+
 if __name__ == "__main__":
     raise SystemExit(run_theme(
         "PR #67 R11 发版门挡发项修复回归",
@@ -333,6 +401,7 @@ if __name__ == "__main__":
             test_r11_2_complete_verifies_every_mapped_result,
             test_r11_3_snapshot_reports_each_missing_identity_module,
             test_r11_3_existing_snapshot_reuse_validates_full_content,
+            test_r11_4_partially_staged_states_enter_artifact,
         ),
         FAILURES,
     ))

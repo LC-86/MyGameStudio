@@ -317,7 +317,17 @@ def capture_pending_review(repo: Path | str, baseline: str,
             elif not tracked and before is not None:
                 after = None  # 暂存删除后工作区又还原,提交仍将删除
         current = after if exists else None
-        hunk = _unified_bytes(path, before, current)
+        # 部分暂存(暂存区与工作区都不同于基线且互不相同)必须同时记录
+        # 基线→暂存区 与 暂存区→工作区 两段:只记净差异会让暂存区独有
+        # 的行在下一次提交时从未受审,且只改暂存区不使结论失效。
+        index_state = staged_bytes if tracked else None
+        partial = (index_state is not None
+                   and index_state != before and index_state != after)
+        if partial:
+            hunk = (_unified_bytes(path, before, index_state)
+                    + _unified_bytes(path, index_state, current))
+        else:
+            hunk = _unified_bytes(path, before, current)
         before_mode = _ls_tree_mode(repo, base_sha, path)
         after_mode = _worktree_mode(repo, path) if exists else None
         mode_hunk = _mode_hunk(path, before_mode, after_mode)
@@ -328,6 +338,8 @@ def capture_pending_review(repo: Path | str, baseline: str,
         if hunk:
             patches.append(hunk)
         marker = "DEL" if current is None else _sha_bytes(current)
+        if partial:
+            marker = f"{marker}|index={_sha_bytes(index_state)}"
         if after_mode:
             marker = f"{marker}|{after_mode}"
         elif before_mode:
