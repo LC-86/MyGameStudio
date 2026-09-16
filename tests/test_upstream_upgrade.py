@@ -527,8 +527,8 @@ def test_new_materials_follow_the_same_review_before_delivery() -> None:
               "纳入新资料后游戏入口和 Matt 路径仍须能加载")
 
 
-def test_upgrade_stays_codex_only_and_is_not_a_service() -> None:
-    """AC: do not expand clients/engines/tools, and do not start a continuous updater."""
+def test_upgrade_records_multi_client_scope_and_is_not_a_service() -> None:
+    """Issue #75: clients record the delivered clients; still no engines/tools/updater."""
 
     with tempfile.TemporaryDirectory(prefix="mgs-upgrade-") as tmp:
         plugin = _write_current_plugin(Path(tmp) / "plugin")
@@ -539,8 +539,8 @@ def test_upgrade_stays_codex_only_and_is_not_a_service() -> None:
             candidate_sha=PINNED_SHA,
         )
         scope = evaluation.get("scope") or {}
-        check(scope.get("clients") == ["codex"],
-              f"首批仍只验证 Codex,实际 {scope.get('clients')}")
+        check(scope.get("clients") == ["codex", "zcode", "grok-build"],
+              f"客户端范围应如实记录 Codex+ZCode+Grok Build,实际 {scope.get('clients')}")
         check(scope.get("continuous_update") is False,
               "不得建立持续更新服务")
         check(scope.get("engines") in (None, [], False),
@@ -858,7 +858,7 @@ TESTS = (
     test_source_conflict_keeps_current_version,
     test_unevaluated_collection_change_is_not_adopted,
     test_new_materials_follow_the_same_review_before_delivery,
-    test_upgrade_stays_codex_only_and_is_not_a_service,
+    test_upgrade_records_multi_client_scope_and_is_not_a_service,
     test_live_package_keeps_the_fixed_upstream_pin,
     test_missing_license_keeps_current_version,
     test_changed_candidate_keeps_commit_authorization_adaptation,

@@ -58,7 +58,7 @@ ENV = {
 }
 UNEXECUTED_ITEMS = (
     "publish",
-    "install-real-codex",
+    "install-real-client",
     "new-session-verification",
     "live-migration",
     "live-switch",

@@ -7,6 +7,7 @@
 - 名称:`mygamestudio`,版本 `2.0.0`。
 - 上游:Matt Pocock skills **1.2.3**,完整提交 `3cca18b368ae95cdbdebbff572ccafa662551015`。
 - 公开集合:正式 25 项(engineering 18 + productivity 7)加三个游戏入口 Game-Producer、Game-Init、Game-Design。实验与未正式发布技能不纳入。
+- 多客户端:同时携带 Codex 清单 `.codex-plugin/plugin.json` 与 ZCode 清单 [`.zcode-plugin/plugin.json`](../.zcode-plugin/plugin.json),两份清单 name/version 保持一致;`skills/` 目录按 ZCode 与 Grok Build 约定自动发现,无 MCP 依赖。
 - 普通工作不注册 mgs-gate。旧运行服务、强制通道和已退役入口已移出安装包,去向见 [internal/game/retired-entries.md](../internal/game/retired-entries.md);历史材料在仓库 `legacy/`,不是新版有效能力。
 - 交付物见仓库 `dist/`。
 
@@ -34,7 +35,7 @@
 - 可玩交付公开接缝:`records/mgs_records.py` 的 `plan_playable_delivery` / `apply_playable_delivery` / `record_playable_result`。
 - 本地旧项目完整资料迁移公开接缝:`records/mgs_records.py` 的 `plan_local_material_migration` / `apply_local_material_migration` / `read_local_material_migration`。
 - GitHub 旧项目完整资料迁移公开接缝:`records/mgs_records.py` 的 `plan_github_material_migration` / `apply_github_material_migration` / `read_github_material_migration`。
-- 用户修改、同名来源与安全切换公开接缝:`records/mgs_records.py` 的 `plan_safe_switch` / `apply_safe_switch` / `read_safe_switch` / `rollback_safe_switch`。技能来源切换用隔离目录演示合同,不安装到真实 Codex。
+- 用户修改、同名来源与安全切换公开接缝:`records/mgs_records.py` 的 `plan_safe_switch` / `apply_safe_switch` / `read_safe_switch` / `rollback_safe_switch`。技能来源切换用隔离目录演示合同,不安装到真实客户端。
 
 `game-design/` 仅保留公开技能说明。既有设计讨论 Python 模块已移到仓库 `legacy/game-design/`,供历史检查使用;新版普通路径以 `records/mgs_records.py` 的设计/规格接缝为准,不经 mgs-gate。
 
@@ -57,4 +58,4 @@
 
 - misc 与 in-progress 技能。
 - 已退役的六个专业入口及 Game-Status/Game-Plan/Game-Spec/Game-Implement 等独立公开入口。
-- 真实 Codex 用户目录安装;本票调用核验使用包发现面与既有 app-server 检查边界。
+- 真实客户端用户目录安装;本票调用核验使用包发现面与既有 app-server 检查边界。
