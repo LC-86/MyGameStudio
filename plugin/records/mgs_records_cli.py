@@ -334,10 +334,13 @@ def _cli() -> int:
                 project_root=root, transport=transport,
                 cache_dir=args.cache_dir)
         elif args.cmd == "switch-check":
+            # --config 必须贯通到 safe-switch API:tracker 判定、就绪核对
+            # 与回滚授权都按该 CONFIG 进行,静默忽略会让选项名存实亡。
             payload = plan_safe_switch(
                 root, client_home=args.client_home,
                 package_root=args.package_root,
-                peer_projects=args.peer_project, **remote)
+                peer_projects=args.peer_project, config_rel=args.config,
+                **remote)
         elif args.cmd in {"switch-run", "switch-rollback"}:
             plan_data = None
             if args.plan:
@@ -346,9 +349,9 @@ def _cli() -> int:
             action = (apply_safe_switch if args.cmd == "switch-run"
                       else rollback_safe_switch)
             payload = action(root, plan_data, confirmed=args.confirmed,
-                             **remote)
+                             config_rel=args.config, **remote)
         elif args.cmd == "switch-status":
-            payload = read_safe_switch(root, **remote)
+            payload = read_safe_switch(root, config_rel=args.config, **remote)
         else:  # pragma: no cover - 子命令已穷举
             raise RecordsError(f"未知子命令 {args.cmd}")
     except RecordsError as exc:

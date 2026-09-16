@@ -1207,6 +1207,7 @@ def plan_safe_switch(project_root: Path | str, *,
                      client_home: Path | str | None = None,
                      package_root: Path | str | None = None,
                      peer_projects: list | None = None,
+                     config_rel: str = DEFAULT_CONFIG_REL,
                      transport=None, api_base: str | None = None,
                      cache_dir: Path | str | None = None) -> dict:
     """只读核对照切换条件。不写入,不切换现行指针或技能来源。"""
@@ -1215,13 +1216,14 @@ def plan_safe_switch(project_root: Path | str, *,
 
     return mgs_safe_switch.plan_safe_switch(
         project_root, client_home=client_home, package_root=package_root,
-        peer_projects=peer_projects, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+        peer_projects=peer_projects, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 def apply_safe_switch(project_root: Path | str,
                       plan: dict | None = None, *,
                       confirmed: bool = False,
+                      config_rel: str = DEFAULT_CONFIG_REL,
                       transport=None, api_base: str | None = None,
                       cache_dir: Path | str | None = None) -> dict:
     """核对通过且确认后切换现行指针与技能来源。未确认不写。"""
@@ -1229,11 +1231,12 @@ def apply_safe_switch(project_root: Path | str,
     import mgs_safe_switch  # noqa: PLC0415
 
     return mgs_safe_switch.apply_safe_switch(
-        project_root, plan, confirmed=confirmed, transport=transport,
-        api_base=api_base, cache_dir=cache_dir)
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 def read_safe_switch(project_root: Path | str, *,
+                     config_rel: str = DEFAULT_CONFIG_REL,
                      transport=None, api_base: str | None = None,
                      cache_dir: Path | str | None = None) -> dict:
     """回读切换状态、现行来源与恢复去向。"""
@@ -1241,13 +1244,14 @@ def read_safe_switch(project_root: Path | str, *,
     import mgs_safe_switch  # noqa: PLC0415
 
     return mgs_safe_switch.read_safe_switch(
-        project_root, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+        project_root, config_rel=config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
 
 
 def rollback_safe_switch(project_root: Path | str,
                          plan: dict | None = None, *,
                          confirmed: bool = False,
+                         config_rel: str = DEFAULT_CONFIG_REL,
                          transport=None, api_base: str | None = None,
                          cache_dir: Path | str | None = None) -> dict:
     """回退前先保留新版新增成果,不用迁移前快照覆盖。"""
@@ -1255,8 +1259,8 @@ def rollback_safe_switch(project_root: Path | str,
     import mgs_safe_switch  # noqa: PLC0415
 
     return mgs_safe_switch.rollback_safe_switch(
-        project_root, plan, confirmed=confirmed, transport=transport,
-        api_base=api_base, cache_dir=cache_dir)
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------
