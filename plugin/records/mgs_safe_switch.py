@@ -131,6 +131,36 @@ def _prep_changed(root: Path, expected: dict[str, str]) -> list[str]:
     return changed
 
 
+def _tree_fingerprints(root: Path | str | None) -> dict[str, str]:
+    """逐文件指纹一棵目录树;目录不存在或未提供时返回空。"""
+
+    if not root:
+        return {}
+    base = Path(root)
+    if not base.is_dir():
+        return {}
+    fingerprints: dict[str, str] = {}
+    for path in sorted(base.rglob("*")):
+        if path.is_file():
+            rel = str(path.relative_to(base)).replace("\\", "/")
+            fingerprints[rel] = _sha_file(path)
+    return fingerprints
+
+
+def _package_drift(plan: dict) -> list[str]:
+    """重查已确认计划里的包树指纹,返回与清单不一致的包内文件。
+
+    计划不含包树指纹时返回空;包根丢失视为全部漂移(失败闭合)。"""
+
+    expected = plan.get("package_fingerprints") or {}
+    if not expected:
+        return []
+    package_raw = str(plan.get("package_root") or "").strip()
+    if not package_raw:
+        return sorted(expected)
+    return _prep_changed(Path(package_raw), expected)
+
+
 def _converted_overall(root: Path, report: dict, *, transport=None,
                        api_base=None, cache_dir=None) -> str:
     staging = Path(report.get("pending_root") or _pending_root(root))
@@ -255,6 +285,7 @@ def plan_safe_switch(project_root: Path | str, *,
         "correspondence": report.get("correspondence") or switched.get("correspondence") or {},
         "migration_status": switched.get("status") or report.get("status"),
         "source_fingerprints": fingerprints,
+        "package_fingerprints": _tree_fingerprints(package_root),
         "already_switched": already,
     }
 
@@ -488,6 +519,16 @@ def _copy_stage_index(home: Path, package_root: Path) -> None:
             return
 
 
+def _paths_overlap(a: Path, b: Path) -> bool:
+    """两个目录是否相同或存在嵌套包含;重叠时先删后拷会互相自毁。"""
+
+    try:
+        ra, rb = a.resolve(), b.resolve()
+    except OSError:
+        return False
+    return ra == rb or ra in rb.parents or rb in ra.parents
+
+
 def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
     home_raw = str(plan.get("client_home") or "").strip()
     package_raw = str(plan.get("package_root") or "").strip()
@@ -518,6 +559,16 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
         pkg_text = _read(pkg_dir / "SKILL.md")
         if user_dir is not None:
             user_text = _read(user_dir / "SKILL.md")
+            # 包来源与安装目录重叠时,先删后拷会把唯一的技能副本连同包
+            # 一起删掉。目录完全相同说明安装内容已是包本身,跳过替换;
+            # 嵌套重叠无法安全替换,暂停该技能交开发者处理。
+            if _paths_overlap(user_dir, pkg_dir):
+                if user_dir.resolve() == pkg_dir.resolve():
+                    continue
+                _write(user_dir / "SKILL.md", _ensure_stage_pointer(user_text))
+                paused.append(name)
+                decisions.append(name)
+                continue
             extra_rels = _skill_file_rels(user_dir) - _skill_file_rels(pkg_dir)
             extra_text = _additive_user_skill_text(user_text, pkg_text)
             hist_dir = history / name if (history / name).is_dir() else None
@@ -566,6 +617,9 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
         user_dir = user_skills.get(name)
         if user_dir is None:
             continue
+        # 退役清理同样不得删除与包来源重叠的目录(否则会删掉包内容)。
+        if _paths_overlap(user_dir, package):
+            continue
         hist = history / name
         if not hist.exists():
             hist.parent.mkdir(parents=True, exist_ok=True)
@@ -603,7 +657,8 @@ def _client_complete(plan: dict, skills: dict, unready: list) -> bool:
         skills.get("paused") or [])
 
 
-def _switch_local(root: Path, plan: dict) -> dict:
+def _switch_local(root: Path, plan: dict, *, transport=None, api_base=None,
+                  cache_dir=None) -> dict:
     staging = _pending_root(root)
     if not (staging / "docs/mygamestudio/CONFIG.md").is_file():
         return {
@@ -620,10 +675,14 @@ def _switch_local(root: Path, plan: dict) -> dict:
             "real_migration_authorized": False,
             "status": "blocked",
         }
+    # peer 就绪检查必须先于归档与提升,且透传注入的 transport:晚于提升
+    # 会让 peer 检查失败时本地已被换成新来源,留下半完成的切换状态。
+    unready = _peer_unready(
+        plan.get("peer_projects") or [], transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
     archived = _archive_originals(root, staging)
     copied = _promote_pending(root, staging)
     correspondence = plan.get("correspondence") or {}
-    unready = _peer_unready(plan.get("peer_projects") or [])
     skills = _switch_skills(plan, unready=unready)
     payload = {
         "status": "switched",
@@ -844,6 +903,12 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
             "recovery_destination": GATE_HISTORY_REL,
             "correspondence": correspondence,
         }
+    # peer 就绪检查必须先于远端标记与本地提升,且透传注入的 transport:
+    # 丢弃注入会让 peer 回读走错误端点;晚于变更则 peer 检查失败时
+    # 远端/本地已切成新来源,留下半完成的切换状态。
+    unready = _peer_unready(
+        plan.get("peer_projects") or [], transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
     # 远端标记迁移必须先于本地提升逐项确认:PATCH 成功且回读到目标状态
     # 才允许归档旧件、提升新件;任何一项未确认时本地保持旧来源,
     # 不写 switch-status。先提升再打标记会让本地指向新源而 GitHub
@@ -909,7 +974,6 @@ def _switch_github(root: Path, plan: dict, *, transport=None,
         }
     archived = _archive_originals(root, staging)
     copied = _promote_pending(root, staging)
-    unready = _peer_unready(plan.get("peer_projects") or [])
     skills = _switch_skills(plan, unready=unready)
     payload = {
         "status": "switched",
@@ -1036,12 +1100,26 @@ def apply_safe_switch(project_root: Path | str,
             "real_migration_authorized": False,
             "status": fresh.get("migration_status") or "blocked",
         }
+    # 包树指纹必须在安装前与已确认计划逐一核对:check 与 run 之间包内容
+    # 可能被整体替换,旧清单不能替代对实际包内容的核对。
+    package_drift = _package_drift(plan)
+    if package_drift:
+        return {
+            "ok": False,
+            "wrote": False,
+            "reason": "确认后技能包内容与已确认清单不一致,不安装来源不明的包",
+            "changed_package_files": package_drift,
+            "gate_required": False,
+            "real_migration_authorized": False,
+            "status": fresh.get("migration_status") or "blocked",
+        }
     tracker = plan.get("tracker") or _tracker_of(root)
     if tracker == "github-issues":
         return _switch_github(
             root, plan, transport=transport, api_base=api_base,
             cache_dir=cache_dir)
-    return _switch_local(root, plan)
+    return _switch_local(root, plan, transport=transport, api_base=api_base,
+                         cache_dir=cache_dir)
 
 
 def read_safe_switch(project_root: Path | str, *,
