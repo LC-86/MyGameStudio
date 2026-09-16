@@ -454,8 +454,13 @@ def _missing_module_refs(root: Path, overall: str, modules: dict) -> list[str]:
             path = root / ref.split()[0]
             if not path.is_file():
                 missing.append(ref.split()[0])
-        elif name.strip() and name.strip() not in modules and not modules:
-            missing.append(name.strip())
+        else:
+            # 身份引用逐个核对:只要还有任一模块可读就放行缺项,归档会
+            # 静默丢失个别模块仍宣称完整。
+            match = re.match(r"规格身份\s+([A-Za-z0-9_-]+)", ref)
+            key = match.group(1) if match else name.strip()
+            if key and key not in modules:
+                missing.append(name.strip() or key)
     return missing
 
 
@@ -836,33 +841,45 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
     if existing is not None and not plan.get("correction"):
         number = existing.get("number")
         body_text = existing.get("body") or ""
-        if "整体设计(当时完整内容)" not in body_text:
-            current = mgs_spec.read_current_design(
-                root, config_rel, transport=transport, api_base=api_base,
-                cache_dir=cache_dir)
-            expected = plan.get("source_sha256")
-            if expected and expected != _source_fingerprint(current):
-                return {
-                    "ok": False, "wrote": True, "complete": False,
-                    "reason": "生成期间来源改变,不能保存混合修订并宣称完整",
-                    "design_id": plan.get("design_id"),
-                    "revision": plan.get("revision"),
-                    "issue_number": number,
-                    "gate_required": False,
-                }
-            attachments, err = _collect_attachments(root, plan)
-            if err:
-                return {
-                    "ok": False, "wrote": True, "complete": False,
-                    "reason": err, "gate_required": False,
-                    "design_id": plan.get("design_id"),
-                    "revision": plan.get("revision"),
-                    "issue_number": number,
-                }
+        current = mgs_spec.read_current_design(
+            root, config_rel, transport=transport, api_base=api_base,
+            cache_dir=cache_dir)
+        expected = plan.get("source_sha256")
+        if expected and expected != _source_fingerprint(current):
+            return {
+                "ok": False, "wrote": True, "complete": False,
+                "reason": "生成期间来源改变,不能保存混合修订并宣称完整",
+                "design_id": plan.get("design_id"),
+                "revision": plan.get("revision"),
+                "issue_number": number,
+                "gate_required": False,
+            }
+        attachments, err = _collect_attachments(root, plan)
+        if err:
+            return {
+                "ok": False, "wrote": True, "complete": False,
+                "reason": err, "gate_required": False,
+                "design_id": plan.get("design_id"),
+                "revision": plan.get("revision"),
+                "issue_number": number,
+            }
+        # 复用前必须校验归档全文:只看「整体设计」标题仍在就跳过校验,
+        # 丢了模块/附件或正文被改的残缺归档会被重试直接盖 complete。
+        saved = _parse_github_snapshot(existing)
+        recovered_ok = (
+            saved.get("overall") == (current.get("overall") or "").strip()
+            and saved.get("modules") == {
+                key: (value or "").strip()
+                for key, value in (current.get("modules") or {}).items()}
+            and saved.get("attachments") == {
+                key: (value or "").strip()
+                for key, value in (attachments or {}).items()})
+        if not recovered_ok:
+            # 恢复保持原形成时间;正文按计划内容重建,回读一致才算恢复。
             body = _render_github_body(
                 plan, current.get("overall") or "",
                 dict(current.get("modules") or {}), attachments,
-                formed_at=today())
+                formed_at=_meta_field(body_text, "形成时间") or today())
             # 恢复 PATCH 必须成功且回读一致:归档 Issue 若仍缺整体/模块/
             # 附件内容,不得因索引已就绪就宣告恢复完成。
             try:

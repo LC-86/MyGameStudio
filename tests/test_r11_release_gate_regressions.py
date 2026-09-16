@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -35,6 +36,7 @@ import mgs_records  # noqa: E402
 
 from test_github_material_migration import (  # noqa: E402
     _write_old_github_project)
+from test_design_version_snapshot import _onboard_github  # noqa: E402
 
 FAILURES, check = make_checker()
 
@@ -210,6 +212,117 @@ def test_r11_2_complete_verifies_every_mapped_result() -> None:
               f"篡改必须成为点名结果的完整性缺口,实际 {missing}")
 
 
+def test_r11_3_snapshot_reports_each_missing_identity_module() -> None:
+    """R11-3a: 个别身份模块缺失必须逐个点名,不得因还有模块可读而放行。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "missing-identity-module")
+        fake = FakeTransport()
+        adopted = mgs_records.plan_spec_adoption(root, {
+            "kind": "new_feature",
+            "source": "开发者主动 to-spec",
+            "reason": "冻结 0.2 设计",
+            "overall": {
+                "title": "star-catcher 整体设计",
+                "version": "v1",
+                "core_play": "接星星。接到一颗得 1 分。",
+                "rules": ["得分：每颗金色星星 1 分。"],
+                "module_index": {
+                    "规则与数值": "规格身份 rules",
+                    "成长经济": "规格身份 growth-economy",
+                },
+            },
+            "modules": {
+                "规则与数值": {"title": "规则与数值",
+                               "rules": ["每颗金色星星 1 分。"]},
+            },
+        }, transport=fake, cache_dir=_cache(root))
+        applied = mgs_records.apply_spec_adoption(
+            root, adopted, confirmed=True, transport=fake, cache_dir=_cache(root))
+        check(applied.get("ok") is True, f"前置:采纳应成功:{applied}")
+        plan = mgs_records.plan_design_snapshot(root, {
+            "trigger": "version_freeze",
+            "game_version": "0.2.0",
+            "source": "正式版本设计确定",
+        }, transport=fake, cache_dir=_cache(root))
+        snap = mgs_records.apply_design_snapshot(
+            root, plan, confirmed=True, transport=fake, cache_dir=_cache(root))
+        check(snap.get("complete") is not True,
+              "引用的身份模块缺失时不得宣称完整归档")
+        check(snap.get("ok") is not True, "缺模块不得报告成功")
+        reason = str(snap.get("reason") or "")
+        check("成长经济" in reason,
+              f"缺口必须点名缺失模块,实际:{reason}")
+
+
+def test_r11_3_existing_snapshot_reuse_validates_full_content() -> None:
+    """R11-3b: 已有快照复用前必须校验归档全文,残缺归档重试必须补齐。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_github(Path(tmp) / "reuse-validate")
+        fake = FakeTransport()
+        mgs_records.apply_spec_adoption(
+            root, mgs_records.plan_spec_adoption(root, {
+                "kind": "new_feature",
+                "source": "开发者主动 to-spec",
+                "overall": {
+                    "title": "reuse 整体设计",
+                    "version": "v1",
+                    "core_play": "接星星。接到一颗得 1 分。",
+                    "rules": ["得分：每颗金色星星 1 分。"],
+                },
+                "modules": {
+                    "规则与数值": {"title": "规则与数值",
+                                   "rules": ["每颗金色星星 1 分。"]},
+                },
+            }, transport=fake, cache_dir=_cache(root)),
+            confirmed=True, transport=fake, cache_dir=_cache(root))
+        first = mgs_records.apply_design_snapshot(
+            root, mgs_records.plan_design_snapshot(root, {
+                "trigger": "explicit",
+                "game_version": "0.1.0",
+                "source": "开发者明确要求",
+            }, transport=fake, cache_dir=_cache(root)),
+            confirmed=True, transport=fake, cache_dir=_cache(root))
+        check(first.get("complete") is True, f"前置:首次归档应完整:{first}")
+        snap = next(item for item in fake.issues
+                    if "快照身份:" in (item.get("body") or ""))
+        body = snap.get("body") or ""
+        check("## 模块:rules(当时完整内容)" in body, "前置:归档应含模块内容")
+        # 场景一:归档 Issue 仍在整体标题,但模块段落被外部删掉。
+        snap["body"] = re.sub(
+            r"## 模块:[^\n]*\(当时完整内容\)\n+(`{3,})markdown\n.*?\n\1\n?",
+            "", body, flags=re.S)
+        lost_module = mgs_records.apply_design_snapshot(
+            root, mgs_records.plan_design_snapshot(root, {
+                "trigger": "explicit",
+                "design_id": first.get("design_id"),
+                "game_version": "0.1.0",
+                "source": "开发者明确要求",
+            }, transport=fake, cache_dir=_cache(root)),
+            confirmed=True, transport=fake, cache_dir=_cache(root))
+        check("## 模块:rules(当时完整内容)" in (snap.get("body") or ""),
+              "复用前发现缺模块必须重建归档正文,不得只看索引就宣告完整")
+        check(lost_module.get("complete") is True,
+              f"重建且回读一致后才能宣告完整:{lost_module}")
+        # 场景二:归档正文被篡改,重试必须恢复计划内容而不是沿用篡改值。
+        snap["body"] = (snap.get("body") or "").replace(
+            "每颗金色星星 1 分", "被篡改:试玩全通过", 1)
+        check("被篡改" in (snap.get("body") or ""), "前置:篡改应生效")
+        repaired = mgs_records.apply_design_snapshot(
+            root, mgs_records.plan_design_snapshot(root, {
+                "trigger": "explicit",
+                "design_id": first.get("design_id"),
+                "game_version": "0.1.0",
+                "source": "开发者明确要求",
+            }, transport=fake, cache_dir=_cache(root)),
+            confirmed=True, transport=fake, cache_dir=_cache(root))
+        check("被篡改" not in (snap.get("body") or ""),
+              "被改动的归档内容必须恢复为计划内容")
+        check(repaired.get("complete") is True,
+              f"恢复后按回读结果宣告完整:{repaired}")
+
+
 if __name__ == "__main__":
     raise SystemExit(run_theme(
         "PR #67 R11 发版门挡发项修复回归",
@@ -218,6 +331,8 @@ if __name__ == "__main__":
             test_r11_2_spec_comments_inventoried_and_results_gated,
             test_r11_2_unreadable_result_comment_pauses_item,
             test_r11_2_complete_verifies_every_mapped_result,
+            test_r11_3_snapshot_reports_each_missing_identity_module,
+            test_r11_3_existing_snapshot_reuse_validates_full_content,
         ),
         FAILURES,
     ))
