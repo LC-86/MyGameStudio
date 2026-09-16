@@ -224,6 +224,26 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
                 "title": raw.get("title") or identity,
                 "fingerprint": _sha_text(body),
             })
+            # 现行/模块规格把已采纳决定与变更历史存在评论里;评论只存于
+            # GitHub,不进盘点就会在类别级完整性检查下静默丢失。
+            if role in {"current", "module"} and raw.get("number") is not None:
+                for comment in _list_comments(backend, int(raw["number"])):
+                    text = comment.get("body") or ""
+                    if not text.strip():
+                        continue
+                    ident = _field(text, "身份")
+                    if not ident or any(c.isspace() for c in ident):
+                        ident = f"comment-{comment.get('id')}"
+                    items.append({
+                        "kind": "decision",
+                        "identity": ident,
+                        "status": _field(text, "状态") or "未验证",
+                        "source": f"github:comment:{comment.get('id')}",
+                        "issue_number": raw.get("number"),
+                        "comment_id": comment.get("id"),
+                        "title": (text.strip().splitlines() or ["决定"])[0][:80],
+                        "fingerprint": _sha_text(text),
+                    })
             continue
         parsed = parse_issue_payload(raw, labels)
         identity = parsed.get("identity") or ""
@@ -621,7 +641,7 @@ def _ensure_blocked_by(backend, child: dict, blocker: dict) -> bool:
     return blocker_id in existing
 
 
-def _source_fingerprint(root: Path, item: dict, backend) -> str:
+def _source_fingerprint(root: Path, item: dict, backend) -> str | None:
     source = str(item.get("source") or "")
     if source.startswith("github:issue:"):
         number = int(source.rsplit(":", 1)[-1])
@@ -635,11 +655,13 @@ def _source_fingerprint(root: Path, item: dict, backend) -> str:
         comment_id = int(source.rsplit(":", 1)[-1])
         number = item.get("issue_number")
         if not number:
-            return item.get("fingerprint") or ""
+            return None
         for comment in _list_comments(backend, int(number)):
             if comment.get("id") == comment_id:
                 return _sha_text(comment.get("body") or "")
-        return item.get("fingerprint") or ""
+        # 评论被删除或评论读取失败:不可用计划预期指纹替代实测,
+        # 否则不可得来源会被当成「未变化」而静默放行。
+        return None
     path = root / source
     if source and path.is_file():
         return _sha_file(path)
@@ -653,6 +675,10 @@ def _changed(root: Path, item: dict, fingerprints: dict[str, str],
     if not expected:
         return False
     current = _source_fingerprint(root, item, backend)
+    if current is None:
+        # 源评论不可读(被删或读取失败)按变化处理:暂停该项,
+        # 不得把不可得当未变化后静默跳过。
+        return True
     if not current:
         return False
     return current != expected
@@ -733,6 +759,15 @@ def _convert_gate(root: Path, staging: Path) -> dict:
 
 def _read_item_body(root: Path, backend, item: dict) -> str:
     source = str(item.get("source") or "")
+    if source.startswith("github:comment:"):
+        comment_id = int(source.rsplit(":", 1)[-1])
+        number = item.get("issue_number")
+        if not number:
+            return ""
+        for comment in _list_comments(backend, int(number)):
+            if comment.get("id") == comment_id:
+                return comment.get("body") or ""
+        return ""
     if source.startswith("github:") or item.get("issue_number"):
         number = item.get("issue_number")
         if not number and source.startswith("github:issue:"):
@@ -955,9 +990,11 @@ def apply_github_material_migration(project_root: Path | str,
             created += int(bool(comment) and not adopted)
             skipped += int(adopted)
         for item in decisions:
-            body = _read(root / item["source"])
+            body = _read_item_body(root, backend, item)
             text = _history_comment(item, body)
-            needle = f"身份:{item.get('identity')}"
+            # 以来源定位收养:规格评论与本地决定文件可能共用同一身份,
+            # 身份针会把后一条并进前一条的评论而丢内容。
+            needle = f"来源:{item.get('source')}"
             comment, adopted = _publish_comment(
                 backend, overall_issue["number"], needle, text)
             converted.append({
@@ -1075,6 +1112,9 @@ def apply_github_material_migration(project_root: Path | str,
         converted.append({
             "kind": "result", "old": item.get("source"),
             "new_issue": target.get("number"),
+            "new_comment": (posted or {}).get("id"),
+            "needle": needle,
+            "fingerprint": _sha_text(wrapped),
             "identity": identity,
             "wrote": bool(posted) and not adopted,
         })
@@ -1347,6 +1387,33 @@ def read_github_material_migration(project_root: Path | str, *,
                    for comment in overall_comments):
             missing.append(f"决定 {ident} 的历史评论未进入规格评论")
             break
+    # 完成判定必须逐条核对结果映射的目标评论:准备后被删或被篡改的
+    # 结果不得在只看类别非空的情况下随全局切换放行。
+    result_rows = (status.get("correspondence") or {}).get("results") or []
+    result_comments: dict[int, list[dict] | None] = {}
+    for row in result_rows:
+        ident = str(row.get("identity") or "")
+        number = row.get("new_issue")
+        if not ident or not isinstance(number, int):
+            continue
+        if number not in result_comments:
+            try:
+                result_comments[number] = _list_comments(backend, number)
+            except TransportError:
+                result_comments[number] = None
+        comments = result_comments[number]
+        if comments is None:
+            missing.append(f"结果 {ident} 的迁移评论读取未确认")
+            continue
+        needle = str(row.get("needle") or f"迁移结果:{ident}:")
+        found = next((comment for comment in comments
+                      if needle in (comment.get("body") or "")), None)
+        if found is None:
+            missing.append(f"结果 {ident} 的迁移评论缺失或不可读")
+            continue
+        want = str(row.get("fingerprint") or "")
+        if want and _sha_text(found.get("body") or "") != want:
+            missing.append(f"结果 {ident} 的迁移评论内容与登记指纹不符")
     gate_text = _read(staging / GATE_HISTORY_REL)
     recovery = ""
     if "待恢复" in gate_text or "unknown" in gate_text:

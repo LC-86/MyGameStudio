@@ -78,11 +78,146 @@ def test_r11_1_discussion_issue_is_not_converted_to_formal_spec() -> None:
               "试验值不得经迁移盖正式规格章后暴露为现行模块规格")
 
 
+def _cache(root: Path) -> Path:
+    return root / "docs/mygamestudio/records/cache"
+
+
+def test_r11_2_spec_comments_inventoried_and_results_gated() -> None:
+    """R11-2a: 源规格 Issue 评论承载的采纳决定必须进入盘点并迁移。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "spec-comments")
+        fake.issues.append({
+            "number": 61, "id": 1061, "title": "现行规格",
+            "body": (
+                "规格身份:overall。种类:现行规格。版本:v2。\n\n"
+                "## 核心玩法\n\n玩家左右移动接住落下的金色星星。\n\n"
+                "## 当前规则与流程\n\n- 得分：每颗金色星星 1 分。\n"
+            ),
+            "labels": [], "assignees": [], "state": "open",
+            "state_reason": None, "html_url": "https://example.invalid/i/61",
+        })
+        fake.comments[61] = [{
+            "id": 6201,
+            "body": ("# 计分决定\n\n身份:dec-score\n状态:已采纳\n\n"
+                     "星星计分从 1 改 2,采纳于讨论。\n"),
+            "created_at": "2026-09-10T12:00:00Z",
+        }]
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        rows = [item for item in (plan.get("items") or [])
+                if item.get("source") == "github:comment:6201"]
+        check(len(rows) == 1 and rows[0].get("kind") == "decision",
+              f"规格评论必须作为决定进入盘点,实际 {rows}")
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=_cache(root))
+        check(applied.get("ok") is True, f"迁移应完成:{applied}")
+        overall_no = applied.get("correspondence", {}).get("specs", [{}])[0] \
+            .get("new_issue") if applied.get("correspondence", {}).get("specs") \
+            else applied.get("overall_issue")
+        overall_no = overall_no or applied.get("overall_issue")
+        comments = fake.comments.get(int(overall_no or 0)) or []
+        check(any("星星计分从 1 改 2" in (comment.get("body") or "")
+                  and "身份:dec-score" in (comment.get("body") or "")
+                  for comment in comments),
+              "规格评论的 GitHub 独有历史必须迁入新规格评论,不得静默丢失")
+        report = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        check(report.get("complete") is True,
+              f"规格评论决定迁入后迁移仍应完整:{report.get('missing')}")
+
+
+def test_r11_2_unreadable_result_comment_pauses_item() -> None:
+    """R11-2b: 源结果评论不可读必须暂停该项,不得回退计划指纹放行。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "lost-comment")
+        # 另一条结果保证「结果」类别非空:仅静默丢一条时旧代码仍可切换。
+        fake.comments[2].append({
+            "id": 6202,
+            "body": ("# 跳跃结果\n\n任务:02-jump。实际成果:src/jump.js "
+                     "空格跳跃。已执行验证:代码级检查通过。\n"),
+            "created_at": "2026-09-07T12:00:00Z",
+        })
+        plan = mgs_records.plan_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        # 准备之后、执行之前:01-move 的结果评论被删除。
+        fake.comments[1] = [item for item in fake.comments[1]
+                            if item.get("id") != 6101]
+        applied = mgs_records.apply_github_material_migration(
+            root, plan, confirmed=True, transport=fake, cache_dir=_cache(root))
+        check(applied.get("ok") is True, f"其余资料仍应转换:{applied}")
+        paused = [str(item) for item in applied.get("paused") or []]
+        check(any("01-move" in item for item in paused),
+              f"不可读的结果评论必须暂停该结果,实际 {paused}")
+        report = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        check(report.get("complete") is False,
+              "结果来源不可读时不得宣告迁移完整可切换")
+
+
+def test_r11_2_complete_verifies_every_mapped_result() -> None:
+    """R11-2c: 完成判定必须逐条核对 correspondence.results 的目标评论。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "verify-results")
+        applied = mgs_records.apply_github_material_migration(
+            root, None, confirmed=True, transport=fake, cache_dir=_cache(root))
+        check(applied.get("ok") is True, f"迁移应完成:{applied}")
+        report = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        check(report.get("complete") is True,
+              f"前置:完整迁移应可切换:{report.get('missing')}")
+        rows = (report.get("correspondence") or {}).get("results") or []
+        check(bool(rows), "前置:应有结果对应关系")
+        row = rows[0]
+        needle = str(row.get("needle") or "")
+        number = row.get("new_issue")
+        check(bool(needle) and bool(number),
+              f"结果对应关系必须记录可回查的迁移评论身份,实际 {row}")
+        # 场景一:已迁移的结果评论在切换前被删除。
+        fake.comments[int(number)] = [
+            item for item in fake.comments.get(int(number), [])
+            if needle not in (item.get("body") or "")]
+        deleted = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        check(deleted.get("complete") is False,
+              "迁移结果评论缺失时不得保持完整判定")
+        missing = [str(item) for item in deleted.get("missing") or []]
+        check(any("01-move" in item and ("结果" in item or "评论" in item)
+                  for item in missing),
+              f"缺口必须点名缺失的结果,实际 {missing}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root, fake = _write_old_github_project(Path(tmp) / "tampered-result")
+        applied = mgs_records.apply_github_material_migration(
+            root, None, confirmed=True, transport=fake, cache_dir=_cache(root))
+        report = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        check(report.get("complete") is True, "前置:迁移应完整")
+        row = ((report.get("correspondence") or {}).get("results") or [{}])[0]
+        number = int(row.get("new_issue"))
+        needle = str(row.get("needle") or "")
+        for item in fake.comments.get(number, []):
+            if needle in (item.get("body") or ""):
+                item["body"] = (item.get("body") or "") + "\n篡改:宣称已试玩通过。\n"
+        tampered = mgs_records.read_github_material_migration(
+            root, transport=fake, cache_dir=_cache(root))
+        check(tampered.get("complete") is False,
+              "迁移结果评论被篡改时不得保持完整判定")
+        missing = [str(item) for item in tampered.get("missing") or []]
+        check(any("01-move" in item for item in missing),
+              f"篡改必须成为点名结果的完整性缺口,实际 {missing}")
+
+
 if __name__ == "__main__":
     raise SystemExit(run_theme(
         "PR #67 R11 发版门挡发项修复回归",
         (
             test_r11_1_discussion_issue_is_not_converted_to_formal_spec,
+            test_r11_2_spec_comments_inventoried_and_results_gated,
+            test_r11_2_unreadable_result_comment_pauses_item,
+            test_r11_2_complete_verifies_every_mapped_result,
         ),
         FAILURES,
     ))
