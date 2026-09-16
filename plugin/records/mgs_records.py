@@ -679,11 +679,14 @@ def verify_project(project_root: Path | str,
                 result_problems.append(f"{task['directory']}/{rel}:未引用所属任务身份")
         if task["results"]:
             index_text = task["result_index_text"].strip()
-            referenced = any(name.split("/")[-1] in index_text or "results" in index_text
-                             for name in task["results"])
-            if not referenced or "(暂无)" in index_text:
+            # 每份结果文件都必须被索引点名;只点名其一或笼统提及 results
+            # 不得视为一致。
+            unreferenced = [name for name in task["results"]
+                            if name.split("/")[-1] not in index_text]
+            if unreferenced or "(暂无)" in index_text:
                 result_problems.append(
-                    f"{task['directory']}:结果文件存在但结果索引未引用")
+                    f"{task['directory']}:结果文件存在但结果索引未引用:"
+                    + ",".join(unreferenced))
     checks.append(check_item("results-consistent", not result_problems,
                          ";".join(result_problems) if result_problems
                          else "结果文件与结果索引互相一致"))

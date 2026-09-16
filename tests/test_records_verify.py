@@ -128,6 +128,37 @@ def test_verify_results_consistency() -> None:
         check("results-consistent" in failed, "结果文件不引用所属任务身份应判失败")
 
 
+def test_verify_results_index_must_reference_every_file() -> None:
+    """多条结果文件仅索引一条时不得报一致:每份结果都必须被索引引用。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = make_project(Path(tmp))
+        results = root / "docs" / "mygamestudio" / "work" / "01-demo" / "results"
+        results.mkdir()
+        (results / "2026-09-08.md").write_text(
+            RESULT_TEMPLATE.format(title="演示任务", identity="01-demo"), encoding="utf-8")
+        (results / "2026-09-09.md").write_text(
+            RESULT_TEMPLATE.format(title="演示任务", identity="01-demo"), encoding="utf-8")
+        task_path = root / "docs" / "mygamestudio" / "work" / "01-demo" / "task.md"
+        task_path.write_text(task_path.read_text(encoding="utf-8").replace(
+            "(暂无)", "- results/2026-09-08.md:骨架交付"), encoding="utf-8")
+        report = mgs_records.verify_project(root)
+        failed = {c["name"] for c in report["checks"] if not c["ok"]}
+        check("results-consistent" in failed,
+              f"多条结果仅索引一条应判 results-consistent 失败,实际 {failed}")
+        detail = next(c["detail"] for c in report["checks"]
+                      if c["name"] == "results-consistent")
+        check("2026-09-09.md" in detail,
+              f"失败详情应指出未被索引的结果文件,实际 {detail}")
+        task_path.write_text(task_path.read_text(encoding="utf-8").replace(
+            "- results/2026-09-08.md:骨架交付",
+            "- results/2026-09-08.md:骨架交付\n- results/2026-09-09.md:补交"),
+            encoding="utf-8")
+        report = mgs_records.verify_project(root)
+        check(report["ok"],
+              f"全部结果被索引引用后应整体通过:{[c for c in report['checks'] if not c['ok']]}")
+
+
 def test_verify_malformed_records_still_discoverable() -> None:
     """AC3/READ-08/READ-25:畸形记录(缺身份)与未知分流仍能被核验发现。
 
@@ -225,6 +256,7 @@ TESTS = (
     test_verify_docmap_failures,
     test_verify_task_failures,
     test_verify_results_consistency,
+    test_verify_results_index_must_reference_every_file,
     test_verify_malformed_records_still_discoverable,
     test_verify_reads_config_and_tasks_once_local,
     test_verify_github_reads_single_task_set_and_keeps_backend_reads,

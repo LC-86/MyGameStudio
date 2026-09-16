@@ -217,8 +217,21 @@ def plan_design_snapshot(project_root: Path | str, request: dict,
     if correction:
         base = str(request.get("design_id") or "")
         prev = [item for item in existing if item.get("design_id") == base]
+        # 修正是对已存在基准修订的另存;无已知基准(未指 design_id 或
+        # 指向的基准不存在)时按 r1 归档会把首修订伪装成修正,直接拒绝。
+        if not base or not prev:
+            return {
+                "wrote": False,
+                "should_snapshot": False,
+                "invalid": True,
+                "reason": ("修正无已知基准修订,不得按 r1 归档:"
+                           f"{base or '(未指定 design_id)'}"),
+                "backend": current.get("backend"),
+                "gate_required": False,
+                "request": dict(request),
+            }
         revision = _next_revision(prev)
-        design_id = base or design_id
+        design_id = base
     else:
         revision = "r1"
     ids_error = _snapshot_ids_error(design_id, revision)

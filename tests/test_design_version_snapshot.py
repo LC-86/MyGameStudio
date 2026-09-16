@@ -720,6 +720,53 @@ def test_correction_revision_uses_highest_existing_number() -> None:
               "已占用修订目录不得被覆盖")
 
 
+def test_correction_without_known_base_does_not_generate_r1() -> None:
+    """修正必须指向已存在的基准修订;无已知基准时不得生成 r1 归档计划,
+    apply 也不得据此写入。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "star-catcher")
+        # 场景 A:correction 未指定 design_id(无任何基准可指)
+        plan = mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "correction": True,
+            "game_version": "0.1.0",
+            "source": "归档修正",
+            "reason": "补入漏记的结束条件",
+        })
+        check(plan.get("should_snapshot") is not True,
+              f"无 design_id 的修正不得生成快照计划:{plan}")
+        check(plan.get("invalid") is True and plan.get("reason"),
+              f"无 design_id 的修正必须判无效并给出原因:{plan}")
+        check(str(plan.get("revision") or "") != "r1",
+              f"无已知基准的修正不得分配 r1:{plan}")
+        applied = mgs_records.apply_design_snapshot(root, plan, confirmed=True)
+        check(applied.get("ok") is not True and applied.get("wrote") is not True,
+              f"无基准修正的 apply 不得写入:{applied}")
+        listed = mgs_records.read_design_snapshots(root)
+        check(not (listed.get("snapshots") or []),
+              f"无基准修正不得产生归档,实际 {listed.get('snapshots')}")
+        # 场景 B:correction 指向不存在的 design_id
+        plan_b = mgs_records.plan_design_snapshot(root, {
+            "trigger": "explicit",
+            "correction": True,
+            "design_id": "ds-missing",
+            "game_version": "0.1.0",
+            "source": "归档修正",
+            "reason": "补入漏记的结束条件",
+        })
+        check(plan_b.get("should_snapshot") is not True
+              and plan_b.get("invalid") is True,
+              f"指向不存在基准的修正必须判无效:{plan_b}")
+        check(str(plan_b.get("revision") or "") != "r1",
+              f"指向不存在基准的修正不得分配 r1:{plan_b}")
+        applied_b = mgs_records.apply_design_snapshot(
+            root, plan_b, confirmed=True)
+        check(applied_b.get("ok") is not True
+              and applied_b.get("wrote") is not True,
+              f"指向不存在基准的修正不得写入:{applied_b}")
+
+
 def test_github_snapshot_association_http_error_is_not_complete() -> None:
     """复用快照时 PATCH 失败不得在索引已在时仍宣称关联成功。"""
 
@@ -1008,6 +1055,7 @@ if __name__ == "__main__":
         test_interrupted_snapshot_does_not_mix_source_revisions,
         test_same_basename_attachments_keep_distinct_paths,
         test_correction_revision_uses_highest_existing_number,
+        test_correction_without_known_base_does_not_generate_r1,
         test_github_snapshot_association_http_error_is_not_complete,
         test_interrupted_snapshot_retry_fills_modules_before_complete,
         test_escaping_snapshot_ids_and_attachments_are_refused,
