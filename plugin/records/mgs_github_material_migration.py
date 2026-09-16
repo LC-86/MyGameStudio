@@ -182,7 +182,25 @@ def _discover_github_items(backend, config: dict) -> list[dict[str, Any]]:
         body = raw.get("body") or ""
         if is_pending_switch(body):
             continue
-        if SPEC_MARK in body or SNAPSHOT_MARK in body or DISCUSSION_MARK in body:
+        if DISCUSSION_MARK in body \
+                and SPEC_MARK not in body and SNAPSHOT_MARK not in body:
+            # 设计讨论不是正式规格:按讨论/历史记录盘点,保持非权威地位。
+            # 归入规格会让无规格身份的讨论变成任意模块并被盖上正式
+            # 规格章,试验值因此暴露为现行模块规格;讨论原件由旧 Issue
+            # 只读历史保留,不进入转换成果。
+            match = re.search(r"讨论身份\s*[:：]\s*([A-Za-z0-9_.-]+)", body)
+            identity = match.group(1) if match else f"issue-{raw.get('number')}"
+            items.append({
+                "kind": "discussion",
+                "role": "historical",
+                "identity": identity,
+                "source": _issue_source(raw.get("number")),
+                "issue_number": raw.get("number"),
+                "title": raw.get("title") or "设计讨论",
+                "fingerprint": _sha_text(body),
+            })
+            continue
+        if SPEC_MARK in body or SNAPSHOT_MARK in body:
             identity = ""
             if _is_archive_snapshot(body):
                 match = re.search(r"快照身份\s*[:：]\s*([A-Za-z0-9_-]+)", body)
