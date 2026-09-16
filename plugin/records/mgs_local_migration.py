@@ -13,9 +13,7 @@ GitHub 旧项目不在本入口(见 plan_github_material_migration)。
 
 from __future__ import annotations
 
-import hashlib
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -23,89 +21,22 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mgs_local_backend import render_task_body  # noqa: E402
+from mgs_migration_common import (  # noqa: E402
+    GATE_HISTORY_REL, IDENTITY_NAME,
+    _convert_gate, _field, _load_status, _pending_root, _read, _rel,
+    _save_status, _section, _sha_file, _title, _write,
+    ensure_spec_mark as _ensure_spec_mark)
 from mgs_record_model import (  # noqa: E402
     IDENTITY_RE, RecordsError, parse_task_body, today)
 from mgs_record_source import (  # noqa: E402
     DEFAULT_CONFIG_REL, DEFAULT_TASK_ROOT, load_config)
 from mgs_snapshot import (  # noqa: E402
     NO_CLAIM, SNAPSHOT_HEADING, SNAPSHOT_MARK, design_ids_for_history)
-from mgs_spec import MODULE_DIR, SPEC_MARK, read_current_design  # noqa: E402
+from mgs_spec import MODULE_DIR, read_current_design  # noqa: E402
 
-PENDING_REL = "docs/mygamestudio/records/pending-switch"
-STATUS_NAME = "migration-status.json"
-IDENTITY_NAME = "identity-map.json"
-GATE_HISTORY_REL = "docs/mygamestudio/records/gate-history.md"
+GITHUB_HINT = "GitHub 旧项目完整资料迁移不在本入口,见 plan_github_material_migration"
 HISTORY_REL = "docs/mygamestudio/records/spec-history.md"
 SNAPSHOT_DIR = "docs/mygamestudio/records/design-snapshots"
-GITHUB_HINT = "GitHub 旧项目完整资料迁移不在本入口,见 plan_github_material_migration"
-
-
-def _sha_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def _rel(root: Path, path: Path) -> str:
-    try:
-        return str(path.relative_to(root)).replace("\\", "/")
-    except ValueError:
-        return str(path)
-
-
-def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.is_file() else ""
-
-
-def _write(path: Path, text: str) -> bool:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    existing = _read(path)
-    if existing == text:
-        return False
-    path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
-    return True
-
-
-def _pending_root(root: Path) -> Path:
-    return root / PENDING_REL
-
-
-def _status_path(root: Path) -> Path:
-    return _pending_root(root) / STATUS_NAME
-
-
-def _load_status(root: Path) -> dict:
-    path = _status_path(root)
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _save_status(root: Path, payload: dict) -> None:
-    path = _status_path(root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-                    encoding="utf-8")
-
-
-def _field(text: str, key: str) -> str:
-    match = re.search(rf"{re.escape(key)}\s*[:：]\s*([^\n]+)", text or "")
-    return match.group(1).strip().rstrip("。") if match else ""
-
-
-def _section(text: str, heading: str) -> str:
-    pattern = rf"## {re.escape(heading)}\n+(.*?)(?=\n## |\Z)"
-    match = re.search(pattern, text or "", re.S)
-    return (match.group(1) or "").strip() if match else ""
-
-
-def _title(text: str) -> str:
-    for line in (text or "").splitlines():
-        if line.startswith("# "):
-            return line[2:].strip()
-    return ""
 
 
 def _config_or_local(root: Path) -> dict:
@@ -369,16 +300,6 @@ def _render_new_config() -> str:
 """
 
 
-def _ensure_spec_mark(body: str, identity: str, version: str, kind: str) -> str:
-    if SPEC_MARK in (body or ""):
-        return body
-    lines = (body or "").splitlines()
-    insert = f"{SPEC_MARK}{identity}。种类:{kind}。版本:{version}。"
-    if lines and lines[0].startswith("# "):
-        return "\n".join([lines[0], "", insert] + lines[1:])
-    return insert + "\n\n" + (body or "")
-
-
 def _snapshot_line(item: dict, *, design_id: str) -> str:
     version = item.get("version") or "v1"
     return (
@@ -582,31 +503,6 @@ def _copy_sidecar(root: Path, staging: Path, rel: str) -> bool:
     if not source.is_file():
         return False
     return _write(staging / rel, _read(source))
-
-
-def _convert_gate(root: Path, staging: Path) -> dict:
-    bits = [
-        "# gate 历史留存",
-        "",
-        "本文件保存旧运行保障配置与待恢复记录,不是新版权限。",
-        "普通工作不经 mgs-gate,旧令牌与运行根不得当作开工授权。",
-        "",
-    ]
-    config_text = _read(root / DEFAULT_CONFIG_REL)
-    gate_lines = [line for line in config_text.splitlines()
-                  if "mgs-gate" in line or "运行保障" in line or "令牌" in line]
-    if gate_lines:
-        bits += ["## 旧 CONFIG 摘录", ""] + [f"- {line.lstrip('- ')}" for line in gate_lines] + [""]
-    policy = _read(root / "docs/mygamestudio/records/gate-policy.md")
-    if policy:
-        bits += ["## 旧 gate 策略原文", "", policy.strip(), ""]
-    recovery = _read(root / "docs/mygamestudio/records/recovery/pending-ops.json")
-    if recovery:
-        bits += ["## 待恢复记录", "", "```json", recovery.strip(), "```", ""]
-    text = "\n".join(bits).rstrip() + "\n"
-    wrote = _write(staging / GATE_HISTORY_REL, text)
-    return {"kind": "gate-history", "new": GATE_HISTORY_REL, "wrote": wrote,
-            "text": text}
 
 
 def apply_local_material_migration(project_root: Path | str,

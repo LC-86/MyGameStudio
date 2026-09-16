@@ -18,8 +18,6 @@ config_rel 指向现行协作配置(CLI --config 透传):tracker 判定、GitHub
 
 from __future__ import annotations
 
-import hashlib
-import json
 import re
 import shutil
 import sys
@@ -28,56 +26,25 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from mgs_backend_options import BackendOptions, github_backend_for  # noqa: E402
 from mgs_github_issue import (  # noqa: E402
     HISTORY_MARK, PENDING_SWITCH_MARK, authorization_for, skip_from_current_reads)
 from mgs_github_transport import repo_path, request_2xx  # noqa: E402
+from mgs_migration_common import (  # noqa: E402
+    GATE_HISTORY_REL, _load_json, _pending_root, _read, _save_json,
+    _sha_file, _write)
 from mgs_record_model import RecordsError, today  # noqa: E402
 from mgs_record_source import (  # noqa: E402
     DEFAULT_CONFIG_REL, WRITE_OP, load_config)
 from mgs_spec import read_current_design  # noqa: E402
 
-PENDING_REL = "docs/mygamestudio/records/pending-switch"
 HISTORY_REL = "docs/mygamestudio/records/readonly-history"
 PRESERVE_REL = "docs/mygamestudio/records/preserved-after-rollback"
 STATUS_NAME = "switch-status.json"
-GATE_HISTORY_REL = "docs/mygamestudio/records/gate-history.md"
-
-
-def _sha_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def _pending_root(root: Path) -> Path:
-    return root / PENDING_REL
 
 
 def _status_path(root: Path) -> Path:
     return _pending_root(root) / STATUS_NAME
-
-
-def _load_json(path: Path) -> dict:
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _save_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-                    encoding="utf-8")
-
-
-def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8") if path.is_file() else ""
-
-
-def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
 
 
 def _tracker_of(root: Path, config_rel: str = DEFAULT_CONFIG_REL) -> str:
@@ -93,13 +60,13 @@ def _switch_status(root: Path) -> dict:
     return _load_json(_status_path(root))
 
 
-def _migration_report(root: Path, *, config_rel: str = DEFAULT_CONFIG_REL,
-                      transport=None, api_base=None, cache_dir=None) -> dict:
-    tracker = _tracker_of(root, config_rel)
+def _migration_report(root: Path, *, options: BackendOptions) -> dict:
+    tracker = _tracker_of(root, options.config_rel)
     if tracker == "github-issues":
         import mgs_github_material_migration  # noqa: PLC0415
         return mgs_github_material_migration.read_github_material_migration(
-            root, transport=transport, api_base=api_base, cache_dir=cache_dir)
+            root, transport=options.transport, api_base=options.api_base,
+            cache_dir=options.cache_dir)
     import mgs_local_migration  # noqa: PLC0415
     return mgs_local_migration.read_local_material_migration(root)
 
@@ -165,8 +132,7 @@ def _package_drift(plan: dict) -> list[str]:
 
 
 def _converted_overall(root: Path, report: dict, *,
-                       config_rel: str = DEFAULT_CONFIG_REL,
-                       transport=None, api_base=None, cache_dir=None) -> str:
+                       options: BackendOptions) -> str:
     staging = Path(report.get("pending_root") or _pending_root(root))
     try:
         converted = read_current_design(staging)
@@ -184,9 +150,7 @@ def _converted_overall(root: Path, report: dict, *,
     if not overall_no:
         return ""
     try:
-        backend = _github_backend(
-            root, config_rel=config_rel, transport=transport,
-            api_base=api_base, cache_dir=cache_dir)
+        backend = _github_backend(root, options)
         read_ok, body = _read_issue_body(backend, int(overall_no))
         return body if read_ok else ""
     except (RecordsError, OSError, TypeError, ValueError):
@@ -194,8 +158,7 @@ def _converted_overall(root: Path, report: dict, *,
 
 
 def _user_edits_ok(root: Path, report: dict, *,
-                   config_rel: str = DEFAULT_CONFIG_REL,
-                   transport=None, api_base=None, cache_dir=None) -> bool:
+                   options: BackendOptions) -> bool:
     live = _read(root / "docs/mygamestudio/GAME_DESIGN.md")
     if "用户补充" not in live:
         return True
@@ -205,16 +168,12 @@ def _user_edits_ok(root: Path, report: dict, *,
     if not snippet or not snippet[0].lstrip("- ").strip():
         return True
     needle = snippet[0].lstrip("- ").strip()
-    overall = _converted_overall(
-        root, report, config_rel=config_rel, transport=transport,
-        api_base=api_base, cache_dir=cache_dir)
+    overall = _converted_overall(root, report, options=options)
     return needle in overall
 
 
-def _checks_from(root: Path, report: dict, *,
-                 fingerprints: dict[str, str] | None = None,
-                 config_rel: str = DEFAULT_CONFIG_REL,
-                 transport=None, api_base=None, cache_dir=None) -> dict[str, Any]:
+def _checks_from(root: Path, report: dict, *, options: BackendOptions,
+                 fingerprints: dict[str, str] | None = None) -> dict[str, Any]:
     complete = bool(report.get("complete"))
     paused = list(report.get("paused") or [])
     missing = list(report.get("missing") or [])
@@ -235,35 +194,24 @@ def _checks_from(root: Path, report: dict, *,
     return {
         "source": status in {"pending-switch", "switched"} or complete,
         "version": bool((report.get("correspondence") or {}).get("specs")),
-        "user_edits": _user_edits_ok(
-            root, report, config_rel=config_rel, transport=transport,
-            api_base=api_base, cache_dir=cache_dir),
+        "user_edits": _user_edits_ok(root, report, options=options),
         "conversion_complete": complete and not paused and not missing,
         "evidence_reachable": reachable,
         "preparation_changes": prep_ok,
     }
 
 
-def plan_safe_switch(project_root: Path | str, *,
-                     client_home: Path | str | None = None,
-                     package_root: Path | str | None = None,
-                     peer_projects: list[Path | str] | None = None,
-                     config_rel: str = DEFAULT_CONFIG_REL,
-                     transport=None, api_base: str | None = None,
-                     cache_dir: Path | str | None = None) -> dict:
+def _plan_safe_switch(root: Path, *, client_home, package_root,
+                      peer_projects, options: BackendOptions) -> dict:
     """只读核对照切换条件。不写入,不切换现行指针或技能来源。"""
 
-    root = Path(project_root)
     if not root.is_dir():
         raise RecordsError(f"目标项目不存在:{root}")
     switched = _switch_status(root)
-    report = _migration_report(
-        root, config_rel=config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+    report = _migration_report(root, options=options)
     fingerprints = _source_fingerprints(root, report.get("correspondence") or {})
     checks = _checks_from(
-        root, report, fingerprints=fingerprints, config_rel=config_rel,
-        transport=transport, api_base=api_base, cache_dir=cache_dir)
+        root, report, options=options, fingerprints=fingerprints)
     already = switched.get("status") == "switched"
     ready = (all(checks.values()) and report.get("status") == "pending-switch"
              and not already)
@@ -279,8 +227,8 @@ def plan_safe_switch(project_root: Path | str, *,
         "wrote": False,
         "ready": ready,
         "status": "planned",
-        "tracker": report.get("tracker") or _tracker_of(root, config_rel),
-        "backend": report.get("tracker") or _tracker_of(root, config_rel),
+        "tracker": report.get("tracker") or _tracker_of(root, options.config_rel),
+        "backend": report.get("tracker") or _tracker_of(root, options.config_rel),
         "checks": checks,
         "blockers": blockers,
         "paused": list(report.get("paused") or []),
@@ -298,6 +246,23 @@ def plan_safe_switch(project_root: Path | str, *,
         "package_fingerprints": _tree_fingerprints(package_root),
         "already_switched": already,
     }
+
+
+def plan_safe_switch(project_root: Path | str, *,
+                     client_home: Path | str | None = None,
+                     package_root: Path | str | None = None,
+                     peer_projects: list[Path | str] | None = None,
+                     config_rel: str = DEFAULT_CONFIG_REL,
+                     transport=None, api_base: str | None = None,
+                     cache_dir: Path | str | None = None) -> dict:
+    """只读核对照切换条件。不写入,不切换现行指针或技能来源。"""
+
+    root = Path(project_root)
+    return _plan_safe_switch(
+        root, client_home=client_home, package_root=package_root,
+        peer_projects=peer_projects,
+        options=BackendOptions(config_rel=config_rel, transport=transport,
+                               api_base=api_base, cache_dir=cache_dir))
 
 
 def _mark_switched_config(text: str) -> str:
@@ -372,8 +337,7 @@ def _promote_pending(root: Path, staging: Path,
     return copied
 
 
-def _peer_unready(peer_projects: list, *, config_rel: str = DEFAULT_CONFIG_REL,
-                  transport=None, api_base=None, cache_dir=None) -> list[str]:
+def _peer_unready(peer_projects: list, *, options: BackendOptions) -> list[str]:
     unready: list[str] = []
     for peer in peer_projects or []:
         path = Path(peer)
@@ -382,9 +346,7 @@ def _peer_unready(peer_projects: list, *, config_rel: str = DEFAULT_CONFIG_REL,
             continue
         if _switch_status(path).get("status") == "switched":
             continue
-        report = _migration_report(
-            path, config_rel=config_rel, transport=transport,
-            api_base=api_base, cache_dir=cache_dir)
+        report = _migration_report(path, options=options)
         if report.get("complete") and report.get("status") == "pending-switch":
             continue
         unready.append(str(path))
@@ -669,8 +631,7 @@ def _client_complete(plan: dict, skills: dict, unready: list) -> bool:
         skills.get("paused") or [])
 
 
-def _switch_local(root: Path, plan: dict, *, config_rel: str = DEFAULT_CONFIG_REL,
-                  transport=None, api_base=None, cache_dir=None) -> dict:
+def _switch_local(root: Path, plan: dict, *, options: BackendOptions) -> dict:
     staging = _pending_root(root)
     if not (staging / "docs/mygamestudio/CONFIG.md").is_file():
         return {
@@ -689,11 +650,9 @@ def _switch_local(root: Path, plan: dict, *, config_rel: str = DEFAULT_CONFIG_RE
         }
     # peer 就绪检查必须先于归档与提升,且透传注入的 transport:晚于提升
     # 会让 peer 检查失败时本地已被换成新来源,留下半完成的切换状态。
-    unready = _peer_unready(
-        plan.get("peer_projects") or [], config_rel=config_rel,
-        transport=transport, api_base=api_base, cache_dir=cache_dir)
+    unready = _peer_unready(plan.get("peer_projects") or [], options=options)
     archived = _archive_originals(root, staging)
-    copied = _promote_pending(root, staging, config_rel=config_rel)
+    copied = _promote_pending(root, staging, config_rel=options.config_rel)
     correspondence = plan.get("correspondence") or {}
     skills = _switch_skills(plan, unready=unready)
     payload = {
@@ -741,17 +700,10 @@ def _switch_local(root: Path, plan: dict, *, config_rel: str = DEFAULT_CONFIG_RE
     }
 
 
-def _github_backend(root: Path, *, config_rel: str = DEFAULT_CONFIG_REL,
-                    transport=None, api_base=None, cache_dir=None):
-    import mgs_github  # noqa: PLC0415
-
-    config = dict(load_config(root, config_rel))
+def _github_backend(root: Path, options: BackendOptions):
+    config = dict(load_config(root, options.config_rel))
     config["project_root"] = str(root)
-    if transport is None:
-        transport = mgs_github.UrllibTransport(
-            api_base=mgs_github.api_base_for(config, api_base),
-            token=mgs_github.token_from_env())
-    return mgs_github.GithubBackend(config, transport, cache_dir)
+    return github_backend_for(config, options)
 
 
 def _strip_mark(body: str, mark: str) -> str:
@@ -890,12 +842,9 @@ def _marker_steps(backend, steps: list[dict]) -> tuple[list[str], list[int], lis
     return failures, compensated, compensation_failures
 
 
-def _switch_github(root: Path, plan: dict, *, config_rel: str = DEFAULT_CONFIG_REL,
-                   transport=None, api_base=None, cache_dir=None) -> dict:
+def _switch_github(root: Path, plan: dict, *, options: BackendOptions) -> dict:
     staging = _pending_root(root)
-    backend = _github_backend(
-        root, config_rel=config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+    backend = _github_backend(root, options)
     correspondence = plan.get("correspondence") or {}
     # 切换前先按当前 CONFIG 重查 issues-write:迁移准备时的授权不能
     # 替代此刻的授权;缺失或不再匹配时失败闭合,不动远端标记。
@@ -920,9 +869,7 @@ def _switch_github(root: Path, plan: dict, *, config_rel: str = DEFAULT_CONFIG_R
     # peer 就绪检查必须先于远端标记与本地提升,且透传注入的 transport:
     # 丢弃注入会让 peer 回读走错误端点;晚于变更则 peer 检查失败时
     # 远端/本地已切成新来源,留下半完成的切换状态。
-    unready = _peer_unready(
-        plan.get("peer_projects") or [], config_rel=config_rel,
-        transport=transport, api_base=api_base, cache_dir=cache_dir)
+    unready = _peer_unready(plan.get("peer_projects") or [], options=options)
     # 远端标记迁移必须先于本地提升逐项确认:PATCH 成功且回读到目标状态
     # 才允许归档旧件、提升新件;任何一项未确认时本地保持旧来源,
     # 不写 switch-status。先提升再打标记会让本地指向新源而 GitHub
@@ -987,7 +934,7 @@ def _switch_github(root: Path, plan: dict, *, config_rel: str = DEFAULT_CONFIG_R
             "correspondence": correspondence,
         }
     archived = _archive_originals(root, staging)
-    copied = _promote_pending(root, staging, config_rel=config_rel)
+    copied = _promote_pending(root, staging, config_rel=options.config_rel)
     skills = _switch_skills(plan, unready=unready)
     payload = {
         "status": "switched",
@@ -1045,6 +992,8 @@ def apply_safe_switch(project_root: Path | str,
     """核对通过且确认后切换现行指针与技能来源。未确认不写。"""
 
     root = Path(project_root)
+    options = BackendOptions(config_rel=config_rel, transport=transport,
+                             api_base=api_base, cache_dir=cache_dir)
     if not confirmed:
         return {
             "ok": False,
@@ -1053,9 +1002,9 @@ def apply_safe_switch(project_root: Path | str,
             "gate_required": False,
             "real_migration_authorized": False,
         }
-    plan = plan or plan_safe_switch(
-        root, config_rel=config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+    plan = plan or _plan_safe_switch(
+        root, client_home=None, package_root=None, peer_projects=None,
+        options=options)
     if plan.get("already_switched") or _switch_status(root).get("status") == "switched":
         current = _switch_status(root)
         return {
@@ -1081,9 +1030,9 @@ def apply_safe_switch(project_root: Path | str,
         }
     # 提升前立即重算核对:清单可能在与确认之间变旧(待切换成果被删改),
     # 旧清单不能替代转换完整性、证据与用户修改检查。
-    fresh = plan_safe_switch(
-        root, config_rel=config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+    fresh = _plan_safe_switch(
+        root, client_home=None, package_root=None, peer_projects=None,
+        options=options)
     if fresh.get("already_switched"):
         current = _switch_status(root)
         return {
@@ -1130,14 +1079,10 @@ def apply_safe_switch(project_root: Path | str,
             "real_migration_authorized": False,
             "status": fresh.get("migration_status") or "blocked",
         }
-    tracker = plan.get("tracker") or _tracker_of(root, config_rel)
+    tracker = plan.get("tracker") or _tracker_of(root, options.config_rel)
     if tracker == "github-issues":
-        return _switch_github(
-            root, plan, config_rel=config_rel, transport=transport,
-            api_base=api_base, cache_dir=cache_dir)
-    return _switch_local(root, plan, config_rel=config_rel,
-                         transport=transport, api_base=api_base,
-                         cache_dir=cache_dir)
+        return _switch_github(root, plan, options=options)
+    return _switch_local(root, plan, options=options)
 
 
 def read_safe_switch(project_root: Path | str, *,
@@ -1148,9 +1093,10 @@ def read_safe_switch(project_root: Path | str, *,
 
     root = Path(project_root)
     switched = _switch_status(root)
-    plan = plan_safe_switch(
-        root, config_rel=config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+    plan = _plan_safe_switch(
+        root, client_home=None, package_root=None, peer_projects=None,
+        options=BackendOptions(config_rel=config_rel, transport=transport,
+                               api_base=api_base, cache_dir=cache_dir))
     status = switched.get("status") or plan.get("migration_status") or "absent"
     recovery = switched.get("recovery_destination") or plan.get("recovery_destination") or ""
     return {
@@ -1340,6 +1286,8 @@ def rollback_safe_switch(project_root: Path | str,
     """回退前先保留新版新增成果,不用迁移前快照覆盖。"""
 
     root = Path(project_root)
+    options = BackendOptions(config_rel=config_rel, transport=transport,
+                             api_base=api_base, cache_dir=cache_dir)
     if not confirmed:
         return {
             "ok": False,
@@ -1358,12 +1306,11 @@ def rollback_safe_switch(project_root: Path | str,
             "real_migration_authorized": False,
         }
     correspondence = current.get("correspondence") or (plan or {}).get("correspondence") or {}
-    preserved = _preserve_new_additions(root, correspondence, config_rel=config_rel)
-    tracker = current.get("tracker") or _tracker_of(root, config_rel)
+    preserved = _preserve_new_additions(
+        root, correspondence, config_rel=options.config_rel)
+    tracker = current.get("tracker") or _tracker_of(root, options.config_rel)
     if tracker == "github-issues":
-        backend = _github_backend(
-            root, config_rel=config_rel, transport=transport,
-            api_base=api_base, cache_dir=cache_dir)
+        backend = _github_backend(root, options)
         # 回滚同样先按当前 CONFIG 重查 issues-write:授权缺失或不再
         # 匹配时不动远端标记,保持已切换状态。
         denied = _write_denied_reason(backend)
@@ -1387,8 +1334,8 @@ def rollback_safe_switch(project_root: Path | str,
         try:
             import mgs_records  # noqa: PLC0415
             live_tasks = mgs_records.list_tasks(
-                root, config_rel, transport=transport, api_base=api_base,
-                cache_dir=cache_dir)
+                root, options.config_rel, transport=options.transport,
+                api_base=options.api_base, cache_dir=options.cache_dir)
         except (RecordsError, OSError):
             live_tasks = []
         for task in live_tasks:
