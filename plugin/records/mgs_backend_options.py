@@ -38,6 +38,15 @@ class BackendOptions:
     cache_dir: Path | str | None = None
 
 
+def backend_options(config_rel: str = DEFAULT_CONFIG_REL, transport: Any = None,
+                    api_base: str | None = None,
+                    cache_dir: Path | str | None = None) -> BackendOptions:
+    """由公共入口的既有 keyword 参数组装选项簇(重复构造的单一收口)。"""
+
+    return BackendOptions(config_rel=config_rel, transport=transport,
+                          api_base=api_base, cache_dir=cache_dir)
+
+
 def github_backend_for(config: dict, options: BackendOptions):
     """由本次已解析配置与选项簇构造 GitHub adapter(唯一定义)。
 

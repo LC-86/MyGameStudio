@@ -52,7 +52,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # 共同记录语义(错误身份、正文规则与纯记录核验)的唯一定义在
 # mgs_record_model;本模块按现有公开名字重新导出,调用方定位不变。
-from mgs_backend_options import BackendOptions, github_backend_for  # noqa: E402
+from mgs_backend_options import (BackendOptions, backend_options,
+                                 github_backend_for)  # noqa: E402
 from mgs_record_model import (  # noqa: E402  (路径调整后导入)
     CANONICAL_LABELS, CORE_DOC_KEYS, IDENTITY_RE, PLAN_REQUEST_KEYS,
     RecordsError, TASK_REQUEST_KEYS, _bullets, _core_rows, _field,
@@ -88,8 +89,7 @@ def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_RE
 
     config = load_config(project_root, config_rel)
     return github_backend_for(
-        config, BackendOptions(transport=transport, api_base=api_base,
-                               cache_dir=cache_dir))
+        config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir))
 
 
 class _Reading:
@@ -170,8 +170,7 @@ def list_tasks(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
     config = load_config(root, config_rel)
     if config["backend"] == "github-issues":
         payload = github_backend_for(
-            config, BackendOptions(transport=transport, api_base=api_base,
-                                   cache_dir=cache_dir)).fetch_tasks()
+            config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir)).fetch_tasks()
         cached = bool(payload.get("cached"))
         # 排序与离线标记使用独立投影:不原地修改后端返回的任务集合,避免
         # 调用特有标注影响其他判断(list 按身份排序,来源集合保持原顺序)。
@@ -199,8 +198,7 @@ def read_task(project_root: Path | str, task_id: str,
     config = load_config(root, config_rel)
     if config["backend"] == "github-issues":
         return github_backend_for(
-            config, BackendOptions(transport=transport, api_base=api_base,
-                                   cache_dir=cache_dir)).read_task(task_id)
+            config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir)).read_task(task_id)
     if config["backend"] != "local-markdown":
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
@@ -245,8 +243,7 @@ def task_dependencies(project_root: Path | str,
     """
 
     reading = _read_workspace(
-        project_root, BackendOptions(config_rel=config_rel, transport=transport,
-                                     api_base=api_base, cache_dir=cache_dir))
+        project_root, backend_options(config_rel, transport, api_base, cache_dir))
     return _dependency_graph(reading.tasks)
 
 
@@ -434,8 +431,7 @@ def startable_tasks(project_root: Path | str,
     """
 
     root = Path(project_root)
-    options = BackendOptions(config_rel=config_rel, transport=transport,
-                             api_base=api_base, cache_dir=cache_dir)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     reading = _read_workspace(root, options)
     # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档);
     # CONFIG 自映射行复用 _read_workspace 已读原文,不二次读取
@@ -500,8 +496,7 @@ def baseline_report(project_root: Path | str,
     """
 
     root = Path(project_root)
-    options = BackendOptions(config_rel=config_rel, transport=transport,
-                             api_base=api_base, cache_dir=cache_dir)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     # 本次判断只用同一份 CONFIG 原文与已读核心文档:一次读取、版本与指纹同源
     # (config_text 复用给文档映射的 CONFIG 自映射行,R2-SP-1)
     config, config_text = load_config_document(root, options.config_rel)
@@ -619,8 +614,7 @@ def verify_project(project_root: Path | str,
     """
 
     root = Path(project_root)
-    options = BackendOptions(config_rel=config_rel, transport=transport,
-                             api_base=api_base, cache_dir=cache_dir)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     checks: list[dict] = []
     try:
         config = load_config(root, config_rel)
@@ -765,10 +759,7 @@ def create_task(project_root: Path | str, identity: str, title: str,
     """记录一项任务。本地 Markdown 先回读再创建,已存在则收养。"""
 
     return _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir)).create_task(
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).create_task(
             identity, title, request, triage=triage, progress=progress)
 
 
@@ -781,10 +772,7 @@ def update_task(project_root: Path | str, identity: str, fields: dict, *,
     """更新任务安排。expected_body_sha256 不符则保留双方成果并拒绝覆盖。"""
 
     return _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir)).update_task(
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).update_task(
             identity, fields, expected_body_sha256=expected_body_sha256,
             change_note=change_note)
 
@@ -794,10 +782,7 @@ def set_triage(project_root: Path | str, identity: str, label: str, *,
                api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir)).set_triage(identity, label)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).set_triage(identity, label)
 
 
 def set_relations(project_root: Path | str, identity: str, deps: list[str], *,
@@ -805,10 +790,7 @@ def set_relations(project_root: Path | str, identity: str, deps: list[str], *,
                   api_base: str | None = None,
                   cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir)).set_relations(identity, deps)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).set_relations(identity, deps)
 
 
 def set_parent(project_root: Path | str, identity: str, parent_id: str | None,
@@ -816,10 +798,7 @@ def set_parent(project_root: Path | str, identity: str, parent_id: str | None,
                api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir)).set_parent(identity, parent_id)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).set_parent(identity, parent_id)
 
 
 def claim_task(project_root: Path | str, identity: str, actor: str, *,
@@ -827,10 +806,7 @@ def claim_task(project_root: Path | str, identity: str, actor: str, *,
                api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     backend = _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir))
+        project_root, backend_options(config_rel, transport, api_base, cache_dir))
     if not hasattr(backend, "claim_task"):
         raise RecordsError("当前后端本票不提供认领写接缝(GitHub 接入见后续票)")
     return backend.claim_task(identity, actor)
@@ -843,10 +819,7 @@ def frontier_tasks(project_root: Path | str, parent_identity: str | None = None,
     """前沿查询:开放、未认领、无开放阻塞的子票(只读)。"""
 
     backend = _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir))
+        project_root, backend_options(config_rel, transport, api_base, cache_dir))
     if hasattr(backend, "frontier_tasks"):
         return backend.frontier_tasks(parent_identity)
     tasks = list_tasks(project_root, config_rel, transport=transport,
@@ -891,10 +864,7 @@ def append_result(project_root: Path | str, identity: str, result_markdown: str,
                   api_base: str | None = None,
                   cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir)).append_result(identity, result_markdown)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).append_result(identity, result_markdown)
 
 
 def close_task(project_root: Path | str, identity: str, reason: str,
@@ -902,10 +872,7 @@ def close_task(project_root: Path | str, identity: str, reason: str,
                transport=None, api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, BackendOptions(config_rel=config_rel,
-                                     transport=transport,
-                                     api_base=api_base,
-                                     cache_dir=cache_dir)).close_task(identity, reason, note=note)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).close_task(identity, reason, note=note)
 
 
 def cancel_operation(project_root: Path | str, op: str, identity: str, *,

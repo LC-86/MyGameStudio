@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from mgs_backend_options import BackendOptions  # noqa: E402
+from mgs_backend_options import BackendOptions, backend_options  # noqa: E402
 from mgs_record_model import RecordsError, today  # noqa: E402
 from mgs_record_source import DEFAULT_CONFIG_REL  # noqa: E402
 import mgs_spec  # noqa: E402
@@ -277,8 +277,7 @@ def apply_design_snapshot(project_root: Path | str, plan: dict, *,
                           cache_dir: Path | str | None = None) -> dict:
     """把现行规格另存为归档快照。未确认或日常路径不写。"""
 
-    options = BackendOptions(config_rel=config_rel, transport=transport,
-                             api_base=api_base, cache_dir=cache_dir)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     if not confirmed:
         return {"ok": False, "wrote": False, "complete": False,
                 "reason": "未确认,不写入归档"}
@@ -319,9 +318,7 @@ def read_design_snapshots(project_root: Path | str,
         return _read_local_snapshots(root, config)
     if config.get("backend") == "github-issues":
         return _read_github_snapshots(
-            config, options=BackendOptions(
-                config_rel=config_rel, transport=transport,
-                api_base=api_base, cache_dir=cache_dir))
+            config, options=backend_options(config_rel, transport, api_base, cache_dir))
     raise RecordsError(f"后端 {config.get('backend')} 未实现")
 
 

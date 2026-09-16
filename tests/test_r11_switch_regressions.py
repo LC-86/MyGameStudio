@@ -304,6 +304,60 @@ def test_peer_check_reads_before_any_marker_or_promotion() -> None:
                   f"标记变更(首个 PATCH 在 {first_patch})")
 
 
+class _Unresolvable:
+    """resolve 必然失败的路径替身:真实文件系统上难以稳定触发 OSError。"""
+
+    def resolve(self):
+        raise OSError("模拟路径解析失败")
+
+
+def test_apply_refuses_plan_without_package_fingerprints() -> None:
+    """#69-1 收口:计划带包根却无包树指纹时必须失败闭合,不得静默跳过比对。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        ready = _ready_local(Path(tmp))
+        home = Path(tmp) / "isolated-codex"
+        _write_isolated_client(home)
+        package = Path(tmp) / "package-skills"
+        shutil.copytree(PLUGIN_SKILLS, package)
+        plan = mgs_records.plan_safe_switch(
+            ready, client_home=home, package_root=package)
+        check(plan.get("ready") is True, f"前置:应可切换:{plan.get('blockers')}")
+        # 旧版计划或被篡改的计划:包根仍在,包树指纹被整体抹掉;
+        # 同时包内容在确认后被替换,缺失的指纹不得放行。
+        stripped = dict(plan)
+        stripped.pop("package_fingerprints", None)
+        target = package / "game-design" / "SKILL.md"
+        original = target.read_text(encoding="utf-8")
+        target.write_text(original + "\n" + TAMPER + "\n", encoding="utf-8")
+        applied = mgs_records.apply_safe_switch(ready, stripped, confirmed=True)
+        check(applied.get("ok") is False,
+              f"计划缺包树指纹不得切换,实际 {applied.get('ok')}")
+        check(applied.get("wrote") is False, "计划缺包树指纹时不得写入")
+        installed = home / "skills" / "game-design" / "SKILL.md"
+        check(not installed.is_file()
+              or TAMPER not in installed.read_text(encoding="utf-8"),
+              "指纹缺失时被替换的包内容不得进入客户端环境")
+        # 完整计划在包恢复后仍可正常切换:失败闭合不得误伤正常路径。
+        target.write_text(original, encoding="utf-8")
+        applied = mgs_records.apply_safe_switch(ready, plan, confirmed=True)
+        check(applied.get("ok") is True, f"完整计划应可切换:{applied}")
+
+
+def test_paths_overlap_resolution_failure_fails_closed() -> None:
+    """#69-2 收口:路径解析失败不得判定为不重叠,否则先删后拷自毁。"""
+
+    import mgs_safe_switch  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory() as tmp:
+        other = Path(tmp) / "other"
+        other.mkdir()
+        check(mgs_safe_switch._paths_overlap(_Unresolvable(), other) is True,
+              "resolve 失败必须按重叠处理(失败闭合),不得返回可安全先删后拷")
+        check(mgs_safe_switch._paths_overlap(other, _Unresolvable()) is True,
+              "任一侧 resolve 失败都必须按重叠处理")
+
+
 def main() -> int:
     return run_theme(
         "issue #69 safe-switch 加固(包树指纹/重叠自毁/peer 注入)",
@@ -312,6 +366,8 @@ def main() -> int:
             test_package_root_overlapping_install_dir_does_not_self_destruct,
             test_peer_check_uses_injected_transport,
             test_peer_check_reads_before_any_marker_or_promotion,
+            test_apply_refuses_plan_without_package_fingerprints,
+            test_paths_overlap_resolution_failure_fails_closed,
         ),
         FAILURES)
 

@@ -26,7 +26,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from mgs_backend_options import BackendOptions, github_backend_for  # noqa: E402
+from mgs_backend_options import (BackendOptions, backend_options,
+                                 github_backend_for)  # noqa: E402
 from mgs_github_issue import (  # noqa: E402
     HISTORY_MARK, PENDING_SWITCH_MARK, authorization_for, skip_from_current_reads)
 from mgs_github_transport import repo_path, request_2xx  # noqa: E402
@@ -120,14 +121,16 @@ def _tree_fingerprints(root: Path | str | None) -> dict[str, str]:
 def _package_drift(plan: dict) -> list[str]:
     """重查已确认计划里的包树指纹,返回与清单不一致的包内文件。
 
-    计划不含包树指纹时返回空;包根丢失视为全部漂移(失败闭合)。"""
+    无包根的计划不涉及技能包安装,无需比对;带包根却无包树指纹的
+    计划(旧版或被篡改)无法证明包内容与确认时一致,视为漂移(失败
+    闭合);包根丢失同样视为全部漂移。"""
 
-    expected = plan.get("package_fingerprints") or {}
-    if not expected:
-        return []
     package_raw = str(plan.get("package_root") or "").strip()
     if not package_raw:
-        return sorted(expected)
+        return []
+    expected = plan.get("package_fingerprints") or {}
+    if not expected:
+        return ["<计划未携带包树指纹,无法核对包内容>"]
     return _prep_changed(Path(package_raw), expected)
 
 
@@ -223,12 +226,13 @@ def _plan_safe_switch(root: Path, *, client_home, package_root,
     recovery = (report.get("recovery_archive") or report.get("gate_history")
                 or _read(root / GATE_HISTORY_REL)
                 or _read(_pending_root(root) / GATE_HISTORY_REL))
+    tracker = report.get("tracker") or _tracker_of(root, options.config_rel)
     return {
         "wrote": False,
         "ready": ready,
         "status": "planned",
-        "tracker": report.get("tracker") or _tracker_of(root, options.config_rel),
-        "backend": report.get("tracker") or _tracker_of(root, options.config_rel),
+        "tracker": tracker,
+        "backend": tracker,
         "checks": checks,
         "blockers": blockers,
         "paused": list(report.get("paused") or []),
@@ -261,8 +265,7 @@ def plan_safe_switch(project_root: Path | str, *,
     return _plan_safe_switch(
         root, client_home=client_home, package_root=package_root,
         peer_projects=peer_projects,
-        options=BackendOptions(config_rel=config_rel, transport=transport,
-                               api_base=api_base, cache_dir=cache_dir))
+        options=backend_options(config_rel, transport, api_base, cache_dir))
 
 
 def _mark_switched_config(text: str) -> str:
@@ -494,13 +497,24 @@ def _copy_stage_index(home: Path, package_root: Path) -> None:
 
 
 def _paths_overlap(a: Path, b: Path) -> bool:
-    """两个目录是否相同或存在嵌套包含;重叠时先删后拷会互相自毁。"""
+    """两个目录是否相同或存在嵌套包含;重叠时先删后拷会互相自毁。
+
+    解析失败时无法证明两侧可安全分离,按重叠处理(失败闭合)。"""
 
     try:
         ra, rb = a.resolve(), b.resolve()
     except OSError:
-        return False
+        return True
     return ra == rb or ra in rb.parents or rb in ra.parents
+
+
+def _same_path(a: Path, b: Path) -> bool:
+    """两个路径是否指向同一位置;解析失败时视为不同(落入暂停分支)。"""
+
+    try:
+        return a.resolve() == b.resolve()
+    except OSError:
+        return False
 
 
 def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
@@ -537,7 +551,7 @@ def _switch_skills(plan: dict, *, unready: list[str]) -> dict:
             # 一起删掉。目录完全相同说明安装内容已是包本身,跳过替换;
             # 嵌套重叠无法安全替换,暂停该技能交开发者处理。
             if _paths_overlap(user_dir, pkg_dir):
-                if user_dir.resolve() == pkg_dir.resolve():
+                if _same_path(user_dir, pkg_dir):
                     continue
                 _write(user_dir / "SKILL.md", _ensure_stage_pointer(user_text))
                 paused.append(name)
@@ -992,8 +1006,7 @@ def apply_safe_switch(project_root: Path | str,
     """核对通过且确认后切换现行指针与技能来源。未确认不写。"""
 
     root = Path(project_root)
-    options = BackendOptions(config_rel=config_rel, transport=transport,
-                             api_base=api_base, cache_dir=cache_dir)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     if not confirmed:
         return {
             "ok": False,
@@ -1095,8 +1108,7 @@ def read_safe_switch(project_root: Path | str, *,
     switched = _switch_status(root)
     plan = _plan_safe_switch(
         root, client_home=None, package_root=None, peer_projects=None,
-        options=BackendOptions(config_rel=config_rel, transport=transport,
-                               api_base=api_base, cache_dir=cache_dir))
+        options=backend_options(config_rel, transport, api_base, cache_dir))
     status = switched.get("status") or plan.get("migration_status") or "absent"
     recovery = switched.get("recovery_destination") or plan.get("recovery_destination") or ""
     return {
@@ -1286,8 +1298,7 @@ def rollback_safe_switch(project_root: Path | str,
     """回退前先保留新版新增成果,不用迁移前快照覆盖。"""
 
     root = Path(project_root)
-    options = BackendOptions(config_rel=config_rel, transport=transport,
-                             api_base=api_base, cache_dir=cache_dir)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     if not confirmed:
         return {
             "ok": False,
