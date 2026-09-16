@@ -20,6 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from mgs_backend_options import BackendOptions, backend_options  # noqa: E402
 from mgs_record_model import RecordsError, today  # noqa: E402
 from mgs_record_source import DEFAULT_CONFIG_REL  # noqa: E402
 import mgs_spec  # noqa: E402
@@ -217,8 +218,21 @@ def plan_design_snapshot(project_root: Path | str, request: dict,
     if correction:
         base = str(request.get("design_id") or "")
         prev = [item for item in existing if item.get("design_id") == base]
+        # 修正是对已存在基准修订的另存;无已知基准(未指 design_id 或
+        # 指向的基准不存在)时按 r1 归档会把首修订伪装成修正,直接拒绝。
+        if not base or not prev:
+            return {
+                "wrote": False,
+                "should_snapshot": False,
+                "invalid": True,
+                "reason": ("修正无已知基准修订,不得按 r1 归档:"
+                           f"{base or '(未指定 design_id)'}"),
+                "backend": current.get("backend"),
+                "gate_required": False,
+                "request": dict(request),
+            }
         revision = _next_revision(prev)
-        design_id = base or design_id
+        design_id = base
     else:
         revision = "r1"
     ids_error = _snapshot_ids_error(design_id, revision)
@@ -263,6 +277,7 @@ def apply_design_snapshot(project_root: Path | str, plan: dict, *,
                           cache_dir: Path | str | None = None) -> dict:
     """把现行规格另存为归档快照。未确认或日常路径不写。"""
 
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     if not confirmed:
         return {"ok": False, "wrote": False, "complete": False,
                 "reason": "未确认,不写入归档"}
@@ -271,9 +286,7 @@ def apply_design_snapshot(project_root: Path | str, plan: dict, *,
                 "reason": plan.get("reason") or "快照身份非法",
                 "gate_required": False}
     if plan.get("reuse"):
-        return _associate_game_version(
-            project_root, plan, config_rel=config_rel, transport=transport,
-            api_base=api_base, cache_dir=cache_dir)
+        return _associate_game_version(project_root, plan, options=options)
     if not plan.get("should_snapshot"):
         return {
             "ok": True, "wrote": False, "complete": False, "skipped": True,
@@ -290,9 +303,7 @@ def apply_design_snapshot(project_root: Path | str, plan: dict, *,
     if config.get("backend") == "local-markdown":
         return _apply_local_snapshot(root, config, plan, config_rel=config_rel)
     if config.get("backend") == "github-issues":
-        return _apply_github_snapshot(
-            root, config, plan, transport=transport, api_base=api_base,
-            cache_dir=cache_dir, config_rel=config_rel)
+        return _apply_github_snapshot(root, config, plan, options=options)
     raise RecordsError(f"后端 {config.get('backend')} 未实现")
 
 
@@ -307,7 +318,7 @@ def read_design_snapshots(project_root: Path | str,
         return _read_local_snapshots(root, config)
     if config.get("backend") == "github-issues":
         return _read_github_snapshots(
-            config, transport=transport, api_base=api_base, cache_dir=cache_dir)
+            config, options=backend_options(config_rel, transport, api_base, cache_dir))
     raise RecordsError(f"后端 {config.get('backend')} 未实现")
 
 
@@ -654,9 +665,8 @@ def _ensure_overall_index(root: Path, config: dict, plan: dict, rev_dir: Path) -
         path.write_text(updated, encoding="utf-8")
 
 
-def _associate_game_version(project_root, plan, *, config_rel, transport,
-                            api_base, cache_dir) -> dict:
-    root, config = mgs_spec._config(project_root, config_rel)
+def _associate_game_version(project_root, plan, *, options: BackendOptions) -> dict:
+    root, config = mgs_spec._config(project_root, options.config_rel)
     if config.get("backend") == "local-markdown":
         listed = _read_local_snapshots(root, config)
         match = _latest_revision_snapshot(
@@ -722,14 +732,13 @@ def _associate_game_version(project_root, plan, *, config_rel, transport,
             "backend": "local-markdown",
             "gate_required": False,
         }
-    return _associate_github_version(
-        root, config, plan, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+    return _associate_github_version(root, config, plan, options=options)
 
 
-def _read_github_snapshots(config, *, transport, api_base, cache_dir) -> dict:
+def _read_github_snapshots(config, *, options: BackendOptions) -> dict:
     backend = mgs_spec._github(
-        config, transport=transport, api_base=api_base, cache_dir=cache_dir)
+        config, transport=options.transport, api_base=options.api_base,
+        cache_dir=options.cache_dir)
     try:
         items = mgs_spec._list_github_items(backend)
     except mgs_spec.TransportError as exc:
@@ -821,12 +830,13 @@ def _render_github_body(plan: dict, overall: str, modules: dict[str, str],
 
 
 def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
-                           transport, api_base, cache_dir, config_rel) -> dict:
+                           options: BackendOptions) -> dict:
     denied = mgs_spec._ensure_write(config)
     if denied:
         return {"ok": False, "wrote": False, "complete": False, "reason": denied}
     backend = mgs_spec._github(
-        config, transport=transport, api_base=api_base, cache_dir=cache_dir)
+        config, transport=options.transport, api_base=options.api_base,
+        cache_dir=options.cache_dir)
     existing = _find_github_revision(
         backend, plan.get("design_id"), plan.get("revision"))
     if existing is not None and plan.get("correction"):
@@ -842,8 +852,8 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
         number = existing.get("number")
         body_text = existing.get("body") or ""
         current = mgs_spec.read_current_design(
-            root, config_rel, transport=transport, api_base=api_base,
-            cache_dir=cache_dir)
+            root, options.config_rel, transport=options.transport,
+            api_base=options.api_base, cache_dir=options.cache_dir)
         expected = plan.get("source_sha256")
         if expected and expected != _source_fingerprint(current):
             return {
@@ -927,8 +937,8 @@ def _apply_github_snapshot(root: Path, config: dict, plan: dict, *,
             "gate_required": False, "published": True,
         }
     current = mgs_spec.read_current_design(
-        root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+        root, options.config_rel, transport=options.transport,
+        api_base=options.api_base, cache_dir=options.cache_dir)
     expected = plan.get("source_sha256")
     if expected and expected != _source_fingerprint(current):
         return {
@@ -1076,13 +1086,14 @@ def _ensure_github_index(backend, plan, snapshot_number) -> bool:
         return False
 
 
-def _associate_github_version(root, config, plan, *, transport, api_base,
-                              cache_dir) -> dict:
+def _associate_github_version(root, config, plan, *,
+                              options: BackendOptions) -> dict:
     denied = mgs_spec._ensure_write(config)
     if denied:
         return {"ok": False, "wrote": False, "complete": False, "reason": denied}
     backend = mgs_spec._github(
-        config, transport=transport, api_base=api_base, cache_dir=cache_dir)
+        config, transport=options.transport, api_base=options.api_base,
+        cache_dir=options.cache_dir)
     match = _find_latest_github(backend, plan.get("design_id"))
     if match is None:
         return {"ok": False, "wrote": False, "complete": False,

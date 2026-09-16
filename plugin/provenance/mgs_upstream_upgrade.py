@@ -698,6 +698,22 @@ def apply_upstream_upgrade(
         result["retain_reason"] = evaluation.get("retain_reason") or "verification-failed"
         result["adopted"] = current
         return result
+    # 评审结论绑定评估时的安装态 pin:apply 前重读比对。评估与确认之间
+    # pin 被另一流程改写(漂移竞态)时,旧结论不知道漂移后的安装态,不得
+    # 按已批准的候选安装;评估记录未绑定基线 pin 时同样失败闭合。
+    baseline = dict(evaluation.get("current") or {})
+    baseline_sha = str(baseline.get("sha") or "")
+    if not baseline_sha:
+        result["decision"] = "retain"
+        result["retain_reason"] = "pin-unbound"
+        result["adopted"] = current
+        return result
+    if (str(current.get("sha") or ""), str(current.get("version") or "")) != (
+            baseline_sha, str(baseline.get("version") or "")):
+        result["decision"] = "retain"
+        result["retain_reason"] = "pin-changed-after-review"
+        result["adopted"] = current
+        return result
     # 评审结论绑定候选全量指纹:apply 时重算比对。评审后候选目录发生
     # 任何变化(或评审未绑定指纹)都不得按已批准的 pin 安装。
     candidate_info = evaluation.get("candidate") or {}

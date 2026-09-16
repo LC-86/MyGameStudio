@@ -4,7 +4,7 @@
     "name": "mygamestudio",
     "version": "2.0.0",
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "sha256": "982a95b5ee6254a28f8cc2828fda758ae81d7b254c41435ef4257edf8a9b4777"
+    "sha256": "e70480d9fca22fbd89f2e5466af72b92a686903be103b07542d1ce937e57690e"
   },
   "upstream": {
     "name": "mattpocock/skills",
@@ -16,7 +16,7 @@
     "retain_reason": "no-new-candidate-authorized"
   },
   "environment": {
-    "system": "Darwin 25.5.0 arm64",
+    "system": "Darwin 27.0.0 arm64",
     "python": "3.14.4",
     "check_client": "local-python-tests",
     "package_version": "2.0.0"
@@ -24,7 +24,7 @@
   "package_consistency": {
     "passed": true,
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "tarball_sha256": "982a95b5ee6254a28f8cc2828fda758ae81d7b254c41435ef4257edf8a9b4777",
+    "tarball_sha256": "e70480d9fca22fbd89f2e5466af72b92a686903be103b07542d1ce937e57690e",
     "missing": [],
     "mismatches": []
   },
@@ -71,13 +71,15 @@
     "install_session": "not-executed"
   },
   "pending_review": {
-    "complete": false,
+    "present": true,
+    "complete": true,
     "committed_only_complete": false,
     "created_commit": false,
     "excluded_unrelated": false,
-    "axes_share_content_version": false,
-    "content_version": "",
-    "present": false
+    "axes_share_content_version": true,
+    "content_version": "3114a57d2da82de0d7cf45b6088be6dbea9077a924afd6ffe30e792af7262439",
+    "baseline": "4580bbc511f1ce667343ad3129707ec51f69be34",
+    "gate_required": false
   },
   "technical_behaviors": [
     {
@@ -117,7 +119,7 @@
     },
     {
       "check": "T8",
-      "status": "incomplete"
+      "status": "passed"
     },
     {
       "check": "T9",
@@ -152,7 +154,7 @@
   ],
   "acceptance": {
     "technical_behavior_evidence": "passed",
-    "standards_spec_pending_review": "incomplete",
+    "standards_spec_pending_review": "passed",
     "package_consistency": "passed",
     "versions_recorded": "passed",
     "publish": "not-executed",

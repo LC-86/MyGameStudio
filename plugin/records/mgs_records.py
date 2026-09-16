@@ -52,6 +52,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # 共同记录语义(错误身份、正文规则与纯记录核验)的唯一定义在
 # mgs_record_model;本模块按现有公开名字重新导出,调用方定位不变。
+from mgs_backend_options import (BackendOptions, backend_options,
+                                 github_backend_for)  # noqa: E402
 from mgs_record_model import (  # noqa: E402  (路径调整后导入)
     CANONICAL_LABELS, CORE_DOC_KEYS, IDENTITY_RE, PLAN_REQUEST_KEYS,
     RecordsError, TASK_REQUEST_KEYS, _bullets, _core_rows, _field,
@@ -76,21 +78,9 @@ READY_NOTE = ("可开工=分流 ready 且记录字段完整且未完成依赖为
 
 # ---------- 逻辑操作(公开接缝) ----------
 
-def _github_backend_for(config: dict, *, transport=None,
-                        api_base: str | None = None,
-                        cache_dir: Path | str | None = None):
-    """由本次已解析配置构造 GitHub adapter(不再重读 CONFIG)。"""
-
-    import mgs_github  # noqa: PLC0415 - 延迟导入避免循环依赖
-
-    if config["backend"] != "github-issues":
-        raise RecordsError(f"当前后端为 {config['backend']},不是 github-issues")
-    if transport is None:
-        transport = mgs_github.UrllibTransport(
-            api_base=mgs_github.api_base_for(config, api_base),
-            token=mgs_github.token_from_env())
-    return mgs_github.GithubBackend(config, transport, cache_dir)
-
+# transport/api_base/cache_dir(+config_rel) 参数簇的唯一定义在
+# mgs_backend_options.BackendOptions(issue #73):公开入口保留既有 keyword
+# 参数并组装成选项对象,内部私有助手只接收这一个对象,不再逐层铺开。
 
 def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
                    *, transport=None, api_base: str | None = None,
@@ -98,8 +88,8 @@ def github_backend(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_RE
     """构建 GitHub Issues 后端适配器(公开接缝;transport 供测试注入替身)。"""
 
     config = load_config(project_root, config_rel)
-    return _github_backend_for(config, transport=transport, api_base=api_base,
-                               cache_dir=cache_dir)
+    return github_backend_for(
+        config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir))
 
 
 class _Reading:
@@ -120,9 +110,7 @@ class _Reading:
         self.fetch_meta = fetch_meta
 
 
-def _read_tasks(root: Path, config: dict, *, transport=None,
-                api_base: str | None = None,
-                cache_dir: Path | str | None = None) -> tuple[list[dict], dict]:
+def _read_tasks(root: Path, config: dict, options: BackendOptions) -> tuple[list[dict], dict]:
     """由本次已加载配置获取任务集合一次(不重读 CONFIG)。
 
     本地每份 task.md 读取一次并保持目录顺序;GitHub 全量任务集合获取一次
@@ -143,9 +131,7 @@ def _read_tasks(root: Path, config: dict, *, transport=None,
                        "task_root": config["task_root"]}}
         return tasks, fetch_meta
     if backend == "github-issues":
-        payload = _github_backend_for(
-            config, transport=transport, api_base=api_base,
-            cache_dir=cache_dir).fetch_tasks()
+        payload = github_backend_for(config, options).fetch_tasks()
         fetch_meta = {"cached": bool(payload.get("cached")),
                       "fetched_at": payload.get("fetched_at"),
                       "source": payload.get("source")}
@@ -156,9 +142,8 @@ def _read_tasks(root: Path, config: dict, *, transport=None,
         f"后端 {backend} 未实现(首版支持 local-markdown 与 github-issues)")
 
 
-def _read_workspace(project_root: Path | str, config_rel: str, *,
-                    transport=None, api_base: str | None = None,
-                    cache_dir: Path | str | None = None) -> _Reading:
+def _read_workspace(project_root: Path | str,
+                    options: BackendOptions) -> _Reading:
     """顶层读取一次:CONFIG 原文一次;需要任务集合时获取一次。
 
     任务集合保留来源顺序,本次判断都从这一份结果推导;下一次顶层调用重新
@@ -166,9 +151,8 @@ def _read_workspace(project_root: Path | str, config_rel: str, *,
     """
 
     root = Path(project_root)
-    config, config_text = load_config_document(root, config_rel)
-    tasks, fetch_meta = _read_tasks(root, config, transport=transport,
-                                    api_base=api_base, cache_dir=cache_dir)
+    config, config_text = load_config_document(root, options.config_rel)
+    tasks, fetch_meta = _read_tasks(root, config, options)
     return _Reading(config, config_text, tasks, fetch_meta)
 
 
@@ -185,9 +169,8 @@ def list_tasks(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
     root = Path(project_root)
     config = load_config(root, config_rel)
     if config["backend"] == "github-issues":
-        payload = _github_backend_for(
-            config, transport=transport, api_base=api_base,
-            cache_dir=cache_dir).fetch_tasks()
+        payload = github_backend_for(
+            config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir)).fetch_tasks()
         cached = bool(payload.get("cached"))
         # 排序与离线标记使用独立投影:不原地修改后端返回的任务集合,避免
         # 调用特有标注影响其他判断(list 按身份排序,来源集合保持原顺序)。
@@ -214,9 +197,8 @@ def read_task(project_root: Path | str, task_id: str,
     root = Path(project_root)
     config = load_config(root, config_rel)
     if config["backend"] == "github-issues":
-        return _github_backend_for(
-            config, transport=transport, api_base=api_base,
-            cache_dir=cache_dir).read_task(task_id)
+        return github_backend_for(
+            config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir)).read_task(task_id)
     if config["backend"] != "local-markdown":
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
@@ -260,8 +242,8 @@ def task_dependencies(project_root: Path | str,
     本次调用只取一份任务集合,依赖由该集合生成。
     """
 
-    reading = _read_workspace(project_root, config_rel, transport=transport,
-                              api_base=api_base, cache_dir=cache_dir)
+    reading = _read_workspace(
+        project_root, backend_options(config_rel, transport, api_base, cache_dir))
     return _dependency_graph(reading.tasks)
 
 
@@ -449,8 +431,8 @@ def startable_tasks(project_root: Path | str,
     """
 
     root = Path(project_root)
-    reading = _read_workspace(root, config_rel, transport=transport,
-                              api_base=api_base, cache_dir=cache_dir)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
+    reading = _read_workspace(root, options)
     # 基线版本表只读一次,供全部任务核对(避免逐任务重读核心文档);
     # CONFIG 自映射行复用 _read_workspace 已读原文,不二次读取
     versions = _doc_baseline_versions(
@@ -514,17 +496,18 @@ def baseline_report(project_root: Path | str,
     """
 
     root = Path(project_root)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     # 本次判断只用同一份 CONFIG 原文与已读核心文档:一次读取、版本与指纹同源
     # (config_text 复用给文档映射的 CONFIG 自映射行,R2-SP-1)
-    config, config_text = load_config_document(root, config_rel)
+    config, config_text = load_config_document(root, options.config_rel)
     if config["backend"] not in SUPPORTED_BACKENDS:
         raise RecordsError(
             f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
     texts = _doc_texts(root, config, config_text=config_text)
     if config.get("backend") == "github-issues":
         current = read_current_design(
-            root, config_rel, transport=transport, api_base=api_base,
-            cache_dir=cache_dir)
+            root, options.config_rel, transport=options.transport,
+            api_base=options.api_base, cache_dir=options.cache_dir)
         overall = current.get("overall") or ""
         if overall:
             for row in config.get("docmap") or []:
@@ -582,8 +565,7 @@ def baseline_report(project_root: Path | str,
                          "status": status, "note": note})
 
     # 任务集合同样由本次已加载配置获取一次(不重读 CONFIG),受本次同调用约束
-    tasks, _ = _read_tasks(root, config, transport=transport,
-                           api_base=api_base, cache_dir=cache_dir)
+    tasks, _ = _read_tasks(root, config, options)
     affected: list[dict] = []
     for task in tasks:
         baseline_text = task["request"].get("输入与基线", "")
@@ -632,6 +614,7 @@ def verify_project(project_root: Path | str,
     """
 
     root = Path(project_root)
+    options = backend_options(config_rel, transport, api_base, cache_dir)
     checks: list[dict] = []
     try:
         config = load_config(root, config_rel)
@@ -640,9 +623,7 @@ def verify_project(project_root: Path | str,
     checks.append(check_item("config-present", True, str(root / config_rel)))
     if config["backend"] == "github-issues":
         # 由本次已解析配置构造后端(verify 内部自行完成任务集合、标签与评论读取)
-        return _github_backend_for(
-            config, transport=transport, api_base=api_base,
-            cache_dir=cache_dir).verify(root)
+        return github_backend_for(config, options).verify(root)
     if config["backend"] != "local-markdown":
         checks.append(check_item("backend-local-markdown", False,
                              f"backend={config['backend']} 未实现"))
@@ -658,7 +639,7 @@ def verify_project(project_root: Path | str,
     checks += docmap_checks(root, config["docmap"])
 
     # 任务集合由本次已加载配置获取一次(不重读 CONFIG);畸形任务不被过滤
-    tasks, _ = _read_tasks(root, config)
+    tasks, _ = _read_tasks(root, config, options)
     task_problems: list[str] = []
     for task in tasks:
         if task["identity"] != task["directory"]:
@@ -679,11 +660,14 @@ def verify_project(project_root: Path | str,
                 result_problems.append(f"{task['directory']}/{rel}:未引用所属任务身份")
         if task["results"]:
             index_text = task["result_index_text"].strip()
-            referenced = any(name.split("/")[-1] in index_text or "results" in index_text
-                             for name in task["results"])
-            if not referenced or "(暂无)" in index_text:
+            # 每份结果文件都必须被索引点名;只点名其一或笼统提及 results
+            # 不得视为一致。
+            unreferenced = [name for name in task["results"]
+                            if name.split("/")[-1] not in index_text]
+            if unreferenced or "(暂无)" in index_text:
                 result_problems.append(
-                    f"{task['directory']}:结果文件存在但结果索引未引用")
+                    f"{task['directory']}:结果文件存在但结果索引未引用:"
+                    + ",".join(unreferenced))
     checks.append(check_item("results-consistent", not result_problems,
                          ";".join(result_problems) if result_problems
                          else "结果文件与结果索引互相一致"))
@@ -752,19 +736,16 @@ def apply_github_onboarding(project_root: Path | str, plan: dict | None = None,
         authorization=authorization, config_rel=config_rel)
 
 
-def _backend_for(project_root: Path | str, config_rel: str = DEFAULT_CONFIG_REL,
-                 *, transport=None, api_base: str | None = None,
-                 cache_dir: Path | str | None = None):
+def _backend_for(project_root: Path | str, options: BackendOptions):
     """按现行 CONFIG 构造可写后端(本地不经 gate;GitHub 仍走既有授权)。"""
 
-    config = load_config(project_root, config_rel)
+    config = load_config(project_root, options.config_rel)
     if config["backend"] == "local-markdown":
         import mgs_local_backend  # noqa: PLC0415
 
         return mgs_local_backend.LocalMarkdownBackend(project_root, config)
     if config["backend"] == "github-issues":
-        return _github_backend_for(
-            config, transport=transport, api_base=api_base, cache_dir=cache_dir)
+        return github_backend_for(config, options)
     raise RecordsError(
         f"后端 {config['backend']} 未实现(首版支持 local-markdown 与 github-issues)")
 
@@ -778,8 +759,7 @@ def create_task(project_root: Path | str, identity: str, title: str,
     """记录一项任务。本地 Markdown 先回读再创建,已存在则收养。"""
 
     return _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir).create_task(
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).create_task(
             identity, title, request, triage=triage, progress=progress)
 
 
@@ -792,8 +772,7 @@ def update_task(project_root: Path | str, identity: str, fields: dict, *,
     """更新任务安排。expected_body_sha256 不符则保留双方成果并拒绝覆盖。"""
 
     return _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir).update_task(
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).update_task(
             identity, fields, expected_body_sha256=expected_body_sha256,
             change_note=change_note)
 
@@ -803,8 +782,7 @@ def set_triage(project_root: Path | str, identity: str, label: str, *,
                api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir).set_triage(identity, label)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).set_triage(identity, label)
 
 
 def set_relations(project_root: Path | str, identity: str, deps: list[str], *,
@@ -812,8 +790,7 @@ def set_relations(project_root: Path | str, identity: str, deps: list[str], *,
                   api_base: str | None = None,
                   cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir).set_relations(identity, deps)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).set_relations(identity, deps)
 
 
 def set_parent(project_root: Path | str, identity: str, parent_id: str | None,
@@ -821,8 +798,7 @@ def set_parent(project_root: Path | str, identity: str, parent_id: str | None,
                api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir).set_parent(identity, parent_id)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).set_parent(identity, parent_id)
 
 
 def claim_task(project_root: Path | str, identity: str, actor: str, *,
@@ -830,8 +806,7 @@ def claim_task(project_root: Path | str, identity: str, actor: str, *,
                api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     backend = _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir))
     if not hasattr(backend, "claim_task"):
         raise RecordsError("当前后端本票不提供认领写接缝(GitHub 接入见后续票)")
     return backend.claim_task(identity, actor)
@@ -844,8 +819,7 @@ def frontier_tasks(project_root: Path | str, parent_identity: str | None = None,
     """前沿查询:开放、未认领、无开放阻塞的子票(只读)。"""
 
     backend = _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir))
     if hasattr(backend, "frontier_tasks"):
         return backend.frontier_tasks(parent_identity)
     tasks = list_tasks(project_root, config_rel, transport=transport,
@@ -890,8 +864,7 @@ def append_result(project_root: Path | str, identity: str, result_markdown: str,
                   api_base: str | None = None,
                   cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir).append_result(identity, result_markdown)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).append_result(identity, result_markdown)
 
 
 def close_task(project_root: Path | str, identity: str, reason: str,
@@ -899,8 +872,7 @@ def close_task(project_root: Path | str, identity: str, reason: str,
                transport=None, api_base: str | None = None,
                cache_dir: Path | str | None = None) -> dict:
     return _backend_for(
-        project_root, config_rel, transport=transport, api_base=api_base,
-        cache_dir=cache_dir).close_task(identity, reason, note=note)
+        project_root, backend_options(config_rel, transport, api_base, cache_dir)).close_task(identity, reason, note=note)
 
 
 def cancel_operation(project_root: Path | str, op: str, identity: str, *,
@@ -1207,6 +1179,7 @@ def plan_safe_switch(project_root: Path | str, *,
                      client_home: Path | str | None = None,
                      package_root: Path | str | None = None,
                      peer_projects: list | None = None,
+                     config_rel: str = DEFAULT_CONFIG_REL,
                      transport=None, api_base: str | None = None,
                      cache_dir: Path | str | None = None) -> dict:
     """只读核对照切换条件。不写入,不切换现行指针或技能来源。"""
@@ -1215,13 +1188,14 @@ def plan_safe_switch(project_root: Path | str, *,
 
     return mgs_safe_switch.plan_safe_switch(
         project_root, client_home=client_home, package_root=package_root,
-        peer_projects=peer_projects, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+        peer_projects=peer_projects, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 def apply_safe_switch(project_root: Path | str,
                       plan: dict | None = None, *,
                       confirmed: bool = False,
+                      config_rel: str = DEFAULT_CONFIG_REL,
                       transport=None, api_base: str | None = None,
                       cache_dir: Path | str | None = None) -> dict:
     """核对通过且确认后切换现行指针与技能来源。未确认不写。"""
@@ -1229,11 +1203,12 @@ def apply_safe_switch(project_root: Path | str,
     import mgs_safe_switch  # noqa: PLC0415
 
     return mgs_safe_switch.apply_safe_switch(
-        project_root, plan, confirmed=confirmed, transport=transport,
-        api_base=api_base, cache_dir=cache_dir)
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 def read_safe_switch(project_root: Path | str, *,
+                     config_rel: str = DEFAULT_CONFIG_REL,
                      transport=None, api_base: str | None = None,
                      cache_dir: Path | str | None = None) -> dict:
     """回读切换状态、现行来源与恢复去向。"""
@@ -1241,13 +1216,14 @@ def read_safe_switch(project_root: Path | str, *,
     import mgs_safe_switch  # noqa: PLC0415
 
     return mgs_safe_switch.read_safe_switch(
-        project_root, transport=transport, api_base=api_base,
-        cache_dir=cache_dir)
+        project_root, config_rel=config_rel, transport=transport,
+        api_base=api_base, cache_dir=cache_dir)
 
 
 def rollback_safe_switch(project_root: Path | str,
                          plan: dict | None = None, *,
                          confirmed: bool = False,
+                         config_rel: str = DEFAULT_CONFIG_REL,
                          transport=None, api_base: str | None = None,
                          cache_dir: Path | str | None = None) -> dict:
     """回退前先保留新版新增成果,不用迁移前快照覆盖。"""
@@ -1255,8 +1231,8 @@ def rollback_safe_switch(project_root: Path | str,
     import mgs_safe_switch  # noqa: PLC0415
 
     return mgs_safe_switch.rollback_safe_switch(
-        project_root, plan, confirmed=confirmed, transport=transport,
-        api_base=api_base, cache_dir=cache_dir)
+        project_root, plan, confirmed=confirmed, config_rel=config_rel,
+        transport=transport, api_base=api_base, cache_dir=cache_dir)
 
 
 # ---------- 兼容入口 ----------
