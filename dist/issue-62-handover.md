@@ -5,12 +5,12 @@
 
 ## 已完成本地核对
 
-- 包：`mygamestudio 2.0.0`，安装包 `mygamestudio-2.0.0.tar.gz`，SHA-256 `5afdb2955f80799a782006a87488a982b47c9b666b32c8b5de8d99a33e38797f`
+- 包：`mygamestudio 2.0.0`，安装包 `mygamestudio-2.0.0.tar.gz`，SHA-256 `2d5aa5422abf39790927e3d45e3ddb1183b9af9c0bf40a2f9766c89c71392dd7`
 - 上游采用：mattpocock/skills 1.2.3 `3cca18b368ae95cdbdebbff572ccafa662551015`，许可 MIT；无新候选，决定 retain
 - 检查环境：系统 `Darwin 27.0.0 arm64`，Python `3.14.4`，检查客户端 `local-python-tests`，Codex 客户端 `未探测`
 - 包一致性：True
 - 包内发现面与调用合同：passed
-- 完整待审捕获 content_version：`（写入时补齐）`
+- 完整待审捕获 content_version：`6f3d5212fc66296e0261b7cc115cf5ac5199b88be0eafe1cefc04404d5bd83f0`
 
 ## 未执行（等待额外授权，不标通过）
 

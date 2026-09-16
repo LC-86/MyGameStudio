@@ -4,7 +4,7 @@
     "name": "mygamestudio",
     "version": "2.0.0",
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "sha256": "5afdb2955f80799a782006a87488a982b47c9b666b32c8b5de8d99a33e38797f"
+    "sha256": "2d5aa5422abf39790927e3d45e3ddb1183b9af9c0bf40a2f9766c89c71392dd7"
   },
   "upstream": {
     "name": "mattpocock/skills",
@@ -24,7 +24,7 @@
   "package_consistency": {
     "passed": true,
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "tarball_sha256": "5afdb2955f80799a782006a87488a982b47c9b666b32c8b5de8d99a33e38797f",
+    "tarball_sha256": "2d5aa5422abf39790927e3d45e3ddb1183b9af9c0bf40a2f9766c89c71392dd7",
     "missing": [],
     "mismatches": []
   },
@@ -71,13 +71,15 @@
     "install_session": "not-executed"
   },
   "pending_review": {
-    "complete": false,
+    "present": true,
+    "complete": true,
     "committed_only_complete": false,
     "created_commit": false,
-    "excluded_unrelated": false,
-    "axes_share_content_version": false,
-    "content_version": "",
-    "present": false
+    "excluded_unrelated": true,
+    "axes_share_content_version": true,
+    "content_version": "6f3d5212fc66296e0261b7cc115cf5ac5199b88be0eafe1cefc04404d5bd83f0",
+    "baseline": "4580bbc511f1ce667343ad3129707ec51f69be34",
+    "gate_required": false
   },
   "technical_behaviors": [
     {
@@ -117,7 +119,7 @@
     },
     {
       "check": "T8",
-      "status": "incomplete"
+      "status": "passed"
     },
     {
       "check": "T9",
@@ -152,7 +154,7 @@
   ],
   "acceptance": {
     "technical_behavior_evidence": "passed",
-    "standards_spec_pending_review": "incomplete",
+    "standards_spec_pending_review": "passed",
     "package_consistency": "passed",
     "versions_recorded": "passed",
     "publish": "not-executed",
