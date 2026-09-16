@@ -334,6 +334,13 @@ def test_apply_refuses_plan_without_package_fingerprints() -> None:
         check(applied.get("ok") is False,
               f"计划缺包树指纹不得切换,实际 {applied.get('ok')}")
         check(applied.get("wrote") is False, "计划缺包树指纹时不得写入")
+        # 指纹字段被篡改为非字典时同样失败闭合,不得以属性错误中断或放行。
+        malformed = dict(plan)
+        malformed["package_fingerprints"] = ["not-a-mapping"]
+        applied = mgs_records.apply_safe_switch(ready, malformed, confirmed=True)
+        check(applied.get("ok") is False,
+              f"指纹字段畸形不得切换,实际 {applied.get('ok')}")
+        check(applied.get("wrote") is False, "指纹字段畸形时不得写入")
         installed = home / "skills" / "game-design" / "SKILL.md"
         check(not installed.is_file()
               or TAMPER not in installed.read_text(encoding="utf-8"),

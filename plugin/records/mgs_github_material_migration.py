@@ -23,7 +23,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from mgs_backend_options import BackendOptions, github_backend_for  # noqa: E402
+from mgs_backend_options import (BackendOptions, backend_options,
+                                 github_backend_for)  # noqa: E402
 from mgs_github_issue import (  # noqa: E402
     PENDING_SWITCH_MARK, authorization_for, build_task_body, is_pending_switch,
     parse_issue_payload)
@@ -352,8 +353,7 @@ def plan_github_material_migration(project_root: Path | str, *,
         raise RecordsError(f"目标项目不存在:{root}")
     config = _config_or_github(root)
     backend = _github_backend(
-        config, BackendOptions(transport=transport, api_base=api_base,
-                               cache_dir=cache_dir))
+        config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir))
     items = _discover_github_items(backend, config) + _discover_local_items(root)
     if scope:
         allowed = set(scope.get("sources") or [])
@@ -749,8 +749,7 @@ def apply_github_material_migration(project_root: Path | str,
                                     cache_dir: Path | str | None = None) -> dict:
     """把清单转换成待切换 GitHub 成果。未确认不写;回读后只补缺项。"""
 
-    options = BackendOptions(transport=transport, api_base=api_base,
-                             cache_dir=cache_dir)
+    options = backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir)
     if not confirmed:
         return {
             "ok": False, "wrote": False, "reason": "未确认迁移清单,不执行转换",
@@ -1225,8 +1224,7 @@ def read_github_material_migration(project_root: Path | str, *,
     try:
         config = _config_or_github(root)
         backend = _github_backend(
-            config, BackendOptions(transport=transport, api_base=api_base,
-                                   cache_dir=cache_dir))
+            config, backend_options(transport=transport, api_base=api_base, cache_dir=cache_dir))
     except RecordsError:
         backend = None
         config = {}

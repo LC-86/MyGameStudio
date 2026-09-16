@@ -128,7 +128,8 @@ def _package_drift(plan: dict) -> list[str]:
     package_raw = str(plan.get("package_root") or "").strip()
     if not package_raw:
         return []
-    expected = plan.get("package_fingerprints") or {}
+    fingerprints = plan.get("package_fingerprints")
+    expected = fingerprints if isinstance(fingerprints, dict) else {}
     if not expected:
         return ["<计划未携带包树指纹,无法核对包内容>"]
     return _prep_changed(Path(package_raw), expected)
