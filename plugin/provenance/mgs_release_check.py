@@ -405,7 +405,7 @@ def _handover_markdown(evidence: dict) -> str:
     env = evidence.get("environment") or {}
     review = evidence.get("pending_review") or {}
     lines = [
-        "# MyGameStudio 2.0.0 技术检查交接（issue #62）",
+        f"# MyGameStudio {package.get('version')} 技术检查交接（issue #62）",
         "",
         "本文件只记录本会话已完成本地技术检查与未执行交接。",
         "发布、真实安装、新会话核验仍等待额外授权，不能当成已经通过。",
@@ -428,7 +428,7 @@ def _handover_markdown(evidence: dict) -> str:
         "",
         "## 后续授权发布/安装时需要的合同与路径",
         "",
-        "- 安装包：`dist/mygamestudio-2.0.0.tar.gz`，校验 `dist/SHA256SUMS.txt`",
+        f"- 安装包：`dist/{package.get('tarball')}`，校验 `dist/SHA256SUMS.txt`",
         "- 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`（Codex）/ `plugin/.zcode-plugin/plugin.json`（ZCode）",
         "- 公开技能：`plugin/skills/*/SKILL.md`（Matt 正式 25 项 + game-producer/game-init/game-design）",
         "- 调用合同：`plugin/internal/game/invocation.md`",

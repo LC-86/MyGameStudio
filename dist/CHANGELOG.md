@@ -1,10 +1,17 @@
 # MyGameStudio 安装包变更说明(dist/)
 
-本目录当前提供 **2.0.0** 候选组合包（issue #50–#62 本地技术检查）。1.0.0 / 0.18.x 安装包保留为历史文件。
+本目录当前提供 **2.0.1** 候选组合包（issue #68 批量修复与 #75 多客户端适配）。2.0.0 及更早安装包保留为历史文件。
 安装包、逐文件清单与校验和由
 `dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致,经
 `dist/verify-reproducible.sh` 干净副本隔离重建验证);
 `tests/test_plugin_package.py` 持续核对清单、校验和与源码三方一致。
+
+## 2.0.1（2026-09-17，issue #68 批量修复 + #75 多客户端适配）
+
+- issue #68 批量修复（PR #74，#69–#73 五张子票）：安全切换加固、迁移与路径安全、升级 pin 漂移与 CLI `--config` 透传、快照与结果一致性、Standards 文档清理；含三轮双轴审查收敛。
+- issue #75 多客户端适配（PR #76）：同时携带 ZCode 清单 `.zcode-plugin/plugin.json`（name/version 与 Codex 清单一致，`tests/test_multi_client.py` 回归防漂移）；三个游戏入口技能兜底定位改为客户端无关回退链（上下文 → Codex `$CODEX_HOME` → ZCode 插件缓存 → Grok `~/.grok/plugins`）；「真实 Codex」措辞与 clients 元数据改「真实客户端」（`clients: [codex, zcode, grok-build]`、`install-real-client`）；README「多客户端安装」写明 ZCode 本地插件源与 Grok Build 安装及隔离目录验证步骤。
+- 全量测试 54/54 通过；dist 交付证据（`issue-62-technical-evidence.json` / `issue-62-handover.md`）在 dist 未提交时重新生成，ok=true、T8 passed。
+- 本版本为 2.x 线首个多客户端发布；2.0.0（2026-09-16）发布内容见下节。
 
 ## 2.0.0（2026-09-15，issue #50–#62 候选包）
 
@@ -28,7 +35,8 @@
 
 | 文件 | 内容 |
 | --- | --- |
-| `mygamestudio-2.0.0.tar.gz` | 当前候选安装包(plugin/ 全量) |
+| `mygamestudio-2.0.1.tar.gz` | 当前候选安装包(plugin/ 全量) |
+| `mygamestudio-2.0.0.tar.gz` | 2.0.0 历史安装包 |
 | `package-manifest.txt` | 包内逐文件 SHA-256 清单 |
 | `SHA256SUMS.txt` | 上两项的校验和 |
 | `issue-62-technical-evidence.json` | issue #62 本地技术证据（含未执行项） |
