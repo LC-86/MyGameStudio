@@ -19,7 +19,7 @@ description: Game-Design 游戏设计讨论。用户显式调用或制作统筹�
 
 公开接缝在 `<插件根>/records/mgs_records.py`：`read_current_design`、`plan_design_discussion`、`apply_design_discussion`。已采纳规则进入现行规格须由开发者主动调用 `to-spec`（`plan_spec_adoption` / `apply_spec_adoption`）。正式版本节点的设计快照走同一接缝的 `plan_design_snapshot` / `apply_design_snapshot` / `read_design_snapshots`，另存归档而不改写现行正文。普通工作不要求专用运行保障或 gate 配置。
 
-若当前上下文没有给出技能安装位置，在 `$CODEX_HOME` 下定位 `skills/game-design/SKILL.md`，再取其包根（上级两级）。
+若当前上下文没有给出技能安装位置，按客户端回退定位 `skills/game-design/SKILL.md` 并取其包根（上级两级）：上下文给定的插件目录 → Codex `$CODEX_HOME` → ZCode 插件缓存 `~/.zcode/cli/plugins/cache/`（`<插件源>/<插件名>/<版本>/`）→ Grok Build `~/.grok/plugins/` 或 `--plugin-dir` 指向的目录。
 
 ## 职责
 

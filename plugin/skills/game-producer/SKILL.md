@@ -19,7 +19,7 @@ description: Game-Producer 游戏制作统筹。用户显式调用或已在当�
 
 公开只读接缝：`<插件根>/records/mgs_records.py` 的 `status_report`、`list_tasks`、`startable_tasks`、`frontier_tasks`。查询本身不修改文件。项目接入后从 `docs/mygamestudio/INDEX.md` 读取现行规格与任务位置；GitHub 模式下任务现行状态以远端 Issue 为准，本地草稿或缓存须标明身份。
 
-若当前上下文没有给出技能安装位置，在 `$CODEX_HOME` 下定位 `skills/game-producer/SKILL.md`，再取其包根（上级两级）。
+若当前上下文没有给出技能安装位置，按客户端回退定位 `skills/game-producer/SKILL.md` 并取其包根（上级两级）：上下文给定的插件目录 → Codex `$CODEX_HOME` → ZCode 插件缓存 `~/.zcode/cli/plugins/cache/`（`<插件源>/<插件名>/<版本>/`）→ Grok Build `~/.grok/plugins/` 或 `--plugin-dir` 指向的目录。
 
 ## 职责
 

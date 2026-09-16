@@ -13,7 +13,8 @@
 - 保留 MIT 许可、原始与分发校验值、适配记录；`implement` 无授权不提交；阶段资料指针可读且不启动制作。
 - 插件清单不注册 mgs-gate。issue #61 已将旧 runtime、强制通道和已退役入口移出安装包；去向见包内 `internal/game/retired-entries.md`。
 - issue #62 汇总本地技术证据：`dist/issue-62-technical-evidence.json` 与交接 `dist/issue-62-handover.md`。
-- 本会话未发布、未打正式版本标签、未安装到真实 Codex / 用户日常技能目录。这些项等待额外授权，不标通过。
+- issue #75 多客户端适配：同时携带 ZCode 清单 `.zcode-plugin/plugin.json`（name/version 与 Codex 清单一致，回归测试核对）；三个游戏入口的技能兜底定位改为客户端无关回退链；README「多客户端安装」写明 ZCode 本地插件源与 Grok Build（`~/.grok/plugins/` / `--plugin-dir`）的安装与隔离目录验证步骤。
+- 本会话未发布、未打正式版本标签、未安装到真实客户端 / 用户日常技能目录。这些项等待额外授权，不标通过。
 
 ## 1.0.0（2026-09-15）
 
@@ -48,7 +49,8 @@
 # 1) 解包审阅(内容与仓库 plugin/ 逐字节一致,可先核对校验和)
 cd dist && shasum -a 256 -c SHA256SUMS.txt
 tar -tzf mygamestudio-2.0.0.tar.gz | head
-# 2) 按当时有效的 Codex 插件安装方式接入解包出的 plugin/
+# 2) 按目标客户端的安装方式接入解包出的 plugin/
+#    (Codex / ZCode 本地插件源 / Grok Build，见仓库 README「多客户端安装」)
 # 3) 用新会话核验：发现正式 25 项加三个游戏入口、同名唯一、
 #    用户专用入口不被自动串调、资料读取不启动制作
 ```

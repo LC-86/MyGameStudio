@@ -4,7 +4,7 @@
     "name": "mygamestudio",
     "version": "2.0.0",
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "sha256": "e70480d9fca22fbd89f2e5466af72b92a686903be103b07542d1ce937e57690e"
+    "sha256": "eab2a4575e77c3afb2223668d5e4a6308e27d4dce3c8b324dcd49384b2584caf"
   },
   "upstream": {
     "name": "mattpocock/skills",
@@ -24,7 +24,7 @@
   "package_consistency": {
     "passed": true,
     "tarball": "mygamestudio-2.0.0.tar.gz",
-    "tarball_sha256": "e70480d9fca22fbd89f2e5466af72b92a686903be103b07542d1ce937e57690e",
+    "tarball_sha256": "eab2a4575e77c3afb2223668d5e4a6308e27d4dce3c8b324dcd49384b2584caf",
     "missing": [],
     "mismatches": []
   },
@@ -77,8 +77,8 @@
     "created_commit": false,
     "excluded_unrelated": false,
     "axes_share_content_version": true,
-    "content_version": "3114a57d2da82de0d7cf45b6088be6dbea9077a924afd6ffe30e792af7262439",
-    "baseline": "4580bbc511f1ce667343ad3129707ec51f69be34",
+    "content_version": "4557d4d9e03379ce3a73238cce95221800752894611d4c4ce3f3596227f2526a",
+    "baseline": "55c45cca0b39d6d653341fbaab39a81eff7bd453",
     "gate_required": false
   },
   "technical_behaviors": [
@@ -158,7 +158,7 @@
     "package_consistency": "passed",
     "versions_recorded": "passed",
     "publish": "not-executed",
-    "install-real-codex": "not-executed",
+    "install-real-client": "not-executed",
     "new-session-verification": "not-executed",
     "live-migration": "not-executed",
     "live-switch": "not-executed",
@@ -172,9 +172,9 @@
       "reason": "按既有有效授权发布（git push、PR、正式版本标签、插件发布）"
     },
     {
-      "item": "install-real-codex",
+      "item": "install-real-client",
       "status": "not-executed",
-      "reason": "安装到真实 Codex / 用户日常技能目录"
+      "reason": "安装到真实客户端 / 用户日常技能目录"
     },
     {
       "item": "new-session-verification",

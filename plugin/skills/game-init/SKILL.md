@@ -19,9 +19,9 @@ description: Game-Init 游戏项目接入。用户显式调用或制作统筹按
 - [初始化流程](../../internal/proposals/project-onboarding.md)
 - [项目目录模板](../../internal/proposals/project-layout.md)与[模板入口](../../templates/README.md)
 
-公开接缝在 `<插件根>/records/mgs_records.py`：`analyze_project`、`plan_local_onboarding`、`apply_local_onboarding`、`plan_github_onboarding`、`apply_github_onboarding`、`plan_local_material_migration`、`apply_local_material_migration`、`read_local_material_migration`、`plan_github_material_migration`、`apply_github_material_migration`、`read_github_material_migration`、`plan_safe_switch`、`apply_safe_switch`、`read_safe_switch`、`rollback_safe_switch`、`create_task`、`claim_task`、`frontier_tasks` 及任务维护入口。普通工作不要求专用运行保障或 gate 配置。GitHub 写入须 CONFIG 中明确到仓库的 issues-write 授权；本地只保存明确标识的草稿或缓存。本地 Markdown 与 GitHub 旧项目的完整资料转换保持所选 tracker，成果待切换；核对完整后才切换现行指针与技能来源。技能来源切换用隔离目录演示合同，不安装到真实 Codex / 用户日常技能目录。
+公开接缝在 `<插件根>/records/mgs_records.py`：`analyze_project`、`plan_local_onboarding`、`apply_local_onboarding`、`plan_github_onboarding`、`apply_github_onboarding`、`plan_local_material_migration`、`apply_local_material_migration`、`read_local_material_migration`、`plan_github_material_migration`、`apply_github_material_migration`、`read_github_material_migration`、`plan_safe_switch`、`apply_safe_switch`、`read_safe_switch`、`rollback_safe_switch`、`create_task`、`claim_task`、`frontier_tasks` 及任务维护入口。普通工作不要求专用运行保障或 gate 配置。GitHub 写入须 CONFIG 中明确到仓库的 issues-write 授权；本地只保存明确标识的草稿或缓存。本地 Markdown 与 GitHub 旧项目的完整资料转换保持所选 tracker，成果待切换；核对完整后才切换现行指针与技能来源。技能来源切换用隔离目录演示合同，不安装到真实客户端 / 用户日常技能目录。
 
-若当前上下文没有给出技能安装位置，在 `$CODEX_HOME` 下定位 `skills/game-init/SKILL.md`，再取其包根（上级两级）。
+若当前上下文没有给出技能安装位置，按客户端回退定位 `skills/game-init/SKILL.md` 并取其包根（上级两级）：上下文给定的插件目录 → Codex `$CODEX_HOME` → ZCode 插件缓存 `~/.zcode/cli/plugins/cache/`（`<插件源>/<插件名>/<版本>/`）→ Grok Build `~/.grok/plugins/` 或 `--plugin-dir` 指向的目录。
 
 ## 职责
 
