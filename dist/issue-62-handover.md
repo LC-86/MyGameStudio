@@ -5,17 +5,17 @@
 
 ## 已完成本地核对
 
-- 包：`mygamestudio 2.0.0`，安装包 `mygamestudio-2.0.0.tar.gz`，SHA-256 `e70480d9fca22fbd89f2e5466af72b92a686903be103b07542d1ce937e57690e`
+- 包：`mygamestudio 2.0.0`，安装包 `mygamestudio-2.0.0.tar.gz`，SHA-256 `eab2a4575e77c3afb2223668d5e4a6308e27d4dce3c8b324dcd49384b2584caf`
 - 上游采用：mattpocock/skills 1.2.3 `3cca18b368ae95cdbdebbff572ccafa662551015`，许可 MIT；无新候选，决定 retain
-- 检查环境：系统 `Darwin 27.0.0 arm64`，Python `3.14.4`，检查客户端 `local-python-tests`，Codex 客户端 `未探测`
+- 检查环境：系统 `Darwin 27.0.0 arm64`，Python `3.14.4`，检查客户端 `local-python-tests`，客户端探测 `未探测`
 - 包一致性：True
 - 包内发现面与调用合同：passed
-- 完整待审捕获 content_version：`3114a57d2da82de0d7cf45b6088be6dbea9077a924afd6ffe30e792af7262439`
+- 完整待审捕获 content_version：`a48150cf294ee7bd5b4f0577773e69437ebf17c69a35369ff36fc1dc74b03295`
 
 ## 未执行（等待额外授权，不标通过）
 
 - `publish`：not-executed — 按既有有效授权发布（git push、PR、正式版本标签、插件发布）
-- `install-real-codex`：not-executed — 安装到真实 Codex / 用户日常技能目录
+- `install-real-client`：not-executed — 安装到真实客户端 / 用户日常技能目录
 - `new-session-verification`：not-executed — 安装后用新会话核验发现、同名来源、调用与资料加载
 - `live-migration`：not-executed — 真实个人项目迁移
 - `live-switch`：not-executed — 用户环境切换 / 真实技能来源切换
@@ -25,7 +25,7 @@
 ## 后续授权发布/安装时需要的合同与路径
 
 - 安装包：`dist/mygamestudio-2.0.0.tar.gz`，校验 `dist/SHA256SUMS.txt`
-- 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`
+- 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`（Codex）/ `plugin/.zcode-plugin/plugin.json`（ZCode）
 - 公开技能：`plugin/skills/*/SKILL.md`（Matt 正式 25 项 + game-producer/game-init/game-design）
 - 调用合同：`plugin/internal/game/invocation.md`
 - 阶段资料：`plugin/internal/game/stage-requirements.md`
