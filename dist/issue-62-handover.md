@@ -1,16 +1,16 @@
-# MyGameStudio 2.0.0 技术检查交接（issue #62）
+# MyGameStudio 2.0.1 技术检查交接（issue #62）
 
 本文件只记录本会话已完成本地技术检查与未执行交接。
 发布、真实安装、新会话核验仍等待额外授权，不能当成已经通过。
 
 ## 已完成本地核对
 
-- 包：`mygamestudio 2.0.0`，安装包 `mygamestudio-2.0.0.tar.gz`，SHA-256 `eab2a4575e77c3afb2223668d5e4a6308e27d4dce3c8b324dcd49384b2584caf`
+- 包：`mygamestudio 2.0.1`，安装包 `mygamestudio-2.0.1.tar.gz`，SHA-256 `538801ec025060dd18c137583223df58af25f6779dec0744aa56b76e9ff6b5b3`
 - 上游采用：mattpocock/skills 1.2.3 `3cca18b368ae95cdbdebbff572ccafa662551015`，许可 MIT；无新候选，决定 retain
 - 检查环境：系统 `Darwin 27.0.0 arm64`，Python `3.14.4`，检查客户端 `local-python-tests`，客户端探测 `未探测`
 - 包一致性：True
 - 包内发现面与调用合同：passed
-- 完整待审捕获 content_version：`4557d4d9e03379ce3a73238cce95221800752894611d4c4ce3f3596227f2526a`
+- 完整待审捕获 content_version：`bfc0175704a68488b19ae23c1c68af689c0a513ebcf6974dc3c1aa984f1dac77`
 
 ## 未执行（等待额外授权，不标通过）
 
@@ -24,7 +24,7 @@
 
 ## 后续授权发布/安装时需要的合同与路径
 
-- 安装包：`dist/mygamestudio-2.0.0.tar.gz`，校验 `dist/SHA256SUMS.txt`
+- 安装包：`dist/mygamestudio-2.0.1.tar.gz`，校验 `dist/SHA256SUMS.txt`
 - 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`（Codex）/ `plugin/.zcode-plugin/plugin.json`（ZCode）
 - 公开技能：`plugin/skills/*/SKILL.md`（Matt 正式 25 项 + game-producer/game-init/game-design）
 - 调用合同：`plugin/internal/game/invocation.md`
