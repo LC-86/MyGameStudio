@@ -197,7 +197,23 @@ def load_config(project_root: Path | str,
 # ---------- 本地 Markdown 记录 adapter(只读) ----------
 
 def _task_root(project_root: Path, config: dict) -> Path:
-    return project_root / config["task_root"]
+    """把 CONFIG 任务根解析成项目根内的路径;越权任务根一律拒绝。
+
+    CONFIG 是不可信输入:task_root 写成绝对路径或含 ``..`` 时,
+    ``project_root / task_root`` 会解析到项目根之外,读写都会随之
+    逃逸。这里统一收紧:解析后必须仍留在项目根内,否则按共同记录
+    错误身份拒绝(本地来源的唯一定义位置,读写共用同一约束)。
+    """
+
+    root = Path(project_root)
+    candidate = root / str(config.get("task_root") or "")
+    try:
+        candidate.resolve().relative_to(root.resolve())
+    except ValueError as exc:
+        raise RecordsError(
+            f"任务根必须留在项目根内:{config.get('task_root')!r}"
+            "(绝对路径与 .. 逃逸一律拒绝)") from exc
+    return candidate
 
 
 def _parse_task_file(project_root: Path, task_dir: Path) -> dict | None:

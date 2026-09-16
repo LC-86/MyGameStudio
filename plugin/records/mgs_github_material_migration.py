@@ -480,9 +480,13 @@ def _parent_identity(value: str) -> str:
 
 
 def _find_pending_issue(backend, needle: str) -> dict | None:
+    # 身份针必须匹配到完整取值:needle 之后只能是句号、换行或结尾。
+    # 纯子串匹配会把前缀身份误判成同身份(如 快照身份:ds-v1 命中
+    # 快照身份:ds-v1-0-0),收养再加正文比对就会覆盖别人的快照。
+    pattern = re.compile(re.escape(needle) + r"(?![^\n。])")
     for item in _list_issues(backend):
         body = item.get("body") or ""
-        if not is_pending_switch(body) or needle not in body:
+        if not is_pending_switch(body) or not pattern.search(body):
             continue
         if needle.startswith(SPEC_MARK) and SNAPSHOT_MARK in body:
             continue
@@ -506,6 +510,30 @@ def _publish_issue(backend, *, title: str, body: str, needle: str,
     if existing is not None:
         issue = existing
         adopted = True
+        # 同身份旧 pending 不得未比对正文即收养:正文须与本次规划源
+        # 比对,不一致则更新目标正文,否则规划源更新会在重试时被旧
+        # 正文静默丢弃。更新后回读核实;核实不了按未落地处理(返回
+        # None 让该项进入重试),不得假装已采用新内容。
+        if (issue.get("body") or "") != body:
+            try:
+                status, patched = backend.transport.request(
+                    "PATCH",
+                    f"{repo_path(backend.repo)}/issues/{issue['number']}",
+                    {"title": title, "body": body})
+                updated = (status in (200, 201) and isinstance(patched, dict)
+                           and (patched.get("body") or "") == body)
+                if not updated:
+                    _status, reread = backend.transport.request(
+                        "GET",
+                        f"{repo_path(backend.repo)}/issues/{issue['number']}")
+                    updated = (isinstance(reread, dict)
+                               and (reread.get("body") or "") == body)
+                    patched = reread if updated else None
+                if not updated:
+                    return None, False
+                issue = patched
+            except TransportError:
+                return None, False
     else:
         payload: dict[str, Any] = {"title": title, "body": body}
         if labels:
