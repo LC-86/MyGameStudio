@@ -10,7 +10,7 @@
 - 检查环境：系统 `Darwin 27.0.0 arm64`，Python `3.14.4`，检查客户端 `local-python-tests`，客户端探测 `未探测`
 - 包一致性：True
 - 包内发现面与调用合同：passed
-- 完整待审捕获 content_version：`a48150cf294ee7bd5b4f0577773e69437ebf17c69a35369ff36fc1dc74b03295`
+- 完整待审捕获 content_version：`4557d4d9e03379ce3a73238cce95221800752894611d4c4ce3f3596227f2526a`
 
 ## 未执行（等待额外授权，不标通过）
 

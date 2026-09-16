@@ -77,7 +77,7 @@
     "created_commit": false,
     "excluded_unrelated": false,
     "axes_share_content_version": true,
-    "content_version": "a48150cf294ee7bd5b4f0577773e69437ebf17c69a35369ff36fc1dc74b03295",
+    "content_version": "4557d4d9e03379ce3a73238cce95221800752894611d4c4ce3f3596227f2526a",
     "baseline": "55c45cca0b39d6d653341fbaab39a81eff7bd453",
     "gate_required": false
   },
