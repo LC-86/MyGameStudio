@@ -658,6 +658,20 @@ def _section_headings(text: str) -> list[str]:
     return found
 
 
+def _current_module_index(current: str) -> dict[str, str]:
+    """现行整体「模块」段的 name→引用 映射;部分采纳时以此为底保留。"""
+
+    index: dict[str, str] = {}
+    for line in _section(current, "模块").splitlines():
+        text = line.lstrip("- ").strip()
+        if not text or ("：" not in text and ":" not in text):
+            continue
+        name, ref = re.split(r"[：:]", text, 1)
+        if name.strip() and ref.strip():
+            index[name.strip()] = ref.strip()
+    return index
+
+
 def _merge_overall(current: str, adopted: dict, history_line: str) -> str:
     overall = dict(adopted.get("overall") or adopted)
     title = overall.get("title")
@@ -691,7 +705,13 @@ def _merge_overall(current: str, adopted: dict, history_line: str) -> str:
     snapshot_index = _section(current, "正式版本设计快照")
     if snapshot_index:
         extra["正式版本设计快照"] = snapshot_index
-    modules = dict(overall.get("module_index") or {})
+    # 部分采纳省略 module_index 时必须以现行索引为底:直接整体替换会把
+    # 既有模块引用清空,而模块文件/Issue 仍是权威,整体入口就此断链。
+    modules = _current_module_index(current)
+    requested_index = overall.get("module_index")
+    if isinstance(requested_index, dict):
+        for name, ref in requested_index.items():
+            modules[str(name)] = str(ref)
     change = [history_line] if history_line else []
     existing_index = _section(current, "变更索引")
     if existing_index:

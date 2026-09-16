@@ -38,7 +38,8 @@ import mgs_records  # noqa: E402
 
 from test_github_material_migration import (  # noqa: E402
     _write_old_github_project)
-from test_design_version_snapshot import _onboard_github  # noqa: E402
+from test_design_version_snapshot import (  # noqa: E402
+    _onboard_github, _onboard_local)
 from test_safe_switch import _convert_local, _write_old_local_project  # noqa: E402
 
 FAILURES, check = make_checker()
@@ -427,6 +428,55 @@ def test_r11_5_second_switch_refreshes_rollback_baseline() -> None:
               "丢失两轮之间的编辑")
 
 
+def test_r11_6_partial_adoption_keeps_module_index() -> None:
+    """R11-6: to-spec 省略 module_index 时必须保留现行模块索引。"""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _onboard_local(Path(tmp) / "keep-index")
+        plan = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "1 分反馈偏弱,改为 3 分",
+            "overall": {
+                "title": "star-catcher：当前游戏需求与设计",
+                "version": "v1",
+                "core_play": "玩家移动角色接住落下的星星。",
+                "rules": ["得分：每颗星星 3 分。"],
+            },
+        })
+        applied = mgs_records.apply_spec_adoption(root, plan, confirmed=True)
+        check(applied.get("ok") is True, f"部分采纳应成功:{applied}")
+        overall = (mgs_records.read_current_design(root)
+                   .get("overall") or "")
+        check("每颗星星 3 分" in overall, "规则更新必须生效")
+        check("规则与数值：docs/mygamestudio/design/rules.md" in overall,
+              "省略 module_index 的部分采纳必须保留现行模块索引,"
+              "不得把模块引用整体清空")
+        explicit = mgs_records.plan_spec_adoption(root, {
+            "kind": "small_change",
+            "source": "开发者主动 to-spec",
+            "reason": "补充成长经济模块入口",
+            "overall": {
+                "title": "star-catcher：当前游戏需求与设计",
+                "version": "v1",
+                "core_play": "玩家移动角色接住落下的星星。",
+                "rules": ["得分：每颗星星 3 分。"],
+                "module_index": {
+                    "成长经济": "docs/mygamestudio/design/economy.md",
+                },
+            },
+        })
+        merged = mgs_records.apply_spec_adoption(
+            root, explicit, confirmed=True)
+        check(merged.get("ok") is True, f"显式模块索引应可合并:{merged}")
+        overall_after = (mgs_records.read_current_design(root)
+                         .get("overall") or "")
+        check("规则与数值：docs/mygamestudio/design/rules.md" in overall_after,
+              "合并显式条目时既有模块索引必须保留")
+        check("成长经济：docs/mygamestudio/design/economy.md" in overall_after,
+              "显式声明的模块索引条目必须并入")
+
+
 if __name__ == "__main__":
     raise SystemExit(run_theme(
         "PR #67 R11 发版门挡发项修复回归",
@@ -439,6 +489,7 @@ if __name__ == "__main__":
             test_r11_3_existing_snapshot_reuse_validates_full_content,
             test_r11_4_partially_staged_states_enter_artifact,
             test_r11_5_second_switch_refreshes_rollback_baseline,
+            test_r11_6_partial_adoption_keeps_module_index,
         ),
         FAILURES,
     ))
