@@ -88,12 +88,20 @@ def load_module(path: Path, name: str):
 def load_git_module(rel: str, name: str, commit: str = LEGACY_BASE_COMMIT):
     """从基点提交读取旧客户端源码并在内存中执行(不写工作区)。"""
 
-    source = subprocess.run(
+    result = subprocess.run(
         ["git", "-C", str(REPO_ROOT), "show", f"{commit}:{rel}"],
-        capture_output=True, text=True, check=True).stdout
+        capture_output=True, text=True)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()[:400]
+        raise RuntimeError(
+            "无法从 git 历史读取旧客户端 "
+            f"{commit}:{rel}（exit {result.returncode}）。"
+            "验收旧新对照需要完整克隆；CI 请对 actions/checkout 设置 "
+            f"fetch-depth: 0。git stderr: {detail}"
+        )
     module = types.ModuleType(name)
     module.__file__ = f"<{commit}:{rel}>"
-    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    exec(compile(result.stdout, module.__file__, "exec"), module.__dict__)
     return module
 
 

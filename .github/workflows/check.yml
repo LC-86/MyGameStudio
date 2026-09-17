@@ -9,7 +9,11 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
+      # 验收客户端旧新对照用 git show 读取基点提交中的旧 appserver_client.py。
+      # 默认 fetch-depth: 1 的浅克隆会缺少这些提交，导致 git show 以 128 失败。
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
