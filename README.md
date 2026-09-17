@@ -63,7 +63,7 @@ MyGameStudio 适合用 AI 做游戏的个人开发者和小团队：你已经有
 ### 复制一行即可安装
 
 ```sh
-shasum -a 256 -c SHA256SUMS.txt && tar -xzf mygamestudio-2.0.2.tar.gz
+grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 把 `<plugin根>` 换成解包后的 `plugin/` 绝对路径：
@@ -87,9 +87,9 @@ ZCode **无已核实单行 CLI**（现行官方文档是 Settings → Plugins �
 ```text
 请安装 MyGameStudio 2.0.2 完整插件，不要使用 npx skills add，也不要只拷单个 SKILL.md。
 
-1. 下载指定版本包 mygamestudio-2.0.2.tar.gz 与 SHA256SUMS.txt（GitHub Release；若尚无 v2.0.2 标签则用仓库 dist/）。
-2. 在同目录执行：shasum -a 256 -c SHA256SUMS.txt。核对失败则停止。
-3. 解包：tar -xzf mygamestudio-2.0.2.tar.gz。安装目标是解包后的 plugin/ 目录，必须同时含 skills、internal、records、templates、provenance 与许可文件。
+1. 下载指定版本包 mygamestudio-2.0.2.tar.gz 与 SHA256SUMS.txt（GitHub Release；若尚无 v2.0.2 标签则用仓库 dist/）。SHA256SUMS.txt 含多条记录，不要对整张表做 shasum -c。
+2. 在同目录执行：grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz。核对失败则停止。
+3. 安装目标是解包后的 plugin/ 目录，必须同时含 skills、internal、records、templates、provenance 与许可文件。
 4. 按客户端放到规定目录或走宿主插件命令（把 <plugin根> 换成该 plugin/ 的绝对路径）：
    - Claude Code：claude --plugin-dir <plugin根>（官方会话加载）。持久安装需自备 marketplace.json 且 source 指向该 plugin 根，再 claude plugin marketplace add <市场目录> 与 claude plugin install mygamestudio@<市场名>。官方缓存 ~/.claude/plugins/cache。本环境未验证。
    - Codex：先在隔离 HOME 的 ~/.agents/plugins/marketplace.json 把 source.path 指向该 plugin 根，再执行 codex plugin add mygamestudio@personal。隔离安装已验证；日常 ~/.codex/ 未验证。

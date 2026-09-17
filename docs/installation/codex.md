@@ -23,9 +23,8 @@
 ## 取得安装包并核对
 
 ```sh
-# 在同时放有 tarball 与 SHA256SUMS.txt 的目录
-shasum -a 256 -c SHA256SUMS.txt
-tar -tzf mygamestudio-2.0.2.tar.gz | head
+# SHA256SUMS.txt 含多条记录；只核对本版本 tar，以便只下载这两个文件时也能通过
+grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 解压后插件根是 `plugin/`。应能看到 `.codex-plugin/plugin.json`、`LICENSE` 与 `skills/`。

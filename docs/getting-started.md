@@ -10,7 +10,7 @@
 2. 核对校验和（在存放这两个文件的目录执行）：
 
 ```sh
-shasum -a 256 -c SHA256SUMS.txt
+grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 3. 解包后，**插件根**是包内的 `plugin/` 目录。该目录应同时包含：

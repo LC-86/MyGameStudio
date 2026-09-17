@@ -188,6 +188,13 @@ def test_readme_documents_both_client_installs() -> None:
           "README 应提供「复制一段指令发给 Agent 来安装」")
     check("npx skills" in text,
           "README 应明确不要把 npx skills add 写成受支持路径")
+    check(
+        "grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c -"
+        in text,
+        "README 一行安装与 Agent 提示词应使用过滤式校验（只核对本版本 tar）",
+    )
+    check("shasum -a 256 -c SHA256SUMS.txt" not in text,
+          "README 不得对整张 SHA256SUMS.txt 做 shasum -c")
     zcode = (REPO_ROOT / "docs" / "installation" / "zcode.md")
     grok = (REPO_ROOT / "docs" / "installation" / "grok-build.md")
     claude = (REPO_ROOT / "docs" / "installation" / "claude-code.md")

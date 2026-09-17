@@ -22,7 +22,7 @@ Python 记录层见 [安装总述](README.md)。最低 Python 版本未单独测
 ## 取得安装包并核对
 
 ```sh
-shasum -a 256 -c SHA256SUMS.txt && tar -xzf mygamestudio-2.0.2.tar.gz
+grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 插件根是解包后的 `plugin/` 目录。应能看到 `.claude-plugin/plugin.json`、`LICENSE` 与 `skills/`。

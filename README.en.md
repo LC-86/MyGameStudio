@@ -48,7 +48,7 @@ Install the **full plugin root** (`plugin/` after unpacking the Release tar): `s
 Chinese copy-one-line commands and the Agent install prompt live in [README.md](README.md) and [docs/installation/README.md](docs/installation/README.md).
 
 ```sh
-shasum -a 256 -c SHA256SUMS.txt && tar -xzf mygamestudio-2.0.2.tar.gz
+grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz
 claude --plugin-dir <plugin-root>
 codex plugin add mygamestudio@personal
 grok plugin install <plugin-root> --trust

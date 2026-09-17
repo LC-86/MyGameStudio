@@ -67,6 +67,11 @@ DOCS_INDEX_MUST_LINK = (
     "development/releasing.md",
 )
 
+FILTERED_CHECKSUM = (
+    "grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c -"
+)
+UNFILTERED_CHECKSUM = "shasum -a 256 -c SHA256SUMS.txt"
+
 INSTALL_MARKERS = {
     "docs/installation/zcode.md": (
         ".zcode-plugin/plugin.json",
@@ -74,6 +79,7 @@ INSTALL_MARKERS = {
         "隔离",
         "未验证",
         "复制一行即可安装",
+        FILTERED_CHECKSUM,
     ),
     "docs/installation/grok-build.md": (
         ".grok/plugins",
@@ -81,6 +87,7 @@ INSTALL_MARKERS = {
         "隔离",
         "未验证",
         "复制一行即可安装",
+        FILTERED_CHECKSUM,
     ),
     "docs/installation/codex.md": (
         "codex plugin add",
@@ -88,6 +95,7 @@ INSTALL_MARKERS = {
         "未验证",
         "隔离",
         "复制一行即可安装",
+        FILTERED_CHECKSUM,
     ),
     "docs/installation/claude-code.md": (
         ".claude-plugin/plugin.json",
@@ -96,6 +104,7 @@ INSTALL_MARKERS = {
         "隔离",
         "未验证",
         "复制一行即可安装",
+        FILTERED_CHECKSUM,
     ),
     "docs/installation/README.md": (
         "复制一行即可安装",
@@ -104,6 +113,7 @@ INSTALL_MARKERS = {
         "npx skills",
         "28",
         "隔离",
+        FILTERED_CHECKSUM,
     ),
 }
 
@@ -190,9 +200,20 @@ def main() -> int:
         "复制一段指令发给 Agent",
         "claude --plugin-dir",
         "docs/installation/claude-code.md",
+        FILTERED_CHECKSUM,
     ):
         if marker not in readme:
             failures.append(f"README.md 缺少必要说明: {marker}")
+
+    for path in docs:
+        rel = path.relative_to(REPO).as_posix()
+        if rel.startswith("dist/"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        if UNFILTERED_CHECKSUM in text:
+            failures.append(
+                f"{rel}: 用户下载流不得对整张 SHA256SUMS.txt 做 shasum -c，应使用过滤式校验"
+            )
 
     if failures:
         print(f"FAIL ({len(failures)}):")

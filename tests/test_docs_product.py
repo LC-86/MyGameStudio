@@ -59,6 +59,13 @@ def test_readme_navigates_to_install_pages() -> None:
     check("复制一行即可安装" in readme, "README 应提供复制一行安装")
     check("复制一段指令发给 Agent" in readme, "README 应提供发给 Agent 的安装提示词")
     check("claude --plugin-dir" in readme, "README 应给出 Claude Code 官方一行命令")
+    check(
+        "grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c -"
+        in readme,
+        "README 一行安装应使用过滤式校验（只核对本版本 tar）",
+    )
+    check("shasum -a 256 -c SHA256SUMS.txt" not in readme,
+          "README 不得对整张 SHA256SUMS.txt 做 shasum -c")
 
 
 def test_install_pages_keep_client_markers() -> None:
@@ -97,6 +104,28 @@ def test_install_pages_keep_client_markers() -> None:
           "安装总述应提供发给 Agent 的安装提示词")
     check("npx skills" in install_index,
           "安装总述应明确 npx skills add 不是受支持路径")
+    filtered = (
+        "grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c -"
+    )
+    check(filtered in install_index,
+          "安装总述一行安装与 Agent 提示词应使用过滤式校验")
+    check("shasum -a 256 -c SHA256SUMS.txt" not in install_index,
+          "安装总述不得对整张 SHA256SUMS.txt 做 shasum -c")
+    for name, text in (
+        ("zcode.md", zcode),
+        ("grok-build.md", grok),
+        ("codex.md", codex),
+        ("claude-code.md", claude),
+    ):
+        check(filtered in text,
+              f"{name} 取得安装包步骤应使用过滤式校验")
+        check("shasum -a 256 -c SHA256SUMS.txt" not in text,
+              f"{name} 不得对整张 SHA256SUMS.txt 做 shasum -c")
+    en = (REPO_ROOT / "README.en.md").read_text(encoding="utf-8")
+    check(filtered in en, "README.en.md 一行安装应使用过滤式校验")
+    started = (REPO_ROOT / "docs" / "getting-started.md").read_text(
+        encoding="utf-8")
+    check(filtered in started, "快速开始核对步骤应使用过滤式校验")
 
 
 def test_skill_index_lists_public_collection() -> None:
