@@ -374,7 +374,7 @@ def evaluate_upstream_upgrade(
         "decision": "retain",
         "retain_reason": None,
         "scope": {
-            "clients": ["codex", "zcode", "grok-build"],
+            "clients": ["codex", "zcode", "grok-build", "claude-code"],
             "continuous_update": False,
         },
         "collection_decisions": decisions,

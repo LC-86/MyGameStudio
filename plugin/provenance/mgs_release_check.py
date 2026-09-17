@@ -180,11 +180,16 @@ def _package_consistency(plugin: Path, dist: Path, name: str, version: str) -> d
             continue
         entries[parts[1].strip().lstrip("*")] = parts[0].strip()
     plugin_files = _plugin_files(plugin)
-    if set(entries) != set(plugin_files):
+    bundled_root = {"LICENSE", "THIRD_PARTY_NOTICES.md"}
+    extra = set(entries) - set(plugin_files)
+    missing = set(plugin_files) - set(entries)
+    if missing or extra - bundled_root:
         result["mismatches"].append("manifest-set")
     for rel, digest in entries.items():
-        path = plugin / rel
+        path = (plugin.parent / rel) if rel in bundled_root else plugin / rel
         if path.is_file() and _sha256(path) != digest:
+            result["mismatches"].append(f"manifest-hash:{rel}")
+        elif not path.is_file():
             result["mismatches"].append(f"manifest-hash:{rel}")
 
     with tarfile.open(tarball, "r:gz") as tar:
@@ -193,11 +198,13 @@ def _package_consistency(plugin: Path, dist: Path, name: str, version: str) -> d
             if member.name.startswith("plugin/") and member.isfile()
         ]
         names = [member.name[len("plugin/"):] for member in members]
-        if sorted(names) != plugin_files:
+        extra_names = set(names) - set(plugin_files)
+        missing_names = set(plugin_files) - set(names)
+        if missing_names or extra_names - bundled_root:
             result["mismatches"].append("tarball-set")
         for member in members:
             rel = member.name[len("plugin/"):]
-            source = plugin / rel
+            source = (plugin.parent / rel) if rel in bundled_root else plugin / rel
             extracted = tar.extractfile(member)
             if extracted is None:
                 result["mismatches"].append(f"tarball-hash:{rel}")
@@ -429,7 +436,7 @@ def _handover_markdown(evidence: dict) -> str:
         "## 后续授权发布/安装时需要的合同与路径",
         "",
         f"- 安装包：`dist/{package.get('tarball')}`，校验 `dist/SHA256SUMS.txt`",
-        "- 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`（Codex）/ `plugin/.zcode-plugin/plugin.json`（ZCode）",
+        "- 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`（Codex）/ `plugin/.zcode-plugin/plugin.json`（ZCode）/ `plugin/.claude-plugin/plugin.json`（Claude Code）",
         "- 公开技能：`plugin/skills/*/SKILL.md`（Matt 正式 25 项 + game-producer/game-init/game-design）",
         "- 调用合同：`plugin/internal/game/invocation.md`",
         "- 阶段资料：`plugin/internal/game/stage-requirements.md`",

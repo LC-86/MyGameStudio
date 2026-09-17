@@ -499,7 +499,12 @@ sanitize() { # 用 <redacted-*> 替换证据中的全部原始令牌(机制化:�
     esac
     tok=$(head -n 1 "$path")
     [ -n "$tok" ] || continue
-    sed -i '' -e "s/$tok/<redacted-$name-token>/g" "$f"
+    # BSD sed 需要 sed -i ''; GNU sed 把 '' 当成文件名。Linux 检查环境用后者。
+    if sed --version >/dev/null 2>&1; then
+      sed -i -e "s/$tok/<redacted-$name-token>/g" "$f"
+    else
+      sed -i '' -e "s/$tok/<redacted-$name-token>/g" "$f"
+    fi
   done
 }
 

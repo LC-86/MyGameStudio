@@ -409,9 +409,18 @@ sanitize() { # 用 <redacted-*> 替换证据中的全部原始令牌(机制化:�
     [ -n "$tok" ] || continue
     # LC_ALL=C 按字节匹配:令牌为纯 ASCII,不受证据文件中无效 UTF-8 字节
     # 或运行环境 locale 影响(BSD sed 在 UTF-8 locale 遇无效字节会整体报错跳过)
-    LC_ALL=C sed -i '' -e "s/$tok/<redacted-$name-token>/g" "$f"
+    # BSD sed 需要 sed -i ''; GNU sed 把 '' 当成文件名。
+    if sed --version >/dev/null 2>&1; then
+      LC_ALL=C sed -i -e "s/$tok/<redacted-$name-token>/g" "$f"
+    else
+      LC_ALL=C sed -i '' -e "s/$tok/<redacted-$name-token>/g" "$f"
+    fi
   done
-  LC_ALL=C sed -i '' -e "s/$GHTOKEN/<redacted-remote-token>/g" "$f"
+  if sed --version >/dev/null 2>&1; then
+    LC_ALL=C sed -i -e "s/$GHTOKEN/<redacted-remote-token>/g" "$f"
+  else
+    LC_ALL=C sed -i '' -e "s/$GHTOKEN/<redacted-remote-token>/g" "$f"
+  fi
 }
 
 # 4.3 U1:旧版(0.17.0)上新项目初始化(直接调用 Game-Init)

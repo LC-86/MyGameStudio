@@ -50,7 +50,10 @@ import pending_review  # noqa: E402
 PINNED_SHA = UPSTREAM_SHA
 PINNED_VERSION = UPSTREAM_VERSION
 PACKAGE_NAME = "mygamestudio"
-PACKAGE_VERSION = "2.0.1"
+PACKAGE_VERSION = json.loads(
+    (REPO_ROOT / "plugin" / ".codex-plugin" / "plugin.json").read_text(
+        encoding="utf-8"))["version"]
+ISSUE62_PACKAGE_VERSION = "2.0.1"
 ENV = {
     "system": "macOS 26.5.0 arm64",
     "python": "3.14.4",
@@ -376,8 +379,9 @@ def test_live_delivery_pack_is_checkable_and_keeps_handover() -> None:
     evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
     package = evidence.get("package") or {}
     check(package.get("name") == PACKAGE_NAME, "现行交付包名必须是 mygamestudio")
-    check(package.get("version") == PACKAGE_VERSION, "现行交付包版本必须是 2.0.1")
-    tarball = REPO_ROOT / "dist" / f"{PACKAGE_NAME}-{PACKAGE_VERSION}.tar.gz"
+    check(package.get("version") == ISSUE62_PACKAGE_VERSION,
+          "issue #62 交接包版本必须是 2.0.1")
+    tarball = REPO_ROOT / "dist" / f"{PACKAGE_NAME}-{ISSUE62_PACKAGE_VERSION}.tar.gz"
     check(tarball.is_file(), "缺少现行安装包")
     if tarball.is_file():
         check(package.get("sha256") == sha256(tarball),

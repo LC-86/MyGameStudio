@@ -539,8 +539,8 @@ def test_upgrade_records_multi_client_scope_and_is_not_a_service() -> None:
             candidate_sha=PINNED_SHA,
         )
         scope = evaluation.get("scope") or {}
-        check(scope.get("clients") == ["codex", "zcode", "grok-build"],
-              f"客户端范围应如实记录 Codex+ZCode+Grok Build,实际 {scope.get('clients')}")
+        check(scope.get("clients") == ["codex", "zcode", "grok-build", "claude-code"],
+              f"客户端范围应如实记录 Codex+ZCode+Grok Build+Claude Code,实际 {scope.get('clients')}")
         check(scope.get("continuous_update") is False,
               "不得建立持续更新服务")
         check(scope.get("engines") in (None, [], False),

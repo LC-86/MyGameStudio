@@ -41,6 +41,6 @@ Only if the relevant native relationship is confirmed unavailable, use a body co
 
 ## Existing local material and domain docs
 
-Existing `.scratch/` files remain readable history or unpublished drafts. They do not become GitHub issues merely because this default changed. On an authorized migration, retain source-to-issue links and designate the GitHub copy as current; keep one authority for subsequent updates.
+Existing unpublished `.scratch/` drafts (including copies that remain only in git history) do not become GitHub issues merely because this default changed. On an authorized migration, retain source-to-issue links and designate the GitHub copy as current; keep one authority for subsequent updates.
 
 Research, prototypes, and supporting artifacts may remain in repository files, linked from their issues. Use reachable commit links for published material; local paths are not remotely accessible evidence. Domain vocabulary and ADR layout remain governed by [domain.md](domain.md).

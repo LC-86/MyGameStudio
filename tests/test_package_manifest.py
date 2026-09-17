@@ -259,7 +259,7 @@ def test_config_template_adaptation() -> None:
     """
 
     adapted = {"README.md", "project/CONFIG.md", "work/result.md"}
-    design_root = REPO_ROOT / ".scratch" / "mygamestudio-framework" / "templates"
+    design_root = REPO_ROOT / "tests" / "fixtures" / "design-templates"
     if not design_root.is_dir():
         check(False, "缺少设计仓库 templates/(只读对照)")
         return

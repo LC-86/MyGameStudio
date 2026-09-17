@@ -22,6 +22,16 @@ DIST="$REPO_ROOT/dist"
 VERSION=$(python3 -c "import json;print(json.load(open('$PLUGIN/.codex-plugin/plugin.json'))['version'])")
 TARBALL="$DIST/mygamestudio-$VERSION.tar.gz"
 
+if [ "$VERSION" != "2.0.1" ]; then
+  echo "dist/build-package.sh 只用于重建历史 2.0.1（plugin/ 源码集合，不含根目录许可）。" >&2
+  echo "当前清单版本是 $VERSION，请使用 ./scripts/build-package.sh。" >&2
+  exit 1
+fi
+if [ -f "$DIST/issue-62-technical-evidence.json" ] && [ -f "$DIST/mygamestudio-2.0.1.tar.gz" ]; then
+  echo "拒绝覆盖已发布的 2.0.1 安装包（SHA 已写入 dist 交接证据）。" >&2
+  exit 1
+fi
+
 mkdir -p "$DIST"
 rm -f "$TARBALL" "$DIST/package-manifest.txt" "$DIST/SHA256SUMS.txt"
 
@@ -49,7 +59,11 @@ mkdir -p "$STAGE/plugin"
     touch -t 202609080000.00 "$STAGE/plugin/$rel"
   done
 )
-(cd "$STAGE" && find . -type d | LC_ALL=C sort | tail -r | while IFS= read -r d; do
+REVERSE_CMD=(tail -r)
+if ! tail -r /dev/null >/dev/null 2>&1 && command -v tac >/dev/null 2>&1; then
+  REVERSE_CMD=(tac)
+fi
+(cd "$STAGE" && find . -type d | LC_ALL=C sort | "${REVERSE_CMD[@]}" | while IFS= read -r d; do
   [ "$d" = "." ] && continue
   touch -t 202609080000.00 "$d"
 done)

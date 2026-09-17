@@ -1,2 +1,0 @@
-{"method": "item/completed", "emittedAtMs": 1000, "params": {"item": {"content": [{"type": "text", "text": "Q1 选 A"}], "type": "userMessage"}, "completedAtMs": 1000}}
-{"method": "item/completed", "emittedAtMs": 1800, "params": {"item": {"tool": "mgs_write", "status": "completed", "arguments": {"path": "docs/mygamestudio/records/decision-x.md", "content": "x"}, "result": {"content": [{"type": "text", "text": "{\"op\": \"write\", \"decision\": \"allow\", \"target\": \"docs/mygamestudio/records/decision-x.md\", \"bytes\": 20}"}]}, "type": "mcpToolCall"}, "completedAtMs": 1800}}

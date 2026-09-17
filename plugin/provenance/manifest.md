@@ -1,13 +1,13 @@
-# mygamestudio 2.0.1 来源与许可追溯
+# mygamestudio 2.0.2 来源与许可追溯
 
 本 manifest 记录组合包随包材料的来源、版本、指纹、许可与适配说明。逐文件指纹见 [fingerprints.json](fingerprints.json)。
 
 ## 包自身
 
-- 名称:`mygamestudio`,版本 `2.0.1`。
+- 名称:`mygamestudio`,版本 `2.0.2`。
 - 上游:Matt Pocock skills **1.2.3**,完整提交 `3cca18b368ae95cdbdebbff572ccafa662551015`。
 - 公开集合:正式 25 项(engineering 18 + productivity 7)加三个游戏入口 Game-Producer、Game-Init、Game-Design。实验与未正式发布技能不纳入。
-- 多客户端:同时携带 Codex 清单 `.codex-plugin/plugin.json` 与 ZCode 清单 [`.zcode-plugin/plugin.json`](../.zcode-plugin/plugin.json),两份清单 name/version 保持一致;`skills/` 目录按 ZCode 与 Grok Build 约定自动发现,无 MCP 依赖。
+- 多客户端:同时携带 Codex 清单 `.codex-plugin/plugin.json`、ZCode 清单 [`.zcode-plugin/plugin.json`](../.zcode-plugin/plugin.json) 与 Claude Code 清单 [`.claude-plugin/plugin.json`](../.claude-plugin/plugin.json),三份清单 name/version 保持一致;`skills/` 目录按各宿主约定发现,无 MCP 依赖。
 - 普通工作不注册 mgs-gate。旧运行服务、强制通道和已退役入口已移出安装包,去向见 [internal/game/retired-entries.md](../internal/game/retired-entries.md);历史材料在仓库 `legacy/`,不是新版有效能力。
 - 交付物见仓库 `dist/`。
 
@@ -48,7 +48,7 @@
 - 上游许可证 MIT 文本随包。
 - 正式 25 项目录与上游 `.claude-plugin/plugin.json` 清单一致。
 - 包内新版有效入口不引用开发机绝对路径。
-- 安装包由 `dist/build-package.sh` 从 `plugin/` 构建,内容与源码可核对。
+- 2.0.2 安装包由 `scripts/build-package.sh` 从 `plugin/` 构建,并带入仓库根目录 LICENSE 与 THIRD_PARTY_NOTICES.md 副本;已发布的 2.0.1 字节仍由 `dist/build-package.sh` 核对应保持不变。
 
 ## 上游升级评估
 

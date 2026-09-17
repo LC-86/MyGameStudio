@@ -1,7 +1,0 @@
-{
-  "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout 1 http://127.0.0.1:49246@127.0.0.2:49246/_test/ping",
-  "exit": 28,
-  "actual_output": "  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                 Dload  Upload   Total   Spent    Left  Speed\n\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0\ncurl: (28) Failed to connect to 127.0.0.2 port 49246 after 1000 ms: Timeout was reached\n",
-  "anchor": "OK",
-  "observed_bug": true
-}

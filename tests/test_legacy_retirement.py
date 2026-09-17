@@ -53,7 +53,12 @@ LIVE_DOC_GLOBS = (
     *sorted((PLUGIN_ROOT / "internal" / "proposals").glob("*.md")),
     *sorted((PLUGIN_ROOT / "skills").glob("*/SKILL.md")),
     REPO_ROOT / "README.md",
+    REPO_ROOT / "README.en.md",
     REPO_ROOT / "CONTEXT.md",
+    REPO_ROOT / "CHANGELOG.md",
+    REPO_ROOT / "CONTRIBUTING.md",
+    *sorted((REPO_ROOT / "docs").rglob("*.md")),
+    *sorted((REPO_ROOT / "examples").rglob("*.md")),
 )
 
 

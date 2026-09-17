@@ -1,10 +1,20 @@
 # MyGameStudio 安装包变更说明(dist/)
 
-本目录当前提供 **2.0.1** 候选组合包（issue #68 批量修复与 #75 多客户端适配）。2.0.0 及更早安装包保留为历史文件。
-安装包、逐文件清单与校验和由
-`dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致,经
-`dist/verify-reproducible.sh` 干净副本隔离重建验证);
-`tests/test_plugin_package.py` 持续核对清单、校验和与源码三方一致。
+面向使用者的版本说明以仓库根目录 [CHANGELOG.md](../CHANGELOG.md) 为准。
+本文件保留打包、历史验收与已发布安装包细节。
+
+本目录当前提供 **2.0.2** 仓库内安装包（含根目录许可），以及保留的 **2.0.1** 已发布组合包（issue #68 批量修复与 #75 多客户端适配）。2.0.0 及更早安装包保留为历史文件。
+**不要**用新脚本覆盖本目录已与 GitHub Release `v2.0.1` 对应的 tar 字节。
+2.0.2 由 `scripts/build-package.sh` 从仓库 `plugin/` 构建并带入根目录许可；
+2.0.1 仍由 `dist/build-package.sh` 核对应保持不变。
+`tests/test_plugin_package.py` 持续核对现行包清单、校验和与源码。
+
+## 2.0.2（2026-09-17，许可随包）
+
+- 插件清单升至 2.0.2。公开入口、调用合同与固定上游 1.2.3 / `3cca18b` 不变。
+- 安装包携带仓库根目录 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 副本，与维护入口字节一致。
+- 不改写 `mygamestudio-2.0.1.tar.gz`（SHA-256 `538801ec025060dd18c137583223df58af25f6779dec0744aa56b76e9ff6b5b3`）。
+- GitHub Release `v2.0.2` 标签与资产待人工上传。
 
 ## 2.0.1（2026-09-17，issue #68 批量修复 + #75 多客户端适配）
 
@@ -35,7 +45,8 @@
 
 | 文件 | 内容 |
 | --- | --- |
-| `mygamestudio-2.0.1.tar.gz` | 当前候选安装包(plugin/ 全量) |
+| `mygamestudio-2.0.2.tar.gz` | 当前仓库内安装包(plugin/ 全量 + 根目录许可副本) |
+| `mygamestudio-2.0.1.tar.gz` | 已发布 2.0.1 安装包(plugin/ 全量，不含根目录 LICENSE) |
 | `mygamestudio-2.0.0.tar.gz` | 2.0.0 历史安装包 |
 | `package-manifest.txt` | 包内逐文件 SHA-256 清单 |
 | `SHA256SUMS.txt` | 上两项的校验和 |
@@ -121,7 +132,7 @@ mygamestudio@personal` + `codex plugin add mygamestudio@personal`(实测
 - 分离 CLI、执行登记、本地写入与远端操作职责；保留锁内权限重读、占用、回滚与审计顺序。
 - 十四个入口引用共同执行规则、受控写入协议和结果字段的权威说明，专业差异保持。
 
-PR 经三轮独立审查后通过。发布准备运行五套聚合回归，并核对包内来源、文件清单与可复现构建；具体结果见 [CLOSURE.md](../.scratch/mygamestudio-architecture-refactor/CLOSURE.md)。
+PR 经三轮独立审查后通过。发布准备运行五套聚合回归，并核对包内来源、文件清单与可复现构建。当时的 CLOSURE 报告曾放在未纳入安装包的本地草稿目录，现已从当前树移除。
 
 用户已决定取消本轮隔离宿主验收，进入正常使用并在使用中反馈问题；新版本未运行真实模型轮、真实验收远端写入或人工体验验收。这些项目保持“未验证”，不复用旧版本结论宣称本版通过。
 

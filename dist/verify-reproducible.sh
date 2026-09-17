@@ -20,6 +20,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIST="$REPO_ROOT/dist"
 VERSION=$(python3 -c "import json;print(json.load(open('$REPO_ROOT/plugin/.codex-plugin/plugin.json'))['version'])")
+if [ "$VERSION" != "2.0.1" ]; then
+  echo "当前清单版本是 $VERSION，请使用 ./scripts/verify-reproducible.sh。" >&2
+  echo "本脚本只核对历史 2.0.1 的 dist/build-package.sh 产物。" >&2
+  exit 1
+fi
 TMP="$(mktemp -d /tmp/mgs-verify-repro.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 

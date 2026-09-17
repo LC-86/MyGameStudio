@@ -20,6 +20,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ROOT = REPO_ROOT / "plugin"
 FIXTURE_DATA_PATH = Path(__file__).resolve().parent / "plugin_package_fixtures.json"
+# 2.0.2 起安装包在 plugin/ 之外附带根目录许可副本；不在 plugin/ 源码维护第二份正文。
+BUNDLED_ROOT_LICENSE_FILES = frozenset({"LICENSE", "THIRD_PARTY_NOTICES.md"})
+
+
+def bundled_license_source(rel: str, plugin_root: Path = PLUGIN_ROOT) -> Path:
+    """许可随包文件对照仓库根；其余路径对照插件源。"""
+
+    if rel in BUNDLED_ROOT_LICENSE_FILES:
+        return plugin_root.parent / rel
+    return plugin_root / rel
 
 
 def sha256(path: Path) -> str:
