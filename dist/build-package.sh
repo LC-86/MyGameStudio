@@ -49,7 +49,11 @@ mkdir -p "$STAGE/plugin"
     touch -t 202609080000.00 "$STAGE/plugin/$rel"
   done
 )
-(cd "$STAGE" && find . -type d | LC_ALL=C sort | tail -r | while IFS= read -r d; do
+REVERSE_CMD=(tail -r)
+if ! tail -r /dev/null >/dev/null 2>&1 && command -v tac >/dev/null 2>&1; then
+  REVERSE_CMD=(tac)
+fi
+(cd "$STAGE" && find . -type d | LC_ALL=C sort | "${REVERSE_CMD[@]}" | while IFS= read -r d; do
   [ "$d" = "." ] && continue
   touch -t 202609080000.00 "$d"
 done)

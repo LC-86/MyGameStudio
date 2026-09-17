@@ -104,13 +104,23 @@ def test_real_client_wording_replaces_codex_only() -> None:
 
 
 def test_readme_documents_both_client_installs() -> None:
-    """README 应写明 ZCode 与 Grok Build 的安装步骤与隔离目录验证。"""
+    """README 应能导航到 ZCode / Grok 安装页；安装页含完整步骤与隔离验证。
+
+    安装正文从首页迁到 docs/installation/ 后，不得靠删除本检查过关：
+    首页负责导航，专页负责可执行细节。
+    """
 
     readme_path = REPO_ROOT / "README.md"
     check(readme_path.is_file(), "缺少 README.md")
     if not readme_path.is_file():
         return
     text = readme_path.read_text(encoding="utf-8")
+    check("docs/installation/zcode.md" in text,
+          "README 应导航到 docs/installation/zcode.md")
+    check("docs/installation/grok-build.md" in text,
+          "README 应导航到 docs/installation/grok-build.md")
+    check("docs/installation/codex.md" in text,
+          "README 应导航到 docs/installation/codex.md")
     check(".zcode-plugin/plugin.json" in text,
           "README 应提及 ZCode 清单 .zcode-plugin/plugin.json")
     check(".grok/plugins" in text,
@@ -121,6 +131,22 @@ def test_readme_documents_both_client_installs() -> None:
           "README 应写明 ZCode 本地插件源 marketplace.json 布局")
     check("隔离" in text,
           "README 应写明隔离目录验证(不安装到真实用户目录)")
+    zcode = (REPO_ROOT / "docs" / "installation" / "zcode.md")
+    grok = (REPO_ROOT / "docs" / "installation" / "grok-build.md")
+    check(zcode.is_file(), "缺少 docs/installation/zcode.md")
+    check(grok.is_file(), "缺少 docs/installation/grok-build.md")
+    if zcode.is_file():
+        ztext = zcode.read_text(encoding="utf-8")
+        check(".zcode-plugin/plugin.json" in ztext,
+              "ZCode 安装页应包含 .zcode-plugin/plugin.json")
+        check("marketplace.json" in ztext,
+              "ZCode 安装页应包含 marketplace.json")
+        check("隔离" in ztext, "ZCode 安装页应包含隔离验证")
+    if grok.is_file():
+        gtext = grok.read_text(encoding="utf-8")
+        check(".grok/plugins" in gtext, "Grok 安装页应包含 ~/.grok/plugins")
+        check("--plugin-dir" in gtext, "Grok 安装页应包含 --plugin-dir")
+        check("隔离" in gtext, "Grok 安装页应包含隔离验证")
 
 
 TESTS = (

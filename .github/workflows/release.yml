@@ -1,0 +1,17 @@
+name: 发布备忘
+
+# 首次公开以人工 Release 为准。本工作流不上传资产、不打标签、不改仓库可见性。
+on:
+  workflow_dispatch:
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 打印发版前检查
+        run: |
+          echo "请按 docs/development/releasing.md 人工发版。"
+          echo "不要在未获授权时 gh release 或修改仓库可见性。"
+          python3 scripts/validate-docs.py
+          python3 -B tests/test_docs_product.py

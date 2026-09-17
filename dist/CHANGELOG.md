@@ -1,6 +1,11 @@
 # MyGameStudio 安装包变更说明(dist/)
 
-本目录当前提供 **2.0.1** 候选组合包（issue #68 批量修复与 #75 多客户端适配）。2.0.0 及更早安装包保留为历史文件。
+面向使用者的版本说明以仓库根目录 [CHANGELOG.md](../CHANGELOG.md) 为准。
+本文件保留打包、历史验收与 2.0.1 安装包细节。
+
+本目录当前提供 **2.0.1** 已发布组合包（issue #68 批量修复与 #75 多客户端适配）。2.0.0 及更早安装包保留为历史文件。
+根目录 LICENSE / THIRD_PARTY_NOTICES.md 将在下一版本由 `scripts/build-package.sh` 随包；
+**不要**用新脚本覆盖本目录已与 GitHub Release `v2.0.1` 对应的 tar 字节。
 安装包、逐文件清单与校验和由
 `dist/build-package.sh` 从仓库 `plugin/` 构建(同源重打包字节一致,经
 `dist/verify-reproducible.sh` 干净副本隔离重建验证);

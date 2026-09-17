@@ -1,0 +1,90 @@
+name: 缺陷报告
+description: 插件安装、技能调用或文档与实际行为不符
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请勿粘贴令牌、`auth.json`、密钥或未脱敏的私人项目内容。
+        维护者分流时请使用本仓库的五个标准 triage 标签（见 `docs/agents/triage-labels.md`）。
+  - type: input
+    id: plugin_version
+    attributes:
+      label: 插件版本
+      placeholder: "2.0.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: 客户端
+      options:
+        - Codex
+        - ZCode
+        - Grok Build
+        - 其他 / 不确定
+    validations:
+      required: true
+  - type: input
+    id: client_version
+    attributes:
+      label: 客户端版本
+      placeholder: 例如 Codex CLI 0.151.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: 例如 macOS 26.5.1 arm64
+    validations:
+      required: true
+  - type: dropdown
+    id: tracker
+    attributes:
+      label: 项目任务后端（游戏记录层）
+      options:
+        - 本地 Markdown
+        - GitHub Issues
+        - 未接入 / 不知道
+        - 其他（请在复现步骤说明；游戏层不支持 Linear）
+    validations:
+      required: true
+  - type: input
+    id: skill
+    attributes:
+      label: 技能入口
+      placeholder: 例如 game-init、game-design、implement
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 去除凭据后的日志
+      description: 删掉 token、cookie、绝对个人路径后再粘贴。
+  - type: checkboxes
+    id: sources
+    attributes:
+      label: 同名技能来源
+      options:
+        - label: 同一环境里可能还有 Matt 原版、其他安装器副本或旧版 MyGameStudio
+        - label: 我只安装了这一份 mygamestudio

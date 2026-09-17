@@ -1,0 +1,23 @@
+name: 文档与结构检查
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 文档导航与链接
+        run: python3 scripts/validate-docs.py
+      - name: 产品化文档与许可
+        run: python3 -B tests/test_docs_product.py
+      - name: 多客户端结构
+        run: python3 -B tests/test_multi_client.py
+      - name: 插件包静态完整性
+        run: python3 -B tests/test_plugin_package.py

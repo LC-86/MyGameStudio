@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 安全问题（不要公开提交）
+    url: https://github.com/LC-86/MyGameStudio/security/advisories/new
+    about: 令牌、凭据或未授权访问路径请走私密漏洞报告，见 SECURITY.md
+  - name: 用户文档
+    url: https://github.com/LC-86/MyGameStudio/blob/main/docs/README.md
+    about: 安装、能力与技能说明
