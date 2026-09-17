@@ -1,1 +1,0 @@
-{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 - http://127.0.0.1:54408/closed", "status": "failed", "exitCode": 2, "aggregatedOutput": "curl: option -: is unknown\ncurl: try 'curl --help' or 'curl --manual' for more information\n"}}}

@@ -9,7 +9,7 @@ MyGameStudio 是安装进 AI 客户端的**工作流插件**，不是游戏引�
 | 产品与许可 | README、LICENSE、docs、examples | 人 |
 | 可安装插件 | `plugin/` | 宿主与 Agent |
 | 验证 | `tests/`、`samples/`、`acceptance/` | 维护者 |
-| 历史 | `legacy/`、部分 `dist/` 与 `.scratch/` | 追溯，不是当前安装包 |
+| 历史 | `legacy/`、部分 `dist/` | 追溯，不是当前安装包 |
 
 `plugin/` 必须作为整体安装：技能通过相对路径引用 `internal/`、`records/`、`templates/`、`provenance/`。
 

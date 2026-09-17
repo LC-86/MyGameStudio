@@ -8,7 +8,7 @@
 
 ## 前置条件
 
-- 已安装完整 2.0.1 插件（本示例**未**在真实客户端执行）
+- 已安装完整 2.0.2 插件（本示例**未**在真实客户端执行）
 - 工作目录指向 `samples/nebula-drift/` 的副本，避免改脏测试夹具
 - 这一轮选择 `game-init`，且声明只读
 
@@ -52,4 +52,4 @@
 - 没有把 `setup-matt-pocock-skills` 或接入写入标成已经完成
 - 没有调用 `implement`
 
-夹具身份与验收关系见 `samples/README.md` 与 `acceptance/05-adopt-existing-project/`。那是历史验收材料，入口集合与 2.0.1 不同，不能当作本版本已安装证明。
+夹具身份与验收关系见 `samples/README.md` 与 `acceptance/05-adopt-existing-project/`。那是历史验收材料，入口集合与 2.0.2 不同，不能当作本版本已安装证明。

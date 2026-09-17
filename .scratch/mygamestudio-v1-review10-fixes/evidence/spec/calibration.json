@@ -1,7 +1,0 @@
-{
-  "original": "new-curl-probes-initial.json",
-  "row": "ftp-control-port-closed",
-  "initial_expected": "OK",
-  "corrected_expected": "MISSING",
-  "reason": "run.sh line 364 explicitly permits only http:// or https:// before the hostname check; FTP is outside the accepted subset, not a bug. Original run preserved; rerun script now reflects the documented subset."
-}

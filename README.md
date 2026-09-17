@@ -6,7 +6,7 @@
 
 MyGameStudio 在 Matt Pocock 工程技能的基础上，增加游戏项目接入、玩法与数值讨论，以及游戏制作进度与交付要求。你负责核心玩法和重要取舍，AI 根据明确的设计、任务和检查要求协助推进工作。
 
-当前 **2.0.1** 组合包包含固定版本的 25 项 Matt 技能与 3 项游戏入口。客户端与任务后端的实际支持程度见 [兼容性说明](docs/reference/compatibility.md)。
+当前 **2.0.2** 组合包包含固定版本的 25 项 Matt 技能与 3 项游戏入口，并在安装包内携带本项目 MIT 许可与第三方说明。客户端与任务后端的实际支持程度见 [兼容性说明](docs/reference/compatibility.md)。
 
 它不是游戏引擎，也不会仅凭一句话自动完成游戏上架。
 
@@ -58,9 +58,9 @@ MyGameStudio 适合用 AI 做游戏的个人开发者和小团队：你已经有
 
 默认入口是 [GitHub Release 的完整插件包](https://github.com/LC-86/MyGameStudio/releases)。仓库源码用于学习、贡献和构建。
 
-| 客户端 | 文档 | 2.0.1 真实日常安装 |
+| 客户端 | 文档 | 2.0.2 真实安装 |
 | --- | --- | --- |
-| Codex | [codex.md](docs/installation/codex.md) | 未验证 |
+| Codex | [codex.md](docs/installation/codex.md) | 隔离 CLI 安装已验证；日常会话未验证 |
 | ZCode | [zcode.md](docs/installation/zcode.md) | 未验证 |
 | Grok Build | [grok-build.md](docs/installation/grok-build.md) | 未验证 |
 
@@ -96,7 +96,7 @@ Grok Build 可将插件放在 `~/.grok/plugins`，或用 `--plugin-dir` 指向�
 - 不代替游戏引擎、模型、资源工具或商店后台。
 - 游戏记录层目前是本地 Markdown 或 GitHub Issues，每项目只选一种。不要假定 Linear 已被本插件游戏层支持。
 - 无提交授权时，`implement` 会保留未提交成果。
-- 2.0.1 的真实日常客户端安装、技能发现与只读调用在本整理中**未验证**。
+- 2.0.2 已在本 Linux 环境用 Codex CLI 0.154.0 做隔离 `plugin add` / `remove`（无用户凭据、不写日常 `~/.codex/`）。新会话技能发现与只读调用**未验证**。ZCode / Grok Build 仍未验证。
 - 不会仅凭一句话自动完成上架。
 
 完整列表：[能力与限制](docs/reference/capabilities.md)、[数据与权限](docs/reference/data-and-permissions.md)。
@@ -117,4 +117,4 @@ Grok Build 可将插件放在 `~/.grok/plugins`，或用 `--plugin-dir` 指向�
 
 维护本仓库时阅读 [AGENTS.md](AGENTS.md)。那是插件开发协作说明，不是用户游戏项目的工作流入口。
 
-当前源码版本与已发布安装包版本均为 **2.0.1**。发布状态、安装验证状态和已知限制不是同一件事。
+当前源码与仓库内安装包版本为 **2.0.2**。GitHub Release `v2.0.1` 仍是上一份已发布资产，字节未改写。发布状态、安装验证状态和已知限制不是同一件事。

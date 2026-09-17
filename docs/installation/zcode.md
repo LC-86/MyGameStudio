@@ -5,7 +5,7 @@
 | 项 | 记录 |
 | --- | --- |
 | 客户端 | ZCode |
-| 插件版本 | 2.0.1（源码与已发布标签一致） |
+| 插件版本 | 2.0.2（源码与仓库内安装包一致；GitHub Release 标签待人工上传） |
 | 结构检查 | `tests/test_multi_client.py` 核对 `.zcode-plugin/plugin.json` 的 name/version 与 Codex 清单一致，且不注册 MCP |
 | 真实 ZCode 安装、技能发现、只读调用 | **未验证** |
 | 本整理环境 | 未安装 ZCode，**未执行**客户端命令 |
@@ -23,7 +23,7 @@ Python 记录层见 [安装总述](README.md)。最低 Python 版本未单独测
 
 ```sh
 shasum -a 256 -c SHA256SUMS.txt
-tar -xzf mygamestudio-2.0.1.tar.gz
+tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 插件根是解包后的 `plugin/` 目录。
@@ -52,4 +52,4 @@ tar -xzf mygamestudio-2.0.1.tar.gz
 
 - 未在真实 ZCode 执行添加本地源、安装、发现与调用
 - 未验证 ZCode 市场 schema 是否与文档中的 `marketplace.json` 字段完全一致
-- 无 MCP 依赖是 2.0.1 清单约束，不是“完全离线”
+- 无 MCP 依赖是 2.0.2 清单约束，不是“完全离线”

@@ -29,7 +29,7 @@ if [ "$VERSION" = "2.0.1" ] && [ -f "$DIST/mygamestudio-2.0.1.tar.gz" ] && \
 fi
 
 mkdir -p "$DIST"
-rm -f "$TARBALL" "$DIST/package-manifest.txt" "$DIST/SHA256SUMS.txt"
+rm -f "$TARBALL" "$DIST/package-manifest.txt"
 
 STAGE="$DIST/.stage-mygamestudio"
 rm -rf "$STAGE"
@@ -77,12 +77,13 @@ fi
   || COPYFILE_DISABLE=1 tar $TAR_META_FLAGS -cf - plugin) | gzip -n > "$TARBALL"
 rm -rf "$STAGE"
 
-(
-  cd "$DIST"
-  for f in "mygamestudio-$VERSION.tar.gz" package-manifest.txt; do
-    printf '%s  %s\n' "$(shasum -a 256 "$f" | awk '{print $1}')" "$f"
-  done
-) > "$DIST/SHA256SUMS.txt"
+{
+  printf '%s  %s\n' "$(shasum -a 256 "$TARBALL" | awk '{print $1}')" "mygamestudio-$VERSION.tar.gz"
+  printf '%s  %s\n' "$(shasum -a 256 "$DIST/package-manifest.txt" | awk '{print $1}')" "package-manifest.txt"
+  if [ "$VERSION" != "2.0.1" ] && [ -f "$DIST/mygamestudio-2.0.1.tar.gz" ]; then
+    printf '%s  %s\n' "$(shasum -a 256 "$DIST/mygamestudio-2.0.1.tar.gz" | awk '{print $1}')" "mygamestudio-2.0.1.tar.gz"
+  fi
+} > "$DIST/SHA256SUMS.txt"
 
 echo "构建完成: dist/mygamestudio-$VERSION.tar.gz（含根目录许可副本）"
 echo "逐文件清单: dist/package-manifest.txt ($(wc -l < "$DIST/package-manifest.txt" | tr -d ' ') 个文件)"

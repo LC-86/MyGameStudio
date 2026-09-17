@@ -13,7 +13,7 @@
 
 | 客户端 | 说明页 | 本整理中的验证结论 |
 | --- | --- | --- |
-| Codex | [codex.md](codex.md) | 0.18.x 曾在隔离 macOS + Codex CLI 0.151.0 安装；**2.0.1 日常客户端未验证** |
+| Codex | [codex.md](codex.md) | 2.0.2 在 Linux + Codex CLI 0.154.0 隔离 HOME/`CODEX_HOME` 下 `plugin add`/`remove` **已验证**；日常目录与新会话发现 **未验证** |
 | ZCode | [zcode.md](zcode.md) | 安装步骤已写入仓库并有结构检查；**真实 ZCode 安装未验证** |
 | Grok Build | [grok-build.md](grok-build.md) | 目录与 `--plugin-dir` 步骤已写入；**真实 Grok Build 安装未验证** |
 
@@ -22,8 +22,10 @@
 ## 解包后哪个目录才是插件根
 
 ```text
-mygamestudio-2.0.1.tar.gz
+mygamestudio-2.0.2.tar.gz
 └── plugin/          ← 插件根
+    ├── LICENSE
+    ├── THIRD_PARTY_NOTICES.md
     ├── .codex-plugin/plugin.json
     ├── .zcode-plugin/plugin.json
     ├── skills/

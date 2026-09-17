@@ -6,7 +6,7 @@ Turn a game idea into a clear design, actionable tasks, and results you can actu
 
 MyGameStudio builds on a pinned release of Matt Pocock's engineering skills, and adds game-project onboarding, design discussions for gameplay and numbers, plus production status and playable-delivery requirements. You own the core loop and the important trade-offs. The assistant helps against explicit design, tasks, and checks.
 
-Version **2.0.1** ships 25 pinned Matt skills plus 3 game entries. Client and tracker support is listed in the [compatibility matrix](docs/reference/compatibility.md) (Chinese).
+Version **2.0.2** ships 25 pinned Matt skills plus 3 game entries, with the project MIT license bundled in the tarball. Client and tracker support is listed in the [compatibility matrix](docs/reference/compatibility.md) (Chinese).
 
 This is not a game engine, and it will not ship a game from a single sentence.
 
@@ -43,9 +43,9 @@ Details: [docs/getting-started.md](docs/getting-started.md).
 
 Default distribution is the full plugin tarball on [Releases](https://github.com/LC-86/MyGameStudio/releases).
 
-| Client | Guide | Real daily install of 2.0.1 |
+| Client | Guide | Real install of 2.0.2 |
 | --- | --- | --- |
-| Codex | [codex.md](docs/installation/codex.md) | Not verified |
+| Codex | [codex.md](docs/installation/codex.md) | Isolated CLI install verified; live session not verified |
 | ZCode | [zcode.md](docs/installation/zcode.md) | Not verified |
 | Grok Build | [grok-build.md](docs/installation/grok-build.md) | Not verified |
 
@@ -63,7 +63,7 @@ Map, not a mandatory pipeline: `game-init` → `game-design` as needed → you c
 
 ## Limits
 
-Not an engine, asset studio, or store publisher. Game records are local Markdown or GitHub Issues only. `implement` leaves work uncommitted without commit authorization. Real Codex / ZCode / Grok Build daily installs of 2.0.1 are **not verified** in this documentation pass.
+Not an engine, asset studio, or store publisher. Game records are local Markdown or GitHub Issues only. `implement` leaves work uncommitted without commit authorization. Codex CLI 0.154.0 isolated `plugin add`/`remove` of 2.0.2 is verified on Linux. Live-session skill discovery and ZCode / Grok Build installs are **not verified**.
 
 ## Relation to Matt
 

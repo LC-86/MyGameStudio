@@ -22,6 +22,16 @@ DIST="$REPO_ROOT/dist"
 VERSION=$(python3 -c "import json;print(json.load(open('$PLUGIN/.codex-plugin/plugin.json'))['version'])")
 TARBALL="$DIST/mygamestudio-$VERSION.tar.gz"
 
+if [ "$VERSION" != "2.0.1" ]; then
+  echo "dist/build-package.sh 只用于重建历史 2.0.1（plugin/ 源码集合，不含根目录许可）。" >&2
+  echo "当前清单版本是 $VERSION，请使用 ./scripts/build-package.sh。" >&2
+  exit 1
+fi
+if [ -f "$DIST/issue-62-technical-evidence.json" ] && [ -f "$DIST/mygamestudio-2.0.1.tar.gz" ]; then
+  echo "拒绝覆盖已发布的 2.0.1 安装包（SHA 已写入 dist 交接证据）。" >&2
+  exit 1
+fi
+
 mkdir -p "$DIST"
 rm -f "$TARBALL" "$DIST/package-manifest.txt" "$DIST/SHA256SUMS.txt"
 

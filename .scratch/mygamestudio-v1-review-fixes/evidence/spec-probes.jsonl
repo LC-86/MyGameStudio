@@ -1,7 +1,0 @@
-{"probe": "append_result_uncertain_readback", "outcome": {"error": "结果评论两次尝试均未确认发布(attempts [{'step': 'comment-1', 'outcome': 'timeout', 'detail': 'timeout: injected drop (comment)'}, {'step': 'readback', 'outcome': 'absent'}, {'step': 'comment-2', 'outcome': 'timeout', 'detail': 'timeout: injected drop (comment)'}, {'step': 'readback', 'outcome': 'absent'}]);不虚报成功"}, "comment_count": 2, "comment_posts": 2, "duplicate_comment": true}
-{"probe": "draft_cross_repo", "saved_repo": "github.com/old-owner/private-repo", "current_repo": {"host": "github.com", "owner": "mygamestudio", "repo": "issue-accept"}, "published_count": 1, "actual_write_paths": ["/repos/mygamestudio/issue-accept/issues"]}
-{"probe": "github_to_local", "created": 1, "config_task_root": "github.com/mygamestudio/issue-accept", "actual_task_files": ["docs/mygamestudio/work/01-alpha/task.md"], "unified_list_tasks": [], "returned_emit_dir_exists": false}
-{"probe": "handover_unreachable_ref", "ok": true, "remote_reachable": [true, true, true], "network_calls": 0}
-{"probe": "ready_cached_metadata", "startable": [{"identity": "01-alpha", "title": "甲", "triage": "ready-for-agent", "progress": "待执行", "executor": "Agent(制作实现)", "reasons": []}], "blocked": [], "note": "可开工=分流 ready 且记录字段完整且未完成依赖为空;这是开工条件核对,不等于依赖已全部完成或已获全部写入授权——开工前按任务「允许修改范围」与运行保障核对授权;能力与授权以实际执行环境为准。"}
-{"probe": "draft_collision", "same_path": true, "draft_count": 1, "remaining_result": ["证据二"]}
-{"probe": "summary", "reproduced_findings": 6, "external_network_calls": 0, "repository_files_modified": 0}

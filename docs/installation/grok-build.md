@@ -5,7 +5,7 @@
 | 项 | 记录 |
 | --- | --- |
 | 客户端 | Grok Build |
-| 插件版本 | 2.0.1 |
+| 插件版本 | 2.0.2 |
 | 结构检查 | 技能 `SKILL.md` 含 `name` / `description` frontmatter；三个游戏入口的定位回退包含 `~/.grok/plugins` 与 `--plugin-dir` |
 | 真实 Grok Build 安装、技能发现、只读调用 | **未验证** |
 | 本整理环境 | 未安装 Grok Build，**未执行**客户端命令 |
@@ -21,7 +21,7 @@
 
 ```sh
 shasum -a 256 -c SHA256SUMS.txt
-tar -xzf mygamestudio-2.0.1.tar.gz
+tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 插件根是解包后的 `plugin/`。

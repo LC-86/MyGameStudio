@@ -1,1 +1,0 @@
-{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS --http2 http://127.0.0.1:52939/h2", "status": "failed", "exitCode": 56, "aggregatedOutput": "curl: (56) Failure when receiving data from the peer\n"}}}

@@ -26,11 +26,11 @@ for t in tests/test_*.py; do python3 -B "$t"; done
 
 ## 安装包一致性
 
-`tests/test_package_dist.py` 核对应已提交的 `dist/mygamestudio-2.0.1.tar.gz` 与 `plugin/`。
+`tests/test_package_dist.py` 核对应已提交的 `dist/mygamestudio-2.0.2.tar.gz` 与 `plugin/`（安装包另含根目录许可副本）。已发布的 `dist/mygamestudio-2.0.1.tar.gz` 保留为历史资产，不得覆盖。
 同源隔离重建依赖 macOS `xattr` 与 BSD tar 语义；Linux 上注入扩展属性的分支会跳过，但仍做两次隔离重建比对（不宣称与 macOS 发版包字节相同）。
 
-当前 2.0.1 产物仍由 `dist/build-package.sh` 构建。
-下一版本把根目录许可打进包内时，使用 `scripts/build-package.sh`（见 [releasing.md](releasing.md)）。
+当前 2.0.2 产物由 `scripts/build-package.sh` 构建（随包根目录许可）。
+`dist/build-package.sh` 只用于重建历史 2.0.1，并拒绝覆盖已发布 tar。
 
 ## 历史验收
 

@@ -1,1 +1,0 @@
-{"method": "item/completed", "params": {"item": {"type": "agentMessage", "text": "Example only: {\"decision\": \"allow\", \"rule_stage\": \"path\"}"}}}

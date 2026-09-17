@@ -1,9 +1,0 @@
---- /tmp/mgs-review8-60iu1bo4/repo/.scratch/mygamestudio-v1-review7-fixes/evidence/run-suites.py
-+++ /tmp/mgs-review8-60iu1bo4/run-suites.py
-@@ -1,5 +1,5 @@
- import os,sys,subprocess,json,pathlib,shutil,time
--W=pathlib.Path('/tmp/mgs-review7-ADyk4of1'); R=W/'repo'; L=W/'logs'
-+W=pathlib.Path('/tmp/mgs-review8-60iu1bo4'); R=W/'repo'; L=W/'logs'
- env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1',TMPDIR=str(W/'tmp'))
- for p in (R/'plugin').rglob('__pycache__'):
-     if p.is_dir(): shutil.rmtree(p.resolve())

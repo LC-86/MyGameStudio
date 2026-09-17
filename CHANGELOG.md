@@ -4,31 +4,36 @@
 已发布安装包见 [GitHub Releases](https://github.com/LC-86/MyGameStudio/releases)。
 打包细节与历史验收材料仍在 [`dist/CHANGELOG.md`](dist/CHANGELOG.md)。
 
-## 未发布的文档整理（基于 2.0.1 源码，本仓库）
+## 2.0.2 — 2026-09-17
 
-本次整理不改变插件技能名称、调用合同或固定上游版本，也不替换已发布的
-`v2.0.1` 安装包字节。
+仓库内安装包：`dist/mygamestudio-2.0.2.tar.gz`（含根目录 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 副本）。
+不改写已发布的 [v2.0.1](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.1) 资产字节。
+本条目描述源码与仓库内 2.0.2 包；GitHub Release 标签仍待维护者人工上传。
 
 ### 新增
 
 - 根目录 `LICENSE`、`THIRD_PARTY_NOTICES.md`、用户文档、示例与贡献/安全说明
 - 分客户端安装页、兼容性矩阵、数据与权限说明
-- 文档链接检查，以及下一版本把根目录许可随包的构建脚本
+- 文档链接检查；`scripts/build-package.sh` 把根目录许可随包
+- 2.0.2 安装包携带本项目 MIT 与第三方说明，与仓库根目录文件字节一致
 
 ### 行为变化
 
 - 无。公开入口仍是 Matt 正式 25 项加 Game-Producer、Game-Init、Game-Design
+- 调用合同、技能名称与固定上游版本不变
 
 ### 迁移要求
 
-- 无。用户游戏项目资料不因阅读或安装文档整理而改写
+- 无。用户游戏项目资料不因阅读或安装 2.0.2 文档整理而改写
 - 本仓库的 `AGENTS.md` 只用于维护本插件仓库，不要复制到用户游戏项目
+- 从 2.0.1 升级：换成完整 2.0.2 插件包后按客户端重新发现技能；不要混用不同版本的 tar 与 `package-manifest.txt`
 
 ### 已知问题
 
-- 2.0.1 尚未作为正式发版安装到日常 Codex / ZCode / Grok Build 客户端
-- 当前已发布安装包尚未携带根目录 `LICENSE` / `THIRD_PARTY_NOTICES.md`；上游 MIT 已在包内
-- 仓库目前为私有；是否公开需维护者决定
+- 2.0.2 已在 Linux + Codex CLI 0.154.0 隔离目录完成 `plugin add`/`remove`；新会话技能发现、只读调用、日常 `~/.codex/` 仍未验证
+- ZCode / Grok Build 真实安装未验证
+- 已发布 `v2.0.1` 安装包仍不含根目录 `LICENSE` / `THIRD_PARTY_NOTICES.md`；上游 MIT 已在该包 provenance 内
+- `.scratch/` 已从当前树移除；Git 历史中仍可能存在，公开仓库前需要维护者对 `main` 做历史清理（会移动已发布标签）
 
 ## 2.0.1 — 2026-09-17
 

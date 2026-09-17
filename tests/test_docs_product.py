@@ -75,7 +75,7 @@ def test_install_pages_keep_client_markers() -> None:
     check("隔离" in grok, "Grok 安装页应写明隔离目录验证")
     check("codex plugin add" in codex, "Codex 安装页应给出曾实测的 plugin add 命令")
     check("未验证" in zcode and "未验证" in grok and "未验证" in codex,
-          "各安装页须标明 2.0.1 真实客户端未验证")
+          "各安装页须标明真实客户端安装尚未验证")
 
 
 def test_skill_index_lists_public_collection() -> None:

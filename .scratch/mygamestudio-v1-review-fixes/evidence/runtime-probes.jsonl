@@ -1,6 +1,0 @@
-{"probe": "revoked_inflight_write", "release_confirmed": true, "current_identity_valid": false, "resumed_write": "allow", "target": "STALE"}
-{"probe": "missing_purpose_policy", "before": "deny", "before_stage": "purpose", "after": "allow", "target": "BYPASS"}
-{"probe": "existing_file_mode", "file": "run.sh", "before": "0o755", "after": "0o644"}
-{"probe": "existing_file_mode", "file": "private.txt", "before": "0o600", "after": "0o644"}
-{"probe": "remote_audit_failure", "mcp_decision": "deny", "mcp_stage": "channel", "actual_remote_comments": 1, "audit_file_exists": false, "external_network_requests": 0}
-{"probe": "summary", "reproduced_findings": 4, "repository_files_modified": 0, "external_network_requests": 0, "model_calls": 0}

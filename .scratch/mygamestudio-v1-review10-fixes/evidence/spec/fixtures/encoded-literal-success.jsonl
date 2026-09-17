@@ -1,1 +1,0 @@
-{"method": "item/completed", "params": {"item": {"type": "commandExecution", "command": "/usr/bin/curl -q --noproxy '*' --connect-timeout .2 --max-time 2 -sS http://127.0.0.1:53496/%7Ba,b%7D", "status": "completed", "exitCode": 0, "aggregatedOutput": ""}}}

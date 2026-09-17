@@ -85,13 +85,12 @@ allow/deny/上游失联与草稿重放;不替代 run.sh 的会话级(真实模�
 ## 4. 安装包构建与一致性核对(无模型调用)
 
 ```bash
-./dist/build-package.sh                     # 现行 2.0.1 产物（与 Release 资产对应）
+./scripts/build-package.sh                  # 现行 2.0.2 产物（含根目录许可）
+# ./dist/build-package.sh                   # 仅重建历史 2.0.1；拒绝覆盖已发布 tar
 shasum -a 256 -c dist/SHA256SUMS.txt        # 在 dist/ 内执行
-./dist/verify-reproducible.sh               # 字节可复现性:git archive 干净副本
-                                            # 隔离重建 + 三项产物逐字节比对
-                                            # + 平台扩展元数据 PAX 头扫描
-# 下一版本（含根目录许可随包）使用 ./scripts/build-package.sh
-# 与 ./scripts/verify-reproducible.sh；不得覆盖 2.0.1 已发布 tar。
+./scripts/verify-reproducible.sh            # 2.0.2 两次隔离重建
+# ./dist/verify-reproducible.sh             # 历史 2.0.1 字节可复现性
+                                            # 不得覆盖 2.0.1 已发布 tar。
 # 内容一致性(清单↔源目录↔tar 包三方)由 tests/test_plugin_package.py 的
 # test_dist_package_consistent 持续核对;同源隔离重建逐字节一致(排除
 # com.apple.provenance 等平台扩展元数据)由同名套件的

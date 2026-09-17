@@ -1,6 +1,0 @@
-original {'direct': 'OK', 'short-proxy': 'OK', 'short-config': 'OK', 'redirect-short': 'OK', 'attached-short-value-hides-first-url': 'OK', 'target-200-body-then-timeout': 'OK', 'userinfo-correct-host': 'OK'}
-short-xK-only {'direct': 'OK', 'short-proxy': 'MISSING', 'short-config': 'MISSING', 'redirect-short': 'OK', 'attached-short-value-hides-first-url': 'OK', 'target-200-body-then-timeout': 'OK', 'userinfo-correct-host': 'OK'}
-redirect-only {'direct': 'OK', 'short-proxy': 'OK', 'short-config': 'OK', 'redirect-short': 'MISSING', 'attached-short-value-hides-first-url': 'OK', 'target-200-body-then-timeout': 'OK', 'userinfo-correct-host': 'OK'}
-attached-value-only {'direct': 'OK', 'short-proxy': 'OK', 'short-config': 'OK', 'redirect-short': 'OK', 'attached-short-value-hides-first-url': 'MISSING', 'target-200-body-then-timeout': 'OK', 'userinfo-correct-host': 'OK'}
-exclude-generic-timeout-only {'direct': 'OK', 'short-proxy': 'OK', 'short-config': 'OK', 'redirect-short': 'OK', 'attached-short-value-hides-first-url': 'OK', 'target-200-body-then-timeout': 'MISSING', 'userinfo-correct-host': 'OK'}
-restored {'direct': 'OK', 'short-proxy': 'OK', 'short-config': 'OK', 'redirect-short': 'OK', 'attached-short-value-hides-first-url': 'OK', 'target-200-body-then-timeout': 'OK', 'userinfo-correct-host': 'OK'}

@@ -1,9 +1,0 @@
-{
-  "id": "R6-missing-requested-target",
-  "returncode": 0,
-  "stdout": "扫描文件数:1\n比对来源:登记 token_hash 1 项;ARENA 令牌文件 0 个\n未发现任何已登记/已保存凭据的明文\n",
-  "stderr": "",
-  "project_exists": false,
-  "registry_entries": 1,
-  "observed_bug": true
-}

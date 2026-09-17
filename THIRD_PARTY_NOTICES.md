@@ -13,10 +13,10 @@ MyGameStudio 由 **LC-86** 独立维护，基于 Matt Pocock skills 构建。
 - 维护者：LC-86
 - 许可：MIT，见仓库根目录 [`LICENSE`](LICENSE)
 - 范围：三个游戏入口、游戏阶段资料、记录层、模板、本仓库用户文档与检查，以及插件清单中声明的组合包原创部分
-- 组合包标识：`mygamestudio` 2.0.1
+- 组合包标识：`mygamestudio` 2.0.2
 
-下一版本安装包构建会把本文件与根目录 `LICENSE` 一并带入插件根。
-当前已发布的 `mygamestudio-2.0.1.tar.gz` 仍按发版时内容提供，其中已包含上游 MIT 副本
+`mygamestudio-2.0.2.tar.gz` 把本文件与根目录 `LICENSE` 一并带入插件根，与仓库维护入口字节一致。
+已发布的 `mygamestudio-2.0.1.tar.gz` 仍按发版时内容提供，其中已包含上游 MIT 副本
 [`plugin/provenance/licenses/mattpocock-skills-LICENSE.txt`](plugin/provenance/licenses/mattpocock-skills-LICENSE.txt)。
 
 ## Matt Pocock skills

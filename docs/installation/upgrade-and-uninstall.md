@@ -11,8 +11,7 @@
 | 用户项目资料结构迁移 | 经 `game-init` 列出清单，确认后才应用 | 不把隔离演示说成已完成真实客户端迁移 |
 | 上游 Matt 基线升级 | 经 provenance 评估，确认后才采用钉住版本 | 不直接改成 `latest` |
 
-2.0.1 的真实客户端升级**未验证**。0.18.0 曾在隔离 Codex 上实测
-`codex plugin remove mygamestudio@personal` 后再 `add`；那是旧版本证据，不能直接当作 2.0.1 结论。
+2.0.2 的隔离 Codex CLI 升级（`remove` 后再 `add`）**已验证**。日常客户端升级未验证。0.18.0 曾在隔离 Codex 上实测同一命令；那是旧版本证据，不能单独当作 2.0.2 会话结论。
 
 ## 同名技能
 
@@ -35,7 +34,7 @@
 
 各客户端的具体卸载命令以宿主文档为准。本环境未执行卸载。
 
-Codex 历史命令（0.18.x，待 2.0.1 复核）：
+Codex 隔离命令（2.0.2，Linux + CLI 0.154.0 已执行）：
 
 ```sh
 codex plugin remove mygamestudio@personal --json
