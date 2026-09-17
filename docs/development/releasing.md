@@ -10,7 +10,7 @@
 | 源码与插件清单版本 | 2.0.2 |
 | 仓库内安装包 | `dist/mygamestudio-2.0.2.tar.gz`（含根目录 LICENSE / THIRD_PARTY_NOTICES.md） |
 | GitHub Release | 仍为 [v2.0.1](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.1)；2.0.2 标签待人工上传 |
-| 日常客户端安装 | Codex CLI 0.154.0 隔离 add/remove 已验证；新会话与 ZCode/Grok 未验证 |
+| 日常客户端安装 | Codex CLI 0.154.0 隔离 add/remove 已验证；新会话与 ZCode/Grok/Claude Code 未验证 |
 | 仓库可见性 | 公开前须先处理 `.scratch/` 历史；HEAD 已移除该目录 |
 | 根目录 LICENSE 是否已在 2.0.2 安装包内 | 是 |
 | 根目录 LICENSE 是否已在 2.0.1 安装包内 | 否；上游 MIT 已在包内 provenance |
@@ -25,7 +25,7 @@
 
 ## 发版检查
 
-1. 双清单 version 一致（当前 2.0.2）
+1. 三份清单 name/version 一致（当前 2.0.2：Codex / ZCode / Claude Code）
 2. provenance `generated_for` 与插件版本一致
 3. `python3 -B tests/test_plugin_package.py` 等有效套件
 4. `python3 scripts/validate-docs.py`

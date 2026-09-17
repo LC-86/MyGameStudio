@@ -11,6 +11,7 @@
   - [Codex](installation/codex.md)
   - [ZCode](installation/zcode.md)
   - [Grok Build](installation/grok-build.md)
+  - [Claude Code](installation/claude-code.md)
   - [升级与卸载](installation/upgrade-and-uninstall.md)
 
 ## 使用

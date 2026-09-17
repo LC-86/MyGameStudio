@@ -21,7 +21,7 @@
 
 | 项 | 现状 |
 | --- | --- |
-| Codex / ZCode / Grok Build 安装 2.0.2 | Codex CLI 0.154.0 隔离 `plugin add`/`remove` 已验证；新会话发现与 ZCode/Grok **未验证** |
+| Codex / ZCode / Grok Build / Claude Code 安装 2.0.2 | Codex CLI 0.154.0 隔离 `plugin add`/`remove` 已验证；新会话发现与 ZCode/Grok/Claude Code **未验证** |
 | 包内 Python 记录脚本在真实会话中的调用 | 有接口与测试夹具；真实宿主会话未在本整理中执行 |
 | GitHub Issues 写入 | 有授权检查与本地替身测试；真实远端写入需你的测试仓库授权 |
 | 同名技能安全切换 | 有合同与隔离演示；真实环境切换未执行 |

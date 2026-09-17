@@ -16,6 +16,7 @@ shasum -a 256 -c SHA256SUMS.txt
 3. 解包后，**插件根**是包内的 `plugin/` 目录。该目录应同时包含：
    - `.codex-plugin/plugin.json`
    - `.zcode-plugin/plugin.json`
+   - `.claude-plugin/plugin.json`
    - `skills/`
    - `internal/`、`records/`、`templates/`、`provenance/`
 
@@ -25,7 +26,7 @@ shasum -a 256 -c SHA256SUMS.txt
 
 ## 2. 按客户端安装
 
-见 [安装方式](installation/README.md)。安装后如客户端要求，重启会话。
+见 [安装方式](installation/README.md)（含「复制一行即可安装」与「复制一段指令发给 Agent 来安装」）。安装后如客户端要求，重启会话。
 
 成功标准（发现）：能列出 Matt 正式 25 项加 `game-producer`、`game-init`、`game-design`，同名技能只有一个明确来源。
 

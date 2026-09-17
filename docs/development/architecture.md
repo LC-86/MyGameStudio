@@ -32,5 +32,5 @@ Matt 1.2.3 / `3cca18b368ae95cdbdebbff572ccafa662551015`。升级走 `plugin/prov
 
 ## 多客户端
 
-同时携带 `.codex-plugin/plugin.json` 与 `.zcode-plugin/plugin.json`，name/version 必须一致。
-技能定位回退：上下文给出的插件目录 → Codex `$CODEX_HOME` → ZCode 缓存 → Grok `~/.grok/plugins` 或 `--plugin-dir`。
+同时携带 `.codex-plugin/plugin.json`、`.zcode-plugin/plugin.json` 与 `.claude-plugin/plugin.json`，name/version 必须一致。不注册 MCP。
+技能定位回退：上下文给出的插件目录 → Codex `$CODEX_HOME` → ZCode 缓存 → Grok `~/.grok/plugins` 或 `--plugin-dir` → Claude Code `~/.claude/plugins/` 或 `claude --plugin-dir`。

@@ -1,7 +1,7 @@
 # 与 Matt Pocock skills 的关系
 
 由 **LC-86** 独立维护，基于 Matt Pocock skills 构建。
-不是 Matt 或 Codex / ZCode / Grok 的官方产品。
+不是 Matt 或 Codex / ZCode / Grok / Claude Code 的官方产品。
 
 ## 固定版本
 

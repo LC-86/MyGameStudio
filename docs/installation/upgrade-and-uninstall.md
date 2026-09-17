@@ -40,7 +40,9 @@ Codex 隔离命令（2.0.2，Linux + CLI 0.154.0 已执行）：
 codex plugin remove mygamestudio@personal --json
 ```
 
-ZCode / Grok Build：从本地插件源或插件目录中移除对应安装副本后重启会话。未在真实客户端核对。
+ZCode / Grok Build / Claude Code：从本地插件源或插件目录中移除对应安装副本后重启会话。未在真实客户端核对。
+
+Claude Code 官方会话加载不写安装记录；市场安装副本在 `~/.claude/plugins/cache`（本环境未执行卸载命令）。
 
 ## 回滚
 

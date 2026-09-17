@@ -22,7 +22,7 @@ for t in tests/test_*.py; do python3 -B "$t"; done
 
 `pytest.ini` 把收集范围限制在 `tests/`，排除 `legacy/`、`samples/`、`acceptance/`、`dist/`。
 
-这些测试主要是清单、定位、记录层与文档结构。它们**不是**真实 Codex/ZCode/Grok 安装通过证明。
+这些测试主要是清单、定位、记录层与文档结构。它们**不是**真实 Codex/ZCode/Grok/Claude Code 安装通过证明。
 
 验收客户端旧新对照（`tests/test_acceptance_client_*.py`）会用 `git show <基点提交>:acceptance/.../appserver_client.py` 读取已删除的旧实现。本地与 CI 都需要完整 git 历史；`.github/workflows/check.yml` 因此设置 `fetch-depth: 0`。浅克隆会在该步以 exit 128 失败，而不是跳过检查。
 

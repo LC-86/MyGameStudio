@@ -9,7 +9,7 @@
 | 结构检查 | 技能 `SKILL.md` 含 `name` / `description` frontmatter；三个游戏入口的定位回退包含 `~/.grok/plugins` 与 `--plugin-dir` |
 | 真实 Grok Build 安装、技能发现、只读调用 | **未验证** |
 | 本整理环境 | 未安装 Grok Build，**未执行**客户端命令 |
-| 文档来源 | 主分支 README 的 Grok Build 步骤（issue #75 / PR #76） |
+| 文档来源 | [Skills, Plugins & Marketplaces](https://docs.x.ai/build/features/skills-plugins-marketplaces)、[CLI Reference](https://docs.x.ai/build/cli/reference)（2026-09-17）；主分支 README 的 Grok Build 步骤（issue #75 / PR #76） |
 
 ## 前置条件
 
@@ -25,6 +25,22 @@ tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 插件根是解包后的 `plugin/`。
+
+## 复制一行即可安装
+
+官方从本地完整插件根安装（本环境 **未验证**）：
+
+```sh
+grok plugin install <plugin根> --trust
+```
+
+官方会话加载（同样 **未验证**）：
+
+```sh
+grok --plugin-dir <plugin根>
+```
+
+不要把 `npx skills add` 或单个 `SKILL.md` 当作安装目标。发给 Agent 的完整提示词见 [安装总述](README.md)。
 
 ## 安装方式（已写入仓库、待真实客户端复核）
 

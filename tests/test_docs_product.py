@@ -52,8 +52,13 @@ def test_readme_navigates_to_install_pages() -> None:
           "README 应导航到 Grok Build 安装页")
     check("docs/installation/codex.md" in readme,
           "README 应导航到 Codex 安装页")
+    check("docs/installation/claude-code.md" in readme,
+          "README 应导航到 Claude Code 安装页")
     check("隔离" in readme, "README 应保留隔离验证口径")
     check("未验证" in readme, "README 应区分发布状态与安装验证状态")
+    check("复制一行即可安装" in readme, "README 应提供复制一行安装")
+    check("复制一段指令发给 Agent" in readme, "README 应提供发给 Agent 的安装提示词")
+    check("claude --plugin-dir" in readme, "README 应给出 Claude Code 官方一行命令")
 
 
 def test_install_pages_keep_client_markers() -> None:
@@ -76,6 +81,22 @@ def test_install_pages_keep_client_markers() -> None:
     check("codex plugin add" in codex, "Codex 安装页应给出曾实测的 plugin add 命令")
     check("未验证" in zcode and "未验证" in grok and "未验证" in codex,
           "各安装页须标明真实客户端安装尚未验证")
+    claude = (REPO_ROOT / "docs" / "installation" / "claude-code.md").read_text(
+        encoding="utf-8")
+    check(".claude-plugin/plugin.json" in claude,
+          "Claude Code 安装页应提及 .claude-plugin/plugin.json")
+    check("claude --plugin-dir" in claude,
+          "Claude Code 安装页应给出官方 claude --plugin-dir")
+    check("隔离" in claude, "Claude Code 安装页应写明隔离目录验证")
+    check("未验证" in claude, "Claude Code 安装页须标明真实安装尚未验证")
+    install_index = (REPO_ROOT / "docs" / "installation" / "README.md").read_text(
+        encoding="utf-8")
+    check("复制一行即可安装" in install_index,
+          "安装总述应提供复制一行安装")
+    check("复制一段指令发给 Agent" in install_index,
+          "安装总述应提供发给 Agent 的安装提示词")
+    check("npx skills" in install_index,
+          "安装总述应明确 npx skills add 不是受支持路径")
 
 
 def test_skill_index_lists_public_collection() -> None:

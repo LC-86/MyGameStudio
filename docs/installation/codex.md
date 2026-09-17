@@ -6,7 +6,7 @@
 | --- | --- |
 | 客户端 | Codex CLI |
 | 2.0.2 隔离安装 | **已验证**：Linux x86_64，Codex CLI 0.154.0，隔离 `HOME` / `CODEX_HOME`，无用户凭据 |
-| 安装副本 | `$CODEX_HOME/plugins/cache/personal/mygamestudio/2.0.2`，与解包插件根 138 个文件逐字节一致（含 `LICENSE`） |
+| 安装副本 | `$CODEX_HOME/plugins/cache/personal/mygamestudio/2.0.2`，与当时解包插件根文件逐字节一致（含 `LICENSE`）。本轮又加入 `.claude-plugin/plugin.json`，隔离安装未重跑 |
 | `plugin add` / `plugin remove` / 再 `add` | **已验证**（同上隔离目录） |
 | 新会话技能发现、只读调用、日常 `~/.codex/` | **未验证**（`codex doctor` 报告无凭据；未开会话） |
 | 历史 | 0.18.x 曾在 macOS + Codex CLI 0.151.0 隔离验收；当时是 14 个游戏入口，**不是** 2.0.2 的 28 项集合 |
@@ -29,6 +29,16 @@ tar -tzf mygamestudio-2.0.2.tar.gz | head
 ```
 
 解压后插件根是 `plugin/`。应能看到 `.codex-plugin/plugin.json`、`LICENSE` 与 `skills/`。
+
+## 复制一行即可安装
+
+在 `marketplace.json` 的 `source.path` 已指向完整插件根之后：
+
+```sh
+codex plugin add mygamestudio@personal
+```
+
+Linux + Codex CLI 0.154.0 隔离目录 **已验证**。不要把该命令指向单个 `SKILL.md`。发给 Agent 的完整提示词见 [安装总述](README.md)。
 
 包内辅助脚本在 `plugin/records/`、`plugin/internal/`、`plugin/provenance/`。
 安装后应能从插件根解析这些相对路径；写入权限以项目授权为准，安装本身不授权改游戏文件。

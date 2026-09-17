@@ -13,7 +13,9 @@
 ### 新增
 
 - 根目录 `LICENSE`、`THIRD_PARTY_NOTICES.md`、用户文档、示例与贡献/安全说明
-- 分客户端安装页、兼容性矩阵、数据与权限说明
+- 分客户端安装页（含 Claude Code）、兼容性矩阵、数据与权限说明
+- README / 安装页「复制一行即可安装」与「复制一段指令发给 Agent 来安装」（指向完整插件根；不把 `npx skills add` 写成受支持路径）
+- Claude Code 清单 `.claude-plugin/plugin.json`（name/version 与 Codex、ZCode 一致，不注册 MCP）
 - 文档链接检查；`scripts/build-package.sh` 把根目录许可随包
 - 2.0.2 安装包携带本项目 MIT 与第三方说明，与仓库根目录文件字节一致
 
@@ -31,7 +33,7 @@
 ### 已知问题
 
 - 2.0.2 已在 Linux + Codex CLI 0.154.0 隔离目录完成 `plugin add`/`remove`；新会话技能发现、只读调用、日常 `~/.codex/` 仍未验证
-- ZCode / Grok Build 真实安装未验证
+- ZCode / Grok Build / Claude Code 真实安装未验证
 - 已发布 `v2.0.1` 安装包仍不含根目录 `LICENSE` / `THIRD_PARTY_NOTICES.md`；上游 MIT 已在该包 provenance 内
 - `.scratch/` 已从当前树移除；Git 历史中仍可能存在，公开仓库前需要维护者对 `main` 做历史清理（会移动已发布标签）
 

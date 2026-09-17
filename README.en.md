@@ -41,17 +41,29 @@ Details: [docs/getting-started.md](docs/getting-started.md).
 
 ## Install
 
-Default distribution is the full plugin tarball on [Releases](https://github.com/LC-86/MyGameStudio/releases).
+Default distribution is the full plugin tarball on [Releases](https://github.com/LC-86/MyGameStudio/releases). Until a `v2.0.2` GitHub tag exists, use `dist/` in this repo.
+
+Install the **full plugin root** (`plugin/` after unpacking the Release tar): `skills/`, `internal/`, `records/`, `templates/`, `provenance/`, and licenses. Do not copy a single `SKILL.md`. Do not treat `npx skills@latest add ...` as a supported path (sibling directories are unverified).
+
+Chinese copy-one-line commands and the Agent install prompt live in [README.md](README.md) and [docs/installation/README.md](docs/installation/README.md).
+
+```sh
+shasum -a 256 -c SHA256SUMS.txt && tar -xzf mygamestudio-2.0.2.tar.gz
+claude --plugin-dir <plugin-root>
+codex plugin add mygamestudio@personal
+grok plugin install <plugin-root> --trust
+```
+
+ZCode has **no verified one-line CLI** in current official plugin docs (UI: Settings → Plugins → Add marketplace). Do not invent `zcode plugins install`. Codex still needs `marketplace.json` `source.path` pointing at that full plugin root.
 
 | Client | Guide | Real install of 2.0.2 |
 | --- | --- | --- |
 | Codex | [codex.md](docs/installation/codex.md) | Isolated CLI install verified; live session not verified |
 | ZCode | [zcode.md](docs/installation/zcode.md) | Not verified |
 | Grok Build | [grok-build.md](docs/installation/grok-build.md) | Not verified |
+| Claude Code | [claude-code.md](docs/installation/claude-code.md) | Not verified |
 
-ZCode local marketplace needs `.zcode-plugin/plugin.json` and `marketplace.json`. Grok Build uses `~/.grok/plugins` or `--plugin-dir`. Isolation checks must not write real user plugin directories.
-
-Do not treat `npx skills@latest add ...` as a supported full-plugin install path.
+ZCode local marketplace needs `.zcode-plugin/plugin.json` and `marketplace.json`. Grok Build uses `~/.grok/plugins` or `--plugin-dir`. Claude Code uses `.claude-plugin/plugin.json`, `claude --plugin-dir`, and cache `~/.claude/plugins/cache`. Isolation checks must not write real user plugin directories.
 
 ## Typical workflow
 
@@ -63,7 +75,7 @@ Map, not a mandatory pipeline: `game-init` → `game-design` as needed → you c
 
 ## Limits
 
-Not an engine, asset studio, or store publisher. Game records are local Markdown or GitHub Issues only. `implement` leaves work uncommitted without commit authorization. Codex CLI 0.154.0 isolated `plugin add`/`remove` of 2.0.2 is verified on Linux. Live-session skill discovery and ZCode / Grok Build installs are **not verified**.
+Not an engine, asset studio, or store publisher. Game records are local Markdown or GitHub Issues only. `implement` leaves work uncommitted without commit authorization. Codex CLI 0.154.0 isolated `plugin add`/`remove` of 2.0.2 is verified on Linux. Live-session skill discovery and ZCode / Grok Build / Claude Code installs are **not verified**.
 
 ## Relation to Matt
 

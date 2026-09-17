@@ -9,7 +9,7 @@
 | 结构检查 | `tests/test_multi_client.py` 核对 `.zcode-plugin/plugin.json` 的 name/version 与 Codex 清单一致，且不注册 MCP |
 | 真实 ZCode 安装、技能发现、只读调用 | **未验证** |
 | 本整理环境 | 未安装 ZCode，**未执行**客户端命令 |
-| 文档来源 | 主分支 README 的 ZCode 本地插件源步骤（issue #75 / PR #76） |
+| 文档来源 | [Plugin](https://zcode.z.ai/en/docs/plugin)（2026-09-17）；主分支 README 的本地插件源步骤（issue #75 / PR #76） |
 
 ## 前置条件
 
@@ -27,6 +27,14 @@ tar -xzf mygamestudio-2.0.2.tar.gz
 ```
 
 插件根是解包后的 `plugin/` 目录。
+
+## 复制一行即可安装
+
+现行官方插件页（[Plugin](https://zcode.z.ai/en/docs/plugin)，2026-09-17）**没有**给出已核实的单行 CLI。不要编造 `zcode plugins install`，也不要把 `npx skills add` 写成受支持路径。
+
+官方步骤：为完整 `plugin/` 根写 `marketplace.json`（`plugins[].source` 指向该目录）→ Settings → Plugins → Create → Add marketplace → Install。本环境 **未验证**。
+
+发给 Agent 的完整提示词见 [安装总述](README.md)。
 
 ## 本地插件源（已写入仓库、待真实客户端复核）
 

@@ -32,6 +32,7 @@ README_MUST_LINK = (
     "docs/installation/codex.md",
     "docs/installation/zcode.md",
     "docs/installation/grok-build.md",
+    "docs/installation/claude-code.md",
     "docs/usage/workflows.md",
     "docs/reference/capabilities.md",
     "docs/reference/compatibility.md",
@@ -48,6 +49,7 @@ DOCS_INDEX_MUST_LINK = (
     "installation/codex.md",
     "installation/zcode.md",
     "installation/grok-build.md",
+    "installation/claude-code.md",
     "installation/upgrade-and-uninstall.md",
     "usage/workflows.md",
     "usage/existing-projects.md",
@@ -71,17 +73,36 @@ INSTALL_MARKERS = {
         "marketplace.json",
         "隔离",
         "未验证",
+        "复制一行即可安装",
     ),
     "docs/installation/grok-build.md": (
         ".grok/plugins",
         "--plugin-dir",
         "隔离",
         "未验证",
+        "复制一行即可安装",
     ),
     "docs/installation/codex.md": (
         "codex plugin add",
         ".codex-plugin/plugin.json",
         "未验证",
+        "隔离",
+        "复制一行即可安装",
+    ),
+    "docs/installation/claude-code.md": (
+        ".claude-plugin/plugin.json",
+        "claude --plugin-dir",
+        "~/.claude/plugins",
+        "隔离",
+        "未验证",
+        "复制一行即可安装",
+    ),
+    "docs/installation/README.md": (
+        "复制一行即可安装",
+        "复制一段指令发给 Agent",
+        "SHA256SUMS",
+        "npx skills",
+        "28",
         "隔离",
     ),
 }
@@ -164,6 +185,14 @@ def main() -> int:
 
     if "隔离" not in readme or "docs/installation/" not in readme:
         failures.append("README.md 应导航到安装页并保留隔离验证口径")
+    for marker in (
+        "复制一行即可安装",
+        "复制一段指令发给 Agent",
+        "claude --plugin-dir",
+        "docs/installation/claude-code.md",
+    ):
+        if marker not in readme:
+            failures.append(f"README.md 缺少必要说明: {marker}")
 
     if failures:
         print(f"FAIL ({len(failures)}):")

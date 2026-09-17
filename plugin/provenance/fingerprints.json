@@ -212,7 +212,7 @@
     },
     {
       "path": "skills/game-design/SKILL.md",
-      "sha256": "31fd1ec4e7415fb94f7c7d98598437fa127fb18ba3257861f5042361ceb9199d",
+      "sha256": "482c4a49a85fb536103231ef121ca809e61d573bb941e02c67a5009b694324f9",
       "source": "本项目自有内容(MIT); issue #54 正式版本设计快照",
       "license": "本项目自有内容(MIT)"
     },
@@ -224,7 +224,7 @@
     },
     {
       "path": "skills/game-init/SKILL.md",
-      "sha256": "cb80eefd0b9f0914279fed5811aa664527c7d38e9674905638a3579e64bce0ab",
+      "sha256": "97eaaaf0012ff10acf34497682e74d9e33ace6abf0e22b7cdc0202adde907e41",
       "source": "本项目自有内容(MIT); issue #59 用户修改、同名来源与安全切换",
       "license": "本项目自有内容(MIT)"
     },
@@ -236,7 +236,7 @@
     },
     {
       "path": "skills/game-producer/SKILL.md",
-      "sha256": "6ced136615f57bacfe680c6ab231eb9511da46aa5ac0c5a7df7eba51ea86893f",
+      "sha256": "b7e8515251c2c3a14f2bd87d5eaefd11d32fefc69c36f9d1d0dc1bf8c2e74871",
       "source": "本项目自有内容(MIT); issue #61 旧入口与 gate 运行路径退役",
       "license": "本项目自有内容(MIT)"
     },

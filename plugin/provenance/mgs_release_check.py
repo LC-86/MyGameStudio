@@ -436,7 +436,7 @@ def _handover_markdown(evidence: dict) -> str:
         "## 后续授权发布/安装时需要的合同与路径",
         "",
         f"- 安装包：`dist/{package.get('tarball')}`，校验 `dist/SHA256SUMS.txt`",
-        "- 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`（Codex）/ `plugin/.zcode-plugin/plugin.json`（ZCode）",
+        "- 插件源：`plugin/`，清单 `plugin/.codex-plugin/plugin.json`（Codex）/ `plugin/.zcode-plugin/plugin.json`（ZCode）/ `plugin/.claude-plugin/plugin.json`（Claude Code）",
         "- 公开技能：`plugin/skills/*/SKILL.md`（Matt 正式 25 项 + game-producer/game-init/game-design）",
         "- 调用合同：`plugin/internal/game/invocation.md`",
         "- 阶段资料：`plugin/internal/game/stage-requirements.md`",
