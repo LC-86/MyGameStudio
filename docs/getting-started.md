@@ -6,7 +6,7 @@
 
 ## 1. 取得完整插件
 
-1. 打开 [Releases](https://github.com/LC-86/MyGameStudio/releases) 或仓库 `dist/`，下载 `mygamestudio-2.0.2.tar.gz` 与 `SHA256SUMS.txt`。尚未打 GitHub Release 标签时，使用仓库内安装包。
+1. 打开 [v2.0.2 Release](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 下载 `mygamestudio-2.0.2.tar.gz` 与 `SHA256SUMS.txt`。仓库 `dist/` 仅供对照，不是未发布替代品。
 2. 核对校验和（在存放这两个文件的目录执行）：
 
 ```sh
@@ -22,7 +22,7 @@ grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -x
 
 不要只拷贝 `skills/` 里某一个技能文件夹。
 
-仓库里的 `plugin/` 与 2.0.2 安装包内容按发版时检查应一致（安装包另含根目录许可副本）。若你从源码工作树安装，请明白它可能含尚未打 Release 标签的文档；已发布的 2.0.1 安装包字节以 Release 为准，不要用新脚本覆盖。
+仓库里的 `plugin/` 与 2.0.2 安装包内容按发版时检查应一致（安装包另含根目录许可副本）。若你从源码工作树安装，请明白它可能含尚未打入下一 Release 的文档。已发布的 [v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 与 [v2.0.1](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.1) 安装包字节以对应 Release 为准，不要用新脚本覆盖。
 
 ## 2. 按客户端安装
 

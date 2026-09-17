@@ -4,7 +4,7 @@
 
 先确认安装的是完整插件根，而不是单个技能目录。
 再查是否同时装了 Matt 原版或其他 MyGameStudio 副本，导致同名来源混乱。
-2.0.2 在隔离 Codex CLI 上已安装；新会话技能发现面尚未验证。
+2.0.2 的 [GitHub Release](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 已发布。隔离 Codex CLI 安装已验证；新会话技能发现面尚未验证。Release 已发布不等于各客户端真实日常安装已验证。
 
 ## 技能找不到 internal/ 或 records/
 

@@ -3,7 +3,7 @@
 面向使用者的版本说明以仓库根目录 [CHANGELOG.md](../CHANGELOG.md) 为准。
 本文件保留打包、历史验收与已发布安装包细节。
 
-本目录当前提供 **2.0.2** 仓库内安装包（含根目录许可），以及保留的 **2.0.1** 已发布组合包（issue #68 批量修复与 #75 多客户端适配）。2.0.0 及更早安装包保留为历史文件。
+本目录当前提供 **2.0.2** 已发布安装包（含根目录许可，对应 [v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2)），以及保留的 **2.0.1** 已发布组合包（issue #68 批量修复与 #75 多客户端适配）。2.0.0 及更早安装包保留为历史文件。
 **不要**用新脚本覆盖本目录已与 GitHub Release `v2.0.1` 对应的 tar 字节。
 2.0.2 由 `scripts/build-package.sh` 从仓库 `plugin/` 构建并带入根目录许可；
 2.0.1 仍由 `dist/build-package.sh` 核对应保持不变。
@@ -14,7 +14,7 @@
 - 插件清单升至 2.0.2。公开入口、调用合同与固定上游 1.2.3 / `3cca18b` 不变。
 - 安装包携带仓库根目录 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 副本，与维护入口字节一致。
 - 不改写 `mygamestudio-2.0.1.tar.gz`（SHA-256 `538801ec025060dd18c137583223df58af25f6779dec0744aa56b76e9ff6b5b3`）。
-- GitHub Release `v2.0.2` 标签与资产待人工上传。
+- GitHub Release [v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 已发布。资产 SHA-256：`mygamestudio-2.0.2.tar.gz` `22109bec2d2295a8aa420151e8c67317347d39094336bc1aab909f90dc7ca002`；`package-manifest.txt` `c3617f856a8f96c64fcd6f5864509be336a0187b52714717acf3e4ee23ac0bfc`；`SHA256SUMS.txt` `a90d505c38ddd06a8c353c15c6f43e88385896b8b1845ad1aa2b329a1ab00925`。发布状态不等于各客户端真实日常安装已验证。
 
 ## 2.0.1（2026-09-17，issue #68 批量修复 + #75 多客户端适配）
 
@@ -45,7 +45,7 @@
 
 | 文件 | 内容 |
 | --- | --- |
-| `mygamestudio-2.0.2.tar.gz` | 当前仓库内安装包(plugin/ 全量 + 根目录许可副本) |
+| `mygamestudio-2.0.2.tar.gz` | 已发布 2.0.2 安装包(plugin/ 全量 + 根目录许可副本) |
 | `mygamestudio-2.0.1.tar.gz` | 已发布 2.0.1 安装包(plugin/ 全量，不含根目录 LICENSE) |
 | `mygamestudio-2.0.0.tar.gz` | 2.0.0 历史安装包 |
 | `package-manifest.txt` | 包内逐文件 SHA-256 清单 |

@@ -71,6 +71,17 @@ FILTERED_CHECKSUM = (
     "grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c -"
 )
 UNFILTERED_CHECKSUM = "shasum -a 256 -c SHA256SUMS.txt"
+PUBLISHED_RELEASE = "releases/tag/v2.0.2"
+STALE_UNRELEASED_PHRASES = (
+    "待人工上传",
+    "尚未打 `v2.0.2`",
+    "若尚无 v2.0.2",
+    "Until a `v2.0.2` GitHub tag exists",
+    "标签仍待维护者人工上传",
+    "2.0.2 标签待",
+    "尚未打 GitHub Release 标签时",
+    "GitHub Release 标签待",
+)
 
 INSTALL_MARKERS = {
     "docs/installation/zcode.md": (
@@ -80,6 +91,7 @@ INSTALL_MARKERS = {
         "未验证",
         "复制一行即可安装",
         FILTERED_CHECKSUM,
+        PUBLISHED_RELEASE,
     ),
     "docs/installation/grok-build.md": (
         ".grok/plugins",
@@ -88,6 +100,7 @@ INSTALL_MARKERS = {
         "未验证",
         "复制一行即可安装",
         FILTERED_CHECKSUM,
+        PUBLISHED_RELEASE,
     ),
     "docs/installation/codex.md": (
         "codex plugin add",
@@ -105,6 +118,7 @@ INSTALL_MARKERS = {
         "未验证",
         "复制一行即可安装",
         FILTERED_CHECKSUM,
+        PUBLISHED_RELEASE,
     ),
     "docs/installation/README.md": (
         "复制一行即可安装",
@@ -114,6 +128,8 @@ INSTALL_MARKERS = {
         "28",
         "隔离",
         FILTERED_CHECKSUM,
+        PUBLISHED_RELEASE,
+        "未验证",
     ),
 }
 
@@ -201,6 +217,7 @@ def main() -> int:
         "claude --plugin-dir",
         "docs/installation/claude-code.md",
         FILTERED_CHECKSUM,
+        PUBLISHED_RELEASE,
     ):
         if marker not in readme:
             failures.append(f"README.md 缺少必要说明: {marker}")
@@ -214,6 +231,32 @@ def main() -> int:
             failures.append(
                 f"{rel}: 用户下载流不得对整张 SHA256SUMS.txt 做 shasum -c，应使用过滤式校验"
             )
+        for phrase in STALE_UNRELEASED_PHRASES:
+            if phrase in text:
+                failures.append(f"{rel}: 不得再写未发布标签措辞: {phrase}")
+
+    dist_changelog = REPO / "dist" / "CHANGELOG.md"
+    if dist_changelog.is_file():
+        dist_text = dist_changelog.read_text(encoding="utf-8")
+        if PUBLISHED_RELEASE not in dist_text:
+            failures.append("dist/CHANGELOG.md 应记录 v2.0.2 已发布")
+        for phrase in STALE_UNRELEASED_PHRASES:
+            if phrase in dist_text:
+                failures.append(
+                    f"dist/CHANGELOG.md: 不得再写未发布标签措辞: {phrase}"
+                )
+
+    for rel, markers in (
+        ("CHANGELOG.md", (PUBLISHED_RELEASE, "未验证")),
+        ("docs/development/releasing.md", (PUBLISHED_RELEASE, "未验证")),
+        ("docs/getting-started.md", (PUBLISHED_RELEASE,)),
+        ("docs/reference/compatibility.md", (PUBLISHED_RELEASE, "未验证")),
+        ("README.en.md", (PUBLISHED_RELEASE,)),
+    ):
+        text = (REPO / rel).read_text(encoding="utf-8")
+        for marker in markers:
+            if marker not in text:
+                failures.append(f"{rel} 缺少必要说明: {marker}")
 
     if failures:
         print(f"FAIL ({len(failures)}):")

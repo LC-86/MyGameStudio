@@ -1,6 +1,6 @@
 # 如何选择安装方式
 
-首个公开版本优先使用 GitHub Release 里的**完整插件包**。仓库 `plugin/` 用于对照源码、贡献和构建。尚未打 `v2.0.2` GitHub 标签时，使用仓库 `dist/`。
+当前公开版本优先使用 [GitHub Release v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 里的**完整插件包**。仓库 `plugin/` 用于对照源码、贡献和构建；`dist/` 与已发布包对照，不是未发布替代品。Release 已发布不等于各客户端真实日常安装已验证。
 
 尚未验证、因此**不要宣传为受支持路径**：
 
@@ -50,7 +50,7 @@ Codex 一行之前仍需本地市场登记，步骤见 [codex.md](codex.md)。�
 ```text
 请安装 MyGameStudio 2.0.2 完整插件，不要使用 npx skills add，也不要只拷单个 SKILL.md。
 
-1. 下载指定版本包 mygamestudio-2.0.2.tar.gz 与 SHA256SUMS.txt（GitHub Release；若尚无 v2.0.2 标签则用仓库 dist/）。SHA256SUMS.txt 含多条记录，不要对整张表做 shasum -c。
+1. 从 GitHub Release v2.0.2 下载 mygamestudio-2.0.2.tar.gz 与 SHA256SUMS.txt。仓库 dist/ 仅供对照。SHA256SUMS.txt 含多条记录，不要对整张表做 shasum -c。
 2. 在同目录执行：grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz。核对失败则停止。
 3. 安装目标是解包后的 plugin/ 目录，必须同时含 skills、internal、records、templates、provenance 与许可文件。
 4. 按客户端放到规定目录或走宿主插件命令（把 <plugin根> 换成该 plugin/ 的绝对路径）：

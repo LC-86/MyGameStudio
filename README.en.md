@@ -41,7 +41,7 @@ Details: [docs/getting-started.md](docs/getting-started.md).
 
 ## Install
 
-Default distribution is the full plugin tarball on [Releases](https://github.com/LC-86/MyGameStudio/releases). Until a `v2.0.2` GitHub tag exists, use `dist/` in this repo.
+Default distribution is the full plugin tarball on [Release v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2). The repo `dist/` copy is for comparison, not an unpublished fallback. A published Release is not the same as verified daily client installs.
 
 Install the **full plugin root** (`plugin/` after unpacking the Release tar): `skills/`, `internal/`, `records/`, `templates/`, `provenance/`, and licenses. Do not copy a single `SKILL.md`. Do not treat `npx skills@latest add ...` as a supported path (sibling directories are unverified).
 

@@ -6,9 +6,11 @@
 
 ## 2.0.2 — 2026-09-17
 
-仓库内安装包：`dist/mygamestudio-2.0.2.tar.gz`（含根目录 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 副本）。
+已发布：[v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2)
+
+安装包：`dist/mygamestudio-2.0.2.tar.gz`（含根目录 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 副本），与该 Release 资产对应。
 不改写已发布的 [v2.0.1](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.1) 资产字节。
-本条目描述源码与仓库内 2.0.2 包；GitHub Release 标签仍待维护者人工上传。
+发布状态、安装验证状态和已知限制分开记录：Release 已发布不等于各客户端真实日常安装已验证。
 
 ### 新增
 
@@ -35,7 +37,7 @@
 - 2.0.2 已在 Linux + Codex CLI 0.154.0 隔离目录完成 `plugin add`/`remove`；新会话技能发现、只读调用、日常 `~/.codex/` 仍未验证
 - ZCode / Grok Build / Claude Code 真实安装未验证
 - 已发布 `v2.0.1` 安装包仍不含根目录 `LICENSE` / `THIRD_PARTY_NOTICES.md`；上游 MIT 已在该包 provenance 内
-- `.scratch/` 已从当前树移除；Git 历史中仍可能存在，公开仓库前需要维护者对 `main` 做历史清理（会移动已发布标签）
+- `.scratch/` 已从当前树移除；Git 历史中仍可能存在。仓库已公开；历史清理会移动已发布标签，须由维护者另行决定
 
 ## 2.0.1 — 2026-09-17
 

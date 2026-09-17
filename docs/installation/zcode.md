@@ -5,7 +5,7 @@
 | 项 | 记录 |
 | --- | --- |
 | 客户端 | ZCode |
-| 插件版本 | 2.0.2（源码与仓库内安装包一致；GitHub Release 标签待人工上传） |
+| 插件版本 | 2.0.2（[v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 已发布；源码与仓库内安装包一致。真实安装见下表，未验证 ≠ 未发版） |
 | 结构检查 | `tests/test_multi_client.py` 核对 `.zcode-plugin/plugin.json` 的 name/version 与 Codex 清单一致，且不注册 MCP |
 | 真实 ZCode 安装、技能发现、只读调用 | **未验证** |
 | 本整理环境 | 未安装 ZCode，**未执行**客户端命令 |
