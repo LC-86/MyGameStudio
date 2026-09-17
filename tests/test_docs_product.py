@@ -56,6 +56,7 @@ def test_readme_navigates_to_install_pages() -> None:
           "README 应导航到 Claude Code 安装页")
     check("隔离" in readme, "README 应保留隔离验证口径")
     check("未验证" in readme, "README 应区分发布状态与安装验证状态")
+    check("releases/tag/v2.0.2" in readme, "README 应写明 v2.0.2 Release 已发布")
     check("复制一行即可安装" in readme, "README 应提供复制一行安装")
     check("复制一段指令发给 Agent" in readme, "README 应提供发给 Agent 的安装提示词")
     check("claude --plugin-dir" in readme, "README 应给出 Claude Code 官方一行命令")
@@ -96,6 +97,9 @@ def test_install_pages_keep_client_markers() -> None:
           "Claude Code 安装页应给出官方 claude --plugin-dir")
     check("隔离" in claude, "Claude Code 安装页应写明隔离目录验证")
     check("未验证" in claude, "Claude Code 安装页须标明真实安装尚未验证")
+    check("releases/tag/v2.0.2" in zcode, "ZCode 安装页应写明 v2.0.2 已发布")
+    check("releases/tag/v2.0.2" in grok, "Grok 安装页应写明 v2.0.2 已发布")
+    check("releases/tag/v2.0.2" in claude, "Claude Code 安装页应写明 v2.0.2 已发布")
     install_index = (REPO_ROOT / "docs" / "installation" / "README.md").read_text(
         encoding="utf-8")
     check("复制一行即可安装" in install_index,
@@ -104,6 +108,10 @@ def test_install_pages_keep_client_markers() -> None:
           "安装总述应提供发给 Agent 的安装提示词")
     check("npx skills" in install_index,
           "安装总述应明确 npx skills add 不是受支持路径")
+    check("releases/tag/v2.0.2" in install_index,
+          "安装总述应写明 v2.0.2 Release 已发布")
+    check("未验证" in install_index,
+          "安装总述须继续区分真实客户端安装尚未验证")
     filtered = (
         "grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c -"
     )
@@ -134,6 +142,51 @@ def test_skill_index_lists_public_collection() -> None:
     missing = [name for name in PUBLIC_SKILLS if name not in text]
     check(not missing, f"技能总目录缺少公开技能: {missing}")
     check(len(PUBLIC_SKILLS) == 28, "当前公开集合应为 28 项（对照清单，而非写死未来版本）")
+
+
+STALE_UNRELEASED_PHRASES = (
+    "待人工上传",
+    "尚未打 `v2.0.2`",
+    "若尚无 v2.0.2",
+    "Until a `v2.0.2` GitHub tag exists",
+    "标签仍待维护者人工上传",
+    "2.0.2 标签待",
+    "尚未打 GitHub Release 标签时",
+    "GitHub Release 标签待",
+)
+
+
+def test_v202_release_is_documented_as_published() -> None:
+    """v2.0.2 GitHub Release 已发布；文档不得再写待上传，且须与安装未验证分开。"""
+
+    published = "releases/tag/v2.0.2"
+    paths = (
+        REPO_ROOT / "README.md",
+        REPO_ROOT / "README.en.md",
+        REPO_ROOT / "CHANGELOG.md",
+        REPO_ROOT / "docs" / "development" / "releasing.md",
+        REPO_ROOT / "docs" / "getting-started.md",
+        REPO_ROOT / "docs" / "installation" / "README.md",
+        REPO_ROOT / "docs" / "installation" / "zcode.md",
+        REPO_ROOT / "docs" / "installation" / "claude-code.md",
+        REPO_ROOT / "docs" / "installation" / "grok-build.md",
+        REPO_ROOT / "docs" / "reference" / "compatibility.md",
+        REPO_ROOT / "dist" / "CHANGELOG.md",
+    )
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        rel = path.relative_to(REPO_ROOT).as_posix()
+        check(published in text, f"{rel} 应记录 v2.0.2 已发布")
+        for phrase in STALE_UNRELEASED_PHRASES:
+            check(phrase not in text, f"{rel} 不得再写未发布标签措辞: {phrase}")
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    releasing = (REPO_ROOT / "docs" / "development" / "releasing.md").read_text(
+        encoding="utf-8")
+    compatibility = (REPO_ROOT / "docs" / "reference" / "compatibility.md").read_text(
+        encoding="utf-8")
+    check("未验证" in changelog, "CHANGELOG 须继续分开写安装未验证")
+    check("未验证" in releasing, "releasing.md 须继续分开写日常客户端未验证")
+    check("未验证" in compatibility, "兼容性矩阵须继续分开写安装未验证")
 
 
 def test_validate_docs_script_passes() -> None:
@@ -228,6 +281,7 @@ TESTS = (
     test_readme_navigates_to_install_pages,
     test_install_pages_keep_client_markers,
     test_skill_index_lists_public_collection,
+    test_v202_release_is_documented_as_published,
     test_validate_docs_script_passes,
     test_next_package_builder_bundles_root_licenses,
     test_current_201_tarball_unchanged_by_live_next_builder,

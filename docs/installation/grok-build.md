@@ -5,7 +5,7 @@
 | 项 | 记录 |
 | --- | --- |
 | 客户端 | Grok Build |
-| 插件版本 | 2.0.2 |
+| 插件版本 | 2.0.2（[v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 已发布。真实安装见下表，未验证 ≠ 未发版） |
 | 结构检查 | 技能 `SKILL.md` 含 `name` / `description` frontmatter；三个游戏入口的定位回退包含 `~/.grok/plugins` 与 `--plugin-dir` |
 | 真实 Grok Build 安装、技能发现、只读调用 | **未验证** |
 | 本整理环境 | 未安装 Grok Build，**未执行**客户端命令 |
