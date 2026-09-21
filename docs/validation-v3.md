@@ -200,11 +200,12 @@ PASS 19 / FAIL 0
 
 - **输入**：GDD 未决项「死亡惩罚强度：候选 A 清空本局得分 / 候选 B 保留一半」，用户明确授权制作原型。要求交付物放在夹具的 `deliverable/`，不写进 `project/`。
 - **实际取得的技能文件**：`prototype-gamestudio/SKILL.md` 与其 `references/prototype-shapes.md`、`references/evidence-and-handoff.md`、`tasks-gamestudio/references/task-responsibility.md`。
-- **交付物**：单文件 `deliverable/index.html`（1,170 行，自包含 HTML + canvas，无外部依赖）与 `deliverable/checks/core-check.mjs`（157 行）。
+- **交付物**：单文件 `deliverable/index.html`（1,170 行，自包含 HTML + canvas，无外部依赖）、`deliverable/checks/core-check.mjs`（58 项）、`deliverable/checks/page-check.mjs`（外壳 25 项 + 页面自检 37 项，覆盖 boot→开始→循环→按键→结算→重开的用户路径）、`deliverable/evidence/`（两份检查日志、两份自检 JSON、两张 1000×780 截图）。
 - **主代理独立核对（不采信自述）**：
-  - 实际运行 `node checks/core-check.mjs` → **58 项断言全部通过**。断言不是形式检查：同 seed 同策略下 A/B 的对局过程逐项相同、只有入库分不同（A 入库 0，B 入库 `floor(本局/2)`，三次死亡后 B 累计 575 = 各局 floor 之和）；永久解锁「银羽」死亡不清除；重开回到第 1 波、本局 0 分、潮位归零，但累计入库与解锁保留；波次推进时潮位重置。
+  - 实际重跑 `node checks/core-check.mjs` → 58/58；`node checks/page-check.mjs` → 25/25 且页面自检 37/37。断言不是形式检查：同 seed 同策略下 A/B 的对局过程逐项相同、只有入库分不同（A 入库 0，B 入库 `floor(本局/2)`，三次死亡后 B 累计 575 = 各局 floor 之和）；永久解锁「银羽」死亡不清除；重开回到第 1 波、本局 0 分、潮位归零，但累计入库与解锁保留；波次推进时潮位重置。
   - **真实输入驱动玩法**：`window.addEventListener('keydown')` 与 canvas `pointerdown`；空格 / ↑ / 点击画面 = 俯冲，保留 GDD 已采纳的 0.4 秒前摇且前摇中不可取消，前摇期间画出落点竖线与十字标记作为不可撤销承诺。检查脚本通过 `dispatchEvent(new KeyboardEvent(...))` 与 `new PointerEvent(...)` 走真实输入路径，不是直接调内部函数。
-  - **不是状态面板**：六个绘制函数（`drawBasin`、`drawBird`、`drawPrey`、`drawSky`、`drawGauge`、`drawEffects`）构成可识别的游戏画面；得分只在一处由捕食事件累加（`s.score += sp.value`），grep 确认不存在「点击成功即加分」一类按钮。
+  - **不是状态面板**：六个绘制函数（`drawBasin`、`drawBird`、`drawPrey`、`drawSky`、`drawGauge`、`drawEffects`）构成可识别的游戏画面；得分只在一处由捕食事件累加（`s.score += sp.value`），grep 确认不存在「点击成功即加分」一类按钮。主代理目视截图确认：天空、潮线、潮池与礁石、空中海鸟与落点虚线十字、带分值标签的猎物、「+100 小蟹」捕食反馈、潮水表（低潮 0.0s / 暴露窗口 ×2 / 潮水周期 12s）、跨局入库与解锁徽章、「若此刻死亡：入库 0（本局 100）」的 A/B 实时对照、`重开` 按钮。
+  - 真实 Chrome 153 无头运行 `?selftest=1` 的自检 JSON（`evidence/selftest-chrome153.json`）逐项可读：低潮/高潮判定、窗口翻倍、潮位重置、按下进入前摇、前摇 0.2 秒不可取消、前摇满 0.4 秒、A/B 入库差异等，`ok: true`。
   - 使用固定 seed 的 `mulberry32` 保证 A/B 可比；复用工程既有规则常量（`TIDE_PERIOD`、`LOW_TIDE_SECONDS`、`isLowTide`、`exposureMultiplier`、`canCancelDive`）。
 - **状态身份与边界**：
   - `project/` 零改动，GDD 未决项仍是未决项；报告明确「某个候选已被采纳：否」，没有创建提交、分支或标签。
@@ -214,6 +215,8 @@ PASS 19 / FAIL 0
   - 故意不启用连击系统，避免混入第二个变量，因此明确声明不能顺便回答另一个未决项。
 - **E10 同时通过**：报告把「能证明」限定为真实 Chrome 153（无头）中页面启动、渲染一帧不抛异常、键鼠事件已接线并能真的触发前摇；「不能证明」逐项列出触屏设备未测、Safari 与 Firefox 未测、音频未实际听过、无人类成绩数据、不持久化因此无法观察长期动机。没有把桌面结果写成手机体验已验证。
 - **人工判断保留**：明确写出「哪个更好玩 / 更公平 / 更想再来一局」需要真人试玩，并给出建议的试玩协议，没有替开发者回答。
+- **对设计决策有用的发现**：候选 B 存在一条稳定的刷分路径——打到有分后故意失手死亡，每局入库 `floor(本局/2)`（核对脚本正是用它制造可控死亡）。若选 B 需要额外限制；原型只报告，没有替用户改设计。
+- **一次沙箱越界，已披露并已核实无残留**：该子代理在写日志时一条命令漏了 `cd`，把 `evidence/` 目录与两个日志误建在它的会话工作目录（即本仓库根），发现后自行删除。主代理随后核实：仓库根不存在 `evidence/`；工作树除既有的未跟踪 `.cursor/` 外干净；提交 `28a10a8` 的新增文件中没有日志、截图或误建目录（提交里名为 `evidence` 的新增项只有两份本就属于设计的技能参考 `feedback-evidence.md` 与 `evidence-and-handoff.md`，而 `acceptance/**/evidence/*` 全部是删除项）。这条记录说明「派发说明里写清允许范围」不能替代主代理收回结果时的实际核对，与 delegation.md 的要求一致。
 
 #### S07 精简 spec 与任务票（E15）— 通过
 
