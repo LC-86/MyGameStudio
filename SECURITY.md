@@ -12,11 +12,11 @@
 
 ## 报告时请包含
 
-- 插件版本（例如 2.0.2）与安装来源（Release 包 / 仓库 `plugin/`）
-- 客户端名称与版本、操作系统
-- 技能入口（如 `game-init`）
+- 技能库版本（`VERSION`，例如 3.0.0）与安装方式（官方 `skills` CLI，完整安装或子集安装）
+- `skills` CLI 版本（`npx skills@latest --version`）、宿主或 Agent 名称与版本、操作系统
+- 涉及的技能（20 项之一，例如 `setup-gamestudio`）
 - 去凭据后的复现步骤与影响范围
-- 是否涉及同名技能多源安装
+- 是否涉及同名技能多源安装（例如另装了 Matt 原版技能库或旧版 MyGameStudio）
 
 ## 不要发送
 

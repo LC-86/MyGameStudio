@@ -1,50 +1,46 @@
-# 发布与维护
+# 发布说明
 
-沿用 2.x 版本线。不要因为首次公开把版本重置成 1.0.0。
-当前已发布 **[v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2)**。不改写 GitHub Release `v2.0.1` 资产。后续版本再由维护者打标签并上传。
+V3 没有构建产物：不发布 npm 包，不构建 tar 包，不提供自建安装器，也没有校验和清单。**发布就是仓库内容本身**，用户通过官方 `skills` CLI 从仓库取得 `skills/` 下的技能。
 
-发布状态、安装验证状态和已知限制分开写：Release 已发布不等于各客户端真实日常安装已验证。
+当前版本以根目录 `VERSION` 为唯一权威来源（V2 时期由插件清单承担，该来源已退出）。
 
-## 当前发布状态
+## 发布步骤
 
-| 项 | 状态 |
-| --- | --- |
-| 源码与插件清单版本 | 2.0.2 |
-| 仓库内安装包 | `dist/mygamestudio-2.0.2.tar.gz`（含根目录 LICENSE / THIRD_PARTY_NOTICES.md），与已发布资产对照 |
-| GitHub Release | 已发布 [v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2)；[v2.0.1](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.1) 资产未改写 |
-| 日常客户端安装 | Codex CLI 0.154.0 隔离 add/remove 已验证；新会话与 ZCode/Grok/Claude Code 未验证 |
-| 仓库可见性 | 已公开；HEAD 已移除 `.scratch/`，Git 历史中仍可能存在（已知限制） |
-| 根目录 LICENSE 是否已在 2.0.2 安装包内 | 是 |
-| 根目录 LICENSE 是否已在 2.0.1 安装包内 | 否；上游 MIT 已在包内 provenance |
+1. **改 `VERSION`**：写入新版本号，与将要打的标签一致。
+2. **写 `CHANGELOG.md`**：新增一条本版条目，分开写清实际改动、已运行的检查与未运行或未验证的项。不要把未执行的行为场景写成通过。
+3. **跑检查**：
+   ```bash
+   python3.12 -m pytest tests/ -q
+   python3.12 scripts/validate-docs.py
+   ```
+   读实际输出，失败就修，不靠删除检查过关。见 [测试说明](testing.md)。
+4. **核对文档一致**：`README.md`、`README.en.md`、[能力与限制](../reference/capabilities.md)、[安装](../installation.md)、[技能依赖](../dependencies.md) 与技能集合一致；双语镜像同批更新。
+5. **核对 provenance**：上游基线、名称映射与适配记录与实际技能正文一致，见 [与 Matt Pocock skills 的关系](../reference/upstream.md)。
+6. **提交**：把本次任务改动的文件作为一个快照提交，提交说明用简体中文的 `type: 说明` 格式。
+7. **推送、打标签、建 Release（各自需要明确授权）**：推送、创建 `v3.0.0` 标签与创建 GitHub Release 是三个动作，逐项取得授权后执行。不改写已发布的 Release 资产与既有标签。
 
-### v2.0.2 Release 资产 SHA-256
+## 标签与用户实际装到的内容
 
-| 资产 | SHA-256 |
-| --- | --- |
-| `mygamestudio-2.0.2.tar.gz` | `22109bec2d2295a8aa420151e8c67317347d39094336bc1aab909f90dc7ca002` |
-| `package-manifest.txt` | `c3617f856a8f96c64fcd6f5864509be336a0187b52714717acf3e4ee23ac0bfc` |
-| `SHA256SUMS.txt` | `a90d505c38ddd06a8c353c15c6f43e88385896b8b1845ad1aa2b329a1ab00925` |
+`npx skills@latest add LC-86/MyGameStudio` 解析的是仓库的**默认分支**，不是某个标签。因此：
 
-## 安装包应包含
+- 只打标签不会改变用户装到的内容；默认分支还没合入本版时，远端命令安装的仍是旧内容。
+- 命令里的 `@latest` 指 `skills` CLI 的版本，与 MyGameStudio 的标签无关。
+- 目前没有经过验证的「按固定标签安装」写法。不要编造一个，也不要把它写进文档当作受支持路径。
 
-运行所需的 `plugin/` 全量，以及许可。不要把 `.scratch/`、整仓源码或历史日志当作默认安装包。
+发布完成的判断标准是默认分支内容已更新，而不只是标签已存在。
 
-2.0.2 由 `scripts/build-package.sh` 构建：在暂存的插件根加入仓库根目录 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 的副本，不以手工维护第二份可独立改动的许可正文。构建仍以 macOS/BSD 工具为准；本 Linux 环境可产出结构正确的包，不宣称与 macOS 发版字节相同。
+## 版本历史
 
-`dist/build-package.sh` 与 `dist/verify-reproducible.sh` 只用于核对已发布的 2.0.1 字节，并拒绝覆盖该 tar。
+V2（2.0.2 及更早）以 tar 包与多客户端插件清单发布，相关资产、构建脚本与可复现核验已随源码树退出，可从 Git 历史恢复，记录见 [provenance/v2-retirement.md](../../provenance/v2-retirement.md)。旧的安装命令已全部退出，切换说明见 [从 2.0.2 迁移到 3.0.0](../migration-v3.md)。
 
-## 发版检查
+## 发布状态怎么写
 
-1. 三份清单 name/version 一致（当前 2.0.2：Codex / ZCode / Claude Code）
-2. provenance `generated_for` 与插件版本一致
-3. `python3 -B tests/test_plugin_package.py` 等有效套件
-4. `python3 scripts/validate-docs.py`
-5. README / CHANGELOG / 仓库内安装包同一版本，并分开写清安装验证状态
-6. `v2.0.2` 已人工上传。后续版本再上传安装包、SHA256SUMS、清单和支持状态摘要；不要替换已发布的 v2.0.2 / v2.0.1 资产
+发布状态、安装验证状态与已知限制是三件不同的事，分开写：
 
-`.github/workflows/check.yml` 跑文档与结构检查。`.github/workflows/release.yml` 仅作人工发版备忘，不会自动对外发布。
+| 项 | 说明 |
+|---|---|
+| 版本与标签 | `VERSION` 内容、标签是否已创建、默认分支是否已合入 |
+| 已运行的检查 | 实际执行的命令与结果，含跳过项及其原因 |
+| 行为验证 | 哪些场景已运行、哪些未运行，见 [验证状态](../validation-v3.md) |
 
-## 临时材料
-
-设计仓库模板对照夹具在 `tests/fixtures/design-templates/`。`.scratch/` 已从当前树删除并列入 `.gitignore`。
-仅添加 `.gitignore` 不会从 Git 历史去掉已跟踪文件。对已发布 `main` 做历史清理需要 force-push，会使 `v2.0.0` / `v2.0.1` 标签与已开 PR 的基线移位，须由维护者在公开仓库前执行。
+`.github/workflows/check.yml` 跑文档与结构检查；`.github/workflows/release.yml` 只是人工发版备忘，不会自动对外发布。

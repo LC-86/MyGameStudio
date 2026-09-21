@@ -1,1 +1,0 @@
-{"op": "scope", "decision": "allow", "instance_id": "i-c4d98b514b77", "task": "driver-reg-a", "role": "implement", "purpose": "production", "allowed": ["src/**"], "basis": {"policy_version": 1, "role_resources_source": "runtime policy.json (trusted scheduler channel)", "task_grant_source": "instance registry issued by trusted scheduler"}}

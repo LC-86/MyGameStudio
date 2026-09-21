@@ -1,1 +1,0 @@
-wrote 3456 chars to /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/15-goal-change-concurrency-recovery/evidence/w1-report.md

@@ -1,1 +1,0 @@
-wrote 4009 chars to /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/02-role-scoped-write/evidence/t1-report.md

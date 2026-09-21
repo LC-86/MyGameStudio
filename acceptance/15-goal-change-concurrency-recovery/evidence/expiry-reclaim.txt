@@ -1,6 +1,0 @@
-== 到期回收 ==
-hold(短期实例取得占用): {"decision": "allow", "rule_stage": "granted", "target": "docs/mygamestudio/work/15-race-demo/results/expiry-probe.md"}
-reclaim-active(活跃期回收): rc=1 {"ok": false, "instance_id": "i-f2d8dbb58b2b", "found": true, "active": true, "reclaimed": 0, "reason": "instance still active: revoke its execution binding (release-instance) or wait for expiry before reclaiming occupancy"}
-expired-write: 见上一检查(命令输出含 identity 拒绝)
-reclaim-expired: rc=0 {"ok": true, "instance_id": "i-f2d8dbb58b2b", "found": true, "active": false, "reclaimed": 1, "reason": "occupancy reclaimed; holder can no longer write (released or expired)"}
-takeover(回收后新执行者): {"decision": "allow", "rule_stage": "granted", "target": "docs/mygamestudio/work/15-race-demo/results/expiry-probe.md"}

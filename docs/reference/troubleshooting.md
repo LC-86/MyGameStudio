@@ -1,39 +1,44 @@
 # 排错
 
-## 技能数量不是 28
+按现象定位。安装命令本身的问题见 [安装](../installation.md)，能力边界见 [当前能力与限制](capabilities.md)。
 
-先确认安装的是完整插件根，而不是单个技能目录。
-再查是否同时装了 Matt 原版或其他 MyGameStudio 副本，导致同名来源混乱。
-2.0.2 的 [GitHub Release](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 已发布。隔离 Codex CLI 安装已验证；新会话技能发现面尚未验证。Release 已发布不等于各客户端真实日常安装已验证。
+## 装完了但技能没被发现
 
-## 技能找不到 internal/ 或 records/
+1. 确认官方 CLI 实际写入的目录，是宿主真正读取的技能目录。目标目录由 CLI 与你的选择决定，本库不维护各客户端的目录转换。
+2. 确认技能名是 20 个 `-gamestudio` 名称，目录内有 `SKILL.md`，且 frontmatter 只有 `name`、`description`、`license` 等标准字段。
+3. 确认技能目录不是嵌套在多余一层里（例如 `skills/skills/`），也没有游离在 `skills/` 之外的 `SKILL.md`。
+4. 宿主需要时重启会话。重启后仍不出现，说明它不在该宿主的发现范围内，这是宿主行为，不是本库可以修的配置。
 
-说明安装器可能只拷了 `skills/`。请改用 Release 完整包，并按 [安装说明](../installation/README.md) 放置整个插件根。
-`npx skills add` 路径未验证，不要当修复方法。
+哪些宿主的安装与发现已经真实测试、哪些未运行，见 [验证状态](../validation-v3.md)。不要用「结构正确」代替「已被发现」。
 
-## Agent 一上来就改文件或开写实现
+## 技能说找不到某份共享参考
 
-明确说“这一轮只读”。接入用 `game-init`，进度用 `game-producer`。
-`to-spec` / `to-tickets` / `implement` 必须由你主动调用。
+多半是你只装了子集。共享方法各只有一份权威正文：`docs-gamestudio/references/` 下的三份参考与 `tasks-gamestudio/references/task-responsibility.md`。缺它们时技能会说明受影响的能力、保留可独立完成的部分，不会凭名称模仿后宣称完成。
 
-## 进度像编的
+补齐方式：按 [技能依赖](../dependencies.md) 的必需依赖表把缺的技能装上，或直接完整安装 20 项。
 
-`game-producer` 只能根据真实记录说话。没有记录就应报缺口，而不是补一段完成说明。
+## 宿主没等我开口就选了用户入口
 
-## 选了 Linear 但游戏任务对不上
+这是已披露的**指令层限制**。用户入口与按需方法的区分写在描述和正文里，标准技能文本无法阻止宿主自行选中某个用户入口，本库不宣称跨宿主强制隔离。
 
-游戏记录层只承诺本地 Markdown 或 GitHub Issues。
-上游 setup 里出现的其他 tracker 不会被游戏层自动接上。
+处理办法：
 
-## 想用旧的 game-status / game-plan 等名字
+1. 当场说明「这一轮只读，不要开始实现」，并明确本轮范围。
+2. 在项目自己的 `AGENTS.md` 里重申边界：用户入口只在你请求相应工作时启动；推荐下一步不等于开始下一步。
+3. 需要授权的操作仍然要单独给：写入、提交、推送、上传、付费与全局配置改动不会因为技能被选中就获得授权，见 [数据、写入与权限](data-and-permissions.md)。
 
-它们不是 2.x 的可执行入口。去向说明在包内 `internal/game/retired-entries.md`，仅供迁移解释。
+## 项目规则里还写着 V2 的入口名
 
-## 构建安装包失败
+`game-producer`、`game-init`、`game-design`、`setup-matt-pocock-skills`、`to-spec`、`to-tickets` 等旧名在 3.0.0 不是可执行入口，V2 的插件安装命令也已退出。
 
-`dist/build-package.sh` 依赖 macOS/BSD 工具。Linux 上未宣称可得到与发版相同的字节。
-见 [发布说明](../development/releasing.md)。
+改写你游戏项目里的规则文件，把引用换成对应的 V3 技能；能力去向与没有等价实现的部分见 [从 2.0.2 迁移到 3.0.0](../migration-v3.md)。`setup-gamestudio` 遇到这类失效引用时会指出并建议改写，但只改约定文档，不迁移数据。
 
-## 需要报告问题
+## 同时装了 Matt 自己的技能库
 
-用 [Bug 模板](https://github.com/LC-86/MyGameStudio/issues/new/choose)。不要附带令牌。安全问题走 [SECURITY.md](../../SECURITY.md)。
+MyGameStudio 的 20 项都带 `-gamestudio` 后缀，与上游名称（`grilling`、`tdd`、`prototype`、`implement`、`ask-matt` 等）不同名，因此明确使用带后缀的名称不会解析到未改编的上游方法。
+
+如果结果看起来不像本库的方法，检查两点：调用文案里是否漏了后缀；上游同名技能的正文没有游戏适配，也不包含本库的共享参考，两者不能互相顶替。
+
+## 报告问题
+
+用 [Bug 模板](https://github.com/LC-86/MyGameStudio/issues/new/choose)，写清 `skills` CLI 版本、宿主、涉及的技能与安装范围。不要附带令牌。安全问题走 [SECURITY.md](../../SECURITY.md)。

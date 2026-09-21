@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Review"
-  short_description: "显式调用的独立审查(规范与需求符合性)入口"
-  default_prompt: "Use $game-review to independently review the specified deliverable against the current spec and standards."
-policy:
-  allow_implicit_invocation: false

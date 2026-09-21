@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        请先说明你在做游戏时遇到的问题。不要只填想新增的技能名字。
-        当前公开入口是 Matt 正式 25 项加三个游戏入口；新入口需要单独评估。
+        请先说明你在做游戏时遇到的问题，不要只填想新增的技能名字。
+        当前范围是 `skills/` 下的 20 项（8 项用户入口 + 12 项按需方法），能力面与已退役能力见 `docs/reference/capabilities.md`。新增技能需要单独评估，见 `CONTRIBUTING.md`。
   - type: textarea
     id: scene
     attributes:
@@ -19,25 +19,30 @@ body:
     id: problem
     attributes:
       label: 现有技能为什么不够
-      description: 已经试过哪些入口（例如 game-init、game-design、to-spec）。
+      description: 已经试过哪些技能（例如 ask-gamestudio、grill-gamestudio-docs、tasks-gamestudio），它们各自缺了什么。
     validations:
       required: true
   - type: textarea
     id: outcome
     attributes:
       label: 你希望得到什么结果
-      description: 可检查的产出，而不是“再加一个技能”。
+      description: 可检查的产出，而不是「再加一个技能」。
     validations:
       required: true
-  - type: dropdown
-    id: client
+  - type: input
+    id: host
     attributes:
-      label: 主要客户端
+      label: 主要宿主 / Agent
+      placeholder: 例如 Claude Code、Codex CLI、Qoder；未安装可留空
+  - type: dropdown
+    id: entry_type
+    attributes:
+      label: 你认为它属于
       options:
-        - Codex
-        - ZCode
-        - Grok Build
-        - 尚未安装 / 不确定
+        - 用户入口（我请求时才启动）
+        - 按需方法（Agent 在任务内组合）
+        - 现有技能的改进
+        - 不确定
   - type: textarea
     id: extra
     attributes:

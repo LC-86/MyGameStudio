@@ -1,88 +1,78 @@
 # MyGameStudio
 
-**An AI workflow plugin for independent game developers.**
+A lightweight, composable Agent Skills library for game development, installed natively through the official `skills` CLI.
 
-Turn a game idea into a clear design, actionable tasks, and results you can actually check.
+**Current version: 3.0.0** (authority: [`VERSION`](VERSION))
 
-MyGameStudio builds on a pinned release of Matt Pocock's engineering skills, and adds game-project onboarding, design discussions for gameplay and numbers, plus production status and playable-delivery requirements. You own the core loop and the important trade-offs. The assistant helps against explicit design, tasks, and checks.
+MyGameStudio helps an agent design and build games using the tools already present in its environment, through explicit goals, rules, boundaries, task breakdowns, material references and verification requirements. It does not depend on a self-built workflow runtime to gate every step, and it does not force every game onto the same engine, layout, task platform or design-document template.
 
-Version **2.0.2** ships 25 pinned Matt skills plus 3 game entries, with the project MIT license bundled in the tarball. Client and tracker support is listed in the [compatibility matrix](docs/reference/compatibility.md) (Chinese).
+The human keeps goals, important trade-offs and explicitly reserved experience judgements. The agent handles fact-finding, method selection, document organisation, implementation steps, self-checks, and handing the remaining judgements back.
 
-This is not a game engine, and it will not ship a game from a single sentence.
-
-The Chinese README is the complete first-edition homepage: [README.md](README.md). This English page matches its structure and version facts. Skill behavior is not duplicated in two languages.
-
-## Intro
-
-For solo developers and small teams who already use AI on a game, and need design, tasks, and delivery to stay connected.
-
-Plugin id: `mygamestudio`. Display name: `MyGameStudio`. Skill ids stay lowercase (`game-init`, and so on).
-
-## Why it exists
-
-It adds clarification, a hand-off from design to engineering, and records you can verify. It does not silently turn a chat into a spec or a shippable build.
-
-## What you get
-
-- **Game-Init** (`game-init`): read-only analysis first; writes only after you confirm.
-- **Game-Design** (`game-design`): gameplay and numbers discussion; discussion is not the spec.
-- **Game-Producer** (`game-producer`): read-only status from real records; it must not auto-run user-only Matt skills.
-
-You start `setup-matt-pocock-skills`, `to-spec`, `to-tickets`, `implement`, and `code-review` yourself. Full index: [docs/skills/README.md](docs/skills/README.md).
-
-## Quick start
-
-1. Install the **full plugin** from the [installation guide](docs/installation/README.md).
-2. Confirm 28 skills are discovered.
-3. Run `setup-matt-pocock-skills` in the game repo.
-4. Run a **read-only** `game-init` pass before any write.
-
-Details: [docs/getting-started.md](docs/getting-started.md).
+This file is a condensed mirror of [README.md](README.md). The Chinese README is authoritative.
 
 ## Install
 
-Default distribution is the full plugin tarball on [Release v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2). The repo `dist/` copy is for comparison, not an unpublished fallback. A published Release is not the same as verified daily client installs.
-
-Install the **full plugin root** (`plugin/` after unpacking the Release tar): `skills/`, `internal/`, `records/`, `templates/`, `provenance/`, and licenses. Do not copy a single `SKILL.md`. Do not treat `npx skills@latest add ...` as a supported path (sibling directories are unverified).
-
-Chinese copy-one-line commands and the Agent install prompt live in [README.md](README.md) and [docs/installation/README.md](docs/installation/README.md).
-
-```sh
-grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz
-claude --plugin-dir <plugin-root>
-codex plugin add mygamestudio@personal
-grok plugin install <plugin-root> --trust
+```bash
+npx skills@latest add LC-86/MyGameStudio              # discover and pick skills
+npx skills@latest add LC-86/MyGameStudio --list       # list only, install nothing
+npx skills@latest add LC-86/MyGameStudio --skill '*'  # install the whole set (recommended)
 ```
 
-ZCode has **no verified one-line CLI** in current official plugin docs (UI: Settings → Plugins → Add marketplace). Do not invent `zcode plugins install`. Codex still needs `marketplace.json` `source.path` pointing at that full plugin root.
+The target directory is decided by the official CLI and by you. This repo ships no installer, publishes no npm package, builds no tarball, and maintains no per-client directory conversion.
 
-| Client | Guide | Real install of 2.0.2 |
-| --- | --- | --- |
-| Codex | [codex.md](docs/installation/codex.md) | Isolated CLI install verified; live session not verified |
-| ZCode | [zcode.md](docs/installation/zcode.md) | Not verified |
-| Grok Build | [grok-build.md](docs/installation/grok-build.md) | Not verified |
-| Claude Code | [claude-code.md](docs/installation/claude-code.md) | Not verified |
+Details: [docs/installation.md](docs/installation.md). Dependency combinations for partial installs: [docs/dependencies.md](docs/dependencies.md). Migrating from the 2.0.2 plugin package: [docs/migration-v3.md](docs/migration-v3.md).
 
-ZCode local marketplace needs `.zcode-plugin/plugin.json` and `marketplace.json`. Grok Build uses `~/.grok/plugins` or `--plugin-dir`. Claude Code uses `.claude-plugin/plugin.json`, `claude --plugin-dir`, and cache `~/.claude/plugins/cache`. Isolation checks must not write real user plugin directories.
+## The 20 skills
 
-## Typical workflow
+**User entries** start only when the user asks for that kind of work. **On-demand methods** are combined by the agent when the current task and authorization apply; the user can also request them directly.
 
-Map, not a mandatory pipeline: `game-init` → `game-design` as needed → you call `to-spec` / `to-tickets` / `implement`. `game-producer` is read-only status. See [workflows](docs/usage/workflows.md).
+The 8/12 split is an **instruction-layer convention** written into descriptions and bodies. Plain standard skill text has no cross-host enforcement power: this library uses no host-specific switch such as `disable-model-invocation`, so nothing stops a host from selecting a user entry on its own. If you need a harder boundary, restate it in your own project rules.
 
-## Examples
+| Skill | Upstream | Invocation | Responsibility |
+|---|---|---|---|
+| [ask-gamestudio](skills/ask-gamestudio/SKILL.md) | ask-matt | user entry | Read-only navigation: one next step worth taking now |
+| [setup-gamestudio](skills/setup-gamestudio/SKILL.md) | setup-matt-pocock-skills | user entry | Minimal project conventions, material entries, asset rules |
+| [grill-gamestudio](skills/grill-gamestudio/SKILL.md) | grill-me | user entry | One-line entry to a pure interview |
+| [grill-gamestudio-docs](skills/grill-gamestudio-docs/SKILL.md) | grill-with-docs | user entry | One-line entry to an interview that also maintains documents |
+| [tasks-gamestudio](skills/tasks-gamestudio/SKILL.md) | to-tickets | user entry | Split into complete small outcomes with real dependencies and acceptance owners |
+| [implement-gamestudio](skills/implement-gamestudio/SKILL.md) | implement | user entry | Implement the current work, organise checks, fixes and handover |
+| [wayfinder-gamestudio](skills/wayfinder-gamestudio/SKILL.md) | wayfinder | user entry | Map cross-session unknowns and decision relations |
+| [handoff-gamestudio](skills/handoff-gamestudio/SKILL.md) | handoff | user entry | Write a handover note the next session can actually use |
+| [grilling-gamestudio](skills/grilling-gamestudio/SKILL.md) | grilling | on demand | Round-by-round clarification of goals, rules, trade-offs, verification |
+| [domain-gamestudio](skills/domain-gamestudio/SKILL.md) | domain-modeling | on demand | Calibrate project vocabulary, keep necessary definitions and decision rationale |
+| [gdd-gamestudio](skills/gdd-gamestudio/SKILL.md) | new | on demand | Maintain the current overall game design and system relations |
+| [spec-gamestudio](skills/spec-gamestudio/SKILL.md) | to-spec | on demand | Capture this round of delivery and verification requirements |
+| [tdd-gamestudio](skills/tdd-gamestudio/SKILL.md) | tdd | on demand | Small-step test-first implementation on public behaviour interfaces |
+| [review-gamestudio](skills/review-gamestudio/SKILL.md) | code-review | on demand | Two-axis review of one actual deliverable: standards and spec |
+| [debug-gamestudio](skills/debug-gamestudio/SKILL.md) | diagnosing-bugs | on demand | Evidence-based diagnosis, authorized fix, re-verify in the original scenario |
+| [prototype-gamestudio](skills/prototype-gamestudio/SKILL.md) | prototype | on demand | Playable browser mini-game prototypes by default |
+| [research-gamestudio](skills/research-gamestudio/SKILL.md) | research | on demand | Research at the depth the question needs, with sources and limits |
+| [codebase-gamestudio](skills/codebase-gamestudio/SKILL.md) | codebase-design | on demand | Design responsibility, state ownership, interfaces and test seams |
+| [merge-gamestudio](skills/merge-gamestudio/SKILL.md) | resolving-merge-conflicts | on demand | Resolve conflicts that already happened, by both sides' real intent |
+| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | writing-for-agents | on demand | Shared writing method for all formal artifacts and subagent dispatch |
 
-[Existing-game change](examples/existing-game-change/README.md) and [first playable loop](examples/first-playable-loop/README.md). Expected text in those pages is illustrative unless a versioned check is cited.
+## How they compose
 
-## Limits
+Skills are composable methods, not one pipeline. Four distinct actions: **reading an artifact**, **using a method**, **delegating work**, **recommending a next step**. A skill name appearing in text does not mean it ran.
 
-Not an engine, asset studio, or store publisher. Game records are local Markdown or GitHub Issues only. `implement` leaves work uncommitted without commit authorization. Codex CLI 0.154.0 isolated `plugin add`/`remove` of 2.0.2 is verified on Linux. Live-session skill discovery and ZCode / Grok Build / Claude Code installs are **not verified**.
+`docs-gamestudio` is the shared writing method behind every formal artifact and every subagent dispatch: GDD, spec, tickets, glossary and decision records, research/test/review conclusions, handover notes, skills and project rules. Specialist skills decide the content; Docs keeps the expression faithful.
 
-## Relation to Matt
+Ownership of shared references and the dependency graph: [docs/dependencies.md](docs/dependencies.md).
 
-Independently maintained by LC-86, based on Matt Pocock skills 1.2.3 (`3cca18b368ae95cdbdebbff572ccafa662551015`). This is not an official Matt or host-vendor product. See [upstream.md](docs/reference/upstream.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+## What it does not do
 
-## Contributing and license
+No self-built task database, state machine, long-running dispatcher, or per-skill program runtime. No per-client plugin adapters, marketplace manifests, proprietary metadata or release pipeline. Loading a skill grants no permission: writing, uploading, paying, changing global config, committing and pushing all follow your actual request and the host's controls. It does not touch your other game projects' tasks, assets, saves or external storage.
 
-[CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md) · [LICENSE](LICENSE) (MIT for original work) · [CHANGELOG.md](CHANGELOG.md)
+## Verification status
 
-[AGENTS.md](AGENTS.md) is for maintainers of **this plugin repository**. Do not copy it into a user game project.
+Actually run and passing this round: 38 static checks, the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
+
+Installing from the remote repository source, pinned-tag installs, and discovery/invocation inside real hosts are **not run**. Per-item evidence, commands and limits are in [docs/validation-v3.md](docs/validation-v3.md).
+
+A successful local install is not a successful remote GitHub install. Source complete, local install passing, behaviour verified and remote published are four different states and never substitute for each other. Until the remote default branch carries this version, `npx skills@latest add LC-86/MyGameStudio` does not install 3.0.0.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Methods are adapted from Matt Pocock's skills, keeping his MIT license and attribution. Every skill directory carries its own `LICENSE` notice so a single-skill install still has complete license information. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Maintained independently by LC-86. Not endorsed by Matt Pocock or by any host vendor.

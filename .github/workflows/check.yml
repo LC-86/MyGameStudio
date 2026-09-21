@@ -1,27 +1,43 @@
-name: 文档与结构检查
+name: check
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
   pull_request:
 
 jobs:
-  check:
+  static:
+    name: 静态检查与文档导航
     runs-on: ubuntu-latest
     steps:
-      # 验收客户端旧新对照用 git show 读取基点提交中的旧 appserver_client.py。
-      # 默认 fetch-depth: 1 的浅克隆会缺少这些提交，导致 git show 以 128 失败。
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: 文档导航与链接
-        run: python3 scripts/validate-docs.py
-      - name: 产品化文档与许可
-        run: python3 -B tests/test_docs_product.py
-      - name: 多客户端结构
-        run: python3 -B tests/test_multi_client.py
-      - name: 插件包静态完整性
-        run: python3 -B tests/test_plugin_package.py
+          python-version: '3.12'
+
+      - name: 安装测试依赖
+        run: python -m pip install --upgrade pip pytest
+
+      - name: 技能布局与内容契约
+        run: python -m pytest tests/test_skills_layout.py tests/test_docs_product.py -q
+
+      - name: 文档导航、链接与版本一致性
+        run: python scripts/validate-docs.py
+
+  native-install:
+    name: 原生安装验证
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 隔离安装测试
+        env:
+          DO_NOT_TRACK: '1'
+          DISABLE_TELEMETRY: '1'
+          USE_NPX: '1'
+        run: bash scripts/install-smoke-test.sh

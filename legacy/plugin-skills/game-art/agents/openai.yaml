@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Art"
-  short_description: "显式调用的视觉资源制作、整理与验证入口"
-  default_prompt: "Use $game-art to produce or process visual assets for the current task."
-policy:
-  allow_implicit_invocation: false

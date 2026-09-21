@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Design"
-  short_description: "Discuss play, numbers, and experience for the current loop"
-  default_prompt: "Use $game-design to discuss play, numbers, or experience for the current game loop."
-policy:
-  allow_implicit_invocation: false

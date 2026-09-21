@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Build"
-  short_description: "显式调用的构建、运行与导出入口"
-  default_prompt: "Use $game-build to build or export the specified deliverable and launch the agreed entry."
-policy:
-  allow_implicit_invocation: false

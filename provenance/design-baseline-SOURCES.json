@@ -1,0 +1,960 @@
+{
+  "date": "2026-09-22",
+  "local_archives": [
+    {
+      "archive": "ask-gamestudio-draft.zip",
+      "sha256": "d306f3fd7d114ca0590cac532248b12c2bd9f1c8d4c4ef0d7df0c4002204b65b",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "setup-gamestudio-draft-v2.zip",
+      "sha256": "5e08756589de829d211ab04122b90b8da4730696f04bd3a4a9407c0c63cf06d0",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "gamestudio-gdd-spec-design-v1.zip",
+      "sha256": "485e788db61b37d1607cb8398719e1b63d2a78c8e6b95a62a9a719c12036d4ec",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "tasks-gamestudio-design-v1.zip",
+      "sha256": "5d0a6ec0c5b7f876bb5a104aa76f6fab99d4f7eaf51678a297804c8657e72b76",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "implement-gamestudio-design-v1.zip",
+      "sha256": "5a45d8edc6957397a65e6b9d838742f2cc96ffe233186128b3cf0a7c1d3f4727",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+      "sha256": "70df7e6561f81fa22605370c4a6bebb2b19082db53804c17c528fdaa6c1ab8fe",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "review-gamestudio-design-v1-confirmed.zip",
+      "sha256": "5755f71218cbe42511837fb3e97ad72b7bfd5881152b0a76380936b867c9746b",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "debug-gamestudio-design-v1-confirmed.zip",
+      "sha256": "b2f78291f56297f8e41680a0a651286093c33529902e479dcd1f63eb336ea2e8",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+      "sha256": "34c30c49eb80ffe19c679b0df1861ca99232e2f64f1724573225e1aca5ea5700",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "research-gamestudio-design-v2-confirmed.zip",
+      "sha256": "3d111b5fe477c9d40255e779b26e876e6dad8cd8b12a6a755dffc2fa4b25e0b8",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "wayfinder-gamestudio-design-v1-confirmed.zip",
+      "sha256": "b7e2cf0c3660eeb013ffd2984ba30e739bca617817db833fee43cd12f9e35981",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "handoff-gamestudio-design-v1.zip",
+      "sha256": "ef11fe4b7037291306c1ea811d9b96b047d02f9cfa1c93930efcce48954841c3",
+      "matches_previous_audit": true,
+      "crc_error": null
+    },
+    {
+      "archive": "gamestudio-core-methods-design-v1.zip",
+      "sha256": "7c2c22cd313ace81f9ed79fec1674de1855d2fd0732b10db41e960d384a0712c",
+      "matches_previous_audit": true,
+      "crc_error": null
+    }
+  ],
+  "logical_skill_files": [
+    {
+      "path": "ask-gamestudio/SKILL.md",
+      "sha256": "e9754fdccad0c6619e5a144e4527a523f35b3fc7ee8af79eff5e5e0f5571ecb3",
+      "sources": [
+        {
+          "archive": "ask-gamestudio-draft.zip",
+          "path": "ask-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "ask-gamestudio/agents/openai.yaml",
+      "sha256": "bbfb7faa3ecef44da1a37d0ba2a14ab6aeca20cccf473e523fe590ca96d616f6",
+      "sources": [
+        {
+          "archive": "ask-gamestudio-draft.zip",
+          "path": "ask-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "codebase-gamestudio/SKILL.md",
+      "sha256": "e04967ced443dff3e59296c451d267e16324ea4d2495cb7899151579bcaf1a34",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/codebase-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "codebase-gamestudio/agents/openai.yaml",
+      "sha256": "cc7fea4b03ca729183018b49351335cafa946d14d2a3c7ba34260d8e45ddf595",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/codebase-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "codebase-gamestudio/references/game-structure.md",
+      "sha256": "6908c93f834003aec83d4e6f5cc3e12404468808c2c94f9fb0570763cd980ff0",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/codebase-gamestudio/references/game-structure.md"
+        }
+      ]
+    },
+    {
+      "path": "debug-gamestudio/SKILL.md",
+      "sha256": "f38a8c04f48e878e7f9f13ac4fd2a6535f65922478e509b8debf094825a16f73",
+      "sources": [
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/debug-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "debug-gamestudio/agents/openai.yaml",
+      "sha256": "f0ff49b279880322544d732206943ecde43f39889984189931164b23d3d2a0b8",
+      "sources": [
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/debug-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "debug-gamestudio/references/feedback-evidence.md",
+      "sha256": "dd40e6a95f653716d7fc362632a8d07b2fe6be488ac6daaabf390c403bacde26",
+      "sources": [
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/debug-gamestudio/references/feedback-evidence.md"
+        }
+      ]
+    },
+    {
+      "path": "debug-gamestudio/references/game-debugging.md",
+      "sha256": "1b717852faca49fb8df1ed9d564e39c3b9c9e376f0bb05e30824b010455c6d4a",
+      "sources": [
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/debug-gamestudio/references/game-debugging.md"
+        }
+      ]
+    },
+    {
+      "path": "docs-gamestudio/SKILL.md",
+      "sha256": "1ab196c642b6b1de065b50626caeab3b5c31750b34320b7ac95fc59d5b81127b",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/docs-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "docs-gamestudio/agents/openai.yaml",
+      "sha256": "ab6b5964310449679c7c3fd6dc869e593e015e84a4bb2fdb8359c85d5af00a49",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/docs-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "docs-gamestudio/references/skill-authoring.md",
+      "sha256": "19afafca71e2c1da359e86009bb2865261acf7747286720be99a042a6eab3374",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/docs-gamestudio/references/skill-authoring.md"
+        }
+      ]
+    },
+    {
+      "path": "domain-gamestudio/SKILL.md",
+      "sha256": "7360a14dda0ad8b24289a51169e9dfd328eeed9bcfcf2416e70c116b264a5bd6",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/domain-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "domain-gamestudio/agents/openai.yaml",
+      "sha256": "a884a4c27d4e5c2d78f2402693fa3353546529a2fe630f1b5bd57a82fab90db5",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/domain-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "domain-gamestudio/references/ADR-FORMAT.md",
+      "sha256": "f849170da179591a79e8270ad0293eb7df39295bad9d0ace4fcb588ed80b92d4",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/domain-gamestudio/references/ADR-FORMAT.md"
+        }
+      ]
+    },
+    {
+      "path": "domain-gamestudio/references/CONTEXT-FORMAT.md",
+      "sha256": "d4bba01ed81d10b25ec39d5f9b4ccb977dd99bb6ad57c81ffe0fea58abb50665",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/domain-gamestudio/references/CONTEXT-FORMAT.md"
+        }
+      ]
+    },
+    {
+      "path": "gdd-gamestudio/SKILL.md",
+      "sha256": "c913ee2ac540156020f433182d4f09df3e635833eaac3eb79e06c7ba63cc8461",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/gdd-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "gdd-gamestudio/agents/openai.yaml",
+      "sha256": "58e48729468fd92fdef467ef260faf0c095602aae59fc8052db9b95ed92e2bc9",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/gdd-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "gdd-gamestudio/references/document-routing.md",
+      "sha256": "106de18279134811ddd00ba455a12d07ea73b659a6d88654aed669dde5dd4605",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/gdd-gamestudio/references/document-routing.md"
+        }
+      ]
+    },
+    {
+      "path": "gdd-gamestudio/references/gdd-writing.md",
+      "sha256": "6326071473a5b2e66e743f83e8d240beffcd3ab2d1d3796d470fd22f4cb9fd7e",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/gdd-gamestudio/references/gdd-writing.md"
+        }
+      ]
+    },
+    {
+      "path": "grill-gamestudio-docs/SKILL.md",
+      "sha256": "ae78780d6443844665f404d19fcb7940ea7341154e249ca45e7faea048db2d99",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grill-gamestudio-docs/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "grill-gamestudio-docs/agents/openai.yaml",
+      "sha256": "bdd3929bd3c47fa59a380c33c03752078041749531419eed684c25ec32f10702",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grill-gamestudio-docs/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "grill-gamestudio/SKILL.md",
+      "sha256": "88ea05708ccf4ee33b98c4ac3cd03c04a1c63b63a8f0f503aefa3daa79785c6f",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grill-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "grill-gamestudio/agents/openai.yaml",
+      "sha256": "fbf6fe8f9f33bcb31d29ee9aaf49ba02ff75abb68f99c329bc8e249c38e5c119",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grill-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "grilling-gamestudio/SKILL.md",
+      "sha256": "7c6fea2cb0490527087283cb881835daa9382370d230649a6de16772ed663f40",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grilling-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "grilling-gamestudio/agents/openai.yaml",
+      "sha256": "9fe15583e81b687dc70ea42c88a529d2519bc2fb9504877f523eb4514cde847e",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grilling-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "grilling-gamestudio/references/game-questioning.md",
+      "sha256": "e4c7e3d5dd1ce5098afc133302a7077cac8baf53d42573a2fda3145a39776279",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grilling-gamestudio/references/game-questioning.md"
+        }
+      ]
+    },
+    {
+      "path": "handoff-gamestudio/SKILL.md",
+      "sha256": "d0efe1fd915eb09682e7dc0bce5e83aa61ed486f79121b286751d008bcf48429",
+      "sources": [
+        {
+          "archive": "handoff-gamestudio-design-v1.zip",
+          "path": "handoff-gamestudio-design-v1/skills/handoff-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "handoff-gamestudio/agents/openai.yaml",
+      "sha256": "9cb5d62c6e58e579b3058f90bc216bd75dc550e56e3bb965dfbfb26c3dee1d4b",
+      "sources": [
+        {
+          "archive": "handoff-gamestudio-design-v1.zip",
+          "path": "handoff-gamestudio-design-v1/skills/handoff-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "handoff-gamestudio/references/game-handoff.md",
+      "sha256": "f73922ec9903acd00ea5bbae5c232121655f22629bda2aadbed4691f8d505352",
+      "sources": [
+        {
+          "archive": "handoff-gamestudio-design-v1.zip",
+          "path": "handoff-gamestudio-design-v1/skills/handoff-gamestudio/references/game-handoff.md"
+        }
+      ]
+    },
+    {
+      "path": "implement-gamestudio/SKILL.md",
+      "sha256": "f2492d4bed35362a6c1b87b39eb5e6f67df43e0bb7c172714471cb5051d794b5",
+      "sources": [
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/implement-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "implement-gamestudio/agents/openai.yaml",
+      "sha256": "9744a953571fab24375cc5d4f97ebbecdc86e356af385de84f6de375896a5e38",
+      "sources": [
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/implement-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "merge-gamestudio/SKILL.md",
+      "sha256": "00eb680cb357440850268bf707157fe8d28d08a5cb3161d87fe4dcdef0baa435",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/merge-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "merge-gamestudio/agents/openai.yaml",
+      "sha256": "b9881d00ba68e4955afc61c88a4736940f3e9d00b51e82065f52a4a0d4de1ece",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/merge-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "merge-gamestudio/references/game-conflicts.md",
+      "sha256": "fe2a068512982cc8ba9f74ba70606144b97adc7e3d9e3136e8195d59ab79a11b",
+      "sources": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/merge-gamestudio/references/game-conflicts.md"
+        }
+      ]
+    },
+    {
+      "path": "prototype-gamestudio/SKILL.md",
+      "sha256": "e0ab53efb9a0471ac16b9baa67b752c939e054942b4396aff1ff2458b5c53a9b",
+      "sources": [
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/prototype-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "prototype-gamestudio/agents/openai.yaml",
+      "sha256": "dddc6f7f3c3ad13d4d0f64f0603abde733c653f11c962ba516929ea6c5e1410d",
+      "sources": [
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/prototype-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "prototype-gamestudio/references/evidence-and-handoff.md",
+      "sha256": "939b63723d41347faa8e0c581a3a0e566d328bff69fff0e3b24a99962d239bf5",
+      "sources": [
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/prototype-gamestudio/references/evidence-and-handoff.md"
+        }
+      ]
+    },
+    {
+      "path": "prototype-gamestudio/references/prototype-shapes.md",
+      "sha256": "3141520feec9dd42e23eea08badc7e40efefa8305fa834e46f8f2a0e930a913f",
+      "sources": [
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/prototype-gamestudio/references/prototype-shapes.md"
+        }
+      ]
+    },
+    {
+      "path": "research-gamestudio/SKILL.md",
+      "sha256": "544cc94f69be8f8ea4fa61a7b7a1e66638f1b943d9c273120ffa8720e69363d0",
+      "sources": [
+        {
+          "archive": "research-gamestudio-design-v2-confirmed.zip",
+          "path": "research-gamestudio-design-v2-confirmed/skills/research-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "research-gamestudio/agents/openai.yaml",
+      "sha256": "797b8c6e040c18215689bbf6b31f89d6aed559497003c15ab756321910f4d281",
+      "sources": [
+        {
+          "archive": "research-gamestudio-design-v2-confirmed.zip",
+          "path": "research-gamestudio-design-v2-confirmed/skills/research-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "research-gamestudio/references/game-research.md",
+      "sha256": "3067f9ff1d743a13d4c659e5f84c3793caef87f1c653b81cecfb4ae211e98693",
+      "sources": [
+        {
+          "archive": "research-gamestudio-design-v2-confirmed.zip",
+          "path": "research-gamestudio-design-v2-confirmed/skills/research-gamestudio/references/game-research.md"
+        }
+      ]
+    },
+    {
+      "path": "research-gamestudio/references/research-strategy.md",
+      "sha256": "de9c66c9b63f804e6aeb8607a4b9dd3eb59b809360553e0a6027274125df6bc1",
+      "sources": [
+        {
+          "archive": "research-gamestudio-design-v2-confirmed.zip",
+          "path": "research-gamestudio-design-v2-confirmed/skills/research-gamestudio/references/research-strategy.md"
+        }
+      ]
+    },
+    {
+      "path": "review-gamestudio/SKILL.md",
+      "sha256": "0b085cb313288a866e3eed4cb2b7288b425f06ec5c7a3fcdd3036f52830fef97",
+      "sources": [
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/review-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "review-gamestudio/agents/openai.yaml",
+      "sha256": "e83108c366c45b167ebdfd7ba92ddec450d2f409c240ce9d9b4c29b8dd873b77",
+      "sources": [
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/review-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "review-gamestudio/references/axis-briefs.md",
+      "sha256": "0b315c3d45fbb0abcb8faa52872fd3349623727cf4255171c1ac5318c0dda918",
+      "sources": [
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/review-gamestudio/references/axis-briefs.md"
+        }
+      ]
+    },
+    {
+      "path": "review-gamestudio/references/game-review.md",
+      "sha256": "8f3ec431bbf65982566c8e7484c071d93031c2ef1267fba944d6d6eeea234c30",
+      "sources": [
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/review-gamestudio/references/game-review.md"
+        }
+      ]
+    },
+    {
+      "path": "review-gamestudio/references/review-input.md",
+      "sha256": "4fba7c6efeb334d241844610e1b1ef48c0170c94b2e6ffda63114be461a2a072",
+      "sources": [
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/review-gamestudio/references/review-input.md"
+        }
+      ]
+    },
+    {
+      "path": "review-gamestudio/references/standards.md",
+      "sha256": "6db28ebfe04fe47f6bb09bf6d0efbbc1844673fd3c181d706a919b54e8fa61c5",
+      "sources": [
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/review-gamestudio/references/standards.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/SKILL.md",
+      "sha256": "4e70a10d837674a24c930b43d744b4b188b83f32a69042c0de0dc17cdc566ec2",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/SOURCES.md",
+      "sha256": "7984c99358c59fd32d47d31dde1d408a42df397c78252b76c5acd15f2bae9a84",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/SOURCES.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/UPDATE-NOTES.md",
+      "sha256": "63ed284239bc28154f0cff028821884a375c659ce2ff3e41fa19dc513d7dec90",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/UPDATE-NOTES.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/UPSTREAM-LICENSE.txt",
+      "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/UPSTREAM-LICENSE.txt"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/agents/openai.yaml",
+      "sha256": "71ef56dd7ead13595cb22b40a2f55777707e5910438d9b307e08791fdfd0c91b",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/templates/assets.md",
+      "sha256": "0c185043b61cc52493e2293c2e357c28a9ec3334efd17129e09a37269ac03edb",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/templates/assets.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/templates/domain.md",
+      "sha256": "1690250a55f7dd148f09ad6e10b48c4f805f077ed179f368d8cd9480fbe1d47a",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/templates/domain.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/templates/game.md",
+      "sha256": "38298a55ebfb14a874669ba27663a0d6cbba563d4c618210ad2021ae0da4e5b4",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/templates/game.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/templates/issue-tracker.md",
+      "sha256": "119d8857933d5789668eccf6057d6b5b33b31c49c1ce06f0e35afd590fba6a59",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/templates/issue-tracker.md"
+        }
+      ]
+    },
+    {
+      "path": "setup-gamestudio/templates/triage-labels.md",
+      "sha256": "04b2711388f33b2b4e95571263acf1adaf68127dfe0748029dd4355b679ae67f",
+      "sources": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/templates/triage-labels.md"
+        }
+      ]
+    },
+    {
+      "path": "spec-gamestudio/SKILL.md",
+      "sha256": "8fd75478c907be1a2faf517daebc70a9a6bcade6e39bff3773a6a790912d356c",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/spec-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "spec-gamestudio/agents/openai.yaml",
+      "sha256": "d7688d4cf93936ed8008c65ae0b1800061298400581402a7a39ccc479c22f8f6",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/spec-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "spec-gamestudio/references/spec-writing.md",
+      "sha256": "afaf244cb09b698db0f29e85a11489b3224c16e76fe8d895136dc53ea3984118",
+      "sources": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/spec-gamestudio/references/spec-writing.md"
+        }
+      ]
+    },
+    {
+      "path": "tasks-gamestudio/SKILL.md",
+      "sha256": "f259b29c504c394c9266792c137a89666d1dc9e84585e1798e19d5b0227e53f2",
+      "sources": [
+        {
+          "archive": "tasks-gamestudio-design-v1.zip",
+          "path": "tasks-gamestudio-design-v1/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/tasks-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "tasks-gamestudio/agents/openai.yaml",
+      "sha256": "394d7a6137e834a523e28d7f8b0d882cb46657d6a3373af76db2163e703255be",
+      "sources": [
+        {
+          "archive": "tasks-gamestudio-design-v1.zip",
+          "path": "tasks-gamestudio-design-v1/skills/tasks-gamestudio/agents/openai.yaml"
+        },
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/tasks-gamestudio/agents/openai.yaml"
+        },
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/agents/openai.yaml"
+        },
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/agents/openai.yaml"
+        },
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/tasks-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "tasks-gamestudio/references/game-delivery.md",
+      "sha256": "aaa0a70a2dd3a139ba9bcebdbaee2ff9c5df36f36a928cda80026f5186e49661",
+      "sources": [
+        {
+          "archive": "tasks-gamestudio-design-v1.zip",
+          "path": "tasks-gamestudio-design-v1/skills/tasks-gamestudio/references/game-delivery.md"
+        },
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/tasks-gamestudio/references/game-delivery.md"
+        },
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/references/game-delivery.md"
+        },
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/references/game-delivery.md"
+        },
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/tasks-gamestudio/references/game-delivery.md"
+        }
+      ]
+    },
+    {
+      "path": "tasks-gamestudio/references/task-responsibility.md",
+      "sha256": "4dfcf378fd3cb588702b2266c5e703bfbc3f70ebda65a25bcf4883caf0be11dc",
+      "sources": [
+        {
+          "archive": "tasks-gamestudio-design-v1.zip",
+          "path": "tasks-gamestudio-design-v1/skills/tasks-gamestudio/references/task-responsibility.md"
+        },
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/tasks-gamestudio/references/task-responsibility.md"
+        },
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/references/task-responsibility.md"
+        },
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/references/task-responsibility.md"
+        },
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/tasks-gamestudio/references/task-responsibility.md"
+        }
+      ]
+    },
+    {
+      "path": "tdd-gamestudio/SKILL.md",
+      "sha256": "4db5c00bdbe1d424343f59f6bee7b5a2ce7b3808e6f69d93b46ff957c7b07a4a",
+      "sources": [
+        {
+          "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+          "path": "tdd-gamestudio-design-v1-confirmed/skills/tdd-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "tdd-gamestudio/agents/openai.yaml",
+      "sha256": "52f0519684e364d9e11795971f8593cd699c75e998ce0cb30b37d36e22c2061d",
+      "sources": [
+        {
+          "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+          "path": "tdd-gamestudio-design-v1-confirmed/skills/tdd-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "tdd-gamestudio/mocking.md",
+      "sha256": "ca3c791ffe7b399631bfe8df45f4de1e3e7572d2d8ad9fb35e12b970b3a9a727",
+      "sources": [
+        {
+          "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+          "path": "tdd-gamestudio-design-v1-confirmed/skills/tdd-gamestudio/mocking.md"
+        }
+      ]
+    },
+    {
+      "path": "tdd-gamestudio/references/game-testing.md",
+      "sha256": "2e6d5c94348f67aaefd1d6ce03c6ffe6b56a10ef3d4c4b2677dec06d6befe1c2",
+      "sources": [
+        {
+          "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+          "path": "tdd-gamestudio-design-v1-confirmed/skills/tdd-gamestudio/references/game-testing.md"
+        }
+      ]
+    },
+    {
+      "path": "tdd-gamestudio/tests.md",
+      "sha256": "80c157c0a167691ae87ce3df3564b5659618739519948345ff6bf65c5b41c57e",
+      "sources": [
+        {
+          "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+          "path": "tdd-gamestudio-design-v1-confirmed/skills/tdd-gamestudio/tests.md"
+        }
+      ]
+    },
+    {
+      "path": "wayfinder-gamestudio/SKILL.md",
+      "sha256": "093b3f97928573802d3c63e2e82d0723adeda688f970a11f77c7568c6ff180e5",
+      "sources": [
+        {
+          "archive": "wayfinder-gamestudio-design-v1-confirmed.zip",
+          "path": "wayfinder-gamestudio-design-v1-confirmed/skills/wayfinder-gamestudio/SKILL.md"
+        }
+      ]
+    },
+    {
+      "path": "wayfinder-gamestudio/agents/openai.yaml",
+      "sha256": "e9c1415445f56c39bdae38bcf621756c60d6046a738ce4ab7313282041c42e5e",
+      "sources": [
+        {
+          "archive": "wayfinder-gamestudio-design-v1-confirmed.zip",
+          "path": "wayfinder-gamestudio-design-v1-confirmed/skills/wayfinder-gamestudio/agents/openai.yaml"
+        }
+      ]
+    },
+    {
+      "path": "wayfinder-gamestudio/references/decision-map.md",
+      "sha256": "2b55134f31b764d10e9979b022ee6e6958b341b9e63046409c2f015b0728ba29",
+      "sources": [
+        {
+          "archive": "wayfinder-gamestudio-design-v1-confirmed.zip",
+          "path": "wayfinder-gamestudio-design-v1-confirmed/skills/wayfinder-gamestudio/references/decision-map.md"
+        }
+      ]
+    },
+    {
+      "path": "wayfinder-gamestudio/references/game-decisions.md",
+      "sha256": "a46fb7cbc31587443422f0652c0155a3958d2815a227a3f339b1d939614e5f17",
+      "sources": [
+        {
+          "archive": "wayfinder-gamestudio-design-v1-confirmed.zip",
+          "path": "wayfinder-gamestudio-design-v1-confirmed/skills/wayfinder-gamestudio/references/game-decisions.md"
+        }
+      ]
+    }
+  ],
+  "prior_audit_evidence": [
+    {
+      "file": "previous-audit.md",
+      "sha256": "3437a89b1d14f89e8e87fd3ff2a0812db814bc6157acbcc617fe6ecdde0dbd12"
+    },
+    {
+      "file": "previous-static-audit.json",
+      "sha256": "516b30beeffe24b29434c52c09547bea0242ca5b80388536707bbf8bfdd4f6e0"
+    }
+  ],
+  "external_primary_sources": [
+    {
+      "id": "W1",
+      "title": "Agent Skills Specification",
+      "url": "https://agentskills.io/specification",
+      "checked_on": "2026-09-22",
+      "role": "Host/format facts only; not evidence that project behavior tests have passed."
+    },
+    {
+      "id": "W2",
+      "title": "Claude Code Skills",
+      "url": "https://code.claude.com/docs/en/skills",
+      "checked_on": "2026-09-22",
+      "role": "Host/format facts only; not evidence that project behavior tests have passed."
+    },
+    {
+      "id": "W3",
+      "title": "OpenAI Build Skills",
+      "url": "https://developers.openai.com/zh-Hans/docs/build-skills",
+      "checked_on": "2026-09-22",
+      "role": "Host/format facts only; not evidence that project behavior tests have passed."
+    },
+    {
+      "id": "W4",
+      "title": "Claude Code Subagents",
+      "url": "https://code.claude.com/docs/en/sub-agents",
+      "checked_on": "2026-09-22",
+      "role": "Host/format facts only; not evidence that project behavior tests have passed."
+    },
+    {
+      "id": "W5",
+      "title": "OpenAI Package Plugins",
+      "url": "https://developers.openai.com/zh-Hans/plugins/build/plugins",
+      "checked_on": "2026-09-22",
+      "role": "Host/format facts only; not evidence that project behavior tests have passed."
+    },
+    {
+      "id": "W6",
+      "title": "OpenAI Build and Test Skills",
+      "url": "https://developers.openai.com/zh-Hans/plugins/build/skills",
+      "checked_on": "2026-09-22",
+      "role": "Host/format facts only; not evidence that project behavior tests have passed."
+    }
+  ],
+  "matt_reference_baseline": {
+    "repository": "LC-86/mattpocockskills",
+    "commit": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+    "formal_skill_baseline": 25
+  },
+  "matt_reference_note": "本次主要汇总所提供草案与对话。原版定位继承前次固定提交对照，不宣称本次重新获取和逐条语义审查全部原版技能。",
+  "conversation_precedence": "最新用户决定优先于早期候选方案；Docs广泛写作范围体现在总设计，尚未写回旧SKILL文件。"
+}

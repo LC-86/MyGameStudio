@@ -1,3 +1,13 @@
+## 技能源码布局
+
+本仓库是原生 Agent Skills 技能库。20 项技能各只有一份权威源码，位于 `skills/<技能名>/SKILL.md`，其 `references/`、`templates/` 与 `LICENSE` 通知都在该技能目录内。不要建立第二份技能正文副本、根目录聚合 `SKILL.md`，或 `skills/` 之外的任何 `SKILL.md`（测试夹具放在临时目录）：官方 `skills` CLI 会发现发布树中的每一个 `SKILL.md`。
+
+frontmatter 只使用标准字段：`name`、`description`、`license`，确有需要时用 `compatibility` 或 `metadata`。不要添加 `disable-model-invocation`、`allow_implicit_invocation`、`argument-hint`、`allowed-tools` 或任何 `agents/<宿主>.yaml`。8 个用户入口与 12 个按需方法是指令层边界，写在描述与正文里，不由宿主强制。
+
+共享参考只有一个所有者：写作方法、文档分流与子代理委派归 `docs-gamestudio`；人机责任与验收交接归 `tasks-gamestudio`。消费者用同级相对路径引用，不保留第二份可独立改写的副本。
+
+改动 `skills/` 或文档后运行 `python3.12 -m pytest tests/ -q` 与 `python3.12 scripts/validate-docs.py`。静态检查不替代行为验证；实际结果记录在 `docs/validation-v3.md`，没有运行的一律标为未运行。
+
 ## Agent 技能
 
 ### 议题追踪器

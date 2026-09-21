@@ -1,0 +1,565 @@
+{
+  "title": "MyGameStudio 统一设计方案",
+  "design_version": "1.0-consolidated",
+  "date": "2026-09-22",
+  "artifact_type": "design_summary_not_installable_plugin",
+  "scope_note": "整合已确认决定和最新设计修正。不是20项均已逐项批准，也不是已通过行为验收。此清单不由插件作为运行时注册表读取。",
+  "matt_baseline": {
+    "repository": "LC-86/mattpocockskills",
+    "commit": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+    "formal_skill_baseline": 25
+  },
+  "counts": {
+    "selected_design_scope": 20,
+    "explicitly_confirmed_design": 17,
+    "selected_additional_designs": 3,
+    "explicit_entries": 8,
+    "on_demand_methods": 12,
+    "mapped_matt_skills": 19,
+    "new_skills": 1,
+    "remaining_matt_not_in_v1": 6,
+    "legacy_dispositions_pending": 3
+  },
+  "skills": [
+    {
+      "index": 1,
+      "name": "ask-gamestudio",
+      "matt_original": "ask-matt",
+      "matt_path": "skills/engineering/ask-matt/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "导航",
+      "purpose": "当前下一步，用哪个技能做哪一件事。",
+      "inputs": "当前目标、已知进展、必要的只读资料与实际可用技能。",
+      "outputs": "一个下一步、推荐理由、完成标志和可直接发送的指令；只缺人工行动时直接指出该行动。",
+      "boundary": "只读判断；不自动调用下游执行入口，不全面盘点项目，不给用户一长串候选。",
+      "key_detail": "推荐仍需当前环境确认可用；需要继续原技能时不强行换路。",
+      "current_source": [
+        {
+          "archive": "ask-gamestudio-draft.zip",
+          "path": "ask-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "e9754fdccad0c6619e5a144e4527a523f35b3fc7ee8af79eff5e5e0f5571ecb3",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 2,
+      "name": "setup-gamestudio",
+      "matt_original": "setup-matt-pocock-skills",
+      "matt_path": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "项目约定",
+      "purpose": "补齐最少协作配置、资料入口和资源管理约定。",
+      "inputs": "当前工程、现有入口规则、任务来源、领域资料和资源管理方式。",
+      "outputs": "最小必要的文档与引用更新；明确同一配置的权威来源。",
+      "boundary": "不是引擎初始化、资源制作、备份执行或历史迁移；忽略/LFS配置只有另获授权才修改。",
+      "key_detail": "重复执行无变化则不改文件；规则就绪、备份完成与恢复验证分开报告。",
+      "current_source": [
+        {
+          "archive": "setup-gamestudio-draft-v2.zip",
+          "path": "setup-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "4e70a10d837674a24c930b43d744b4b188b83f32a69042c0de0dc17cdc566ec2",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 3,
+      "name": "grilling-gamestudio",
+      "matt_original": "grilling",
+      "matt_path": "skills/productivity/grilling/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "提问方法",
+      "purpose": "按问题依赖分轮澄清当前目标、取舍和验证方式。",
+      "inputs": "当前对话、已确认决定、相关事实和按需专业参考。",
+      "outputs": "共同理解、明确决定和仍待调查或验证的问题。",
+      "boundary": "事实自己查；用户保留的重要决定不代答；普通清晰任务不启动完整访谈。",
+      "key_detail": "知识发现歧义与反例，不强制类型问卷；文档协作模式才持续落盘。",
+      "current_source": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grilling-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "7c6fea2cb0490527087283cb881835daa9382370d230649a6de16772ed663f40",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 4,
+      "name": "domain-gamestudio",
+      "matt_original": "domain-modeling",
+      "matt_path": "skills/engineering/domain-modeling/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "共同语言",
+      "purpose": "校准项目概念并保存值得复用的定义及重要决策理由。",
+      "inputs": "当前用语、既有词表、相关设计和实际实现。",
+      "outputs": "一两句话的必要定义；符合条件的简短决策记录。",
+      "boundary": "不是聊天日志、完整规则库或行业百科；不自动重命名代码。",
+      "key_detail": "只记离开对话后会被合理误解并影响后续工作的概念；数值和完整规则另有去处。",
+      "current_source": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/domain-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "7360a14dda0ad8b24289a51169e9dfd328eeed9bcfcf2416e70c116b264a5bd6",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 5,
+      "name": "grill-gamestudio",
+      "matt_original": "grill-me",
+      "matt_path": "skills/productivity/grill-me/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "纯讨论入口",
+      "purpose": "一句话启动访谈方法。",
+      "inputs": "用户希望澄清的问题。",
+      "outputs": "grilling-gamestudio 的讨论结果。",
+      "boundary": "默认不维护项目文档；入口不重复访谈规则。",
+      "key_detail": "正文仅调用 grilling-gamestudio。",
+      "current_source": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grill-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "88ea05708ccf4ee33b98c4ac3cd03c04a1c63b63a8f0f503aefa3daa79785c6f",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 6,
+      "name": "grill-gamestudio-docs",
+      "matt_original": "grill-with-docs",
+      "matt_path": "skills/engineering/grill-with-docs/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "带文档讨论入口",
+      "purpose": "在一场问答中按需维护术语、GDD和spec。",
+      "inputs": "当前问题、可写项目范围及已有资料。",
+      "outputs": "边讨论边局部保存的共识，以及未决项。",
+      "boundary": "只表达组合意图；不重复底层方法，不自动制作或发布实现任务。",
+      "key_detail": "正文一句话组合 grilling/domain，并在决定明确后按需使用 gdd/spec。",
+      "current_source": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/grill-gamestudio-docs/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "ae78780d6443844665f404d19fcb7940ea7341154e249ca45e7faea048db2d99",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 7,
+      "name": "gdd-gamestudio",
+      "matt_original": null,
+      "matt_path": null,
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "整体游戏设计",
+      "purpose": "生成并持续维护整款游戏及相关系统的现行设计。",
+      "inputs": "已采纳决定、相关资料、已有GDD；明确请求时也可提出候选方案。",
+      "outputs": "完整策划或局部章节修订，体现体验、行为、系统、内容与表现的关系。",
+      "boundary": "候选不是已采纳；整理不自动作重要设计决定；不批量拆票或开工。",
+      "key_detail": "以当前范围判断完整；与spec互调只处理明确差异，已处理则返回。",
+      "current_source": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/gdd-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "c913ee2ac540156020f433182d4f09df3e635833eaac3eb79e06c7ba63cc8461",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 8,
+      "name": "spec-gamestudio",
+      "matt_original": "to-spec",
+      "matt_path": "skills/engineering/to-spec/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "工作规格",
+      "purpose": "将本次工作的要求整理成具体交付与验证依据。",
+      "inputs": "对话、任务、相关GDD、现有工程及已确认约束。",
+      "outputs": "具体行为、条件、数值、例外、交付、验证及不在范围内的内容。",
+      "boundary": "不重开完整访谈；不从实现反推要求；保存不等于可实施，更不等于已授权实施。",
+      "key_detail": "可以在讨论中形成同一份草稿并增量补齐；新设计按授权更新GDD。",
+      "current_source": [
+        {
+          "archive": "gamestudio-gdd-spec-design-v1.zip",
+          "path": "gamestudio-design-collaboration-v1/skills/spec-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "8fd75478c907be1a2faf517daebc70a9a6bcade6e39bff3773a6a790912d356c",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 9,
+      "name": "tasks-gamestudio",
+      "matt_original": "to-tickets",
+      "matt_path": "skills/engineering/to-tickets/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "任务拆分",
+      "purpose": "按完整小成果拆任务，明确依赖、验收责任和交接。",
+      "inputs": "已经明确的spec、GDD局部、计划或当前对话。",
+      "outputs": "一票一成果及具体检查；需要人工的条目清楚标识。",
+      "boundary": "不新建必填任务类型；不默认按代码/UI/美术横向拆散；不自动执行。",
+      "key_detail": "ready-for-agent/human表示下一执行段；依赖、当前进度和最终验收另看真实记录。",
+      "current_source": [
+        {
+          "archive": "tasks-gamestudio-design-v1.zip",
+          "path": "tasks-gamestudio-design-v1/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/tasks-gamestudio/SKILL.md"
+        },
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/tasks-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "f259b29c504c394c9266792c137a89666d1dc9e84585e1798e19d5b0227e53f2",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 10,
+      "name": "implement-gamestudio",
+      "matt_original": "implement",
+      "matt_path": "skills/engineering/implement/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "执行交付",
+      "purpose": "实现本次已明确工作并组织验证、修复和交接。",
+      "inputs": "实际任务、spec或已确认的小范围对话，以及权限与责任。",
+      "outputs": "工程/资源/内容成果、实际检查、评审处理和准确完成或交接结果。",
+      "boundary": "不重设计、偷改规格、自动领取下一票；提交/推送/关单分别需要条件与授权。",
+      "key_detail": "可用TDD、Codebase、Debug和Review；有人工条目先完成Agent部分后交接。",
+      "current_source": [
+        {
+          "archive": "implement-gamestudio-design-v1.zip",
+          "path": "implement-gamestudio-design-v1/skills/implement-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "f2492d4bed35362a6c1b87b39eb5e6f67df43e0bb7c172714471cb5051d794b5",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 11,
+      "name": "tdd-gamestudio",
+      "matt_original": "tdd",
+      "matt_path": "skills/engineering/tdd/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "测试先行",
+      "purpose": "针对明确行为用独立预期和小步测试驱动实现。",
+      "inputs": "已经确定的行为、正常调用入口及验证要求。",
+      "outputs": "有效测试、最小实现、红绿结果与覆盖限制。",
+      "boundary": "不代替整体游戏验收；不以环境报错假称目标测试失败；不编造红灯。",
+      "key_detail": "允许绿灯后必要局部整理；游戏时间/随机/状态/引擎条件按需保留。",
+      "current_source": [
+        {
+          "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+          "path": "tdd-gamestudio-design-v1-confirmed/skills/tdd-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "4db5c00bdbe1d424343f59f6bee7b5a2ce7b3808e6f69d93b46ff957c7b07a4a",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 12,
+      "name": "review-gamestudio",
+      "matt_original": "code-review",
+      "matt_path": "skills/engineering/code-review/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "成果评审",
+      "purpose": "对同一份实际成果分别检查规范和需求符合性。",
+      "inputs": "范围、基线、完整待交付材料、适用规范与已确认要求。",
+      "outputs": "Standards和Spec分轴发现、证据、检查缺口和待人工条件。",
+      "boundary": "默认评审不修改；不代人确认、不关单、不改GDD/spec；不无限递归派发。",
+      "key_detail": "相关未提交/新建/删除/资源变化必须纳入；两轴看同版；缺独立审查能力要披露。",
+      "current_source": [
+        {
+          "archive": "review-gamestudio-design-v1-confirmed.zip",
+          "path": "review-gamestudio-design-v1-confirmed/skills/review-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "0b085cb313288a866e3eed4cb2b7288b425f06ec5c7a3fcdd3036f52830fef97",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 13,
+      "name": "debug-gamestudio",
+      "matt_original": "diagnosing-bugs",
+      "matt_path": "skills/engineering/diagnosing-bugs/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "具体故障",
+      "purpose": "取得真实信号、定位具体异常，在授权内修复并原场景复验。",
+      "inputs": "用户症状、当前版本、已有日志/测试/录屏和复现条件。",
+      "outputs": "可核对原因或候选、修复/诊断结果、回归证据及局限。",
+      "boundary": "只解释不自动改；不扩大为全库审计；无法复现不能称修复已验证。",
+      "key_detail": "不强制单条命令/固定假设数；已有事实可继续分析，结论强度随证据变化。",
+      "current_source": [
+        {
+          "archive": "debug-gamestudio-design-v1-confirmed.zip",
+          "path": "debug-gamestudio-design-v1-confirmed/skills/debug-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "f38a8c04f48e878e7f9f13ac4fd2a6535f65922478e509b8debf094825a16f73",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 14,
+      "name": "prototype-gamestudio",
+      "matt_original": "prototype",
+      "matt_path": "skills/engineering/prototype/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "玩法验证",
+      "purpose": "用最小而可信的可玩体验回答一个设计问题。",
+      "inputs": "未决问题、已确认条件、实验授权和已有可复用成果。",
+      "outputs": "默认浏览器小游戏：真实输入、轻量美术、规则、必要反馈与运行入口。",
+      "boundary": "不交应用式状态面板冒充玩法；不为像游戏擅加系统；不自动升为正式实现。",
+      "key_detail": "SVG/程序化美术优先，非强制唯一形式；保留关键三维/引擎/设备条件和人工判断。",
+      "current_source": [
+        {
+          "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+          "path": "prototype-gamestudio-design-v2-confirmed/skills/prototype-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "e0ab53efb9a0471ac16b9baa67b752c939e054942b4396aff1ff2458b5c53a9b",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 15,
+      "name": "research-gamestudio",
+      "matt_original": "research",
+      "matt_path": "skills/engineering/research/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "证据研究",
+      "purpose": "按所需深度调查事实、案例和方法，给出来源与局限。",
+      "inputs": "当前问题、已有研究、适用版本/时间和允许使用的资料工具。",
+      "outputs": "聚焦的研究结论与可复用笔记，事实/推断/建议明确区分。",
+      "boundary": "不默认新增收费API、pplx接入、安装CLI或虚构后台；不把资料当体验证明。",
+      "key_detail": "事实核查/专题/深度研究按需选择；工具可换，证据标准不偷偷下降。",
+      "current_source": [
+        {
+          "archive": "research-gamestudio-design-v2-confirmed.zip",
+          "path": "research-gamestudio-design-v2-confirmed/skills/research-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "544cc94f69be8f8ea4fa61a7b7a1e66638f1b943d9c273120ffa8720e69363d0",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 16,
+      "name": "wayfinder-gamestudio",
+      "matt_original": "wayfinder",
+      "matt_path": "skills/engineering/wayfinder/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "跨会话决策",
+      "purpose": "组织相互依赖的重要未知，持续明确当前目标的路线。",
+      "inputs": "有目的但路线未明的工作，已有决定、地图及相关证据。",
+      "outputs": "最小问题索引、依赖、已有答案入口、待展开与排除范围。",
+      "boundary": "不是生产排期器或完整任务调度；问题票不自动等于制作票。",
+      "key_detail": "按需用研究/访谈/获准原型并更新GDD/spec；路线清楚即交接。",
+      "current_source": [
+        {
+          "archive": "wayfinder-gamestudio-design-v1-confirmed.zip",
+          "path": "wayfinder-gamestudio-design-v1-confirmed/skills/wayfinder-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "093b3f97928573802d3c63e2e82d0723adeda688f970a11f77c7568c6ff180e5",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 17,
+      "name": "handoff-gamestudio",
+      "matt_original": "handoff",
+      "matt_path": "skills/productivity/handoff/SKILL.md",
+      "adoption": "explicitly_confirmed_design",
+      "target_invocation": "explicit",
+      "group_for_reading_only": "跨环境接手",
+      "purpose": "让新会话、工具或协作者取得继续工作所需的真实上下文。",
+      "inputs": "下一接收目标、当前成果、必要来源和未决状态。",
+      "outputs": "可携带的短交接说明、实际资源/版本位置、下一步及访问缺口。",
+      "boundary": "不自动复制工程、开新会话或改任务；引用不代表已传输，摘要不替代备份。",
+      "key_detail": "保存位置服务接收方式，不一律临时目录；未记录的关键决定也要精确保留。",
+      "current_source": [
+        {
+          "archive": "handoff-gamestudio-design-v1.zip",
+          "path": "handoff-gamestudio-design-v1/skills/handoff-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "d0efe1fd915eb09682e7dc0bce5e83aa61ed486f79121b286751d008bcf48429",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 18,
+      "name": "codebase-gamestudio",
+      "matt_original": "codebase-design",
+      "matt_path": "skills/engineering/codebase-design/SKILL.md",
+      "adoption": "selected_for_design_not_blanket_detail_approval",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "代码结构",
+      "purpose": "设计当前工作的职责、状态归属、接口与测试边界。",
+      "inputs": "当前行为、调用方、工程惯例和具体结构问题。",
+      "outputs": "最小而有依据的结构建议、调用示例、约束与测试入口。",
+      "boundary": "不是全库架构巡检，不固定ECS/事件总线或强改引擎用语，不因方法而自动重构。",
+      "key_detail": "保留深度/局部性判断；不强制双适配器或多方案，删除测试前核对覆盖。",
+      "current_source": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/codebase-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "e04967ced443dff3e59296c451d267e16324ea4d2495cb7899151579bcaf1a34",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 19,
+      "name": "merge-gamestudio",
+      "matt_original": "resolving-merge-conflicts",
+      "matt_path": "skills/engineering/resolving-merge-conflicts/SKILL.md",
+      "adoption": "selected_for_design_not_blanket_detail_approval",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "冲突处理",
+      "purpose": "理解双方意图并安全处理正在进行的Git冲突。",
+      "inputs": "实际merge/rebase状态、共同基线、两侧依据和范围授权。",
+      "outputs": "明确的解决内容、组合后检查及Git操作完成/暂停状态。",
+      "boundary": "不主动发起合并，不全量暂存无关文件、不默认提交/推送，不能可靠处理时保留现场。",
+      "key_detail": "场景/元数据/二进制需适合工具与实际验证；ours/theirs按操作上下文核对。",
+      "current_source": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/merge-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "00eb680cb357440850268bf707157fe8d28d08a5cb3161d87fe4dcdef0baa435",
+      "target_integration": "pending",
+      "behavior_validation": "not_run"
+    },
+    {
+      "index": 20,
+      "name": "docs-gamestudio",
+      "matt_original": "writing-for-agents",
+      "matt_path": "skills/productivity/writing-for-agents/SKILL.md",
+      "adoption": "selected_for_design_not_blanket_detail_approval",
+      "target_invocation": "on-demand",
+      "group_for_reading_only": "共同写作方法",
+      "purpose": "把目标、知识、决定和结果表达成Agent能执行、核对和复用的内容。",
+      "inputs": "写作目的、读者、已明确的专业内容、必要上下文与约束。",
+      "outputs": "可靠的子代理说明、GDD/spec/tickets、研究/评审/测试记录及技能/规则文档。",
+      "boundary": "不代替专业决策、不抹掉原始证据、不成为审批岗位或递归写作代理，不借文档扩大权限。",
+      "key_detail": "覆盖正式写作与委派；当前上下文已加载就沿用；这项扩大定位尚未回写旧技能包。",
+      "current_source": [
+        {
+          "archive": "gamestudio-core-methods-design-v1.zip",
+          "path": "gamestudio-core-methods-v1/skills/docs-gamestudio/SKILL.md"
+        }
+      ],
+      "current_skill_sha256": "1ab196c642b6b1de065b50626caeab3b5c31750b34320b7ac95fc59d5b81127b",
+      "target_integration": "pending",
+      "behavior_validation": "not_run",
+      "latest_scope": "User requires a common writing method for formal artifacts and delegation; authoritative in this consolidated target, not yet patched into source drafts."
+    }
+  ],
+  "not_selected_for_v1": [
+    {
+      "matt_original": "improve-codebase-architecture",
+      "proposed_disposition": "暂缓",
+      "reason": "主动架构扫描不是首版必备；Codebase只处理当前结构问题，不假装等价替代。",
+      "status": "scope_proposal_not_implemented"
+    },
+    {
+      "matt_original": "triage",
+      "proposed_disposition": "暂缓",
+      "reason": "持续外部反馈分流尚未纳入；仍复用项目标签，不要求装完整Triage。",
+      "status": "scope_proposal_not_implemented"
+    },
+    {
+      "matt_original": "to-questionnaire",
+      "proposed_disposition": "暂缓",
+      "reason": "出现反复的外部协作信息收集需要时再独立设计。",
+      "status": "scope_proposal_not_implemented"
+    },
+    {
+      "matt_original": "wizard",
+      "proposed_disposition": "不独立发布完整技能",
+      "reason": "普通人工步骤使用现有交接；没有实现原版Bash向导生成能力。",
+      "status": "scope_proposal_not_implemented"
+    },
+    {
+      "matt_original": "teach",
+      "proposed_disposition": "不纳入首版",
+      "reason": "跨会话课程体系属于不同产品目标；不影响日常解释。",
+      "status": "scope_proposal_not_implemented"
+    },
+    {
+      "matt_original": "wait-what",
+      "proposed_disposition": "不独立发布",
+      "reason": "清楚解释作为日常沟通原则，不增加专用入口。",
+      "status": "scope_proposal_not_implemented"
+    }
+  ],
+  "legacy": [
+    {
+      "old_name": "game-producer",
+      "covered": "下一步导航由ask承担",
+      "unresolved": "全面进度盘点未作为独立新技能完成",
+      "proposal": "退役旧总控入口；确需全面状态分析再单独决定",
+      "decision_status": "pending_final_disposition"
+    },
+    {
+      "old_name": "game-init",
+      "covered": "项目约定与资源规则由setup承担",
+      "unresolved": "旧资料迁移、安全切换及原记录程序的行为不等于已被Markdown替代",
+      "proposal": "旧迁移能力保留为归档/维护手段，切换在单独授权下进行",
+      "decision_status": "pending_final_disposition"
+    },
+    {
+      "old_name": "game-design",
+      "covered": "grilling/domain/GDD/spec及讨论入口组合覆盖主要讨论和文档工作",
+      "unresolved": "旧入口是否彻底删除、历史调用和来源如何迁移",
+      "proposal": "不再发布重复设计入口，保留迁移说明",
+      "decision_status": "pending_final_disposition"
+    }
+  ],
+  "source_code_modified": false,
+  "behavior_tests_run": false
+}

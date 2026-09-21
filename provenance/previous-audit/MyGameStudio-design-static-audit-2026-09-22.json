@@ -1,0 +1,312 @@
+{
+  "scope": "read-only logical union of selected proposed/confirmed draft packages; no installation or model execution",
+  "archives": [
+    {
+      "archive": "ask-gamestudio-draft.zip",
+      "sha256": "d306f3fd7d114ca0590cac532248b12c2bd9f1c8d4c4ef0d7df0c4002204b65b",
+      "crc_error": null
+    },
+    {
+      "archive": "setup-gamestudio-draft-v2.zip",
+      "sha256": "5e08756589de829d211ab04122b90b8da4730696f04bd3a4a9407c0c63cf06d0",
+      "crc_error": null
+    },
+    {
+      "archive": "gamestudio-gdd-spec-design-v1.zip",
+      "sha256": "485e788db61b37d1607cb8398719e1b63d2a78c8e6b95a62a9a719c12036d4ec",
+      "crc_error": null
+    },
+    {
+      "archive": "tasks-gamestudio-design-v1.zip",
+      "sha256": "5d0a6ec0c5b7f876bb5a104aa76f6fab99d4f7eaf51678a297804c8657e72b76",
+      "crc_error": null
+    },
+    {
+      "archive": "implement-gamestudio-design-v1.zip",
+      "sha256": "5a45d8edc6957397a65e6b9d838742f2cc96ffe233186128b3cf0a7c1d3f4727",
+      "crc_error": null
+    },
+    {
+      "archive": "tdd-gamestudio-design-v1-confirmed.zip",
+      "sha256": "70df7e6561f81fa22605370c4a6bebb2b19082db53804c17c528fdaa6c1ab8fe",
+      "crc_error": null
+    },
+    {
+      "archive": "review-gamestudio-design-v1-confirmed.zip",
+      "sha256": "5755f71218cbe42511837fb3e97ad72b7bfd5881152b0a76380936b867c9746b",
+      "crc_error": null
+    },
+    {
+      "archive": "debug-gamestudio-design-v1-confirmed.zip",
+      "sha256": "b2f78291f56297f8e41680a0a651286093c33529902e479dcd1f63eb336ea2e8",
+      "crc_error": null
+    },
+    {
+      "archive": "prototype-gamestudio-design-v2-confirmed.zip",
+      "sha256": "34c30c49eb80ffe19c679b0df1861ca99232e2f64f1724573225e1aca5ea5700",
+      "crc_error": null
+    },
+    {
+      "archive": "research-gamestudio-design-v2-confirmed.zip",
+      "sha256": "3d111b5fe477c9d40255e779b26e876e6dad8cd8b12a6a755dffc2fa4b25e0b8",
+      "crc_error": null
+    },
+    {
+      "archive": "wayfinder-gamestudio-design-v1-confirmed.zip",
+      "sha256": "b7e2cf0c3660eeb013ffd2984ba30e739bca617817db833fee43cd12f9e35981",
+      "crc_error": null
+    },
+    {
+      "archive": "handoff-gamestudio-design-v1.zip",
+      "sha256": "ef11fe4b7037291306c1ea811d9b96b047d02f9cfa1c93930efcce48954841c3",
+      "crc_error": null
+    },
+    {
+      "archive": "gamestudio-core-methods-design-v1.zip",
+      "sha256": "7c2c22cd313ace81f9ed79fec1674de1855d2fd0732b10db41e960d384a0712c",
+      "crc_error": null
+    }
+  ],
+  "skill_count": 20,
+  "logical_files": 75,
+  "skills": [
+    {
+      "skill": "ask-gamestudio",
+      "file": "ask-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 59,
+      "docs_reference_lines": [],
+      "sha256": "e9754fdccad0c6619e5a144e4527a523f35b3fc7ee8af79eff5e5e0f5571ecb3"
+    },
+    {
+      "skill": "codebase-gamestudio",
+      "file": "codebase-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 33,
+      "docs_reference_lines": [],
+      "sha256": "e04967ced443dff3e59296c451d267e16324ea4d2495cb7899151579bcaf1a34"
+    },
+    {
+      "skill": "debug-gamestudio",
+      "file": "debug-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 65,
+      "docs_reference_lines": [],
+      "sha256": "f38a8c04f48e878e7f9f13ac4fd2a6535f65922478e509b8debf094825a16f73"
+    },
+    {
+      "skill": "docs-gamestudio",
+      "file": "docs-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 37,
+      "docs_reference_lines": [
+        2
+      ],
+      "sha256": "1ab196c642b6b1de065b50626caeab3b5c31750b34320b7ac95fc59d5b81127b"
+    },
+    {
+      "skill": "domain-gamestudio",
+      "file": "domain-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 39,
+      "docs_reference_lines": [],
+      "sha256": "7360a14dda0ad8b24289a51169e9dfd328eeed9bcfcf2416e70c116b264a5bd6"
+    },
+    {
+      "skill": "gdd-gamestudio",
+      "file": "gdd-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 39,
+      "docs_reference_lines": [],
+      "sha256": "c913ee2ac540156020f433182d4f09df3e635833eaac3eb79e06c7ba63cc8461"
+    },
+    {
+      "skill": "grill-gamestudio",
+      "file": "grill-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 8,
+      "docs_reference_lines": [],
+      "sha256": "88ea05708ccf4ee33b98c4ac3cd03c04a1c63b63a8f0f503aefa3daa79785c6f"
+    },
+    {
+      "skill": "grill-gamestudio-docs",
+      "file": "grill-gamestudio-docs/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 8,
+      "docs_reference_lines": [],
+      "sha256": "ae78780d6443844665f404d19fcb7940ea7341154e249ca45e7faea048db2d99"
+    },
+    {
+      "skill": "grilling-gamestudio",
+      "file": "grilling-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 73,
+      "docs_reference_lines": [],
+      "sha256": "7c6fea2cb0490527087283cb881835daa9382370d230649a6de16772ed663f40"
+    },
+    {
+      "skill": "handoff-gamestudio",
+      "file": "handoff-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 23,
+      "docs_reference_lines": [],
+      "sha256": "d0efe1fd915eb09682e7dc0bce5e83aa61ed486f79121b286751d008bcf48429"
+    },
+    {
+      "skill": "implement-gamestudio",
+      "file": "implement-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 52,
+      "docs_reference_lines": [],
+      "sha256": "f2492d4bed35362a6c1b87b39eb5e6f67df43e0bb7c172714471cb5051d794b5"
+    },
+    {
+      "skill": "merge-gamestudio",
+      "file": "merge-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 23,
+      "docs_reference_lines": [],
+      "sha256": "00eb680cb357440850268bf707157fe8d28d08a5cb3161d87fe4dcdef0baa435"
+    },
+    {
+      "skill": "prototype-gamestudio",
+      "file": "prototype-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 59,
+      "docs_reference_lines": [],
+      "sha256": "e0ab53efb9a0471ac16b9baa67b752c939e054942b4396aff1ff2458b5c53a9b"
+    },
+    {
+      "skill": "research-gamestudio",
+      "file": "research-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 25,
+      "docs_reference_lines": [],
+      "sha256": "544cc94f69be8f8ea4fa61a7b7a1e66638f1b943d9c273120ffa8720e69363d0"
+    },
+    {
+      "skill": "review-gamestudio",
+      "file": "review-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 51,
+      "docs_reference_lines": [],
+      "sha256": "0b085cb313288a866e3eed4cb2b7288b425f06ec5c7a3fcdd3036f52830fef97"
+    },
+    {
+      "skill": "setup-gamestudio",
+      "file": "setup-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 109,
+      "docs_reference_lines": [],
+      "sha256": "4e70a10d837674a24c930b43d744b4b188b83f32a69042c0de0dc17cdc566ec2"
+    },
+    {
+      "skill": "spec-gamestudio",
+      "file": "spec-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 45,
+      "docs_reference_lines": [],
+      "sha256": "8fd75478c907be1a2faf517daebc70a9a6bcade6e39bff3773a6a790912d356c"
+    },
+    {
+      "skill": "tasks-gamestudio",
+      "file": "tasks-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 82,
+      "docs_reference_lines": [],
+      "sha256": "f259b29c504c394c9266792c137a89666d1dc9e84585e1798e19d5b0227e53f2"
+    },
+    {
+      "skill": "tdd-gamestudio",
+      "file": "tdd-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": false,
+      "allow_implicit_invocation": true,
+      "lines": 42,
+      "docs_reference_lines": [],
+      "sha256": "4db5c00bdbe1d424343f59f6bee7b5a2ce7b3808e6f69d93b46ff957c7b07a4a"
+    },
+    {
+      "skill": "wayfinder-gamestudio",
+      "file": "wayfinder-gamestudio/SKILL.md",
+      "name_matches": true,
+      "description_present": true,
+      "disable_model_invocation": true,
+      "allow_implicit_invocation": false,
+      "lines": 59,
+      "docs_reference_lines": [],
+      "sha256": "093b3f97928573802d3c63e2e82d0723adeda688f970a11f77c7568c6ff180e5"
+    }
+  ],
+  "yaml_errors": [],
+  "relative_links_count": 39,
+  "unresolved_relative_links": [],
+  "duplicate_paths_with_different_content": {},
+  "docs_explicit_references_outside_docs_main": [],
+  "docs_mentions_anywhere_outside_docs": [],
+  "not_tested": [
+    "semantic equivalence across all Matt originals",
+    "actual model triggering",
+    "delegated-context inheritance",
+    "user authorization enforcement",
+    "GDD/spec writes",
+    "task closure",
+    "game runtime",
+    "cross-client installation"
+  ]
+}

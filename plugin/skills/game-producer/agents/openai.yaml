@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Producer"
-  short_description: "Read-only game status, gaps, and on-demand routing"
-  default_prompt: "Use $game-producer to report current game goals, progress, gaps, and the next recommended entry."
-policy:
-  allow_implicit_invocation: false
