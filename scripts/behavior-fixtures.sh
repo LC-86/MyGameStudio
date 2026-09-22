@@ -67,17 +67,32 @@ OUT_ABS="$_root${_tail:+/$_tail}"
   echo "输出目录规范化后为空或为文件系统根，拒绝执行" >&2
   exit 1
 }
-for forbidden in "$HOME" "$REPO" "$HOME/.agents" "$HOME/.claude" "$HOME/.qoder" "$HOME/.qoder-cn" \
-                 "$(cd "$HOME" 2>/dev/null && pwd -P)" "$(cd "$REPO" && pwd -P)"; do
-  [ -n "$forbidden" ] || continue
+# 受保护路径必须全部解析成功；解析不出来就不能确认安全，直接拒绝而不是跳过比对。
+if ! HOME_PHYS="$(cd "$HOME" && pwd -P 2>/dev/null)"; then
+  echo "无法解析 HOME 的物理路径，不能确认输出目录安全，拒绝执行" >&2
+  exit 1
+fi
+if ! REPO_PHYS="$(cd "$REPO" && pwd -P 2>/dev/null)"; then
+  echo "无法解析仓库路径 $REPO 的物理位置，拒绝执行" >&2
+  exit 1
+fi
+for forbidden in "$HOME" "$REPO" "$HOME/.agents" "$HOME/.claude" "$HOME/.qoder" \
+                 "$HOME/.qoder-cn" "$HOME_PHYS" "$REPO_PHYS"; do
   if [ "$OUT_ABS" = "$forbidden" ]; then
     echo "输出目录解析为 ${OUT_ABS}，与受保护路径相同，拒绝执行" >&2
     exit 1
   fi
 done
-if [ -e "$OUT_ABS" ]; then
+if [ -e "$OUT_ABS" ] || [ -L "$OUT_ABS" ]; then
   [ -d "$OUT_ABS" ] || { echo "$OUT_ABS 已存在且不是目录，拒绝执行" >&2; exit 1; }
-  if [ -n "$(ls -A "$OUT_ABS" 2>/dev/null)" ]; then
+  # 只有「成功列出且结果为空」才算确认可写；列不出来时不能当成空目录。
+  # 目录可写但不可读（如 0311）时 ls 会失败且输出为空，早期版本因此放行。
+  if ! listing="$(ls -A "$OUT_ABS" 2>&1)"; then
+    echo "无法列出输出目录内容，不能确认它是空的，拒绝执行：$OUT_ABS" >&2
+    echo "ls 实际返回：$listing" >&2
+    exit 1
+  fi
+  if [ -n "$listing" ]; then
     echo "$OUT_ABS 已存在且非空，本脚本不会删除已有内容。" >&2
     echo "请换一个目录，或先自行确认并处理它，例如：ls -A '$OUT_ABS'" >&2
     exit 1
@@ -111,10 +126,16 @@ make_project() {
   cd "$p"
   # 显式固定初始分支，不依赖调用者的 init.defaultBranch；
   # 老版本 git 不支持 -b 时回退，并记录实际分支名供 S08 使用。
-  git init -q -b main . 2>/dev/null || git init -q . 2>/dev/null || true
-  FIXTURE_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || echo main)"
-  git config user.email "fixture@example.invalid" 2>/dev/null || true
-  git config user.name "Fixture" 2>/dev/null || true
+  # 夹具的 git 状态是审查者核对差异的依据，建立失败必须让脚本失败，不能 || true 吞掉
+  git init -q -b main . 2>/dev/null || git init -q . || {
+    echo "夹具 ${p}：git init 失败" >&2; return 1; }
+  FIXTURE_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null)" || {
+    echo "夹具 ${p}：无法确定初始分支" >&2; return 1; }
+  [ -n "$FIXTURE_BRANCH" ] || { echo "夹具 ${p}：初始分支为空" >&2; return 1; }
+  git config user.email "fixture@example.invalid" >/dev/null 2>&1 || {
+    echo "夹具 ${p}：无法设置提交身份" >&2; return 1; }
+  git config user.name "Fixture" >/dev/null 2>&1 || {
+    echo "夹具 ${p}：无法设置提交身份" >&2; return 1; }
 
   cat > AGENTS.md <<'EOF'
 ## Agent 约定
@@ -250,9 +271,11 @@ EOF
 - [ ] Agent：3 波结束后进入结算。
 - [ ] 开发者：节奏是否支撑目标体验。
 EOF
-  git add -A >/dev/null 2>&1 || true
-  git commit -qm "fixture: 潮汐潮池工程骨架与现行资料" >/dev/null 2>&1 || true
-  cd - >/dev/null
+  git add -A >/dev/null 2>&1 || { echo "夹具 ${p}：git add 失败" >&2; return 1; }
+  git commit -qm "fixture: 潮汐潮池工程骨架与现行资料" >/dev/null 2>&1 || {
+    echo "夹具 ${p}：初始提交失败，审查者将无法用 git diff 核对场景改动" >&2; return 1; }
+  git rev-parse HEAD >/dev/null 2>&1 || { echo "夹具 ${p}：提交后无可用 HEAD" >&2; return 1; }
+  cd - >/dev/null || { echo "无法从夹具 $p 返回" >&2; return 1; }
 }
 
 echo "准备共享技能安装…"
@@ -272,7 +295,10 @@ for s in $SCENARIOS; do
     *) printf '场景目标不在输出根内，拒绝写入：%s\n' "$d" >&2; exit 1 ;;
   esac
   mkdir -p "$d"
-  make_project "$d/project"
+  make_project "$d/project" || {
+    printf "场景 %s 的夹具生成失败，停止执行\n" "$s" >&2
+    exit 1
+  }
   mkdir -p "$d/project/.agents"
   cp -R "$SEED/.agents/skills" "$d/project/.agents/skills"
   echo "  夹具就绪 $s"

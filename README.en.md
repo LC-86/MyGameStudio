@@ -65,7 +65,7 @@ No self-built task database, state machine, long-running dispatcher, or per-skil
 
 ## Verification status
 
-Actually run and passing this round: 58 static checks (including regression assertions for all three pre-merge review rounds), the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
+Actually run and passing this round: 60 static checks (including regression assertions for all four pre-merge review rounds), the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
 
 Installing from the remote repository source, pinned-tag installs, and discovery/invocation inside real hosts are **not run**. Per-item evidence, commands and limits are in [docs/validation-v3.md](docs/validation-v3.md).
 

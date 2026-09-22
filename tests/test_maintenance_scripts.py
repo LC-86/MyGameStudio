@@ -241,6 +241,49 @@ def test_fixture_still_allows_missing_intermediates_without_dotdot(tmp_path: Pat
     assert not (tmp_path / "a").exists(), "依赖校验前不得创建输出目录"
 
 
+def test_fixture_refuses_unlistable_output_directory(tmp_path: Path) -> None:
+    """目录可写但不可列出时，非空检查不得把「列不出来」当成「是空的」。
+
+    拒绝发生在依赖校验之前，因此本测试不需要 skills CLI。
+    """
+    if os.geteuid() == 0:
+        pytest.skip("root 可以列出任意目录，无法构造不可读场景")
+    out = tmp_path / "out"
+    target = out / "S01-ask" / "project"
+    target.mkdir(parents=True)
+    sentinel = target / "AGENTS.md"
+    sentinel.write_text("SENTINEL\n", encoding="utf-8")
+    original_mode = out.stat().st_mode & 0o777
+    out.chmod(0o311)  # 可进入、可写入，但不能列出内容
+    try:
+        result = run_fixture(str(out), "S01-ask")
+    finally:
+        out.chmod(original_mode)
+
+    assert result.returncode != 0, "无法枚举目录内容时必须拒绝，不能当成空目录放行"
+    assert "无法列出输出目录内容" in result.stderr, f"应说明枚举失败：{result.stderr}"
+    assert sentinel.read_text(encoding="utf-8") == "SENTINEL\n", "既有文件被覆盖"
+    assert not (target / "src").exists(), "不得在受害者目录里写入夹具"
+    assert not (target / ".git").exists(), "不得在受害者目录里初始化 git"
+
+
+def test_guard_checks_do_not_swallow_command_failures() -> None:
+    """安全守卫不得用 `2>/dev/null` 吞掉命令退出码后按空结果放行。"""
+    offenders = []
+    for script in SHELL_SCRIPTS:
+        for line_no, line in enumerate(read(script).splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                continue
+            # 形如 [ -n "$(cmd 2>/dev/null)" ]：命令失败时结果为空，判断被绕过
+            if re.search(r'\[\s*-n\s+"\$\([^"]*2>/dev/null', line):
+                offenders.append(f"{script.name}:{line_no}: {stripped[:70]}")
+            # 守卫循环里用 `|| continue` 跳过解析失败的受保护路径
+            if "forbidden" in line and "continue" in line:
+                offenders.append(f"{script.name}:{line_no}: {stripped[:70]}")
+    assert not offenders, "守卫条件吞掉了失败状态：\n" + "\n".join(offenders)
+
+
 def test_no_machine_specific_npx_cache_hash_in_tracked_files() -> None:
     """缓存目录名是内容哈希，不绑定某台机器；只允许出现通配形式。"""
     pattern = re.compile(r"_npx/(?!\*)[0-9a-z]{6,}")
