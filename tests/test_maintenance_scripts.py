@@ -207,6 +207,40 @@ def test_shell_variables_before_multibyte_text_are_braced() -> None:
     assert not offenders, "变量后紧跟非 ASCII 且未加花括号：\n" + "\n".join(offenders)
 
 
+def test_fixture_rejects_dotdot_bypass_of_non_empty_guard(tmp_path: Path) -> None:
+    """`missing/../victim` 不得绕过非空检查。
+
+    规范化失败时若回退到原始字符串，`-e` 会因中间目录不存在而返回假，
+    随后 mkdir -p 先建出 missing、再经 .. 落进已有的非空目录。
+    """
+    victim = tmp_path / "victim"
+    target = victim / "S01-ask" / "project"
+    target.mkdir(parents=True)
+    sentinel = target / "AGENTS.md"
+    sentinel.write_text("SENTINEL\n", encoding="utf-8")
+    escaping = str(tmp_path / "missing" / ".." / "victim")
+
+    result = run_fixture(escaping, "S01-ask")
+
+    assert result.returncode != 0, "含 .. 的输出路径必须被拒绝，不能回退到未规范化字符串"
+    assert sentinel.read_text(encoding="utf-8") == "SENTINEL\n", "既有文件被覆盖"
+    assert not (tmp_path / "missing").exists(), "校验阶段不得创建任何目录"
+    assert not (target / ".git").exists(), "不得在受害者目录里初始化 git"
+    assert ".." in result.stderr, "应说明拒绝原因与 .. 有关"
+
+
+def test_fixture_still_allows_missing_intermediates_without_dotdot(tmp_path: Path) -> None:
+    """缺失中间目录且不含 .. 时，路径校验应放行（后续步骤才失败），不能误拒。"""
+    nested = str(tmp_path / "a" / "b" / "c")
+    result = run_fixture(nested, env={"SKILLS_CLI": str(tmp_path / "no-such-cli.mjs")})
+
+    assert result.returncode != 0, "CLI 不可用时仍应失败"
+    assert "上级引用" not in result.stderr and "无法安全规范化" not in result.stderr, \
+        f"合法嵌套路径被误判为不安全：{result.stderr}"
+    assert "SKILLS_CLI" in result.stderr, "应走到 CLI 解析那一步才失败"
+    assert not (tmp_path / "a").exists(), "依赖校验前不得创建输出目录"
+
+
 def test_no_machine_specific_npx_cache_hash_in_tracked_files() -> None:
     """缓存目录名是内容哈希，不绑定某台机器；只允许出现通配形式。"""
     pattern = re.compile(r"_npx/(?!\*)[0-9a-z]{6,}")

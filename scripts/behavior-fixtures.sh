@@ -41,13 +41,32 @@ case "$OUT" in
   "/")  echo "输出目录是文件系统根，拒绝执行" >&2; exit 1 ;;
 esac
 
-# 规范化到物理路径再比对：macOS 上 /tmp 是 /private/tmp 的符号链接，
-# 混用逻辑与物理路径会让包含性检查误判。父目录不存在时不创建，只做字面比较。
-if OUT_PARENT="$(cd "$(dirname "$OUT")" 2>/dev/null && pwd -P)"; then
-  OUT_ABS="$OUT_PARENT/$(basename "$OUT")"
-else
-  OUT_ABS="$OUT"
+# 输出路径必须能安全规范化；不能就拒绝，绝不回退到未规范化的原始字符串。
+# 回退会让 missing/../victim 绕过非空检查：-e 因中间目录不存在而返回假，
+# 之后 mkdir -p 先建出 missing，再经 .. 落进已有的非空目录。
+case "$OUT" in
+  ..|*/..|../*|*/../*)
+    echo "输出目录含上级引用（..），拒绝执行：$OUT" >&2
+    exit 1 ;;
+esac
+
+# 用已存在的最深祖先做物理规范化（macOS 上 /tmp 是 /private/tmp 的符号链接，
+# 混用逻辑与物理路径会让包含性检查误判），剩余组件不含 ..。不创建任何目录。
+_walk="$OUT"
+_tail=""
+while [ ! -d "$_walk" ] && [ "$_walk" != "/" ]; do
+  _tail="$(basename "$_walk")${_tail:+/$_tail}"
+  _walk="$(dirname "$_walk")"
+done
+if [ ! -d "$_walk" ] || ! _root="$(cd "$_walk" && pwd -P 2>/dev/null)"; then
+  echo "无法安全规范化输出目录，拒绝执行：$OUT" >&2
+  exit 1
 fi
+OUT_ABS="$_root${_tail:+/$_tail}"
+[ -n "$OUT_ABS" ] && [ "$OUT_ABS" != "/" ] || {
+  echo "输出目录规范化后为空或为文件系统根，拒绝执行" >&2
+  exit 1
+}
 for forbidden in "$HOME" "$REPO" "$HOME/.agents" "$HOME/.claude" "$HOME/.qoder" "$HOME/.qoder-cn" \
                  "$(cd "$HOME" 2>/dev/null && pwd -P)" "$(cd "$REPO" && pwd -P)"; do
   [ -n "$forbidden" ] || continue
