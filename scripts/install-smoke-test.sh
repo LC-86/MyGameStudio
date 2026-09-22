@@ -13,6 +13,9 @@ set -uo pipefail
 
 REPO="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
 REPO="$(cd "$REPO" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=resolve-skills-cli.sh
+. "$SCRIPT_DIR/resolve-skills-cli.sh"
 VERSION="${SKILLS_CLI_VERSION:-1.7.0}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/mgs-install-test.XXXXXX")"
 export DO_NOT_TRACK=1 DISABLE_TELEMETRY=1
@@ -32,20 +35,12 @@ info() { printf '      %s\n' "$1"; }
 clean() { sed -e "$ANSI_RE" | tr -s '[:space:]' ' '; }
 
 resolve_cli() {
-  if [ -n "${SKILLS_CLI:-}" ] && [ -f "$SKILLS_CLI" ]; then
-    CLI=(node "$SKILLS_CLI"); return 0
+  if ! resolve_skills_cli "$VERSION"; then
+    bad "无法取得 skills CLI，见上面的原因"
+    printf 'PASS %d / FAIL %d\n' "$PASS" "$FAIL"
+    exit 1
   fi
-  local cached
-  cached="$(ls -d "$HOME"/.npm/_npx/*/node_modules/skills/bin/cli.mjs 2>/dev/null | head -1)"
-  if [ -n "${USE_NPX:-}" ]; then
-    CLI=(npx --yes "skills@$VERSION"); return 0
-  fi
-  if [ -n "$cached" ]; then
-    local v; v="$(node -p "require('$(dirname "$(dirname "$cached")")/package.json').version" 2>/dev/null)"
-    if [ "$v" = "$VERSION" ]; then CLI=(node "$cached"); return 0; fi
-    info "缓存版本为 ${v:-未知}，与固定版本 $VERSION 不一致，改用 npx"
-  fi
-  CLI=(npx --yes "skills@$VERSION")
+  CLI=("${SKILLS_CLI_CMD[@]}")
 }
 
 run_cli() { "${CLI[@]}" "$@" 2>&1; }

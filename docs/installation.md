@@ -40,9 +40,25 @@ npx skills@latest add LC-86/MyGameStudio --skill implement-gamestudio review-gam
 
 CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起安装的集合见 [dependencies.md](dependencies.md)。
 
-## 固定版本安装
+## 固定引用安装：`@` 与 `#` 不是一回事
 
-CLI 的来源解析接受 `owner/repo@<ref>`，`<ref>` 会作为 git 引用用于克隆，因此 `add LC-86/MyGameStudio@v3.0.0` 在语法上成立。本项目**没有**端到端验证过固定标签的远端安装，不要在文档或脚本中把它写成已验证用法。
+核对 `skills@1.7.0` 的来源解析后确认：
+
+| 写法 | 实际含义 |
+|---|---|
+| `owner/repo@x` | `x` 是**技能筛选**（skillFilter），仓库仍按**默认分支**克隆 |
+| `owner/repo#ref` | `ref` 才是 **Git 引用**（分支或标签） |
+| `owner/repo#ref@skill` | 先按 `ref` 取内容，再筛 `skill` |
+
+所以 `npx skills@latest add LC-86/MyGameStudio@release/v3` **不会**装到 `release/v3`：`@release/v3` 被当成技能筛选名，没有任何技能叫这个名字，配合 `--skill '*'` 就直接把默认分支的全部技能装上去了。这一步退出码是成功的，不会给你任何警告。
+
+实测记录：在 V3 尚未合入 `main` 时执行该命令，日志为 `Found 39 skills` / `Installing all 39 skills`，产物是 2.0.2 的旧技能（含 `plugin/skills/ask-matt/SKILL.md`），锁文件未记录目标引用。39 正好等于 V2 树里 `plugin/skills/` 的 28 项加 `legacy/plugin-skills/` 的 11 项，与「装到了默认分支」一致。
+
+因此：
+
+- 想装本 PR 的内容，在合入默认分支之前请用**本地路径**安装，见本节开头。
+- 想按标签固定版本，用 `LC-86/MyGameStudio#v3.0.0`。这一形式来自对 CLI 解析代码的核对，**尚未端到端验证成功**（本机到 `github.com` 的 git 传输受阻，试过 SSL 错误与超时）。在验证完成前不要把它写进脚本当作可靠路径。
+- 任何时候都不要用 `@<分支或标签>` 表达版本意图，它只会静默地给你默认分支。
 
 ## 安装后确认
 

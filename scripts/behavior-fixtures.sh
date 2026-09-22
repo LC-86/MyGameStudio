@@ -1,13 +1,66 @@
 #!/usr/bin/env bash
 # 为行为验证准备隔离夹具：一个代表性小游戏项目 + 原生安装的 20 项技能。
-#   scripts/behavior-fixtures.sh <输出根目录> [场景名...]
+#   scripts/behavior-fixtures.sh <空的或尚不存在的输出目录> [场景名...]
+#
+# 输出目录必须是新建的或空的。脚本不会删除任何已存在的内容：要重用旧目录，
+# 请自己确认后删除，或换一个目录。这样误传工程目录时不会丢东西。
+#
+# 环境变量：
+#   SKILLS_CLI          已缓存的 cli.mjs 路径
+#   SKILLS_CLI_VERSION  固定 CLI 版本，默认 1.7.0
+#   USE_NPX=1           强制走 npx
 set -euo pipefail
-REPO="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="${1:?需要输出根目录}"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$REPO/scripts"
+# shellcheck source=resolve-skills-cli.sh
+. "$SCRIPT_DIR/resolve-skills-cli.sh"
+VERSION="${SKILLS_CLI_VERSION:-1.7.0}"
+export DO_NOT_TRACK=1 DISABLE_TELEMETRY=1
+
+# 位置参数可能是第一个场景名，因此先取出输出目录再 shift
+OUT="${1:?用法：scripts/behavior-fixtures.sh <空的或尚不存在的输出目录> [场景名...]}"
 shift || true
 SCENARIOS="${*:-S01-ask S02-setup-rerun S03-routing S04-partial-save S05-subagent S06-prototype S07-condense S08-conflict S09-human-acceptance S10-no-tools}"
-CLI="${SKILLS_CLI:-$HOME/.npm/_npx/5606f1555d02ef53/node_modules/skills/bin/cli.mjs}"
-export DO_NOT_TRACK=1 DISABLE_TELEMETRY=1
+
+# --- 先校验依赖与目标，全部通过后才创建任何目录 -------------------------
+if ! resolve_skills_cli "$VERSION"; then
+  echo "未取得 skills CLI，未做任何改动" >&2
+  exit 1
+fi
+CLI=("${SKILLS_CLI_CMD[@]}")
+if ! "${CLI[@]}" --version >/dev/null 2>&1; then
+  echo "skills CLI 不可执行：${CLI[*]}（未做任何改动）" >&2
+  "${CLI[@]}" --version || true
+  exit 1
+fi
+[ -d "$REPO/skills" ] || { echo "$REPO/skills 不存在，未做任何改动" >&2; exit 1; }
+
+case "$OUT" in
+  "")   echo "输出目录为空字符串，拒绝执行" >&2; exit 1 ;;
+  "/")  echo "输出目录是文件系统根，拒绝执行" >&2; exit 1 ;;
+esac
+OUT_PARENT="$(mkdir -p "$(dirname "$OUT")" && cd "$(dirname "$OUT")" && pwd)"
+OUT_ABS="$OUT_PARENT/$(basename "$OUT")"
+for forbidden in "$HOME" "$REPO" "$HOME/.agents" "$HOME/.claude" "$HOME/.qoder" "$HOME/.qoder-cn"; do
+  if [ "$OUT_ABS" = "$forbidden" ]; then
+    echo "输出目录解析为 $OUT_ABS，与受保护路径相同，拒绝执行" >&2
+    exit 1
+  fi
+done
+if [ -e "$OUT_ABS" ]; then
+  [ -d "$OUT_ABS" ] || { echo "$OUT_ABS 已存在且不是目录，拒绝执行" >&2; exit 1; }
+  if [ -n "$(ls -A "$OUT_ABS" 2>/dev/null)" ]; then
+    echo "$OUT_ABS 已存在且非空，本脚本不会删除已有内容。" >&2
+    echo "请换一个目录，或先自行确认并删除它，例如：" >&2
+    echo "    ls -A '$OUT_ABS'   # 先看内容" >&2
+    exit 1
+  fi
+fi
+OUT="$OUT_ABS"
+mkdir -p "$OUT"
+echo "输出目录：$OUT"
+echo "CLI 调用：${CLI[*]}"
+echo "来源标识：$(git -C "$REPO" rev-parse --short HEAD)$( [ -n "$(git -C "$REPO" status --porcelain)" ] && echo '-dirty' || echo '-clean')"
 
 make_project() {
   local p="$1"
@@ -157,12 +210,12 @@ EOF
   cd - >/dev/null
 }
 
-rm -rf "$OUT"; mkdir -p "$OUT"
 echo "准备共享技能安装…"
 SEED="$OUT/_seed"; mkdir -p "$SEED"
-# 在隔离目录内安装，绝不写入源码仓库
-( cd "$SEED" && node "$CLI" add "$REPO" --skill '*' --agent universal --copy -y >/dev/null 2>&1 ) \
-  || { echo "技能安装失败"; exit 1; }
+# 在隔离目录内安装，绝不写入源码仓库；失败时保留原始错误
+( cd "$SEED" && "${CLI[@]}" add "$REPO" --skill '*' --agent universal --copy -y ) >/dev/null \
+  || { echo "技能安装失败，夹具未生成（$SEED 里可能已有部分内容，请检查后换目录）" >&2; exit 1; }
+[ -d "$SEED/.agents/skills" ] || { echo "安装后未出现 .agents/skills" >&2; exit 1; }
 echo "已安装 $(find "$SEED/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') 项到 $SEED/.agents/skills"
 
 for s in $SCENARIOS; do

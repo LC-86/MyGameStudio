@@ -41,7 +41,9 @@ bash scripts/install-smoke-test.sh                 # 默认用 npx 拉取固定�
 SKILLS_CLI=/path/to/skills/bin/cli.mjs bash scripts/install-smoke-test.sh   # 无网络时用已缓存 CLI
 ```
 
-它在临时目录里建消费项目，用官方 CLI 从本仓库安装，然后检查：发现集合恰为 20 项、随包资料与许可齐全、安装目录内引用可达、不依赖源码 checkout、共享参考归属、子集安装缺少依赖的负例、默认链接模式、二次安装不产生双份名称、`--full-depth` 不暴露额外入口。结束打印 `PASS n / FAIL n`，临时目录保留供核对。
+它在临时目录里建消费项目，用官方 CLI 从本仓库安装，然后检查：发现数量与无旧名、随包资料与许可齐全、安装目录内引用可达、不依赖源码 checkout、共享参考归属、子集安装缺少依赖的负例、默认链接模式、二次安装不产生双份名称、`--full-depth` 不暴露额外入口。结束打印 `PASS n / FAIL n`，临时目录保留供核对。
+
+两个脚本共用 `scripts/resolve-skills-cli.sh` 取 CLI 入口：优先用 `SKILLS_CLI` 指定的路径，其次在 `~/.npm/_npx/*/node_modules/skills/` 里**按版本号**匹配（缓存目录名是内容哈希，随机器变化，不绑定某个固定哈希），都没有时回落到 `npx --yes skills@<版本>`。取不到时直接失败并说明原因，不静默继续。
 
 脚本不使用 `-g` / `--global` / `--all`，不写入真实 HOME 下的技能或配置目录。缺少 `npx` 或网络时它会失败而不是静默通过；这种情况在 [验证状态](../validation-v3.md) 中记为**未运行**并写明缺少什么。跳过不是安装已被验证。
 
@@ -50,12 +52,14 @@ SKILLS_CLI=/path/to/skills/bin/cli.mjs bash scripts/install-smoke-test.sh   # �
 真实行为验证用另一套脚本准备隔离夹具：
 
 ```bash
-bash scripts/behavior-fixtures.sh /tmp/mgs-behavior
+bash scripts/behavior-fixtures.sh /tmp/mgs-behavior-$(date +%Y%m%d-%H%M)
 ```
+
+**输出目录必须是新建的或空的。** 脚本在创建任何东西之前先校验 CLI 可用与目标安全，遇到已存在的非空目录直接退出并提示先看内容——它不会递归删除调用者传入的目录，误传工程目录时不会丢东西。要重用旧目录请自己确认后处理。
 
 它生成一个代表性小游戏项目（含项目约定、现行 GDD、进行中 spec、术语表、源码、本地任务票与真实 git 历史），用官方 CLI 原生安装 20 项技能到该项目的 `.agents/skills/`，并为每个场景准备特定现场（例如 S08 是一次真实进行中的 merge 冲突，带无关的未暂存改动）。
 
-场景由独立子代理上下文执行：它拿不到升级对话，只有用户口吻的请求与夹具路径，必须自行从 `.agents/skills/` 读取方法。产出留在各夹具目录内供核对。执行结果逐项记录在 [验证状态](../validation-v3.md)，本页不填结果。
+场景由新建的子代理上下文执行：派发说明里不提供本次升级对话，接收方只有用户口吻的请求与夹具路径，必须自行从 `.agents/skills/` 读取方法。注意**新上下文是否真的不含父历史是宿主属性**（见 `skills/docs-gamestudio/references/delegation.md`），所以结论只在核实过隔离性的宿主内成立。产出留在各夹具目录内供核对，执行结果逐项记录在 [验证状态](../validation-v3.md)，本页不填结果。
 
 安装路径的目标用法见 [安装](../installation.md)。
 

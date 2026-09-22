@@ -47,6 +47,14 @@
 - `tdd-gamestudio` 的 `tests.md`、`mocking.md` 移入 `references/` 以统一随包资料布局
 - CI 改为运行 V3 静态检查与文档导航检查，不再构建或核验插件包
 
+### 合并前审查修正
+
+- 修正 `docs/installation.md` 的固定引用说明：`owner/repo@x` 的 `@x` 是**技能筛选**，仓库仍按默认分支克隆；Git 引用来自 `#<ref>` 形式。原先的写法会让 `add LC-86/MyGameStudio@release/v3` 静默装到默认分支的旧技能（实测 `Found 39 skills`，等于 V2 树 `plugin/skills/` 28 项 + `legacy/plugin-skills/` 11 项），退出码正常且无警告
+- `delegation.md` 与 `docs-gamestudio` 不再把「子代理不含父历史」写成通用事实，改为宿主属性，并给出 Codex `spawn_agent` 默认 `fork_turns=all` 的反例与核实、披露要求
+- `scripts/behavior-fixtures.sh` 不再对调用者传入的目录做无条件递归删除：先校验 CLI 与目标安全，遇已存在的非空目录直接退出且不删任何内容
+- 新增 `scripts/resolve-skills-cli.sh`，两个脚本共用；按版本号在 npx 缓存中匹配，不再绑定某台机器的缓存哈希
+- 新增 `tests/test_maintenance_scripts.py`，把上述四类问题固化为回归断言
+
 ## 2.0.2 — 2026-09-17
 
 已发布：[v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2)
