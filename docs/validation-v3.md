@@ -120,6 +120,7 @@ PR #80 以 merge commit `fd3d894` 合入默认分支后，对本机取得的**�
 | 远端克隆复跑隔离安装测试 | `git clone --depth 1 --branch main git@github.com:LC-86/MyGameStudio.git /tmp/mgs-remote-main` → `./scripts/install-smoke-test.sh /tmp/mgs-remote-main` | **通过 19/19**，来源标识 `fd3d894-clean`，`FAIL 0` |
 | 默认分支的 git 来源安装 | `add LC-86/MyGameStudio --skill '*' --agent universal --copy -y` | **通过**。`Found 20 skills`，`.agents/skills/` 下 20 项目录名与 20 项 `-gamestudio` 名称一致，含 `gdd-gamestudio/LICENSE`；`skills-lock.json` 记 `source: LC-86/MyGameStudio`、`sourceType: github`、`skillPath: skills/<名>/SKILL.md` |
 | `#<ref>` 固定引用安装 | `add LC-86/MyGameStudio#v2.0.2 …` 与 `add LC-86/MyGameStudio#release/v3 …` | **通过**。前者 `Found 39 skills` / `Installing all 39 skills`，装到的是旧名（`ask-matt`、`to-spec` 等）；后者 `Found 20 skills`，装到的是本版新名。两次内容不同，直接证明 `#` 之后的 ref 决定取哪份内容，而不是回落到默认分支 |
+| `#v3.0.0` 标签安装 | `add LC-86/MyGameStudio#v3.0.0 --skill '*' --agent universal --copy -y`（标签创建后复测） | **通过**。`Found 20 skills`，含 `gdd-gamestudio/SKILL.md` 与 `docs-gamestudio/references/delegation.md`，无 `ask-matt` 等旧名 |
 
 这轮复验改变了此前两条结论的性质：`#<ref>` 由「读 CLI 源码推得、端到端未成功」变成**已实测**（分支与标签各一例）；远端来源安装由「未运行（网络受阻）」变成**已通过**。本轮两条取包通路都成功：SSH 克隆（`git@github.com`）与 CLI 自己的 git 来源取包；此前反复观测到的 HTTPS git 传输间歇受阻在本轮未复现，判读时仍按第 5 节的记录当作环境风险。
 
@@ -326,8 +327,9 @@ PR #80 以 merge commit `fd3d894` 合入默认分支后，对本机取得的**�
 | 拉取请求 | [#80](https://github.com/LC-86/MyGameStudio/pull/80) `release/v3` → `main`，**已合并**（2026-09-22 07:06Z，merge commit `fd3d894`，保留 9 个提交不 squash）。`release/v3` 分支保留作为审查记录 |
 | CI | 合入后 `main` 上 `fd3d894` 的 `check` 工作流整体 `success`（`静态检查与文档导航` + `原生安装验证`）。此前 `ef94dfa` 及更早的 CI 只跑了显式列出的两个测试文件（38 项），第二轮审查指出后已改为收集整个 `tests/` |
 | 远端默认分支 | 已更新。`main` 自 `fd3d894` 起承载 3.0.0 内容，`npx skills@latest add LC-86/MyGameStudio` 实测安装到本版 20 项 |
-| 标签 `v3.0.0` | 已创建（用户授权），指向 `main` 上承载本版的发布提交 |
-| GitHub Release | 已创建（用户授权）。V3 没有构建产物，Release 不挂 tar 包，发布内容就是仓库本身 |
+| 标签 `v3.0.0` | 已创建并推送（用户授权）。附注标签，指向 `main` 上承载本版的发布提交；`add LC-86/MyGameStudio#v3.0.0` 实测装到本版 20 项 |
+| GitHub Release | 已创建并公开（用户授权），目标 `main`，不含任何资产——V3 没有构建产物，发布内容就是仓库本身。`v2.0.2` 的 Release 说明已在原文之前追加停止维护标注，其原文与 3 个资产均未改写 |
+| 标签与默认分支的关系 | 标签指向本版发布提交；这一往返之后落在 `main` 上的提交只改文档与静态检查，`skills/` 内容与标签处逐字节相同（`git diff v3.0.0 main -- skills/` 为空）。因此按 `#v3.0.0` 固定与按默认分支安装，取得的技能一致 |
 | 2.0.2 维护状态 | 停止维护。旧的 `dist/` 安装路径与多客户端插件入口已随源码树退出，`v2.0.2` 标签与其 Release 仅作历史留存，需要旧内容请按 `#v2.0.2` 固定引用取，不再修缺陷 |
 
 本地安装成功不等于远端安装成功。远端命令只有在默认分支已包含 V3 并实际测试后才能报告为通过——本次两个条件都满足：默认分支已合入，且已对真实远端内容复跑并通过。
@@ -402,7 +404,7 @@ Spec 本轮无新发现。评论里「改为独占创建新目录」仍是待决
 
 ### 合并与发布往返（2026-09-22）
 
-PR #80 以 merge commit `fd3d894` 合入 `main`，随后创建 `v3.0.0` 标签与 GitHub Release（均为用户授权）。这一往返新增的实测见第 2 节「远端仓库来源安装」，它关闭了此前的一项未验证：`#<ref>` 固定引用的端到端远端安装。
+PR #80 以 merge commit `fd3d894` 合入 `main`，随后创建 `v3.0.0` 附注标签与 GitHub Release，并给 `v2.0.2` 的 Release 说明前置追加停止维护标注（均为用户授权）。这一往返新增的实测见第 2 节「远端仓库来源安装」，它关闭了此前的一项未验证：`#<ref>` 固定引用的端到端远端安装——分支 ref、旧标签 ref 与本版标签各测一例。
 
 ### 仍未验证与仍未运行的
 

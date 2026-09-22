@@ -62,14 +62,15 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
 因此：
 
 - 任何时候都不要用 `@<分支或标签>` 表达版本意图。它要么因为筛选匹配不到而直接失败，要么在你同时给了 `--skill '*'` 时静默地给你默认分支——两种都不是你想要的版本。
-- 要按版本固定，用 `#<ref>`：`npx skills@latest add LC-86/MyGameStudio#v3.0.0`。这一形式已在 2026-09-22 用仓库内两个真实 ref 端到端验证（都加 `--skill '*' --agent universal --copy -y`）：
+- 要按版本固定，用 `#<ref>`：`npx skills@latest add LC-86/MyGameStudio#v3.0.0`。这一形式已在 2026-09-22 用仓库内三个真实 ref 端到端验证（都加 `--skill '*' --agent universal --copy -y`）：
 
   | 来源 | 结果 |
   |---|---|
   | `LC-86/MyGameStudio#v2.0.2` | `Found 39 skills` / `Installing all 39 skills`，装到的是旧技能名（`ask-matt`、`to-spec` 等） |
   | `LC-86/MyGameStudio#release/v3` | `Found 20 skills` / `Installing all 20 skills`，装到的是本版 `-gamestudio` 名称 |
+  | `LC-86/MyGameStudio#v3.0.0` | `Found 20 skills`，含 `gdd-gamestudio/SKILL.md` 与共享参考，无旧名残留 |
 
-  两次结果内容不同，说明 `#` 之后的引用确实决定了取哪份内容，而不是只看默认分支。
+  三次结果内容各不相同，说明 `#` 之后的引用确实决定了取哪份内容，而不是只看默认分支；标签与分支 ref 走同一条解析路径。
 - 只想试装未合入的改动，也可以用本地路径：`add /绝对路径/到/checkout`（本仓库的安装测试就是这么跑的）。
 
 ## 安装后确认

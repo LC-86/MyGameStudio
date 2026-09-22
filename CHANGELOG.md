@@ -90,10 +90,10 @@
 ### 合并与发布
 
 - PR #80 以 merge commit `fd3d894` 合入 `main`，保留 9 个提交不 squash，使五轮修复各自成为历史中的一个检查点；`release/v3` 分支保留为审查记录
-- 创建 `v3.0.0` 标签与对应 GitHub Release。V3 没有构建产物，Release 不挂 tar 包，发布内容就是仓库里 `skills/` 下的 20 项技能
+- 创建 `v3.0.0` 附注标签与对应 GitHub Release。V3 没有构建产物，Release 不挂 tar 包，发布内容就是仓库里 `skills/` 下的 20 项技能；标签创建后 `add LC-86/MyGameStudio#v3.0.0` 复测通过，装到的正是本版 20 项
 - 合入后对**真实远端内容**复跑验证：SSH 全新克隆上 `scripts/install-smoke-test.sh` 19/19 通过（来源标识 `fd3d894-clean`）；`add LC-86/MyGameStudio` 从默认分支实测装到 20 项本版技能；`#<ref>` 固定引用用 `#v2.0.2`（39 项旧名）与 `#release/v3`（20 项新名）各测一例，证明引用确实决定内容
 - 据此关闭两项此前记录的未验证：远端来源安装、`#<ref>` 端到端安装。同时修正 `docs/installation.md` 中一处与实测不符的说法：`skills-lock.json` 并不记录 `ref` 与 `sourceUrl`，也不记录提交 SHA
-- 2.0.2 及更早版本停止维护，不再修缺陷；`v2.0.2` 标签与其 Release 仅作历史留存。需要旧内容按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得
+- 2.0.2 及更早版本停止维护，不再修缺陷；`v2.0.2` 标签与其 Release 仅作历史留存，已在其 Release 说明原文之前前置追加停止维护标注（原文与 3 个资产均未改写）。需要旧内容按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得
 - 静态检查 64 项通过，文档导航与版本一致性检查通过
 
 ## 2.0.2 — 2026-09-17
