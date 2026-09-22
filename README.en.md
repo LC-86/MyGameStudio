@@ -65,11 +65,11 @@ No self-built task database, state machine, long-running dispatcher, or per-skil
 
 ## Verification status
 
-Actually run and passing this round: 63 static checks (including regression assertions for all five pre-merge review rounds), the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
+Actually run and passing for this release: 64 static checks (including regression assertions for all six pre-merge review rounds), the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. After the merge into the default branch the same checks were re-run against **the actual remote content**: a fresh SSH clone passed the install test 19/19, and both a git-source install and a pinned `#<ref>` install were verified. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
 
-Installing from the remote repository source, pinned-tag installs, and discovery/invocation inside real hosts are **not run**. Per-item evidence, commands and limits are in [docs/validation-v3.md](docs/validation-v3.md).
+Discovery and invocation inside real hosts, plus the remaining numbered behaviour scenarios, are **not run**; see section 4 of [docs/validation-v3.md](docs/validation-v3.md) for the list, and the same file for per-item evidence, exact commands and limits.
 
-A successful local install is not a successful remote GitHub install. Source complete, local install passing, behaviour verified and remote published are four different states and never substitute for each other. Until the remote default branch carries this version, `npx skills@latest add LC-86/MyGameStudio` does not install 3.0.0.
+A successful local install is not a successful remote GitHub install, which is why the remote content was re-tested separately. 3.0.0 is merged into `main`, and the `v3.0.0` tag and GitHub Release exist, so `npx skills@latest add LC-86/MyGameStudio` installs these 20 skills. 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
 
 ## License
 

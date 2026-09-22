@@ -56,13 +56,21 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 ## 恢复 2.0.2
 
-Git 历史未被改写。2.0.2 的完整内容在提交 `5e3cfbfa3e217a9182690237955734109b982235`：
+3.0.0 已合入默认分支，`npx skills@latest add LC-86/MyGameStudio` 从此刻起取到的是本版。**2.0.2 及更早版本停止维护**：不再修缺陷、不再补适配、不再发新版，`v2.0.2` 标签与其 Release 仅作历史留存。
+
+仍要取得 2.0.2 内容有两条路：
 
 ```bash
+# 一：按 Git 引用固定安装（已实测：Found 39 skills，即 2.0.2 的技能树）
+npx skills@latest add LC-86/MyGameStudio#v2.0.2 --skill '*'
+
+# 二：检出完整 2.0.2 树自行查看或取物
 git worktree add /tmp/mgs-v2 5e3cfbf     # 只读查看完整 2.0.2 树
 git show 5e3cfbf:plugin/records/mgs_records.py
 git checkout 5e3cfbf -- legacy/          # 会写入工作树，按需使用
 ```
+
+Git 历史未被改写，2.0.2 的完整内容在提交 `5e3cfbfa3e217a9182690237955734109b982235`。注意固定引用只按 `computedHash` 记录内容哈希，不记录引用与提交 SHA；`v2.0.2` 标签被移动时同一命令取到的内容也会变，见 [安装](installation.md)。
 
 已发布的 GitHub Release 资产不受本次改动影响。被移除内容的完整清单见 [provenance/v2-retirement.md](../provenance/v2-retirement.md)。
 

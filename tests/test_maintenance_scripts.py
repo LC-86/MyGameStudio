@@ -478,6 +478,27 @@ def test_docs_do_not_claim_at_suffix_is_the_git_ref() -> None:
         "installation.md 应保留误装旧版本的实测证据"
 
 
+def test_docs_do_not_claim_pinned_ref_still_unverified() -> None:
+    """`#<ref>` 已用真实分支与标签各测一例，文档不得继续把它写成未验证。
+
+    验证记录需要留下「曾经没跑通」的过程，因此同一行带此前/变成/已实测等
+    复盘标记时放行；只有把未验证当成当前状态的断言才算回归。
+    """
+    ref_token = ("#<ref>", "`#v", "固定引用", "固定标签")
+    not_verified = ("尚未端到端", "端到端未成功", "未端到端验证", "端到端未", "别写进脚本")
+    retrospective = ("此前", "原先", "已实测", "已通过", "变成", "已用", "纠正", "关闭")
+    offenders = []
+    for rel in tracked_files():
+        if not rel.endswith(".md") or rel.startswith("docs/design/"):
+            continue
+        for line_no, line in enumerate(read(REPO / rel).splitlines(), 1):
+            if any(m in line for m in retrospective):
+                continue
+            if any(t in line for t in ref_token) and any(m in line for m in not_verified):
+                offenders.append(f"{rel}:{line_no}")
+    assert not offenders, "仍把 #<ref> 写成未端到端验证：\n" + "\n".join(offenders)
+
+
 def test_delegation_states_isolation_is_host_dependent() -> None:
     """派发是否隔离父历史是宿主属性，不能写成通用事实。"""
     text = read(SKILLS / "docs-gamestudio" / "references" / "delegation.md")

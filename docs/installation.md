@@ -15,7 +15,7 @@ npx skills@latest add LC-86/MyGameStudio --list
 npx skills@latest add LC-86/MyGameStudio --skill '*'
 ```
 
-具体安装到哪个目录由官方 CLI 与你的选择决定。`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的 `v3.0.0` 标签；默认分支尚未更新到 V3 时，远端命令安装到的不是本版本。
+具体安装到哪个目录由官方 CLI 与你的选择决定。`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的 `v3.0.0` 标签：远端命令取的是仓库**默认分支**的内容，标签与默认分支是两件事。3.0.0 已合入 `main`，实测该命令安装到的是本版的 20 项技能。
 
 推荐完整安装 20 项。这套技能互相引用共享方法，选择安装会缺少依赖，见 [dependencies.md](dependencies.md)。
 
@@ -27,7 +27,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 - 只指定一个宿主时，CLI 直接把真实文件复制进该宿主目录（例如 `.claude/skills/`），不生成 `.agents/`。
 - 指定两个及以上宿主时，正本落在 `.agents/skills/`，各宿主目录是指向正本的符号链接。加 `--copy` 则在每个宿主目录各生成一份独立真实副本。
 - `-g` / `--global` 写入用户主目录下的宿主技能目录。本项目不使用它，也不建议对真实用户环境使用。
-- 项目级安装会生成 `skills-lock.json`，记录来源、`sourceType` 与内容哈希；git 来源还会记录 `ref` 与 `sourceUrl`，但不记录提交 SHA。
+- 项目级安装会生成 `skills-lock.json`。每项技能只记四个字段：`source`、`sourceType`、`skillPath`、`computedHash`（2026-09-22 用 `sourceType: github` 的默认分支安装实测）。**不记录 Git 引用，也不记录提交 SHA**，所以同一份锁文件看不出内容取自哪个分支或标签；标签被移动时只能靠 `computedHash` 比对发现变化。
 - 仓库根的 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` **不会**随技能安装，只有技能目录内的文件会被复制。这是每项技能都自带 `LICENSE` 通知的原因。
 
 ## 选择安装的语法
@@ -57,13 +57,20 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
 | `add LC-86/MyGameStudio@release/v3` | 筛选匹配不到任何技能，报 `No matching skills found for: release/v3`，**退出 1**，什么都没装 |
 | `add LC-86/MyGameStudio@release/v3 --skill '*'` | 通配绕过筛选，**退出 0** 并把**默认分支**的全部技能装上，无警告 |
 
-第二种才是真正危险的：它看起来成功了，装的却是默认分支的旧内容。实测记录（V3 尚未合入 `main` 时）：日志 `Found 39 skills` / `Installing all 39 skills`，产物含 `plugin/skills/ask-matt/SKILL.md`，锁文件未记录目标引用。39 正好等于 V2 树里 `plugin/skills/` 的 28 项加 `legacy/plugin-skills/` 的 11 项，与「装到了默认分支」一致。
+第二种才是真正危险的：它看起来成功了，装的却是默认分支的旧内容。实测记录（取于 3.0.0 合入 `main` 之前）：日志 `Found 39 skills` / `Installing all 39 skills`，产物含 `plugin/skills/ask-matt/SKILL.md`，锁文件未记录目标引用。39 正好等于 V2 树里 `plugin/skills/` 的 28 项加 `legacy/plugin-skills/` 的 11 项，与「装到了默认分支」一致。
 
 因此：
 
-- 想装本 PR 的内容，在合入默认分支之前请用**本地路径**安装，见本节开头。
-- 想按标签固定版本，用 `LC-86/MyGameStudio#v3.0.0`。这一形式来自对 CLI 解析代码的核对，**尚未端到端验证成功**（本机到 `github.com` 的 git 传输受阻，试过 SSL 错误与超时）。在验证完成前不要把它写进脚本当作可靠路径。
 - 任何时候都不要用 `@<分支或标签>` 表达版本意图。它要么因为筛选匹配不到而直接失败，要么在你同时给了 `--skill '*'` 时静默地给你默认分支——两种都不是你想要的版本。
+- 要按版本固定，用 `#<ref>`：`npx skills@latest add LC-86/MyGameStudio#v3.0.0`。这一形式已在 2026-09-22 用仓库内两个真实 ref 端到端验证（都加 `--skill '*' --agent universal --copy -y`）：
+
+  | 来源 | 结果 |
+  |---|---|
+  | `LC-86/MyGameStudio#v2.0.2` | `Found 39 skills` / `Installing all 39 skills`，装到的是旧技能名（`ask-matt`、`to-spec` 等） |
+  | `LC-86/MyGameStudio#release/v3` | `Found 20 skills` / `Installing all 20 skills`，装到的是本版 `-gamestudio` 名称 |
+
+  两次结果内容不同，说明 `#` 之后的引用确实决定了取哪份内容，而不是只看默认分支。
+- 只想试装未合入的改动，也可以用本地路径：`add /绝对路径/到/checkout`（本仓库的安装测试就是这么跑的）。
 
 ## 安装后确认
 
