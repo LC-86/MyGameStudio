@@ -50,15 +50,20 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
 | `owner/repo#ref` | `ref` 才是 **Git 引用**（分支或标签） |
 | `owner/repo#ref@skill` | 先按 `ref` 取内容，再筛 `skill` |
 
-所以 `npx skills@latest add LC-86/MyGameStudio@release/v3` **不会**装到 `release/v3`：`@release/v3` 被当成技能筛选名，没有任何技能叫这个名字，配合 `--skill '*'` 就直接把默认分支的全部技能装上去了。这一步退出码是成功的，不会给你任何警告。
+所以 `npx skills@latest add LC-86/MyGameStudio@release/v3` **不会**装到 `release/v3`：`@release/v3` 被当成技能筛选名。具体结果取决于有没有同时给 `--skill '*'`：
 
-实测记录：在 V3 尚未合入 `main` 时执行该命令，日志为 `Found 39 skills` / `Installing all 39 skills`，产物是 2.0.2 的旧技能（含 `plugin/skills/ask-matt/SKILL.md`），锁文件未记录目标引用。39 正好等于 V2 树里 `plugin/skills/` 的 28 项加 `legacy/plugin-skills/` 的 11 项，与「装到了默认分支」一致。
+| 命令 | 结果 |
+|---|---|
+| `add LC-86/MyGameStudio@release/v3` | 筛选匹配不到任何技能，报 `No matching skills found for: release/v3`，**退出 1**，什么都没装 |
+| `add LC-86/MyGameStudio@release/v3 --skill '*'` | 通配绕过筛选，**退出 0** 并把**默认分支**的全部技能装上，无警告 |
+
+第二种才是真正危险的：它看起来成功了，装的却是默认分支的旧内容。实测记录（V3 尚未合入 `main` 时）：日志 `Found 39 skills` / `Installing all 39 skills`，产物含 `plugin/skills/ask-matt/SKILL.md`，锁文件未记录目标引用。39 正好等于 V2 树里 `plugin/skills/` 的 28 项加 `legacy/plugin-skills/` 的 11 项，与「装到了默认分支」一致。
 
 因此：
 
 - 想装本 PR 的内容，在合入默认分支之前请用**本地路径**安装，见本节开头。
 - 想按标签固定版本，用 `LC-86/MyGameStudio#v3.0.0`。这一形式来自对 CLI 解析代码的核对，**尚未端到端验证成功**（本机到 `github.com` 的 git 传输受阻，试过 SSL 错误与超时）。在验证完成前不要把它写进脚本当作可靠路径。
-- 任何时候都不要用 `@<分支或标签>` 表达版本意图，它只会静默地给你默认分支。
+- 任何时候都不要用 `@<分支或标签>` 表达版本意图。它要么因为筛选匹配不到而直接失败，要么在你同时给了 `--skill '*'` 时静默地给你默认分支——两种都不是你想要的版本。
 
 ## 安装后确认
 

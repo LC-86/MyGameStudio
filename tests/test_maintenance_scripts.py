@@ -9,8 +9,10 @@
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -56,15 +58,153 @@ def test_no_unguarded_recursive_delete_of_caller_supplied_path() -> None:
 
 
 def test_fixture_script_refuses_non_empty_target_and_checks_cli_first() -> None:
-    """夹具脚本必须先校验依赖与目标安全，再创建任何东西。"""
+    """夹具脚本必须先校验依赖与目标，再创建任何东西。"""
     text = read(SCRIPTS / "behavior-fixtures.sh")
-    assert "已存在且非空" in text, "缺少对非空输出目录的拒绝"
-    assert "本脚本不会删除已有内容" in text, "应明确说明不会删除已有内容"
-    resolve_at = text.find("resolve_skills_cli")
+    for marker in ("已存在且非空", "本脚本不会删除已有内容"):
+        assert marker in text, f"缺少对非空输出目录的拒绝说明：{marker}"
     mkdir_at = text.find('mkdir -p "$OUT"')
-    refuse_at = text.find("已存在且非空")
-    assert 0 <= resolve_at < mkdir_at, "CLI 校验必须发生在创建目录之前"
-    assert 0 <= refuse_at < mkdir_at, "目标安全校验必须发生在创建目录之前"
+    assert mkdir_at > 0, "夹具脚本应显式创建输出目录"
+    for guard in ("resolve_skills_cli", "已存在且非空", "场景名不合法"):
+        assert 0 <= text.find(guard) < mkdir_at, f"{guard} 必须发生在任何写入之前"
+    # 参数校验不应依赖外部工具，也不该在检查阶段创建目录
+    assert text.find("场景名不合法") < text.find("resolve_skills_cli"), \
+        "场景名校验应先于 CLI 解析，使拒绝路径不依赖网络或缓存"
+    assert 'OUT_PARENT="$(mkdir -p' not in text, "路径规范化阶段不得创建目录"
+
+
+# --- 实际行为测试：真的跑脚本，而不是只查脚本里有没有提示文字 -------------
+
+FIXTURE = SCRIPTS / "behavior-fixtures.sh"
+
+
+def run_fixture(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    # 在现有环境上叠加，不整体替换：脚本需要 PATH、HOME 才能找到 node 与 git
+    full_env = {**os.environ, "DO_NOT_TRACK": "1", "DISABLE_TELEMETRY": "1",
+                **(env or {})}
+    return subprocess.run(["bash", str(FIXTURE), *args],
+                          capture_output=True, text=True, env=full_env, check=False)
+
+
+def test_fixture_rejects_scenario_name_escaping_output_root(tmp_path: Path) -> None:
+    """场景名 `../victim` 不得逃出输出根并覆盖既有工程。"""
+    out = tmp_path / "out"
+    victim = tmp_path / "victim"
+    (victim / "project").mkdir(parents=True)
+    sentinel = victim / "project" / "AGENTS.md"
+    sentinel.write_text("SENTINEL-DO-NOT-TOUCH\n", encoding="utf-8")
+    out.mkdir()
+
+    result = run_fixture(str(out), "../victim")
+
+    assert result.returncode != 0, f"越界场景名必须被拒绝，实际退出码 0：{result.stdout}"
+    assert sentinel.read_text(encoding="utf-8") == "SENTINEL-DO-NOT-TOUCH\n", \
+        "越界写入覆盖了既有文件"
+    assert not (victim / "project" / "src").exists(), "越界写入创建了预期外的目录"
+    assert not (victim / "project" / ".git").exists(), "越界写入在受害者目录里初始化了 git"
+    assert list(out.iterdir()) == [], "输出根应保持为空"
+
+
+def test_fixture_rejects_non_empty_output_and_preserves_content(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    keep = out / "previous-evidence.md"
+    keep.write_text("已有验证证据\n", encoding="utf-8")
+
+    result = run_fixture(str(out))
+
+    assert result.returncode != 0, "非空输出目录必须被拒绝"
+    assert keep.read_text(encoding="utf-8") == "已有验证证据\n", "脚本不得删除已有内容"
+
+
+def test_fixture_rejects_protected_targets(tmp_path: Path) -> None:
+    """受保护路径必须被拒；用临时 HOME 测，避免守卫失效时真的写入用户主目录。"""
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    for target, env in ((str(fake_home), {"HOME": str(fake_home)}), ("/", None)):
+        result = run_fixture(target, env=env)
+        assert result.returncode != 0, f"应拒绝把 {target} 当作输出目录"
+
+
+def test_fixture_rejects_bad_scenario_names(tmp_path: Path) -> None:
+    out = tmp_path / "out"
+    out.mkdir()
+    for bad in ("..", ".", "a/b", "/etc", "..\\x", "-x", "a;b", "$(touch pwn)"):
+        result = run_fixture(str(out), bad)
+        assert result.returncode != 0, f"应拒绝场景名 {bad!r}"
+    assert list(out.iterdir()) == [], "拒绝路径不得留下任何产物"
+
+
+def test_ci_workflows_run_the_whole_test_suite() -> None:
+    """CI 与发布检查必须收集整个 tests/，否则新增回归文件不会阻止发布。"""
+    for rel in (".github/workflows/check.yml", ".github/workflows/release.yml"):
+        text = read(REPO / rel)
+        assert re.search(r"pytest\s+tests/\s+-q", text), f"{rel} 未运行完整 tests/ 目录"
+        assert "test_skills_layout.py tests/test_docs_product.py" not in text, \
+            f"{rel} 仍用显式文件列表，会漏掉新增测试文件"
+
+
+def test_all_test_files_are_collected_by_default_entry() -> None:
+    """默认入口必须收集到 tests/ 下的每个测试文件，防止文件被静默排除。"""
+    listed = subprocess.run(
+        [sys.executable, "-m", "pytest", "tests/", "-q", "--collect-only", "-p", "no:cacheprovider"],
+        cwd=REPO, capture_output=True, text=True, check=False,
+    )
+    assert listed.returncode == 0, f"收集失败：{listed.stdout[-800:]}{listed.stderr[-400:]}"
+    collected = set(re.findall(r"tests/(test_[a-z_]+)\.py", listed.stdout))
+    on_disk = {p.stem for p in (REPO / "tests").glob("test_*.py")}
+    assert collected == on_disk, f"未被收集的测试文件：{sorted(on_disk - collected)}"
+
+
+def test_fixture_pins_initial_branch_and_builds_real_conflict(tmp_path: Path) -> None:
+    """夹具不得假定初始分支只能是 main/master；S08 必须真的建立合并冲突现场。
+
+    需要官方 skills CLI 才能装技能副本，取不到时按未运行处理而不是假装通过。
+    """
+    if not _skills_cli_available():
+        pytest.skip("未取得 skills CLI，夹具生成未运行")
+    out = tmp_path / "fixtures"
+    env = {
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "init.defaultBranch",
+        "GIT_CONFIG_VALUE_0": "trunk",
+    }
+    result = run_fixture(str(out), "S08-conflict", env=env)
+    assert result.returncode == 0, f"trunk 默认分支下夹具应仍能生成：{result.stdout[-600:]}"
+
+    project = out / "S08-conflict" / "project"
+    branch = subprocess.run(["git", "-C", str(project), "symbolic-ref", "--short", "HEAD"],
+                            capture_output=True, text=True, check=True).stdout.strip()
+    assert branch == "main", f"夹具应显式固定初始分支，实际 {branch}"
+    assert (project / ".git" / "MERGE_HEAD").exists(), "S08 应留下进行中的合并"
+    conflicted = subprocess.run(["git", "-C", str(project), "diff", "--name-only",
+                                 "--diff-filter=U"],
+                                capture_output=True, text=True, check=True).stdout.split()
+    assert set(conflicted) == {"docs/design/GDD.md", "src/game.js"}, \
+        f"冲突现场不符：{conflicted}"
+
+
+def _skills_cli_available() -> bool:
+    probe = subprocess.run(
+        ["bash", "-c",
+         f'. "{SCRIPTS / "resolve-skills-cli.sh"}" && '
+         'resolve_skills_cli "${SKILLS_CLI_VERSION:-1.7.0}"'],
+        capture_output=True, text=True, check=False,
+    )
+    return probe.returncode == 0
+
+
+def test_shell_variables_before_multibyte_text_are_braced() -> None:
+    """`$VAR` 紧跟全角标点时，bash 会把多字节字符读进变量名，在 set -u 下直接崩。
+
+    这类缺陷只在报错分支触发，正常路径跑不到，因此必须静态守住。
+    """
+    bare = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*[^\x00-\x7f]")
+    offenders = []
+    for script in SHELL_SCRIPTS:
+        for line_no, line in enumerate(read(script).splitlines(), 1):
+            if bare.search(line):
+                offenders.append(f"{script.name}:{line_no}: {line.strip()[:70]}")
+    assert not offenders, "变量后紧跟非 ASCII 且未加花括号：\n" + "\n".join(offenders)
 
 
 def test_no_machine_specific_npx_cache_hash_in_tracked_files() -> None:

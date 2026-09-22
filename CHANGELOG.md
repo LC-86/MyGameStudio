@@ -49,11 +49,20 @@
 
 ### 合并前审查修正
 
-- 修正 `docs/installation.md` 的固定引用说明：`owner/repo@x` 的 `@x` 是**技能筛选**，仓库仍按默认分支克隆；Git 引用来自 `#<ref>` 形式。原先的写法会让 `add LC-86/MyGameStudio@release/v3` 静默装到默认分支的旧技能（实测 `Found 39 skills`，等于 V2 树 `plugin/skills/` 28 项 + `legacy/plugin-skills/` 11 项），退出码正常且无警告
+- 修正 `docs/installation.md` 的固定引用说明：`owner/repo@x` 的 `@x` 是**技能筛选**，仓库仍按默认分支克隆；Git 引用来自 `#<ref>` 形式。结果取决于参数组合：`add LC-86/MyGameStudio@release/v3` 单独执行时筛选匹配不到，报 `No matching skills found` 并退出 1；加上 `--skill '*'` 后通配绕过筛选，退出 0 并装到默认分支的全部旧技能（实测 `Found 39 skills`，等于 V2 树 `plugin/skills/` 28 项 + `legacy/plugin-skills/` 11 项），锁文件不记引用
 - `delegation.md` 与 `docs-gamestudio` 不再把「子代理不含父历史」写成通用事实，改为宿主属性，并给出 Codex `spawn_agent` 默认 `fork_turns=all` 的反例与核实、披露要求
 - `scripts/behavior-fixtures.sh` 不再对调用者传入的目录做无条件递归删除：先校验 CLI 与目标安全，遇已存在的非空目录直接退出且不删任何内容
 - 新增 `scripts/resolve-skills-cli.sh`，两个脚本共用；按版本号在 npx 缓存中匹配，不再绑定某台机器的缓存哈希
 - 新增 `tests/test_maintenance_scripts.py`，把上述四类问题固化为回归断言
+
+### 第二轮合并前审查修正
+
+- `scripts/behavior-fixtures.sh` 的场景名此前未校验，`../victim` 能绕过输出根的非空检查并覆盖同级既有工程。改为在任何写入前校验全部场景名（禁止分隔符、上级与非法字符）并断言目标位于输出根内；参数校验移到 CLI 解析之前，使拒绝路径不依赖网络或缓存
+- `.github/workflows/check.yml` 与 `release.yml` 原先只运行显式列出的两个测试文件，新增回归文件即使失败也不会阻止检查通过。统一改为收集整个 `tests/`
+- S08 夹具原先假定初始分支只能是 `main`/`master`，在 `init.defaultBranch=trunk` 的环境下无法建立冲突现场。改为 `git init -b main` 显式固定并记录实际分支，冲突现场未成功建立时报错退出
+- 误装证据补回决定结果的参数：`add owner/repo@x` 单独执行时筛选匹配不到会退出 1，只有同时给 `--skill '*'` 才绕过筛选、退出 0 并装到默认分支。`docs/validation-v3.md`、`docs/installation.md`、`docs/development/releasing.md` 同步区分两种结果
+- 修的过程中另发现并修掉：macOS 上 `/tmp` 符号链接导致的路径包含检查误判（统一 `pwd -P`），以及 `$VAR` 紧跟全角标点时 bash 把多字节字符读进变量名造成的 unbound variable
+- 回归测试从 10 项增至 18 项，含真实越界行为测试与「默认入口必须收集到每个测试文件」的断言；静态检查共 56 项通过
 
 ## 2.0.2 — 2026-09-17
 

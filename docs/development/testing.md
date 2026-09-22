@@ -24,6 +24,8 @@ python3.12 scripts/validate-docs.py
 
 `tests/test_docs_product.py` 检查文档与发布契约：根 `VERSION` 是唯一版本权威（不存在第二个 `package.json` / `plugin.json` / `marketplace.json`）、非历史文档不残留旧版本号、必需文档提到当前版本、根许可与第三方说明保留上游署名与基线提交、README 列出全部 20 项并给出原生安装命令、中英与双语 AGENTS 镜像结构一致、迁移说明记录了基线提交与能力去向。
 
+`tests/test_maintenance_scripts.py` 守住维护脚本与文档事实，逐条对应合并前审查发现的问题：脚本不得对调用者传入的目录做无守卫递归删除；场景名不得逃出输出根（**真的跑脚本**的行为测试，不是查脚本里有没有提示文字）；CI 与发布检查必须收集整个 `tests/`；文档不得把 CLI 的 `@` 技能筛选写成 Git 引用；共享 CLI 解析器不得绑定单机缓存哈希；`$VAR` 后紧跟全角标点必须加花括号（这类缺陷只在报错分支触发，正常路径跑不到）。
+
 `scripts/validate-docs.py` 检查用户文档：导航清单齐全、相对链接可解析、用户文档不带技能 frontmatter（避免被安装器误发现）、已退出的旧安装命令只出现在迁移说明与历史记录中。它维护自己的期望文件清单；清单与当前文档集合不一致时会报断链或缺少导航，届时按失败项判断该改文档还是改脚本。原样保留的历史输入（`provenance/previous-audit/`、`provenance/v2-plugin-provenance/`、`provenance/setup-gamestudio-draft-v2/`、统一设计 v1 两份文件）不做链接与措辞检查，避免为了绿灯改写原始事实。
 
 ## 静态检查不是什么
@@ -55,7 +57,7 @@ SKILLS_CLI=/path/to/skills/bin/cli.mjs bash scripts/install-smoke-test.sh   # �
 bash scripts/behavior-fixtures.sh /tmp/mgs-behavior-$(date +%Y%m%d-%H%M)
 ```
 
-**输出目录必须是新建的或空的。** 脚本在创建任何东西之前先校验 CLI 可用与目标安全，遇到已存在的非空目录直接退出并提示先看内容——它不会递归删除调用者传入的目录，误传工程目录时不会丢东西。要重用旧目录请自己确认后处理。
+**输出目录必须是新建的或空的，场景名只能是不含路径分隔符的简单名字。** 脚本在创建任何东西之前先校验参数与目标安全，遇已存在的非空目录直接退出并提示先看内容——它不会递归删除调用者传入的目录，也不会让 `../victim` 这类名字逃出输出根去覆盖同级工程。要重用旧目录请自己确认后处理。
 
 它生成一个代表性小游戏项目（含项目约定、现行 GDD、进行中 spec、术语表、源码、本地任务票与真实 git 历史），用官方 CLI 原生安装 20 项技能到该项目的 `.agents/skills/`，并为每个场景准备特定现场（例如 S08 是一次真实进行中的 merge 冲突，带无关的未暂存改动）。
 

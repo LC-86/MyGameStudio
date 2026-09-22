@@ -24,8 +24,11 @@ CLI 调用方式：本机 `npx skills@1.7.0` 解析缓慢，实测改用已缓�
 命令与结果：
 
 ```
-$ python3.12 -m pytest tests/test_skills_layout.py tests/test_docs_product.py -q
+$ python3.12 -m pytest tests/ -q
+56 passed
+
 $ python3.12 scripts/validate-docs.py
+OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，20 项技能）
 ```
 
 `tests/test_skills_layout.py` 覆盖 27 项断言：
@@ -112,9 +115,9 @@ PASS 19 / FAIL 0
 |---|---|---|
 | `npx skills@latest add LC-86/MyGameStudio`（远端仓库来源） | 未运行 | 本机到 `github.com` 的网络被阻断（`SSL_ERROR_SYSCALL`），克隆失败。远端默认分支目前也不是 V3 内容 |
 | `add LC-86/MyGameStudio#v3.0.0` 固定引用安装 | 未运行 | 同上。`#<ref>` 才是 Git 引用形式，来自对 CLI 解析代码的核对；远端尝试分别遇到 SSL 错误与超时，端到端未成功 |
-| `add LC-86/MyGameStudio@v3.0.0` | **已证伪** | `@` 后缀是技能筛选，不是 Git 引用。隔离实测：退出成功但装到默认分支的 39 项旧技能（等于 V2 树 `plugin/skills/` 28 项 + `legacy/plugin-skills/` 11 项），锁文件未记引用。见 [installation.md](installation.md) |
+| `add LC-86/MyGameStudio@v3.0.0` | **已证伪** | `@` 后缀是技能筛选，不是 Git 引用。结果取决于是否同时给 `--skill '*'`，两种情况不同，不能合并成一句：不带该参数时筛选匹配不到任何技能，CLI 报 `No matching skills found for: …` 并**退出 1**（安装失败）；带上时通配绕过筛选，**退出 0** 并把**默认分支**的全部技能装上，锁文件不记引用。实测成功的完整命令是 `add LC-86/MyGameStudio@release/v3 --skill '*' --agent universal --copy -y`，产物 `Found 39 skills` / `Installing all 39 skills`，等于 V2 树 `plugin/skills/` 28 项 + `legacy/plugin-skills/` 11 项。见 [installation.md](installation.md) |
 
-本行原先断言「CLI 接受 `owner/repo@<ref>` 并把它作为 git 引用」，是错的，来源是上一轮子代理把 CLI 输出里 `Source: … @main` 的显示误读为引用（那个 `@` 其实是 skillFilter 的着色显示）。合并前审查用实际远端安装证伪了它。教训：**对第三方工具的行为断言必须来自可执行验证或源码，不能来自对输出文本的解读**；输出文本正是同一轮审查里安装测试脚本翻车的地方。
+本行原先断言「CLI 接受 `owner/repo@<ref>` 并把它作为 git 引用」，是错的，来源是上一轮子代理把 CLI 输出里 `Source: … @main` 的显示误读为引用（那个 `@` 其实是 skillFilter 的着色显示）。合并前审查用实际远端安装证伪了它。第二轮审查又指出：我记录误装时省掉了 `--skill '*'`，而正是这个参数决定结果是「报错退出 1」还是「成功装到默认分支」，省略它会让读者无法复现、并把两种不同结论混为一谈。两条教训同源：**对第三方工具的行为断言必须来自可执行验证或源码，且证据要保留决定结果的参数**，不能来自对输出文本的解读或摘要。
 | 真实宿主（Claude Code / Codex / Cursor 等）内的发现与调用 | 未运行 | 本轮不在这些宿主内执行；V3 不为任何宿主建立适配代码，也不宣称已验证 |
 | 全局安装（`-g`） | 未运行（有意） | 不对真实用户环境执行全局写入 |
 
@@ -301,15 +304,50 @@ PASS 19 / FAIL 0
 | 状态 | 实际情况 |
 |---|---|
 | 源码完成 | 是。20 项技能（73 个文件：20 份 `SKILL.md`、20 份 `LICENSE`、28 份参考、5 份模板）、共享参考、文档、静态检查与安装/夹具脚本均在本地工作树中 |
-| 静态检查 | 通过。`python3.12 -m pytest tests/ -q` 38 项通过；`python3.12 scripts/validate-docs.py` 通过（37 个文档、20 项技能） |
+| 静态检查 | 通过。`python3.12 -m pytest tests/ -q` 56 项通过；`python3.12 scripts/validate-docs.py` 通过（37 个文档、20 项技能） |
 | 本地安装通过 | 是。从本地工作树以官方 CLI 1.7.0 隔离安装，`scripts/install-smoke-test.sh` 19/19 通过，已对最终源码状态复跑 |
 | 行为验证 | 9 个场景通过，1 个阻塞（S10 / E11）。逐项证据见第 3 节；未运行的场景不声称通过 |
-| 本地提交 | `28a10a8`（升级本体）、`29c1949`（验证补记）、`82116e6`（安装验证工装修正），分支 `release/v3` |
-| 推送 | 已推送到 `origin/release/v3`（2026-09-22，用户授权）。`5e3cfbf..82116e6` |
+| 合并前审查 | 两轮，共 8 项发现，全部成立并已修订（见第 6 节）。第二轮审查另复现出第 1 项修复不完整的越界路径 |
+| 本地提交 | `28a10a8`（升级本体）、`29c1949`（验证补记）、`82116e6`（安装验证工装修正）、`ef94dfa`（第一轮审查修订），分支 `release/v3` |
+| 推送 | 已推送到 `origin/release/v3`（2026-09-22，用户授权）。HTTPS git 传输间歇不通，恢复后完成；`github.com:22` 与 `ssh.github.com:443` 的 SSH 通路可用 |
 | 拉取请求 | [#80](https://github.com/LC-86/MyGameStudio/pull/80) `release/v3` → `main`，状态 OPEN |
-| CI | `静态检查与文档导航` 与 `原生安装验证` 均通过。首轮安装验证因工装解析缺陷失败，`82116e6` 修复后复跑通过 |
+| CI | `静态检查与文档导航` 与 `原生安装验证` 均通过。注意：`ef94dfa` 及之前的 CI 只跑了显式列出的两个测试文件（38 项），第二轮审查指出后已改为收集整个 `tests/` |
 | 远端默认分支 | 未更新（PR 未合入）。因此 `npx skills@latest add LC-86/MyGameStudio` 目前安装到的**不是** 3.0.0 |
 | 标签 `v3.0.0` | 未创建。需要单独授权 |
 | GitHub Release | 未创建。V3 没有构建产物，发布就是仓库内容本身 |
 
 本地安装成功不等于远端安装成功。远端命令只有在默认分支已包含 V3 并实际测试后才能报告为通过。
+
+## 6. 合并前审查往返
+
+两轮审查共提出 8 项发现，**全部经独立复核成立**，没有一项被驳回。逐项状态：
+
+### 第一轮（`45c74fd`，Standards 2 / Spec 2）
+
+| 项 | 发现 | 修订 | 复核方式 |
+|---|---|---|---|
+| P1 | `behavior-fixtures.sh` 对调用者目录无条件 `rm -rf`，且先删后校验 | 先校验再写入；非空目录直接拒绝 | 哨兵复现：非空目录退出 1 且文件存活；坏 CLI 时连输出目录都不创建 |
+| P2 | 绑定单机 `~/.npm/_npx/<hash>` 路径 | 新增 `scripts/resolve-skills-cli.sh`，按版本号匹配 | 用审查者机器的哈希 `43103b98cff1ffa9` 造假 HOME 实测命中 |
+| P2 | 文档把 `@` 后缀写成 Git 引用 | 读 CLI 源码确认 `@` 是 skillFilter、`#` 才是引用，改三处文档 | 独立对上 `Found 39 skills` = V2 树 28 + 11 |
+| P2 | 把「子代理不含父历史」写成通用事实 | 改为宿主属性，补 Codex `fork_turns=all` 反例与核实、披露要求 | 同步修正 `validation-v3.md`、`testing.md` 同类表述 |
+
+### 第二轮（`ef94dfa`，Standards 3 / Spec 1）
+
+| 项 | 发现 | 修订 | 复核方式 |
+|---|---|---|---|
+| P1 | 场景名未校验，`../victim` 可绕过输出根检查并覆盖既有工程（第 1 项修复不完整） | 写入前校验全部场景名（禁分隔符、上级、非法字符），并断言目标在输出根内；参数校验提到 CLI 解析之前，使拒绝路径不依赖网络 | 真实行为测试：越界退出非 0、哨兵未被覆盖、未建 `src/` 与 `.git`、输出根零写入 |
+| P2 | `check.yml` 与 `release.yml` 只跑显式两个测试文件，新增回归文件永不进 CI | 两处统一为 `python -m pytest tests/ -q` | 新增断言：工作流必须含 `pytest tests/ -q` 且不含显式文件列表；并校验默认入口收集到磁盘上每个测试文件 |
+| P2 | S08 夹具假定初始分支只能是 main/master | `git init -q -b main` 显式固定并记录实际分支；S08 冲突现场未建立时报错退出 | 以 `init.defaultBranch=trunk` 跑子进程实测：夹具仍为 `main`，`MERGE_HEAD` 存在，两个文件冲突 |
+| P3 | 误装证据省掉了 `--skill '*'`，混淆「退出 1 失败」与「退出 0 装错版本」 | 保留完整命令，用表格区分两种结果，同步四处文档 | 读 CLI 源码确认 `selectedSkills.length === 0` 时 `process.exit(1)` |
+
+### 修过程中额外发现并修掉的缺陷
+
+- **路径规范化误判**：macOS 上 `/tmp` 是 `/private/tmp` 的符号链接，`cd && pwd` 返回物理路径而 `$OUT` 是逻辑路径，导致我新加的包含性检查把合法场景全部拒绝。改为统一 `pwd -P`，并让规范化阶段不再创建目录。
+- **变量后紧跟全角标点**：`"$OUT_ABS，..."` 会让 bash 把多字节字符读进变量名，在 `set -u` 下报 unbound variable。这类缺陷只在报错分支触发，正常路径跑不到，因此加了静态断言守住（同时修掉 `install-smoke-test.sh` 里的同类写法）。
+- 上面两项都由第二轮的行为测试暴露，不是静态阅读发现的——这正是审查要求「补实际越界测试，不能只检查脚本里有没有提示文字」的价值。
+
+### 本轮仍未验证的
+
+- `#<ref>` 固定引用的端到端远端安装：本机到 `github.com` 间歇阻断，未成功。
+- 真实宿主内的技能发现与调用、E05/E07/E08/E12/E17/E18 行为场景：见第 4 节。
+- 第二轮修复后未重跑行为场景（改动集中在脚本与文档，未触及技能正文中影响行为的语义）。

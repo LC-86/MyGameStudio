@@ -22,7 +22,50 @@ OUT="${1:?用法：scripts/behavior-fixtures.sh <空的或尚不存在的输出�
 shift || true
 SCENARIOS="${*:-S01-ask S02-setup-rerun S03-routing S04-partial-save S05-subagent S06-prototype S07-condense S08-conflict S09-human-acceptance S10-no-tools}"
 
-# --- 先校验依赖与目标，全部通过后才创建任何目录 -------------------------
+# --- 1. 参数校验：不依赖外部工具，不写任何东西 --------------------------
+# 场景名会拼进输出路径，未校验就能用 ../x 逃出输出根并覆盖既有工程。
+for s in $SCENARIOS; do
+  case "$s" in
+    ""|.|..|*/*|*\\*)
+      printf '场景名不合法（不得为空、点号、上级或含路径分隔符）：%s\n' "$s" >&2
+      exit 1 ;;
+  esac
+  if ! printf '%s' "$s" | grep -qE '^[A-Za-z0-9][A-Za-z0-9._-]*$'; then
+    printf '场景名只允许字母、数字、点、下划线与连字符：%s\n' "$s" >&2
+    exit 1
+  fi
+done
+
+case "$OUT" in
+  "")   echo "输出目录为空字符串，拒绝执行" >&2; exit 1 ;;
+  "/")  echo "输出目录是文件系统根，拒绝执行" >&2; exit 1 ;;
+esac
+
+# 规范化到物理路径再比对：macOS 上 /tmp 是 /private/tmp 的符号链接，
+# 混用逻辑与物理路径会让包含性检查误判。父目录不存在时不创建，只做字面比较。
+if OUT_PARENT="$(cd "$(dirname "$OUT")" 2>/dev/null && pwd -P)"; then
+  OUT_ABS="$OUT_PARENT/$(basename "$OUT")"
+else
+  OUT_ABS="$OUT"
+fi
+for forbidden in "$HOME" "$REPO" "$HOME/.agents" "$HOME/.claude" "$HOME/.qoder" "$HOME/.qoder-cn" \
+                 "$(cd "$HOME" 2>/dev/null && pwd -P)" "$(cd "$REPO" && pwd -P)"; do
+  [ -n "$forbidden" ] || continue
+  if [ "$OUT_ABS" = "$forbidden" ]; then
+    echo "输出目录解析为 ${OUT_ABS}，与受保护路径相同，拒绝执行" >&2
+    exit 1
+  fi
+done
+if [ -e "$OUT_ABS" ]; then
+  [ -d "$OUT_ABS" ] || { echo "$OUT_ABS 已存在且不是目录，拒绝执行" >&2; exit 1; }
+  if [ -n "$(ls -A "$OUT_ABS" 2>/dev/null)" ]; then
+    echo "$OUT_ABS 已存在且非空，本脚本不会删除已有内容。" >&2
+    echo "请换一个目录，或先自行确认并处理它，例如：ls -A '$OUT_ABS'" >&2
+    exit 1
+  fi
+fi
+
+# --- 2. 依赖校验：仍然不写任何东西 --------------------------------------
 if ! resolve_skills_cli "$VERSION"; then
   echo "未取得 skills CLI，未做任何改动" >&2
   exit 1
@@ -35,27 +78,7 @@ if ! "${CLI[@]}" --version >/dev/null 2>&1; then
 fi
 [ -d "$REPO/skills" ] || { echo "$REPO/skills 不存在，未做任何改动" >&2; exit 1; }
 
-case "$OUT" in
-  "")   echo "输出目录为空字符串，拒绝执行" >&2; exit 1 ;;
-  "/")  echo "输出目录是文件系统根，拒绝执行" >&2; exit 1 ;;
-esac
-OUT_PARENT="$(mkdir -p "$(dirname "$OUT")" && cd "$(dirname "$OUT")" && pwd)"
-OUT_ABS="$OUT_PARENT/$(basename "$OUT")"
-for forbidden in "$HOME" "$REPO" "$HOME/.agents" "$HOME/.claude" "$HOME/.qoder" "$HOME/.qoder-cn"; do
-  if [ "$OUT_ABS" = "$forbidden" ]; then
-    echo "输出目录解析为 $OUT_ABS，与受保护路径相同，拒绝执行" >&2
-    exit 1
-  fi
-done
-if [ -e "$OUT_ABS" ]; then
-  [ -d "$OUT_ABS" ] || { echo "$OUT_ABS 已存在且不是目录，拒绝执行" >&2; exit 1; }
-  if [ -n "$(ls -A "$OUT_ABS" 2>/dev/null)" ]; then
-    echo "$OUT_ABS 已存在且非空，本脚本不会删除已有内容。" >&2
-    echo "请换一个目录，或先自行确认并删除它，例如：" >&2
-    echo "    ls -A '$OUT_ABS'   # 先看内容" >&2
-    exit 1
-  fi
-fi
+# --- 3. 到这里才开始写入 ------------------------------------------------
 OUT="$OUT_ABS"
 mkdir -p "$OUT"
 echo "输出目录：$OUT"
@@ -67,7 +90,10 @@ make_project() {
   mkdir -p "$p"/{docs/agents,docs/design,docs/specs,docs/research,tasks,src,assets/svg}
   mkdir -p "$p"/tasks/01-dive-windup "$p"/tasks/02-third-wave
   cd "$p"
-  git init -q . 2>/dev/null || true
+  # 显式固定初始分支，不依赖调用者的 init.defaultBranch；
+  # 老版本 git 不支持 -b 时回退，并记录实际分支名供 S08 使用。
+  git init -q -b main . 2>/dev/null || git init -q . 2>/dev/null || true
+  FIXTURE_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || echo main)"
   git config user.email "fixture@example.invalid" 2>/dev/null || true
   git config user.name "Fixture" 2>/dev/null || true
 
@@ -219,7 +245,14 @@ SEED="$OUT/_seed"; mkdir -p "$SEED"
 echo "已安装 $(find "$SEED/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') 项到 $SEED/.agents/skills"
 
 for s in $SCENARIOS; do
-  d="$OUT/$s"; mkdir -p "$d"
+  d="$OUT/$s"
+  # 名称已禁止分隔符与上级，这里再断言一次目标仍在输出根内，
+  # 防止将来构造方式被改动后静默越界。
+  case "$d" in
+    "$OUT"/*) ;;
+    *) printf '场景目标不在输出根内，拒绝写入：%s\n' "$d" >&2; exit 1 ;;
+  esac
+  mkdir -p "$d"
   make_project "$d/project"
   mkdir -p "$d/project/.agents"
   cp -R "$SEED/.agents/skills" "$d/project/.agents/skills"
@@ -234,7 +267,7 @@ if [ -d "$C" ]; then
     printf '\nexport const COMBO_CAP = 5; // 试验值\n' >> src/game.js
     printf '潮水周期改为 10 秒。\n' >> docs/design/GDD.md
     git commit -qam "feature: 潮水周期改为 10 秒并加连击上限试验值"
-    git checkout -q main 2>/dev/null || git checkout -q master
+    git checkout -q "$FIXTURE_BRANCH" || { echo "S08：无法返回初始分支 $FIXTURE_BRANCH" >&2; exit 1; }
     printf '\nexport const WAVE_COUNT = 3;\n' >> src/game.js
     printf '第三波结束后进入结算。\n' >> docs/design/GDD.md
     git commit -qam "main: 补充波次常量与结算说明"
@@ -244,9 +277,14 @@ if [ -d "$C" ]; then
     printf 'unrelated untracked note\n' > UNRELATED-UNTRACKED.txt
     printf 'PK\x03\x04fake-binary-scene-payload\n' > assets/svg/tide-pool-scene.bin
     git merge feature/tide-balance >/dev/null 2>&1 || true
-    echo "      S08 冲突文件：$(git diff --name-only --diff-filter=U | tr '\n' ' ')"
+    CONFLICTED="$(git diff --name-only --diff-filter=U | tr '\n' ' ')"
+    echo "      S08 初始分支：$FIXTURE_BRANCH"
+    echo "      S08 冲突文件：$CONFLICTED"
     echo "      S08 merge 进行中：$([ -f .git/MERGE_HEAD ] && echo yes || echo no)"
-    echo "      S08 git status："
-    git status --short | grep -v '^?? \.agents/' | sed 's/^/        /' )
+    git status --short | grep -v '^?? \.agents/' | sed 's/^/        /'
+    if [ ! -f .git/MERGE_HEAD ] || [ -z "$CONFLICTED" ]; then
+      echo "S08：未能建立进行中的合并冲突现场，夹具不可用" >&2
+      exit 1
+    fi )
 fi
 echo "输出根目录：$OUT"

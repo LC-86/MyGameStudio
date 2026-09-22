@@ -183,7 +183,7 @@ if [ -z "$FULL_N" ]; then
 elif [ "$FULL_N" = "20" ]; then
   ok "--full-depth 未发现旧技能、样例或夹具入口"
 elif [ "$FULL_N" = "${PLAIN_N:-0}" ]; then
-  ok "--full-depth 与默认发现数一致（$FULL_N），无额外入口"
+  ok "--full-depth 与默认发现数一致（${FULL_N}），无额外入口"
 else
   bad "--full-depth 发现 $FULL_N 项，多于默认的 ${PLAIN_N:-?} 项，仓库内可能有游离 SKILL.md"
   printf '%s\n' "$FD" | sed -e "$ANSI_RE" | grep -vE -- '-gamestudio|^│|^┌|^└|^├|^\s*$' | head -10 | sed 's/^/      /'
