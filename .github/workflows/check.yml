@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'   # skills CLI 要求 node >= 22.20.0
 
       - name: 隔离安装测试
         env:

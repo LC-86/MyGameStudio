@@ -16,6 +16,10 @@ REPO="$(cd "$REPO" && pwd)"
 VERSION="${SKILLS_CLI_VERSION:-1.7.0}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/mgs-install-test.XXXXXX")"
 export DO_NOT_TRACK=1 DISABLE_TELEMETRY=1
+# CLI 的 --list 是给人看的彩色表格：终端宽度不同会把技能名折行。
+# 因此这里关掉颜色，并在匹配前去掉 ANSI 与多余空白；名称集合的权威判据是安装结果，不是这段文本。
+export NO_COLOR=1 FORCE_COLOR=0 TERM=dumb
+ANSI_RE=$'s/\x1b\\[[0-9;]*[A-Za-z]//g'
 FAIL=0
 PASS=0
 
@@ -23,6 +27,9 @@ note() { printf '\n=== %s ===\n' "$1"; }
 ok()   { PASS=$((PASS+1)); printf 'PASS  %s\n' "$1"; }
 bad()  { FAIL=$((FAIL+1)); printf 'FAIL  %s\n' "$1"; }
 info() { printf '      %s\n' "$1"; }
+# 去 ANSI 并把连续空白压成单个空格，用于匹配 "Found N skills" 这类短语。
+# 只处理字节安全的转义序列，不动多字节字符。
+clean() { sed -e "$ANSI_RE" | tr -s '[:space:]' ' '; }
 
 resolve_cli() {
   if [ -n "${SKILLS_CLI:-}" ] && [ -f "$SKILLS_CLI" ]; then
@@ -54,23 +61,23 @@ info "仓库：$REPO"
 info "工作目录：$WORK"
 info "CLI 调用：${CLI[*]}"
 info "来源标识：$(git -C "$REPO" rev-parse --short HEAD)$( [ -n "$(git -C "$REPO" status --porcelain)" ] && echo '-dirty' || echo '-clean')"
-run_cli --version | tail -2 | sed 's/^/      CLI 版本：/'
+info "CLI 版本：$(run_cli --version 2>&1 | clean | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)"
 
 note "1. 发现集合恰为 20 项"
 CONSUMER="$WORK/consumer-list"; mkdir -p "$CONSUMER"
-LIST="$(cd "$CONSUMER" && run_cli add "$REPO" --list)"
-printf '%s\n' "$LIST" | grep -E '^\s*(◇|●|■|✓|⚠)' | head -5 | sed 's/^/      /'
-FOUND="$(printf '%s\n' "$LIST" | grep -oE '\b[a-z]+(-[a-z0-9]+)*-gamestudio(-docs)?\b' | sort -u)"
-COUNT="$(printf '%s\n' "$FOUND" | grep -c . )"
-[ "$COUNT" = "20" ] && ok "发现 20 项" || bad "发现 $COUNT 项，应为 20 项"
-for name in $EXPECTED; do
-  printf '%s\n' "$FOUND" | grep -qx "$name" || bad "缺少 $name"
-done
-for extra in $FOUND; do
-  printf '%s\n' $EXPECTED | grep -qx "$extra" || bad "发现集合外的技能 $extra"
-done
-printf '%s\n' "$LIST" | grep -qE 'game-producer|game-init|game-design|ask-matt|to-spec|to-tickets' \
-  && bad "发现集合含旧技能名" || ok "无旧技能名或已退役入口"
+LIST="$(cd "$CONSUMER" && run_cli add "$REPO" --list 2>&1)"
+LIST_CLEAN="$(printf '%s\n' "$LIST" | clean)"
+printf '%s\n' "$LIST" | sed -e "$ANSI_RE" | grep -E '◇|●|■|✓|⚠' | cut -c1-120 | head -3 | sed 's/^/      /'
+FOUND_N="$(printf '%s' "$LIST_CLEAN" | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
+if [ -z "$FOUND_N" ]; then
+  info "未能从 --list 文本解析数量（该输出是给人看的表格，会随终端宽度折行）；名称集合由第 2 步的安装结果判定"
+elif [ "$FOUND_N" = "20" ]; then
+  ok "CLI 报告发现 20 项"
+else
+  bad "CLI 报告发现 $FOUND_N 项，应为 20 项"
+fi
+printf '%s' "$LIST_CLEAN" | grep -qE 'game-producer|game-init|game-design|ask-matt|to-spec|to-tickets|writing-for-agents|diagnosing-bugs' \
+  && bad "发现集合含旧技能名" || ok "发现输出无旧技能名或已退役入口"
 
 note "2. 完整安装（--agent universal --copy）"
 FULL="$WORK/consumer-full"; mkdir -p "$FULL"
@@ -172,15 +179,19 @@ OLD="$(find "$FULL" -type d \( -name 'ask-matt' -o -name 'to-spec' -o -name 'to-
 [ "$OLD" = "0" ] && ok "无旧别名目录" || bad "出现旧别名目录"
 
 note "8. --full-depth 是否暴露额外 SKILL.md"
-FD="$(cd "$WORK/consumer-list" && run_cli add "$REPO" --list --full-depth)"
-PLAIN_N="$(printf '%s\n' "$LIST" | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
-FULL_N="$(printf '%s\n' "$FD" | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
-info "默认发现 ${PLAIN_N:-?} 项，--full-depth 发现 ${FULL_N:-?} 项"
-if [ "${PLAIN_N:-0}" = "20" ] && [ "${FULL_N:-0}" = "20" ]; then
+FD="$(cd "$WORK/consumer-list" && run_cli add "$REPO" --list --full-depth 2>&1)"
+PLAIN_N="$(printf '%s' "$LIST_CLEAN" | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
+FULL_N="$(printf '%s' "$FD" | clean | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
+info "默认发现 ${PLAIN_N:-未解析} 项，--full-depth 发现 ${FULL_N:-未解析} 项"
+if [ -z "$FULL_N" ]; then
+  bad "--full-depth 输出无法解析数量，需检查 CLI 版本或输出格式"
+elif [ "$FULL_N" = "20" ]; then
   ok "--full-depth 未发现旧技能、样例或夹具入口"
+elif [ "$FULL_N" = "${PLAIN_N:-0}" ]; then
+  ok "--full-depth 与默认发现数一致（$FULL_N），无额外入口"
 else
-  bad "--full-depth 发现 ${FULL_N:-?} 项，多于 20 项说明仓库内有游离 SKILL.md"
-  printf '%s\n' "$FD" | grep -iE 'skill' | grep -vE -- '-gamestudio' | head -10 | sed 's/^/      /'
+  bad "--full-depth 发现 $FULL_N 项，多于默认的 ${PLAIN_N:-?} 项，仓库内可能有游离 SKILL.md"
+  printf '%s\n' "$FD" | sed -e "$ANSI_RE" | grep -vE -- '-gamestudio|^│|^┌|^└|^├|^\s*$' | head -10 | sed 's/^/      /'
 fi
 
 note "结果"
