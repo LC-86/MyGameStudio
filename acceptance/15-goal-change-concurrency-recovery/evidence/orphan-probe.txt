@@ -1,2 +1,0 @@
-{"phase": "before-release", "decision": "allow", "rule_stage": "granted"}
-{"phase": "after-release", "decision": "deny", "rule_stage": "identity"}

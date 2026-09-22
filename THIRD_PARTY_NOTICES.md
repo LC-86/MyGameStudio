@@ -1,49 +1,54 @@
 # 第三方来源与许可
 
-本文件是仓库维护入口。逐文件指纹、原始校验值与适配明细以
-[`plugin/provenance/manifest.md`](plugin/provenance/manifest.md) 和
-[`plugin/provenance/fingerprints.json`](plugin/provenance/fingerprints.json)
-为准，不在此另建第二套来源账本。
+MyGameStudio 由 **LC-86** 独立维护，方法改编自 Matt Pocock 的技能库。这不表示 Matt Pocock 或任何宿主厂商对本项目作了官方背书。
 
-MyGameStudio 由 **LC-86** 独立维护，基于 Matt Pocock skills 构建。
-这不表示 Matt Pocock 或任何宿主厂商对本项目作了官方背书。
+## 本项目
 
-## 本项目原创部分
-
-- 维护者：LC-86
-- 许可：MIT，见仓库根目录 [`LICENSE`](LICENSE)
-- 范围：三个游戏入口、游戏阶段资料、记录层、模板、本仓库用户文档与检查，以及插件清单中声明的组合包原创部分
-- 组合包标识：`mygamestudio` 2.0.2
-
-`mygamestudio-2.0.2.tar.gz` 把本文件与根目录 `LICENSE` 一并带入插件根，与仓库维护入口字节一致。
-已发布的 `mygamestudio-2.0.1.tar.gz` 仍按发版时内容提供，其中已包含上游 MIT 副本
-[`plugin/provenance/licenses/mattpocock-skills-LICENSE.txt`](plugin/provenance/licenses/mattpocock-skills-LICENSE.txt)。
+| 项 | 内容 |
+|---|---|
+| 维护者 | LC-86 |
+| 许可 | MIT，见 [LICENSE](LICENSE) |
+| 当前版本 | 3.0.0，权威来源 [VERSION](VERSION) |
+| 交付形态 | 原生 Agent Skills 仓库，根目录 `skills/<技能名>/SKILL.md`，通过官方 `skills` CLI 安装 |
+| 原创范围 | `gdd-gamestudio` 技能、全部游戏化适配、共享方法（文档分流与增量协作、子代理委派、人机责任与验收交接）、本仓库文档与检查 |
 
 ## Matt Pocock skills
 
 | 项 | 内容 |
-| --- | --- |
+|---|---|
 | 来源项目 | [mattpocock/skills](https://github.com/mattpocock/skills) |
 | 作者 | Matt Pocock |
-| 固定版本 | 1.2.3 |
-| 提交 | `3cca18b368ae95cdbdebbff572ccafa662551015` |
-| 纳入范围 | 正式 25 项（engineering 18 + productivity 7）。实验与未正式发布技能不纳入 |
-| 仓库中的位置 | `plugin/skills/<name>/`（按 Codex 插件惯例扁平分发，保留原名与调用声明） |
-| 许可证位置 | [`plugin/provenance/licenses/mattpocock-skills-LICENSE.txt`](plugin/provenance/licenses/mattpocock-skills-LICENSE.txt) |
-| 许可证 | MIT，版权 `Copyright (c) 2026 Matt Pocock` |
-| 组合包维护者 | LC-86 |
+| 许可 | MIT，版权 `Copyright (c) 2026 Matt Pocock` |
+| 许可副本 | [provenance/v2-plugin-provenance/licenses/mattpocock-skills-LICENSE.txt](provenance/v2-plugin-provenance/licenses/mattpocock-skills-LICENSE.txt) |
+| V3 方法基线 | 提交 `c55ee46073ed923f86ce59a5eb3b6d895095d1b7`，读取自 fork [LC-86/mattpocockskills](https://github.com/LC-86/mattpocockskills)（其 `upstream` remote 指向 mattpocock/skills），上游插件声明版本 1.2.3 |
+| V2 曾钉住的提交 | `3cca18b368ae95cdbdebbff572ccafa662551015`（2.0.2 的分发基线，两个提交的差异未按文件逐一对照） |
+| 纳入范围 | 20 项中的 19 项改编自上游方法；`gdd-gamestudio` 为原创 |
 
-主要适配（方法正文仍以各技能 `SKILL.md` 及 provenance 为准）：
+名称映射、逐项适配记录、可能损失与核对方式见 [provenance/upstream.md](provenance/upstream.md) 与 [provenance/adaptation-log.md](provenance/adaptation-log.md)。上游的 `writing-for-agents` 配套文件 `SKILL-MECHANICS.md` 没有对应技能：其中宿主专属调用开关的内容在 V3 退出，通用写作杠杆并入 `docs-gamestudio`。
 
-1. 在方法正文后追加 MyGameStudio 阶段资料指针，读取资料不是开始制作。
-2. `implement`：无提交授权时保留未提交成果，不无条件提交。
-3. `code-review`：覆盖适用的已提交、暂存、未暂存、新建与删除成果，不用空的已提交差异代替完整评审。
-4. 正式工程默认最小可玩闭环、必要资源与实际检查要求。
+### 许可随技能分发
 
-除此以外不重写 Matt 方法。原始字节与分发字节不一致的文件必须在 provenance 中带 `adaptation` 字段。
+每个技能目录内有一份 `LICENSE`，包含 MIT 许可全文、`Copyright (c) 2026 LC-86 / MyGameStudio` 与 `Copyright (c) 2026 Matt Pocock` 两条声明（`gdd-gamestudio` 为原创，只含前者），以及该技能的上游来源说明。
+
+原因是按单项技能安装时，仓库根的 `LICENSE` 与本文件不会随之安装，接收方能看到的全部许可信息只有技能目录内的内容。
 
 ## 未纳入
 
-- Matt 的 misc 与 in-progress 技能
-- 已退役的独立游戏入口（说明见包内 `internal/game/retired-entries.md`，不是可执行别名）
-- Linear 或其他未在本插件游戏记录层验证的任务后端
+- 上游 `misc/`、`in-progress/`、`deprecated/` 中的技能
+- 上游的 `improve-codebase-architecture`、`triage`、`to-questionnaire`、`wizard`、`teach`、`wait-what`
+- 2.0.2 的三个游戏入口 `game-producer`、`game-init`、`game-design`
+
+去向与明确未覆盖的能力见 [docs/migration-v3.md](docs/migration-v3.md) 与 [provenance/v2-retirement.md](provenance/v2-retirement.md)。
+
+## 官方资料
+
+以下外部文档只用于格式、宿主事实与验证原则，不为本项目的架构取舍背书。其内容会变化，实施与发布时应重新核对。
+
+- Agent Skills 规范：<https://agentskills.io/specification>
+- Claude Code 技能：<https://code.claude.com/docs/en/skills>
+- OpenAI 技能编写：<https://developers.openai.com/zh-Hans/docs/build-skills>
+- Claude Code 子代理：<https://code.claude.com/docs/en/sub-agents>
+
+## 历史材料
+
+[provenance/v2-plugin-provenance/](provenance/v2-plugin-provenance/) 保留 2.0.2 插件包的上游 manifest 与逐文件指纹，作为历史记录。其中的相对链接指向已移除的 V2 目录结构，不再可达；完整 V2 树可从提交 `5e3cfbfa3e217a9182690237955734109b982235` 恢复。

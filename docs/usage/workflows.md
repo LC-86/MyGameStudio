@@ -1,54 +1,88 @@
 # 常用工作流
 
-下面是工作流地图，不是每项小改动都必须执行的长流水线。
-`game-producer` 可以在过程中只读查询，不代表你授权它自动串调所有阶段。
+这些是实际组合，不是每项小改动都要走完的流水线。明确的小任务可以直接实现，不必先补规格和拆票。
+
+三条贯穿所有组合的事实：
+
+- **推荐与开始是两个动作。**`ask-gamestudio` 与 `handoff-gamestudio` 只给建议和指令文本，不代替你启动下一个入口。
+- **用户入口不自动串调。**8 项用户入口各自完成即停；12 项按需方法由 Agent 在当前任务与授权适用时组合，你也可以直接点名。
+- **`docs-gamestudio` 是共同写作方法。**GDD、spec、任务票、术语与决策记录、研究/评审/诊断结论、交接说明，以及子代理委派材料，都由产出方按它的方法表达。它不决定写什么，也不是审批岗。
+
+这条区分写在描述与正文里，不是宿主强制的隔离，见 [当前能力与限制](../reference/capabilities.md)。
+
+## 一次设计讨论
 
 ```text
-安装完整插件 → 确认技能发现
-        ↓
-setup-matt-pocock-skills（你主动调用）
-        ↓
-game-init：分析项目 → 接入清单 → 确认后应用
-        ↓
-game-design：按需要讨论当前最小玩法闭环
-        ↓
-to-spec（你主动调用）
-        ↓
-to-tickets（范围较大时，由你主动调用）
-        ↓
-implement（你主动调用）
-        ↓
-检查与实际运行 / 试玩 → 记录结果 → 决定后续修改
+请使用 grill-gamestudio-docs，讨论把体力系统改成随时间恢复。
+分轮问清目标、影响与取舍；已确认的决定按用途更新术语、GDD 或本次规格。
+这一轮不要开始编码，也不要发布任务。
 ```
 
-调用文案是对 Agent 的说明。客户端需要先选技能时，选对应的已安装技能。
+组合：`grilling-gamestudio` 提问，`domain-gamestudio` 澄清并保存必要术语，`gdd-gamestudio` 更新整体设计，`spec-gamestudio` 整理本次工作规格。只想要纯访谈不落盘时用 `grill-gamestudio`。
 
-## 新项目或尚未接入的项目
+讨论记录不是现行规格；采纳与写入范围由你确认。
 
-1. `setup-matt-pocock-skills`：只配置**这个游戏仓库**的 tracker / 标签 / 领域文档。
-2. `game-init`：先只读分析，再确认写入。
-3. 需要时 `game-design` 讨论当前闭环。
-4. 你调用 `to-spec` / `to-tickets` / `implement`。
-
-## 已有游戏修改
-
-见 [接入与修改已有游戏](existing-projects.md)。小改动可以在已采纳规则上直接讨论影响，不必重走整条地图。
-
-## 进度查询
+## 把已确认的工作变成票
 
 ```text
-请使用 MyGameStudio 的 game-producer，只读检查当前项目。
-根据真实记录说明当前目标、已完成和待完成任务、阻塞项以及下一步建议。
-不要修改记录，也不要自动启动实现。
+请使用 tasks-gamestudio，把已确认的体力系统改造拆成任务。
+按完整小成果拆，写明真实依赖、Agent 可承担的部分和必要的人工验收，
+再按项目约定保存。标签变更会触发现有自动化时先问我。
 ```
 
-## 组合使用（规格 → 任务 → 实现 → 评审）
+任务票是交给另一个上下文执行的正式内容，接收方没有当前对话，因此按 `docs-gamestudio` 的方法写。
 
-这些是 Matt 用户专用入口。制作统筹可以**推荐**它们，但必须由你启动。
+## 一次实现
 
-1. `to-spec`：把已经讨论并采纳的内容整理成规格，不要现场再采访一遍。
-2. `to-tickets`：范围较大时拆成可独立检查的任务，并声明阻塞关系。
-3. `implement`：按任务实现。无提交授权时保留未提交成果。
-4. `code-review`：对完整待审成果做 Standards 与 Spec 两轴评审；空的已提交差异不是完整通过。
+```text
+请使用 implement-gamestudio 完成这张票。
+沿用已确认的范围，不重新设计需求，也不要自动领取下一项工作。
+需要时组合测试先行、结构设计、诊断与评审方法，
+完成后按任务责任交接。提交、推送与关单各自需要我单独授权。
+```
 
-人读说明：[setup](../skills/engineering/setup-matt-pocock-skills.md)、[to-spec](../skills/engineering/to-spec.md)、[to-tickets](../skills/engineering/to-tickets.md)、[implement](../skills/engineering/implement.md)、[code-review](../skills/engineering/code-review.md)。
+组合：`tdd-gamestudio` 测试先行，`codebase-gamestudio` 设计职责与接口边界，`debug-gamestudio` 处理原因不明的异常，`review-gamestudio` 收尾做规范与需求两轴评审。评审发现交回实现者组织修复，不自动改代码。
+
+## 用一个可玩原型回答设计问题
+
+```text
+请使用 prototype-gamestudio，回答「随时间恢复的体力是否让玩家长时间等待」。
+默认做可玩的浏览器小游戏：真实输入影响结果，轻量美术，可重置。
+只回答这个问题，不要升成正式实现，也不要领取新任务。
+```
+
+原型服务决策，不等于正式交付；保留有用发现和必要依据，已确认采纳的结果再更新 GDD 或 spec。
+
+## 带来源的研究
+
+```text
+请使用 research-gamestudio，调查同类游戏怎样处理体力恢复节奏。
+用已有工具，给出带来源、适用条件与局限的结论，
+结论回到当前讨论，不要替我采纳设计。
+```
+
+研究深度按问题选择，不是必走阶段。
+
+## 跨会话找路线
+
+```text
+请使用 wayfinder-gamestudio，梳理「把当前 demo 做成完整可发售版本」的路线。
+建立或续接决策地图，逐个解决关键未知，按缺口选择访谈、研究或原型。
+路线清楚后交接给我，不要自动开始制作。
+```
+
+它不是生产排期器或任务调度器；地图帮助跨会话保留问题、依赖与依据。
+
+## 交接
+
+```text
+请使用 handoff-gamestudio，把当前未完成的工作写成一份可携带的短交接说明。
+整理必要上下文、实际资源与版本位置、下一步和访问缺口。
+不要复制工程、开新会话、改任务状态或搬迁资料。
+```
+
+接收方是子代理时，委派材料按 `docs-gamestudio/references/delegation.md` 组织。引用不代表已传输。
+
+## 相关文档
+
+安装与第一次会话见 [从安装到第一次有效使用](../getting-started.md)，已有项目接入见 [接入已有游戏项目](existing-projects.md)。每项技能必须一起安装的依赖见 [技能依赖](../dependencies.md)，读写与授权边界见 [数据、写入与权限](../reference/data-and-permissions.md)。

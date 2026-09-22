@@ -1,9 +1,0 @@
-== 新增 ==
-./prototypes/gull-window/README.md
-./prototypes/gull-window/index.html
-./prototypes/gull-window/report.md
-./prototypes/gull-window/sim.py
-== 删除(应为空) ==
-
-== 修改(应为空) ==
-

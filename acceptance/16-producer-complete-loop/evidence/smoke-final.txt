@@ -1,5 +1,0 @@
-init-tide=50
-urgent-at-10=true tide-at-10=10 frame=800
-settled=true settle-text=潮汐结算：拾取总数 0 枚
-settle-idempotent=true
-PT-01-SMOKE-OK

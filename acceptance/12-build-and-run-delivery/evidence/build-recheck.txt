@@ -1,9 +1,0 @@
-== 验收侧独立复核(不依赖模型自述) ==
-build files:
-./index.html
-./main.js
-byte-identity: index.html=SAME main.js=SAME
-http index: 200  http main.js: 200
-http body identity: index=SAME main.js=SAME
--- node smoke --
-SMOKE-OK: 初始 60 → 递减 → urgent → 0 秒结算(幂等),产物脚本可运行 (exit 0)

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Init"
-  short_description: "Analyze an existing game and fill needed studio materials"
-  default_prompt: "Use $game-init to analyze this game project and list the materials still needed to join the MyGameStudio workflow."
-policy:
-  allow_implicit_invocation: false

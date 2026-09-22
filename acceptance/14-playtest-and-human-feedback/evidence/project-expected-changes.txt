@@ -1,7 +1,0 @@
-== 新增(应恰为 evidence/ 2 个文件:试玩记录 + 模拟反馈登记) ==
-./docs/mygamestudio/evidence/2026-09-08-playtest-11-playable-build.md
-./docs/mygamestudio/evidence/2026-09-08-playtest-feedback-intake-SIMULATED.md
-== 删除(应为空——受控通道无删除原语) ==
-
-== 修改(应为空) ==
-

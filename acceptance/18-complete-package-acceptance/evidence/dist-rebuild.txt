@@ -1,3 +1,0 @@
-构建完成: dist/mygamestudio-0.18.0.tar.gz
-逐文件清单: dist/package-manifest.txt (79 个文件)
-校验和: dist/SHA256SUMS.txt

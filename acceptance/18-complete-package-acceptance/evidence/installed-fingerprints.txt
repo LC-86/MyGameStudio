@@ -1,5 +1,0 @@
-generated_for: mygamestudio 0.18.0
-fingerprint_files: 40 bad: none
-methods_present: 15
-license: True
-VERSION: 0.18.0

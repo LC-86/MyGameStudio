@@ -1,66 +1,73 @@
 # 从安装到第一次有效使用
 
-目标：在一个被文档声明的安装路径上，发现正确技能，读取包内依赖，并完成一次**不修改游戏文件**的查询。
+目标：在你的 AI 开发工具里发现这套技能，完成第一次**不修改游戏文件**的会话。
 
-当前 2.0.2 已在本 Linux 环境完成 Codex CLI **隔离安装**（无用户凭据）。新会话技能发现仍未验证。下面是推荐顺序；各客户端的命令以安装页为准，未执行的步骤标为未验证。
+安装细节、安装后确认与卸载在 [安装](installation.md)；这里只给顺序和一段可直接发送的调用文案。哪些安装路径已经真实测试、哪些未运行，见 [验证状态](validation-v3.md)。
 
-## 1. 取得完整插件
+## 1. 安装
 
-1. 打开 [v2.0.2 Release](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 下载 `mygamestudio-2.0.2.tar.gz` 与 `SHA256SUMS.txt`。仓库 `dist/` 仅供对照，不是未发布替代品。
-2. 核对校验和（在存放这两个文件的目录执行）：
-
-```sh
-grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c - && tar -xzf mygamestudio-2.0.2.tar.gz
+```bash
+npx skills@latest add LC-86/MyGameStudio
 ```
 
-3. 解包后，**插件根**是包内的 `plugin/` 目录。该目录应同时包含：
-   - `.codex-plugin/plugin.json`
-   - `.zcode-plugin/plugin.json`
-   - `.claude-plugin/plugin.json`
-   - `skills/`
-   - `internal/`、`records/`、`templates/`、`provenance/`
+推荐完整安装 20 项（`--skill '*'`）。这套技能互相引用共享方法，选择安装可能缺少依赖，组合清单在 [技能依赖](dependencies.md)。
 
-不要只拷贝 `skills/` 里某一个技能文件夹。
+成功标准：宿主实际读取的技能目录里能看到 20 个 `-gamestudio` 名称，每个目录内有 `SKILL.md`、它引用的 `references/` 或 `templates/`，以及一份 `LICENSE` 通知。
 
-仓库里的 `plugin/` 与 2.0.2 安装包内容按发版时检查应一致（安装包另含根目录许可副本）。若你从源码工作树安装，请明白它可能含尚未打入下一 Release 的文档。已发布的 [v2.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.2) 与 [v2.0.1](https://github.com/LC-86/MyGameStudio/releases/tag/v2.0.1) 安装包字节以对应 Release 为准，不要用新脚本覆盖。
+## 2. 第一次会话：先问下一步
 
-## 2. 按客户端安装
-
-见 [安装方式](installation/README.md)（含「复制一行即可安装」与「复制一段指令发给 Agent 来安装」）。安装后如客户端要求，重启会话。
-
-成功标准（发现）：能列出 Matt 正式 25 项加 `game-producer`、`game-init`、`game-design`，同名技能只有一个明确来源。
-
-## 3. 配置游戏项目（用户主动调用）
-
-在**游戏项目**仓库里调用 `setup-matt-pocock-skills`。它会询问议题追踪、分流标签和领域文档布局。
-
-- 游戏层任务记录只支持本地 Markdown 或 GitHub Issues。
-- 若通用 setup 提到 Linear 等选项，那是上游技能的 tracker 配置，**不是**本插件游戏记录层已经支持 Linear。
-
-不要把本插件仓库的 `AGENTS.md` 复制进游戏项目。
-
-## 4. 第一次只读接入
-
-调用文案（这是对 Agent 的说明，不是跨客户端通用斜杠命令。客户端需要你先选技能时，选已安装的 `game-init`）：
+在**游戏项目**仓库里开会话，直接说明你要做什么。想知道该从哪开始时用 `ask-gamestudio`：
 
 ```text
-请使用 MyGameStudio 的 game-init 分析当前游戏项目。
+请使用 ask-gamestudio。
 
-这一轮先只读，不修改文件。
-请说明已有玩法、设计资料、工程与资源，以及接入工作流仍缺的内容。
-列出建议复用、新增和需要我决定的事项，等我确认后再写入。
+我想继续推进当前游戏项目，但不确定现在最该做哪一件事。
+先只读查看必要资料，给我一个下一步建议：承担它的技能、完成标志，
+以及一段我可以直接发送的调用指令。
+这一轮不要修改任何文件，也不要开始实现。
 ```
 
-成功标准：
+成功标准：它给一个下一步而不是一串候选；说明实际读了哪些资料；没有写入文件；没有把未运行的检查说成已通过。
 
-- 能指出实际读取的资料、已知事实与缺口
-- 分析阶段没有修改游戏文件
-- 不会把尚未运行的配置或验收写成完成
+## 3. 记录项目约定
 
-完整示例：[接入已有游戏](../examples/existing-game-change/README.md)。
+新项目或从未整理过协作约定的项目，用 `setup-gamestudio`：
+
+```text
+请使用 setup-gamestudio 为当前游戏项目补齐协作约定。
+
+先探查实际情况，提出建议清单等我确认，再做获准的最小文档修改并回读。
+约定包括：任务来源、分流约定、术语与决策资料入口、游戏资料与资源管理方式。
+不要执行引擎初始化、不要做资源制作或清理，也不要写入远端。
+```
+
+它记录的是**你这个项目**的真实约定，供其余技能沿用。约定已经完整时重复运行不改文件。
+
+## 4. 讨论一个设计问题
+
+需要边讨论边把已采纳内容落到资料里，用 `grill-gamestudio-docs`：
+
+```text
+请使用 grill-gamestudio-docs。
+
+我要把体力系统从按次数扣除改成随时间恢复，先分轮问清楚再更新资料。
+已经确认的决定请按用途更新术语、GDD 或本次工作规格，写入前告诉我改哪个文件。
+这一轮不要开始编码，也不要发布任务。
+```
+
+只想要一场纯访谈、暂时不落盘，用 `grill-gamestudio`。
 
 ## 5. 之后按需进行
 
-需要讨论玩法时用 `game-design`。查看进度用 `game-producer`。
-整理规格、拆任务、写代码分别由你调用 `to-spec`、`to-tickets`、`implement`。
-见 [工作流](usage/workflows.md)。
+`tasks-gamestudio` 把已明确的工作拆成票，`implement-gamestudio` 完成一次实现，`wayfinder-gamestudio` 梳理需要跨会话澄清的大目标，`handoff-gamestudio` 写交接说明。
+
+其余 12 项是**按需方法**：`grilling`、`domain`、`gdd`、`spec`、`tdd`、`review`、`debug`、`prototype`、`research`、`codebase`、`merge`、`docs`。你不需要记住它们，也不需要逐个启动；当前任务和授权适用时由 Agent 组合使用。
+
+实际组合方式见 [常用工作流](usage/workflows.md)；每项技能的权威说明是 `skills/<技能名>/SKILL.md`。
+
+## 常见误解
+
+- 用户入口不是自动串起来的：一个入口完成即停，不代替你启动下一个入口。
+- **推荐**下一步和**开始**下一步是两个动作。`ask-gamestudio` 只推荐。
+- 加载技能不等于获得权限：写入、提交、推送、上传、付费和全局配置改动仍各自需要授权，见 [数据、写入与权限](reference/data-and-permissions.md)。
+- 8 项用户入口与 12 项按需方法的区分写在描述和正文里，不是宿主强制的隔离，见 [当前能力与限制](reference/capabilities.md)。

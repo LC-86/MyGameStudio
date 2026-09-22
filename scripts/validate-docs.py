@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""检查用户文档导航、相对链接，以及技能索引与公开技能集合一致。
+"""检查用户文档导航、相对链接、版本一致性与旧安装命令残留。
 
     python3 scripts/validate-docs.py
+
+技能源码布局与内容契约由 tests/test_skills_layout.py 检查，本脚本不重复。
 """
 
 from __future__ import annotations
@@ -11,132 +13,57 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-PLUGIN_SKILLS = REPO / "plugin" / "skills"
+SKILLS = REPO / "skills"
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
-SKILL_FRONTMATTER = re.compile(r"^---\nname:\s*\S+", re.MULTILINE)
+FRONTMATTER = re.compile(r"\A---\nname:\s*\S+", re.MULTILINE)
 
-USER_DOC_GLOBS = (
-    "README.md",
-    "README.en.md",
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "SECURITY.md",
-    "THIRD_PARTY_NOTICES.md",
-    "docs/**/*.md",
-    "examples/**/*.md",
+DOC_GLOBS = (
+    "README.md", "README.en.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md", "AGENTS.md", "AGENTS.zh-CN.md",
+    "docs/**/*.md", "provenance/**/*.md",
 )
 
 README_MUST_LINK = (
-    "docs/getting-started.md",
-    "docs/installation/README.md",
-    "docs/installation/codex.md",
-    "docs/installation/zcode.md",
-    "docs/installation/grok-build.md",
-    "docs/installation/claude-code.md",
-    "docs/usage/workflows.md",
-    "docs/reference/capabilities.md",
-    "docs/reference/compatibility.md",
-    "docs/skills/README.md",
-    "examples/README.md",
-    "CONTRIBUTING.md",
-    "LICENSE",
-    "THIRD_PARTY_NOTICES.md",
+    "VERSION", "docs/README.md", "docs/getting-started.md", "docs/installation.md",
+    "docs/dependencies.md", "docs/migration-v3.md", "docs/validation-v3.md",
+    "docs/reference/capabilities.md", "docs/design/v3-overrides.md",
+    "provenance/README.md", "CONTRIBUTING.md", "CHANGELOG.md", "LICENSE",
+    "THIRD_PARTY_NOTICES.md", "README.en.md",
 )
 
 DOCS_INDEX_MUST_LINK = (
-    "getting-started.md",
-    "installation/README.md",
-    "installation/codex.md",
-    "installation/zcode.md",
-    "installation/grok-build.md",
-    "installation/claude-code.md",
-    "installation/upgrade-and-uninstall.md",
-    "usage/workflows.md",
-    "usage/existing-projects.md",
-    "reference/capabilities.md",
-    "reference/compatibility.md",
-    "reference/data-and-permissions.md",
-    "reference/upstream.md",
-    "reference/troubleshooting.md",
-    "skills/README.md",
-    "skills/game/game-producer.md",
-    "skills/game/game-init.md",
-    "skills/game/game-design.md",
-    "development/architecture.md",
-    "development/testing.md",
-    "development/releasing.md",
+    "installation.md", "dependencies.md", "migration-v3.md", "validation-v3.md",
+    "getting-started.md", "design/v3-overrides.md", "design/unified-design-v1.md",
+    "reference/capabilities.md", "reference/data-and-permissions.md",
+    "reference/troubleshooting.md", "reference/upstream.md",
+    "development/testing.md", "development/releasing.md",
+    "usage/existing-projects.md", "usage/workflows.md",
+    "agents/issue-tracker.md", "agents/triage-labels.md", "agents/domain.md",
 )
 
-FILTERED_CHECKSUM = (
-    "grep ' mygamestudio-2.0.2.tar.gz$' SHA256SUMS.txt | shasum -a 256 -c -"
+# 已退出的旧安装命令，只允许出现在退役说明与历史记录中
+RETIRED_COMMANDS = (
+    "claude --plugin-dir", "codex plugin add", "zcode plugin",
+    "shasum -a 256 -c SHA256SUMS", ".claude-plugin/plugin.json",
+    ".codex-plugin/plugin.json", ".zcode-plugin/plugin.json",
+    "scripts/build-package.sh", "disable-model-invocation: true",
 )
-UNFILTERED_CHECKSUM = "shasum -a 256 -c SHA256SUMS.txt"
-PUBLISHED_RELEASE = "releases/tag/v2.0.2"
-STALE_UNRELEASED_PHRASES = (
-    "待人工上传",
-    "尚未打 `v2.0.2`",
-    "若尚无 v2.0.2",
-    "Until a `v2.0.2` GitHub tag exists",
-    "标签仍待维护者人工上传",
-    "2.0.2 标签待",
-    "尚未打 GitHub Release 标签时",
-    "GitHub Release 标签待",
-)
+HISTORY_ALLOWED = ("docs/migration-v3.md", "CHANGELOG.md")
+HISTORY_PREFIXES = ("provenance/", "docs/design/")
 
-INSTALL_MARKERS = {
-    "docs/installation/zcode.md": (
-        ".zcode-plugin/plugin.json",
-        "marketplace.json",
-        "隔离",
-        "未验证",
-        "复制一行即可安装",
-        FILTERED_CHECKSUM,
-        PUBLISHED_RELEASE,
-    ),
-    "docs/installation/grok-build.md": (
-        ".grok/plugins",
-        "--plugin-dir",
-        "隔离",
-        "未验证",
-        "复制一行即可安装",
-        FILTERED_CHECKSUM,
-        PUBLISHED_RELEASE,
-    ),
-    "docs/installation/codex.md": (
-        "codex plugin add",
-        ".codex-plugin/plugin.json",
-        "未验证",
-        "隔离",
-        "复制一行即可安装",
-        FILTERED_CHECKSUM,
-    ),
-    "docs/installation/claude-code.md": (
-        ".claude-plugin/plugin.json",
-        "claude --plugin-dir",
-        "~/.claude/plugins",
-        "隔离",
-        "未验证",
-        "复制一行即可安装",
-        FILTERED_CHECKSUM,
-        PUBLISHED_RELEASE,
-    ),
-    "docs/installation/README.md": (
-        "复制一行即可安装",
-        "复制一段指令发给 Agent",
-        "SHA256SUMS",
-        "npx skills",
-        "28",
-        "隔离",
-        FILTERED_CHECKSUM,
-        PUBLISHED_RELEASE,
-        "未验证",
-    ),
-}
+# 原样保留的历史输入与旧版追溯材料：不做链接与措辞检查，避免为了绿灯改写原始事实
+FROZEN_PREFIXES = ("provenance/previous-audit/", "provenance/v2-plugin-provenance/",
+                   "provenance/setup-gamestudio-draft-v2/")
+FROZEN_FILES = ("docs/design/unified-design-v1.md", "docs/design/unified-integration-v1.md")
+
+VERSION = "3.0.0"
+VERSION_MUST_MENTION = ("README.md", "README.en.md", "CHANGELOG.md", "SECURITY.md",
+                        "docs/installation.md", "docs/migration-v3.md")
 
 
-def iter_user_docs() -> list[Path]:
+def iter_docs() -> list[Path]:
     files: list[Path] = []
-    for pattern in USER_DOC_GLOBS:
+    for pattern in DOC_GLOBS:
         if "*" in pattern:
             files.extend(sorted(REPO.glob(pattern)))
         else:
@@ -146,39 +73,37 @@ def iter_user_docs() -> list[Path]:
     return files
 
 
-def public_skill_names() -> set[str]:
-    return {path.name for path in PLUGIN_SKILLS.iterdir() if path.is_dir()}
+def skill_names() -> list[str]:
+    return sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
 
 
-def resolve_link(source: Path, target: str) -> Path | None:
-    if target.startswith(("http://", "https://", "mailto:")):
+def resolve(source: Path, target: str) -> Path | None:
+    if target.startswith(("http://", "https://", "mailto:")) or target.startswith("#"):
         return None
-    if target.startswith("#"):
-        return source
     path_part = target.split("#", 1)[0]
-    if not path_part:
-        return source
-    return (source.parent / path_part).resolve()
+    return source if not path_part else (source.parent / path_part).resolve()
 
 
-def contains_link(text: str, rel: str) -> bool:
-    return rel in text or f"({rel})" in text or rel.replace("\\", "/") in text
+def contains(text: str, rel: str) -> bool:
+    return f"({rel})" in text or f"({rel}#" in text
 
 
 def main() -> int:
     failures: list[str] = []
-    docs = iter_user_docs()
+    docs = iter_docs()
     if not docs:
         print("FAIL: 未找到用户文档")
         return 1
 
     for path in docs:
-        text = path.read_text(encoding="utf-8")
         rel = path.relative_to(REPO).as_posix()
-        if path.parent != REPO and SKILL_FRONTMATTER.search(text):
-            failures.append(f"{rel}: 用户文档不得带有技能 frontmatter（避免被安装器发现）")
+        if rel.startswith(FROZEN_PREFIXES) or rel in FROZEN_FILES:
+            continue
+        text = path.read_text(encoding="utf-8")
+        if path.parent != REPO and FRONTMATTER.search(text):
+            failures.append(f"{rel}: 文档不得带技能 frontmatter（会被安装器发现为技能）")
         for raw in LINK.findall(text):
-            dest = resolve_link(path, raw.strip())
+            dest = resolve(path, raw.strip())
             if dest is None:
                 continue
             try:
@@ -187,85 +112,55 @@ def main() -> int:
                 continue
             if not dest.exists():
                 failures.append(f"{rel}: 断链 {raw}")
+        if rel in HISTORY_ALLOWED or rel.startswith(HISTORY_PREFIXES):
+            continue
+        for marker in RETIRED_COMMANDS:
+            if marker in text:
+                failures.append(f"{rel}: 仍出现已退出的旧命令或字段 {marker}")
 
     readme = (REPO / "README.md").read_text(encoding="utf-8")
     for rel in README_MUST_LINK:
-        if not contains_link(readme, rel):
+        if not contains(readme, rel):
             failures.append(f"README.md 缺少导航 {rel}")
+    for name in skill_names():
+        if not contains(readme, f"skills/{name}/SKILL.md"):
+            failures.append(f"README.md 未链接技能 skills/{name}/SKILL.md")
 
     index = (REPO / "docs" / "README.md").read_text(encoding="utf-8")
     for rel in DOCS_INDEX_MUST_LINK:
-        if not contains_link(index, rel):
+        if not contains(index, rel):
             failures.append(f"docs/README.md 缺少导航 {rel}")
 
-    skills_index = (REPO / "docs" / "skills" / "README.md").read_text(encoding="utf-8")
-    missing = sorted(name for name in public_skill_names() if name not in skills_index)
-    if missing:
-        failures.append(f"docs/skills/README.md 未索引技能: {missing}")
+    version_file = REPO / "VERSION"
+    if not version_file.is_file():
+        failures.append("缺少根目录 VERSION 文件")
+    else:
+        actual = version_file.read_text(encoding="utf-8").strip()
+        if actual != VERSION:
+            failures.append(f"VERSION 应为 {VERSION}，实际 {actual}")
+        for rel in VERSION_MUST_MENTION:
+            path = REPO / rel
+            if path.is_file() and VERSION not in path.read_text(encoding="utf-8"):
+                failures.append(f"{rel} 未提及当前版本 {VERSION}")
 
-    for rel, markers in INSTALL_MARKERS.items():
-        text = (REPO / rel).read_text(encoding="utf-8")
-        for marker in markers:
-            if marker not in text:
-                failures.append(f"{rel} 缺少必要说明: {marker}")
-
-    if "隔离" not in readme or "docs/installation/" not in readme:
-        failures.append("README.md 应导航到安装页并保留隔离验证口径")
-    for marker in (
-        "复制一行即可安装",
-        "复制一段指令发给 Agent",
-        "claude --plugin-dir",
-        "docs/installation/claude-code.md",
-        FILTERED_CHECKSUM,
-        PUBLISHED_RELEASE,
-    ):
-        if marker not in readme:
-            failures.append(f"README.md 缺少必要说明: {marker}")
-
-    for path in docs:
-        rel = path.relative_to(REPO).as_posix()
-        if rel.startswith("dist/"):
-            continue
-        text = path.read_text(encoding="utf-8")
-        if UNFILTERED_CHECKSUM in text:
+    for pair in (("AGENTS.md", "AGENTS.zh-CN.md"),):
+        en = [l for l in (REPO / pair[0]).read_text(encoding="utf-8").splitlines()
+              if l.startswith("#")]
+        zh = [l for l in (REPO / pair[1]).read_text(encoding="utf-8").splitlines()
+              if l.startswith("#")]
+        if len(en) != len(zh):
             failures.append(
-                f"{rel}: 用户下载流不得对整张 SHA256SUMS.txt 做 shasum -c，应使用过滤式校验"
-            )
-        for phrase in STALE_UNRELEASED_PHRASES:
-            if phrase in text:
-                failures.append(f"{rel}: 不得再写未发布标签措辞: {phrase}")
-
-    dist_changelog = REPO / "dist" / "CHANGELOG.md"
-    if dist_changelog.is_file():
-        dist_text = dist_changelog.read_text(encoding="utf-8")
-        if PUBLISHED_RELEASE not in dist_text:
-            failures.append("dist/CHANGELOG.md 应记录 v2.0.2 已发布")
-        for phrase in STALE_UNRELEASED_PHRASES:
-            if phrase in dist_text:
-                failures.append(
-                    f"dist/CHANGELOG.md: 不得再写未发布标签措辞: {phrase}"
-                )
-
-    for rel, markers in (
-        ("CHANGELOG.md", (PUBLISHED_RELEASE, "未验证")),
-        ("docs/development/releasing.md", (PUBLISHED_RELEASE, "未验证")),
-        ("docs/getting-started.md", (PUBLISHED_RELEASE,)),
-        ("docs/reference/compatibility.md", (PUBLISHED_RELEASE, "未验证")),
-        ("README.en.md", (PUBLISHED_RELEASE,)),
-    ):
-        text = (REPO / rel).read_text(encoding="utf-8")
-        for marker in markers:
-            if marker not in text:
-                failures.append(f"{rel} 缺少必要说明: {marker}")
+                f"{pair[0]} 有 {len(en)} 个标题，{pair[1]} 有 {len(zh)} 个，镜像结构不一致")
 
     if failures:
         print(f"FAIL ({len(failures)}):")
         for item in failures:
             print(f"  - {item}")
         return 1
-    print(f"OK: 用户文档导航与链接检查通过（{len(docs)} 个文件）")
+    print(f"OK: 文档导航、链接、版本与退役命令检查通过（{len(docs)} 个文件，"
+          f"{len(skill_names())} 项技能）")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

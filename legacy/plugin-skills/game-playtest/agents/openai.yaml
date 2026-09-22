@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Playtest"
-  short_description: "显式调用的试玩与运行观察(人工反馈收集)入口"
-  default_prompt: "Use $game-playtest to execute scenario checks against the specified build version and collect human playtest feedback."
-policy:
-  allow_implicit_invocation: false

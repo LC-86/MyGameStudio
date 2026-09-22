@@ -1,2 +1,0 @@
-SCRIPTS=main.js,tide-extra.js
-DEFECT-SMOKE-OK: 初始 90/aria-valuemax 90/阈值 7(缺陷真实生效,均不在 HEAD)

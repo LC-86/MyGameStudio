@@ -1,5 +1,5 @@
 name: 缺陷报告
-description: 插件安装、技能调用或文档与实际行为不符
+description: 技能安装、调用或文档与实际行为不符
 title: "[bug] "
 labels: ["bug"]
 body:
@@ -9,28 +9,25 @@ body:
         请勿粘贴令牌、`auth.json`、密钥或未脱敏的私人项目内容。
         维护者分流时请使用本仓库的五个标准 triage 标签（见 `docs/agents/triage-labels.md`）。
   - type: input
-    id: plugin_version
+    id: version
     attributes:
-      label: 插件版本
-      placeholder: "2.0.2"
-    validations:
-      required: true
-  - type: dropdown
-    id: client
-    attributes:
-      label: 客户端
-      options:
-        - Codex
-        - ZCode
-        - Grok Build
-        - 其他 / 不确定
+      label: 技能库版本
+      description: 仓库根 `VERSION` 的内容，或你安装时对应的标签 / 默认分支提交。
+      placeholder: "3.0.0"
     validations:
       required: true
   - type: input
-    id: client_version
+    id: skills_cli_version
     attributes:
-      label: 客户端版本
-      placeholder: 例如 Codex CLI 0.151.0
+      label: skills CLI 版本
+      placeholder: npx skills@latest --version 的输出
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: 宿主 / Agent 与版本
+      placeholder: 例如 Claude Code 2.x、Codex CLI 0.x、Qoder
     validations:
       required: true
   - type: input
@@ -41,27 +38,28 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: tracker
+    id: install_scope
     attributes:
-      label: 项目任务后端（游戏记录层）
+      label: 安装范围
       options:
-        - 本地 Markdown
-        - GitHub Issues
-        - 未接入 / 不知道
-        - 其他（请在复现步骤说明；游戏层不支持 Linear）
+        - 完整安装 20 项（--skill '*'）
+        - 选择安装（子集）
+        - 不确定 / 其他（请在复现步骤说明）
     validations:
       required: true
   - type: input
     id: skill
     attributes:
-      label: 技能入口
-      placeholder: 例如 game-init、game-design、implement
+      label: 涉及的技能
+      description: 20 项之一或多项，例如 ask-gamestudio、implement-gamestudio。
+      placeholder: 例如 setup-gamestudio
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
       label: 复现步骤
+      description: 包含你发送的调用文案（去凭据）。
     validations:
       required: true
   - type: textarea
@@ -86,5 +84,5 @@ body:
     attributes:
       label: 同名技能来源
       options:
-        - label: 同一环境里可能还有 Matt 原版、其他安装器副本或旧版 MyGameStudio
-        - label: 我只安装了这一份 mygamestudio
+        - label: 同一环境里可能还有 Matt 原版技能库、其他安装副本或旧版 MyGameStudio
+        - label: 我只安装了这一份 MyGameStudio

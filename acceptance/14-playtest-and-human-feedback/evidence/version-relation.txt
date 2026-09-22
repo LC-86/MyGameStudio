@@ -1,4 +1,0 @@
-build/index.html: 8e562a6a6e067de5057703cf4eaa24570e7f23daf331ca46d9a4e7497aa85ba1
-build/main.js:    35ed50601ad540a878afbf62c922392455abd460ee460dcfc06eee3b8b87a5e8
-src/index.html:   8e562a6a6e067de5057703cf4eaa24570e7f23daf331ca46d9a4e7497aa85ba1
-src/main.js:      35ed50601ad540a878afbf62c922392455abd460ee460dcfc06eee3b8b87a5e8

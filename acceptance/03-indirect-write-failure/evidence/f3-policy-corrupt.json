@@ -1,1 +1,0 @@
-{"server": ["python3", "-B", "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/plugin/runtime/mcp_gate.py"], "timeout": 8.0, "pid": 54534, "initialize": "responded", "write": {"decision": "deny", "rule_stage": "policy", "isError": false}, "alive_after": true}

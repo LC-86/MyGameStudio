@@ -1,2 +1,0 @@
-SCRIPTS=main.js
-BUILD-SMOKE-OK: 初始 60/aria-valuemax 60/8 秒 urgent/60 秒结算幂等(当前构建可观察行为)

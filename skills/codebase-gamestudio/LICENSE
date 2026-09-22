@@ -1,0 +1,39 @@
+MyGameStudio skill: codebase-gamestudio
+Part of MyGameStudio 3.0.0 -- a native Agent Skills library for game
+development. Copyright (c) 2026 LC-86 / MyGameStudio.
+
+This skill adapts the method of "codebase-design" from Matt Pocock's skills
+repository (https://github.com/mattpocock/skills), read at the pinned
+baseline commit c55ee46073ed923f86ce59a5eb3b6d895095d1b7 of the fork
+https://github.com/LC-86/mattpocockskills.
+Copyright (c) 2026 Matt Pocock. Adapted for game development, renamed
+and revised by LC-86 / MyGameStudio; the adaptation is not endorsed by
+Matt Pocock or by any host vendor.
+
+This notice travels with the skill so that a single-skill install still
+carries the required copyright and permission notices.
+
+MIT License
+
+Copyright (c) 2026 LC-86 / MyGameStudio
+Copyright (c) 2026 Matt Pocock
+
+Copyright (c) 2026 LC-86 / MyGameStudio
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

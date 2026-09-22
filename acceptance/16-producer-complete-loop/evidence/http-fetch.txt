@@ -1,4 +1,0 @@
-index-status=200
-main-status=200
-index-identical=yes
-main-identical=yes

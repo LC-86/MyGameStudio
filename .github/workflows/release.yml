@@ -1,17 +1,46 @@
-name: 发布备忘
+name: release
 
-# 首次公开以人工 Release 为准。本工作流不上传资产、不打标签、不改仓库可见性。
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 要发布的版本号，必须与根目录 VERSION 一致
+        required: true
 
 jobs:
-  remind:
+  prepare:
+    name: 发布前检查
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 打印发版前检查
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 核对版本一致
         run: |
-          echo "请按 docs/development/releasing.md 人工发版。"
-          echo "不要在未获授权时 gh release 或修改仓库可见性。"
-          python3 scripts/validate-docs.py
-          python3 -B tests/test_docs_product.py
+          actual="$(cat VERSION)"
+          if [ "$actual" != "${{ github.event.inputs.version }}" ]; then
+            echo "输入版本 ${{ github.event.inputs.version }} 与 VERSION 中的 $actual 不一致"
+            exit 1
+          fi
+          echo "版本一致：$actual"
+
+      - name: 静态检查
+        run: |
+          python -m pip install --upgrade pip pytest
+          python -m pytest tests/ -q
+          python scripts/validate-docs.py
+
+      - name: 人工发布备忘
+        run: |
+          echo "本 workflow 不自动发布。V3 没有构建产物，发布就是仓库内容本身。"
+          echo "剩余步骤需要人工在授权内完成："
+          echo "  1. 确认 CHANGELOG.md 已有 ${VERSION:-$(cat VERSION)} 条目"
+          echo "  2. 提交并推送（推送需要单独授权）"
+          echo "  3. 创建标签 v$(cat VERSION) 与对应 GitHub Release"
+          echo "  4. 若要让 npx skills@latest add LC-86/MyGameStudio 装到本版本，"
+          echo "     必须把改动合入远端默认分支；只打标签不改变默认分支的安装结果"
+          echo "  5. 在真实消费项目里复跑 scripts/install-smoke-test.sh，"
+          echo "     并把结果记入 docs/validation-v3.md"

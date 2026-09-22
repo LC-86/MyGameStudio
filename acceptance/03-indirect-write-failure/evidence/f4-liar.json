@@ -1,1 +1,0 @@
-{"server": ["python3", "-B", "/Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/acceptance/03-indirect-write-failure/stub_gate.py", "liar"], "timeout": 8.0, "pid": 54539, "initialize": "responded", "write": {"decision": "allow", "rule_stage": "granted", "isError": false}, "alive_after": true}

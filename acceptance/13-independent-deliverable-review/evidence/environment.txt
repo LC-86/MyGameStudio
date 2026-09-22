@@ -1,9 +1,0 @@
-date: 2026-09-08T21:26:20+08:00
-codex: codex-cli 0.151.0
-python3: Python 3.14.4
-node: v24.19.0
-ffmpeg: ffmpeg version 7.1 Copyright (c) 2000-2024 the FFmpeg developers
-os: macOS 26.5.1 (arm64)
-cwd-repo: /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio
-env-root(isolated HOME/CODEX_HOME/workspaces): /tmp/mygamestudio-accept-13
-arena(protected project + runtime, outside /tmp): /Users/cuilei/MyOS/01_Projects/plugins/MyGameStudio/.tmp/accept-13

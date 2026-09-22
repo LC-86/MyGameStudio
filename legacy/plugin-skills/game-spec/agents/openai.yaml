@@ -1,6 +1,0 @@
-interface:
-  display_name: "Game-Spec"
-  short_description: "显式调用的规格整理与基线同步入口"
-  default_prompt: "Use $game-spec to turn adopted decisions into the current executable spec."
-policy:
-  allow_implicit_invocation: false

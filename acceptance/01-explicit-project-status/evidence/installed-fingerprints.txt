@@ -1,7 +1,0 @@
-OK  internal/contracts/common.md 76c13fd2f73e38a316b1ee44e02f1ba3923726daebbeca75fd69eee9a076bda6
-OK  internal/contracts/management.md 517f45bf97c11e77c50535c9a56b1c38975bd63f0dbf7ac25a25815ed1253d55
-OK  internal/contracts/records.md 481d8f6359f000cb3b61696a4e9c639a456431d17dd016367ef4a55de57ad45f
-OK  internal/contracts/task-triage.md a361620eda15b1eddbcac08d185222fb48ea28d3468984a1099843c66d10c56c
-OK  internal/methods/writing-for-agents/SKILL-MECHANICS.md c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059
-OK  internal/methods/writing-for-agents/SKILL.md 551adca942227b44192edba88acd4e8db911f0121ce58ad16944ccf6a896a74a
-OK  internal/methods/writing-for-agents/agents/openai.yaml eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b

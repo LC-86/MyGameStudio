@@ -6,5 +6,11 @@ out/
 .tmp/
 __pycache__/
 *.pyc
-dist/.stage-mygamestudio/
+.pytest_cache/
+.ruff_cache/
 .scratch/
+
+# 本地测试安装产生的宿主技能目录与锁文件。
+# 这些目录属于官方 CLI 的发现容器，若被提交会让同一批技能被发现两次。
+.agents/
+skills-lock.json
