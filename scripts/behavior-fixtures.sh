@@ -121,23 +121,35 @@ echo "来源标识：$(git -C "$REPO" rev-parse --short HEAD)$( [ -n "$(git -C "
 
 make_project() {
   local p="$1"
-  mkdir -p "$p"/{docs/agents,docs/design,docs/specs,docs/research,tasks,src,assets/svg}
-  mkdir -p "$p"/tasks/01-dive-windup "$p"/tasks/02-third-wave
-  cd "$p"
+  local scenario="${2:-}"
+  # bash 在 ||、&& 或 if 测试里调用函数时，会忽略函数体内的 set -e。
+  # 失败必须直接 exit：若只 return，mkdir 或 cd 失败后仍会继续，
+  # 后面的 git 和相对路径写入会落在调用者的当前目录。
+  die() {
+    local status="$1"
+    shift
+    printf '场景 %s 的夹具生成失败：%s\n' "$scenario" "$*" >&2
+    exit "$status"
+  }
+  write_file() {
+    local dest="$1"
+    cat > "$dest" || die $? "无法写入 ${dest}"
+  }
+  mkdir -p "$p"/{docs/agents,docs/design,docs/specs,docs/research,tasks,src,assets/svg} \
+    || die $? "无法创建项目目录"
+  mkdir -p "$p"/tasks/01-dive-windup "$p"/tasks/02-third-wave \
+    || die $? "无法创建任务目录"
+  cd "$p" || die $? "无法进入项目目录，已停止以免写入调用者的当前目录"
   # 显式固定初始分支，不依赖调用者的 init.defaultBranch；
   # 老版本 git 不支持 -b 时回退，并记录实际分支名供 S08 使用。
   # 夹具的 git 状态是审查者核对差异的依据，建立失败必须让脚本失败，不能 || true 吞掉
-  git init -q -b main . 2>/dev/null || git init -q . || {
-    echo "夹具 ${p}：git init 失败" >&2; return 1; }
-  FIXTURE_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null)" || {
-    echo "夹具 ${p}：无法确定初始分支" >&2; return 1; }
-  [ -n "$FIXTURE_BRANCH" ] || { echo "夹具 ${p}：初始分支为空" >&2; return 1; }
-  git config user.email "fixture@example.invalid" >/dev/null 2>&1 || {
-    echo "夹具 ${p}：无法设置提交身份" >&2; return 1; }
-  git config user.name "Fixture" >/dev/null 2>&1 || {
-    echo "夹具 ${p}：无法设置提交身份" >&2; return 1; }
+  git init -q -b main . 2>/dev/null || git init -q . || die $? "git init 失败"
+  FIXTURE_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null)" || die $? "无法确定初始分支"
+  [ -n "$FIXTURE_BRANCH" ] || die $? "初始分支为空"
+  git config user.email "fixture@example.invalid" >/dev/null 2>&1 || die $? "无法设置提交身份"
+  git config user.name "Fixture" >/dev/null 2>&1 || die $? "无法设置提交身份"
 
-  cat > AGENTS.md <<'EOF'
+  write_file AGENTS.md <<'EOF'
 ## Agent 约定
 
 - 任务：本地 Markdown，一票一文件，见 `docs/agents/issue-tracker.md`。
@@ -145,13 +157,13 @@ make_project() {
 - 领域文档：见 `docs/agents/domain.md`。
 - 现行设计：`docs/design/GDD.md`。本次工作规格：`docs/specs/`。
 EOF
-  cat > docs/agents/issue-tracker.md <<'EOF'
+  write_file docs/agents/issue-tracker.md <<'EOF'
 # 议题追踪器
 
 本项目使用本地 Markdown 任务，一票一文件，位于 `tasks/`。文件名格式 `NN-简短标题/task.md`。
 没有远端 tracker，没有自动化标签触发。
 EOF
-  cat > docs/agents/triage-labels.md <<'EOF'
+  write_file docs/agents/triage-labels.md <<'EOF'
 # 分流标签
 
 写在任务正文的 `分流:` 字段，不是远端标签，不触发任何自动化。
@@ -162,19 +174,19 @@ EOF
 - `ready-for-human`：当前需要人完成一项具体行动，输入已就绪
 - `wontfix`：明确不做
 EOF
-  cat > docs/agents/domain.md <<'EOF'
+  write_file docs/agents/domain.md <<'EOF'
 # 领域文档
 
 术语表：`CONTEXT.md`。重要决策记录：`docs/adr/`（当前为空）。
 EOF
-  cat > CONTEXT.md <<'EOF'
+  write_file CONTEXT.md <<'EOF'
 # 术语表
 
 - **潮池**：一局游戏的单个关卡场景，玩家在其中控制一只海鸟捕食。
 - **重开**：结束当前一局并从第一波重新开始；永久解锁保留。
 - **永久解锁**：跨局保留的能力或外观，死亡不清除。
 EOF
-  cat > docs/design/GDD.md <<'EOF'
+  write_file docs/design/GDD.md <<'EOF'
 # 潮汐潮池 GDD（现行）
 
 ## 目标体验
@@ -192,7 +204,7 @@ EOF
 - 死亡惩罚强度：候选 A 清空本局得分，候选 B 保留一半。尚未采纳。
 - 连击倍率上限：试验值 5x，未验证。
 EOF
-  cat > docs/specs/2026-09-10-first-level.md <<'EOF'
+  write_file docs/specs/2026-09-10-first-level.md <<'EOF'
 # 规格：第一关可玩闭环
 
 状态：进行中（部分已实现）
@@ -213,7 +225,7 @@ EOF
 - [ ] Agent：3 波结束后进入结算，重开回到第一波且永久解锁保留。
 - [ ] 开发者：俯冲手感与时机判断是否成立（需在浏览器实际试玩）。
 EOF
-  cat > src/game.js <<'EOF'
+  write_file src/game.js <<'EOF'
 // 潮汐潮池：核心规则
 export const TIDE_PERIOD = 12;
 export const LOW_TIDE_SECONDS = 4;
@@ -240,14 +252,14 @@ export function canCancelDive(run, t) {
   return run.diving && (t - run.diveStartedAt) >= DIVE_WINDUP;
 }
 EOF
-  cat > index.html <<'EOF'
+  write_file index.html <<'EOF'
 <!doctype html>
 <html lang="zh"><head><meta charset="utf-8"><title>潮汐潮池</title></head>
 <body><h1>潮汐潮池</h1><p>当前为工程骨架，尚无可玩画面。</p>
 <script type="module">import { isLowTide } from './src/game.js';
 console.log('low tide at t=2:', isLowTide(2));</script></body></html>
 EOF
-  cat > tasks/01-dive-windup/task.md <<'EOF'
+  write_file tasks/01-dive-windup/task.md <<'EOF'
 # 俯冲前摇与取消限制
 
 分流: ready-for-agent
@@ -257,7 +269,7 @@ EOF
 ## 验收
 - [x] Agent：前摇 0.4 秒内 canCancelDive 返回 false，之后返回 true。
 EOF
-  cat > tasks/02-third-wave/task.md <<'EOF'
+  write_file tasks/02-third-wave/task.md <<'EOF'
 # 第三波猎物生成节奏
 
 分流: needs-info
@@ -271,11 +283,11 @@ EOF
 - [ ] Agent：3 波结束后进入结算。
 - [ ] 开发者：节奏是否支撑目标体验。
 EOF
-  git add -A >/dev/null 2>&1 || { echo "夹具 ${p}：git add 失败" >&2; return 1; }
-  git commit -qm "fixture: 潮汐潮池工程骨架与现行资料" >/dev/null 2>&1 || {
-    echo "夹具 ${p}：初始提交失败，审查者将无法用 git diff 核对场景改动" >&2; return 1; }
-  git rev-parse HEAD >/dev/null 2>&1 || { echo "夹具 ${p}：提交后无可用 HEAD" >&2; return 1; }
-  cd - >/dev/null || { echo "无法从夹具 $p 返回" >&2; return 1; }
+  git add -A >/dev/null 2>&1 || die $? "git add 失败"
+  git commit -qm "fixture: 潮汐潮池工程骨架与现行资料" >/dev/null 2>&1 \
+    || die $? "初始提交失败，审查者将无法用 git diff 核对场景改动"
+  git rev-parse HEAD >/dev/null 2>&1 || die $? "提交后无可用 HEAD"
+  cd - >/dev/null || die $? "无法从夹具目录返回"
 }
 
 echo "准备共享技能安装…"
@@ -295,10 +307,8 @@ for s in $SCENARIOS; do
     *) printf '场景目标不在输出根内，拒绝写入：%s\n' "$d" >&2; exit 1 ;;
   esac
   mkdir -p "$d"
-  make_project "$d/project" || {
-    printf "场景 %s 的夹具生成失败，停止执行\n" "$s" >&2
-    exit 1
-  }
+  # 必须作为独立命令调用。放在 || 或 if 里会关掉函数内的 set -e。
+  make_project "$d/project" "$s"
   mkdir -p "$d/project/.agents"
   cp -R "$SEED/.agents/skills" "$d/project/.agents/skills"
   echo "  夹具就绪 $s"

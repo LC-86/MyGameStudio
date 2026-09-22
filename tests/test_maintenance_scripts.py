@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -77,12 +78,14 @@ def test_fixture_script_refuses_non_empty_target_and_checks_cli_first() -> None:
 FIXTURE = SCRIPTS / "behavior-fixtures.sh"
 
 
-def run_fixture(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+def run_fixture(*args: str, env: dict[str, str] | None = None,
+                cwd: Path | None = None) -> subprocess.CompletedProcess:
     # 在现有环境上叠加，不整体替换：脚本需要 PATH、HOME 才能找到 node 与 git
     full_env = {**os.environ, "DO_NOT_TRACK": "1", "DISABLE_TELEMETRY": "1",
                 **(env or {})}
     return subprocess.run(["bash", str(FIXTURE), *args],
-                          capture_output=True, text=True, env=full_env, check=False)
+                          capture_output=True, text=True, env=full_env,
+                          cwd=cwd, check=False)
 
 
 def test_fixture_rejects_scenario_name_escaping_output_root(tmp_path: Path) -> None:
@@ -265,6 +268,139 @@ def test_fixture_refuses_unlistable_output_directory(tmp_path: Path) -> None:
     assert sentinel.read_text(encoding="utf-8") == "SENTINEL\n", "既有文件被覆盖"
     assert not (target / "src").exists(), "不得在受害者目录里写入夹具"
     assert not (target / ".git").exists(), "不得在受害者目录里初始化 git"
+
+
+_MKDIR_WRAPPER = """#!/bin/bash
+real=/bin/mkdir
+if [ "${FAIL_PROJECT_MKDIR:-}" = "1" ]; then
+  for arg in "$@"; do
+    case "$arg" in
+      -*) continue ;;
+      */S01-ask/project|*/S01-ask/project/*) exit 73 ;;
+    esac
+  done
+fi
+"$real" "$@"
+status=$?
+if [ "$status" -ne 0 ]; then
+  exit "$status"
+fi
+if [ "${LOCK_PROJECT_AFTER_TASK_MKDIR:-}" = "1" ]; then
+  for arg in "$@"; do
+    case "$arg" in
+      */S01-ask/project/tasks/*)
+        chmod 000 "${arg%/tasks/*}" || exit 99
+        ;;
+    esac
+  done
+fi
+exit 0
+"""
+
+_FAKE_SKILLS_CLI = """\
+const fs = require('fs');
+const path = require('path');
+const args = process.argv.slice(2);
+if (args.includes('--version')) process.exit(0);
+if (args[0] === 'add') {
+  const dest = path.join(process.cwd(), '.agents', 'skills', 'placeholder');
+  fs.mkdirSync(dest, { recursive: true });
+  fs.writeFileSync(path.join(dest, 'SKILL.md'), '# placeholder\\n');
+  process.exit(0);
+}
+process.stderr.write('unexpected args: ' + args.join(' ') + '\\n');
+process.exit(2);
+"""
+
+
+def _stub_fixture_env(tmp_path: Path, **extra: str) -> tuple[Path, dict[str, str]]:
+    """桩 CLI 走到夹具生成，并把 mkdir 换成可注入失败的包装。不联网。"""
+    if shutil.which("node") is None:
+        pytest.skip("没有 node，无法用桩 CLI 走到夹具生成")
+    caller = tmp_path / "caller"
+    caller.mkdir()
+    (caller / "AGENTS.md").write_text("SENTINEL-DO-NOT-TOUCH\n", encoding="utf-8")
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    wrapper = bindir / "mkdir"
+    wrapper.write_text(_MKDIR_WRAPPER, encoding="utf-8")
+    wrapper.chmod(0o755)
+    fake = tmp_path / "fake-skills-cli.js"
+    fake.write_text(_FAKE_SKILLS_CLI, encoding="utf-8")
+    env = {
+        "PATH": str(bindir) + os.pathsep + os.environ.get("PATH", ""),
+        "SKILLS_CLI": str(fake),
+        **extra,
+    }
+    return caller, env
+
+
+def _assert_caller_untouched(caller: Path) -> None:
+    sentinel = caller / "AGENTS.md"
+    assert sentinel.read_text(encoding="utf-8") == "SENTINEL-DO-NOT-TOUCH\n"
+    assert {p.name for p in caller.iterdir()} == {"AGENTS.md"}
+    assert not (caller / ".git").exists()
+    assert not (caller / "CONTEXT.md").exists()
+
+
+def test_fixture_project_mkdir_failure_does_not_write_caller_directory(tmp_path: Path) -> None:
+    """项目目录创建失败时必须马上停，不能在调用者的当前目录继续 git 和相对路径写入。
+
+    第五轮审查的故障注入：只让 `S01-ask/project` 及其子目录的 mkdir 返回 73，
+    其余命令真实执行。`make_project || ...` 会关掉函数内的 set -e，于是 cd 失败后
+    仍会在调用者目录里 git init，并覆盖那里的 AGENTS.md。
+    """
+    caller, env = _stub_fixture_env(tmp_path, FAIL_PROJECT_MKDIR="1")
+    out = tmp_path / "out"
+    result = run_fixture(str(out), "S01-ask", env=env, cwd=caller)
+
+    assert result.returncode == 73, (
+        f"应带回 mkdir 的退出码 73，实际 {result.returncode}\n"
+        f"stderr:\n{result.stderr}\nstdout:\n{result.stdout}"
+    )
+    assert "无法创建项目目录" in result.stderr
+    assert "git init" not in result.stderr
+    assert "No such file or directory" not in result.stderr
+    _assert_caller_untouched(caller)
+    assert not (out / "S01-ask" / "project" / ".git").exists()
+
+
+def test_fixture_project_cd_failure_does_not_write_caller_directory(tmp_path: Path) -> None:
+    """目录已经建好但进不去时，也必须停在 cd，不能接着在调用者目录里写文件。"""
+    if os.geteuid() == 0:
+        pytest.skip("root 仍能进入 000 权限的目录，无法构造 cd 失败")
+    caller, env = _stub_fixture_env(tmp_path, LOCK_PROJECT_AFTER_TASK_MKDIR="1")
+    out = tmp_path / "out"
+    project = out / "S01-ask" / "project"
+    try:
+        result = run_fixture(str(out), "S01-ask", env=env, cwd=caller)
+    finally:
+        if project.is_dir():
+            os.chmod(project, 0o755)
+
+    assert result.returncode != 0, f"进不了项目目录必须失败：{result.stderr}"
+    assert "无法进入项目目录" in result.stderr, result.stderr
+    assert "git init" not in result.stderr
+    _assert_caller_untouched(caller)
+    assert project.is_dir()
+    assert not (project / ".git").exists()
+
+
+def test_fixture_stub_cli_still_builds_project_without_touching_caller(tmp_path: Path) -> None:
+    """失败路径收紧后，正常生成仍把仓库和文件写在夹具项目里，调用者目录保持原样。"""
+    caller, env = _stub_fixture_env(tmp_path)
+    out = tmp_path / "out"
+    result = run_fixture(str(out), "S01-ask", env=env, cwd=caller)
+
+    assert result.returncode == 0, f"桩 CLI 下夹具应生成成功：{result.stderr}\n{result.stdout}"
+    _assert_caller_untouched(caller)
+    project = out / "S01-ask" / "project"
+    text = (project / "AGENTS.md").read_text(encoding="utf-8")
+    assert text.startswith("## Agent 约定\n"), "夹具正文不应因写入方式改变"
+    assert (project / "CONTEXT.md").is_file()
+    head = subprocess.run(["git", "-C", str(project), "rev-parse", "HEAD"],
+                          capture_output=True, text=True, check=False)
+    assert head.returncode == 0 and head.stdout.strip(), "夹具项目应有可用基线提交"
 
 
 def test_guard_checks_do_not_swallow_command_failures() -> None:
