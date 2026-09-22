@@ -89,7 +89,7 @@
 
 ### 合并与发布
 
-- PR #80 以 merge commit `fd3d894` 合入 `main`，保留 9 个提交不 squash，使五轮修复各自成为历史中的一个检查点；`release/v3` 分支保留为审查记录
+- PR #80 以 merge commit `fd3d894` 合入 `main`，保留 9 个提交不 squash，使五轮修复各自成为历史中的一个检查点。`release/v3` 分支已在发布后删除（远端与本地），9 个提交作为该合并提交的父链继续在 `main` 历史中可达，审查往返本身记在 PR #80 与 `docs/validation-v3.md` 第 6 节
 - 创建 `v3.0.0` 附注标签与对应 GitHub Release。V3 没有构建产物，Release 不挂 tar 包，发布内容就是仓库里 `skills/` 下的 20 项技能；标签创建后 `add LC-86/MyGameStudio#v3.0.0` 复测通过，装到的正是本版 20 项
 - 合入后对**真实远端内容**复跑验证：SSH 全新克隆上 `scripts/install-smoke-test.sh` 19/19 通过（来源标识 `fd3d894-clean`）；`add LC-86/MyGameStudio` 从默认分支实测装到 20 项本版技能；`#<ref>` 固定引用用 `#v2.0.2`（39 项旧名）与 `#release/v3`（20 项新名）各测一例，证明引用确实决定内容
 - 据此关闭两项此前记录的未验证：远端来源安装、`#<ref>` 端到端安装。同时修正 `docs/installation.md` 中一处与实测不符的说法：`skills-lock.json` 并不记录 `ref` 与 `sourceUrl`，也不记录提交 SHA

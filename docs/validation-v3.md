@@ -119,7 +119,7 @@ PR #80 以 merge commit `fd3d894` 合入默认分支后，对本机取得的**�
 |---|---|---|
 | 远端克隆复跑隔离安装测试 | `git clone --depth 1 --branch main git@github.com:LC-86/MyGameStudio.git /tmp/mgs-remote-main` → `./scripts/install-smoke-test.sh /tmp/mgs-remote-main` | **通过 19/19**，来源标识 `fd3d894-clean`，`FAIL 0` |
 | 默认分支的 git 来源安装 | `add LC-86/MyGameStudio --skill '*' --agent universal --copy -y` | **通过**。`Found 20 skills`，`.agents/skills/` 下 20 项目录名与 20 项 `-gamestudio` 名称一致，含 `gdd-gamestudio/LICENSE`；`skills-lock.json` 记 `source: LC-86/MyGameStudio`、`sourceType: github`、`skillPath: skills/<名>/SKILL.md` |
-| `#<ref>` 固定引用安装 | `add LC-86/MyGameStudio#v2.0.2 …` 与 `add LC-86/MyGameStudio#release/v3 …` | **通过**。前者 `Found 39 skills` / `Installing all 39 skills`，装到的是旧名（`ask-matt`、`to-spec` 等）；后者 `Found 20 skills`，装到的是本版新名。两次内容不同，直接证明 `#` 之后的 ref 决定取哪份内容，而不是回落到默认分支 |
+| `#<ref>` 固定引用安装 | `add LC-86/MyGameStudio#v2.0.2 …` 与 `add LC-86/MyGameStudio#release/v3 …`（后者取于分支删除前） | **通过**。前者 `Found 39 skills` / `Installing all 39 skills`，装到的是旧名（`ask-matt`、`to-spec` 等）；后者 `Found 20 skills`，装到的是本版新名。两次内容不同，直接证明 `#` 之后的 ref 决定取哪份内容，而不是回落到默认分支 |
 | `#v3.0.0` 标签安装 | `add LC-86/MyGameStudio#v3.0.0 --skill '*' --agent universal --copy -y`（标签创建后复测） | **通过**。`Found 20 skills`，含 `gdd-gamestudio/SKILL.md` 与 `docs-gamestudio/references/delegation.md`，无 `ask-matt` 等旧名 |
 
 这轮复验改变了此前两条结论的性质：`#<ref>` 由「读 CLI 源码推得、端到端未成功」变成**已实测**（分支与标签各一例）；远端来源安装由「未运行（网络受阻）」变成**已通过**。本轮两条取包通路都成功：SSH 克隆（`git@github.com`）与 CLI 自己的 git 来源取包；此前反复观测到的 HTTPS git 传输间歇受阻在本轮未复现，判读时仍按第 5 节的记录当作环境风险。
@@ -128,7 +128,7 @@ PR #80 以 merge commit `fd3d894` 合入默认分支后，对本机取得的**�
 
 | 检查 | 状态 | 缺少什么 |
 |---|---|---|
-| `add LC-86/MyGameStudio@v3.0.0` | **已证伪** | `@` 后缀是技能筛选，不是 Git 引用。结果取决于是否同时给 `--skill '*'`，两种情况不同，不能合并成一句：不带该参数时筛选匹配不到任何技能，CLI 报 `No matching skills found for: …` 并**退出 1**（安装失败）；带上时通配绕过筛选，**退出 0** 并把**默认分支**的全部技能装上，锁文件不记引用。实测成功的完整命令是 `add LC-86/MyGameStudio@release/v3 --skill '*' --agent universal --copy -y`，产物 `Found 39 skills` / `Installing all 39 skills`，等于 V2 树 `plugin/skills/` 28 项 + `legacy/plugin-skills/` 11 项。见 [installation.md](installation.md) |
+| `add LC-86/MyGameStudio@v3.0.0` | **已证伪** | `@` 后缀是技能筛选，不是 Git 引用。结果取决于是否同时给 `--skill '*'`，两种情况不同，不能合并成一句：不带该参数时筛选匹配不到任何技能，CLI 报 `No matching skills found for: …` 并**退出 1**（安装失败）；带上时通配绕过筛选，**退出 0** 并把**默认分支**的全部技能装上，锁文件不记引用。合入前的实测命令是 `add LC-86/MyGameStudio@release/v3 --skill '*' --agent universal --copy -y`（该分支现已删除），产物 `Found 39 skills` / `Installing all 39 skills`，等于 V2 树 `plugin/skills/` 28 项 + `legacy/plugin-skills/` 11 项。合入后用 `@v2.0.2` 复测同一机制：不带 `--skill` 时先 `Found 20 skills` 再报 `No matching skills found for: v2.0.2` 并退出 1；带 `--skill '*'` 时退出 0 且 `Installing all 20 skills`，装到的是默认分支的本版而非 2.0.2。见 [installation.md](installation.md) |
 | 真实宿主（Claude Code / Codex / Cursor 等）内的发现与调用 | 未运行 | 本轮不在这些宿主内执行；V3 不为任何宿主建立适配代码，也不宣称已验证 |
 | 全局安装（`-g`） | 未运行（有意） | 不对真实用户环境执行全局写入 |
 
@@ -324,7 +324,7 @@ PR #80 以 merge commit `fd3d894` 合入默认分支后，对本机取得的**�
 | 合并前审查 | 六轮，共 11 项发现，全部经独立复核成立并已修订（见第 6 节）。第二轮复现第一轮修复不完整，第三轮复现第二轮自身引入的回归，第四轮复现一个既存缺陷被前几轮的守卫漏掉，第五轮复现第四轮为了报出场景名而加上的 `\|\|` 关掉了函数内的失败退出；第六轮无新发现，审查结论为通过 |
 | 本地提交 | `release/v3` 上 9 个提交：`28a10a8`（升级本体）、`29c1949`（验证补记）、`82116e6`（安装验证工装修正）、`45c74fd`（验证状态记录）、`ef94dfa`～`8512ca2`（第一至第五轮审查修订） |
 | 推送 | 全部 9 个提交已推送到 `origin/release/v3`（2026-09-22，用户授权）。过程中 HTTPS git 传输间歇不通，恢复后完成；`github.com:22` 与 `ssh.github.com:443` 的 SSH 通路可用 |
-| 拉取请求 | [#80](https://github.com/LC-86/MyGameStudio/pull/80) `release/v3` → `main`，**已合并**（2026-09-22 07:06Z，merge commit `fd3d894`，保留 9 个提交不 squash）。`release/v3` 分支保留作为审查记录 |
+| 拉取请求 | [#80](https://github.com/LC-86/MyGameStudio/pull/80) `release/v3` → `main`，**已合并**（2026-09-22 07:06Z，merge commit `fd3d894`，保留 9 个提交不 squash）。分支已在发布后删除（远端与本地）；9 个提交作为该合并提交的父链在 `main` 历史中仍然可达，逐轮发现与修订记在本文件第 6 节与 PR #80 的评论里 |
 | CI | 合入后 `main` 上 `fd3d894` 的 `check` 工作流整体 `success`（`静态检查与文档导航` + `原生安装验证`）。此前 `ef94dfa` 及更早的 CI 只跑了显式列出的两个测试文件（38 项），第二轮审查指出后已改为收集整个 `tests/` |
 | 远端默认分支 | 已更新。`main` 自 `fd3d894` 起承载 3.0.0 内容，`npx skills@latest add LC-86/MyGameStudio` 实测安装到本版 20 项 |
 | 标签 `v3.0.0` | 已创建并推送（用户授权）。附注标签，指向 `main` 上承载本版的发布提交；`add LC-86/MyGameStudio#v3.0.0` 实测装到本版 20 项 |

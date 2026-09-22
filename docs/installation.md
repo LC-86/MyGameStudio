@@ -50,14 +50,14 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
 | `owner/repo#ref` | `ref` 才是 **Git 引用**（分支或标签） |
 | `owner/repo#ref@skill` | 先按 `ref` 取内容，再筛 `skill` |
 
-所以 `npx skills@latest add LC-86/MyGameStudio@release/v3` **不会**装到 `release/v3`：`@release/v3` 被当成技能筛选名。具体结果取决于有没有同时给 `--skill '*'`：
+所以 `npx skills@latest add LC-86/MyGameStudio@v2.0.2` **不会**装到 `v2.0.2`：`@v2.0.2` 被当成技能筛选名。具体结果取决于有没有同时给 `--skill '*'`：
 
-| 命令 | 结果 |
+| 命令 | 结果（2026-09-22 实测，均加 `--agent universal --copy -y`） |
 |---|---|
-| `add LC-86/MyGameStudio@release/v3` | 筛选匹配不到任何技能，报 `No matching skills found for: release/v3`，**退出 1**，什么都没装 |
-| `add LC-86/MyGameStudio@release/v3 --skill '*'` | 通配绕过筛选，**退出 0** 并把**默认分支**的全部技能装上，无警告 |
+| `add LC-86/MyGameStudio@v2.0.2` | 先 `Found 20 skills`，随后报 `No matching skills found for: v2.0.2`，**退出 1**，什么都没装 |
+| `add LC-86/MyGameStudio@v2.0.2 --skill '*'` | 通配绕过筛选，`Found 20 skills` / `Installing all 20 skills`，**退出 0** 并把**默认分支**的全部技能装上，无警告——你想固定旧版，拿到的却是本版（装出的目录里没有 `ask-matt` 等旧名） |
 
-第二种才是真正危险的：它看起来成功了，装的却是默认分支的旧内容。实测记录（取于 3.0.0 合入 `main` 之前）：日志 `Found 39 skills` / `Installing all 39 skills`，产物含 `plugin/skills/ask-matt/SKILL.md`，锁文件未记录目标引用。39 正好等于 V2 树里 `plugin/skills/` 的 28 项加 `legacy/plugin-skills/` 的 11 项，与「装到了默认分支」一致。
+第二种才是真正危险的：它看起来成功了，装的却是**默认分支**的内容，而不是你写在 `@` 后面那个版本。合入前的实测记录：日志 `Found 39 skills` / `Installing all 39 skills`，产物含 `plugin/skills/ask-matt/SKILL.md`，锁文件未记录目标引用——39 正好等于 V2 树里 `plugin/skills/` 的 28 项加 `legacy/plugin-skills/` 的 11 项，与「装到了默认分支」一致。合入之后同一条命令改成 `Found 20 skills`，装的正是默认分支上的本版，机制没变、内容跟着默认分支变。
 
 因此：
 
@@ -67,7 +67,7 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
   | 来源 | 结果 |
   |---|---|
   | `LC-86/MyGameStudio#v2.0.2` | `Found 39 skills` / `Installing all 39 skills`，装到的是旧技能名（`ask-matt`、`to-spec` 等） |
-  | `LC-86/MyGameStudio#release/v3` | `Found 20 skills` / `Installing all 20 skills`，装到的是本版 `-gamestudio` 名称 |
+  | `LC-86/MyGameStudio#release/v3` | `Found 20 skills` / `Installing all 20 skills`，装到的是本版 `-gamestudio` 名称（该分支已在发布后删除，此行是当时的实测记录；要用 `#v3.0.0`） |
   | `LC-86/MyGameStudio#v3.0.0` | `Found 20 skills`，含 `gdd-gamestudio/SKILL.md` 与共享参考，无旧名残留 |
 
   三次结果内容各不相同，说明 `#` 之后的引用确实决定了取哪份内容，而不是只看默认分支；标签与分支 ref 走同一条解析路径。
