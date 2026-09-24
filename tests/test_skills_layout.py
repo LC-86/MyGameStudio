@@ -398,7 +398,7 @@ def test_no_retired_trees_in_publishable_content() -> None:
     assert not hits, f"发布内容仍含客户端适配：{hits[:20]}"
     allowed_policy = {f"skills/{name}/{CODEX_POLICY_PATH}" for name in USER_ENTRIES}
     stray_policy = [rel for rel in publishable_files()
-                    if rel.endswith("openai.yaml") and rel not in allowed_policy]
+                    if "openai.yaml" in rel and rel not in allowed_policy]
     assert not stray_policy, f"发布内容含未授权的 Codex 策略文件：{stray_policy[:20]}"
 
 
