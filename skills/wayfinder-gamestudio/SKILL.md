@@ -2,6 +2,7 @@
 name: wayfinder-gamestudio
 description: 用户请求为一个需要跨会话澄清的大型游戏目标梳理路线时使用：建立或续接决策地图，逐步解决关键未知，直到当前设计路线足够清楚，然后交接。不是生产排期器或任务调度器，不替代明确工作的拆票与正式实现，路线清楚后不自动开始制作。
 license: MIT
+disable-model-invocation: true
 ---
 
 # Wayfinder GameStudio

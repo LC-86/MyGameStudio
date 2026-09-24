@@ -2,6 +2,7 @@
 name: implement-gamestudio
 description: 用户请求实现当前已明确的工作时使用：按任务、规格或已确认的小范围对话完成工程、资源与内容成果，执行必要检查，组织评审与修复，并按任务责任交接或结束。不重新设计需求、不偷改规格、不自动领取下一项工作；提交、推送与关单各自需要相应条件与授权。
 license: MIT
+disable-model-invocation: true
 ---
 
 # Implement GameStudio

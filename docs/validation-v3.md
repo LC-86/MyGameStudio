@@ -33,18 +33,20 @@ OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，2
 
 第六轮为 63 项，发布往返后为 64 项（新增一项防止「已失效的未验证声明」残留在文档里）。
 
-`tests/test_skills_layout.py` 覆盖 27 项断言：
+上面这段命令输出与本节表格记录的是 **3.0.0 发布时点**的结果；#81 落地后的当前值是 `68 passed` 与 31 项断言，见下文「调用控制反转（#81）」。
+
+`tests/test_skills_layout.py` 覆盖 27 项断言（3.0.0 时点）：
 
 | 检查 | 结果 |
 |---|---|
 | 发现集合恰为 20 项、名称与固定名单一致 | 通过 |
 | 每项技能只有一份 `SKILL.md`，位于目录顶层 | 通过 |
 | 目录名与 frontmatter `name` 一致，小写连字符 | 通过 |
-| frontmatter 只用标准字段；无 `disable-model-invocation`、`allow_implicit_invocation`、`argument-hint`、`allowed-tools` | 通过 |
+| frontmatter 只用标准字段；无 `disable-model-invocation`、`allow_implicit_invocation`、`argument-hint`、`allowed-tools` | 通过（3.0.0 时点；#81 已反转，见下文「调用控制反转（#81）」） |
 | 8 个用户入口的 description 说明由用户请求触发；description 长度合规 | 通过 |
 | 每项技能自带 `LICENSE` 通知，含 MIT 全文与相应版权声明 | 通过 |
 | 包内 102 处相对引用全部可达 | 通过 |
-| 无 `agents/openai.yaml`、无客户端清单残留 | 通过 |
+| 无 `agents/openai.yaml`、无客户端清单残留 | 通过（3.0.0 时点；#81 已允许 8 个入口各带一份，见下文「调用控制反转（#81）」） |
 | 共享参考单一所有者；跨技能只引用 `docs-gamestudio` 与 `tasks-gamestudio` 的共享资料或对方正文 | 通过 |
 | 无以未纳入技能或上游原名作为调用目标的硬引用 | 通过 |
 | Docs 消费者有可追踪的真实写作入口与委派入口，不是仅出现技能名字符串 | 通过 |
@@ -62,6 +64,42 @@ OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，2
 - **Docs 消费者接入**：18 项技能有指向 `docs-gamestudio` 正文或其参考的真实链接，落在实际写作或委派处；两个一句话入口按设计不追加规则；`docs-gamestudio` 自身不递归。
 - **GDD/spec 按条件互调**：只在处理明确差异时衔接，被调用方完成差异即返回，缺口交回当前 Agent，没有无条件反调。该检查不把一切相互引用判为非法循环。
 - **人机责任一致性**：`tasks-gamestudio` 拥有唯一说明，`implement`、`review`、`debug`、`prototype`、`tdd` 引用同一路径，没有第二份可改写正文。
+
+### 调用控制反转（#81）— 静态契约通过，宿主内隔离未运行
+
+8 个用户入口（ask / setup / grill / grill-gamestudio-docs / tasks / implement / wayfinder / handoff）在 2026-09-25 叠加三层调用控制：frontmatter 新增 `disable-model-invocation: true`，技能目录内新增 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`），description 措辞未改；12 个按需方法零改动。上文表格中「无 `disable-model-invocation`」与「无 `agents/openai.yaml`」两行描述的是 3.0.0 时点的契约，已被本次反转取代，原文保留；同节命令输出块里的 `64 passed` 与「覆盖 27 项断言」也是 3.0.0 时点的记录，本轮的对应值是 `68 passed` 与 31 项。
+
+本节结论的可追溯标识：基线提交 `4275de2`（分支 `format/skill-writing`）之上、紧随本记录的这一笔改动（8 份入口 `SKILL.md`、8 份 `agents/openai.yaml`、`tests/test_skills_layout.py`、`scripts/validate-docs.py` 与本文件）。
+
+实际执行的检查与输出：
+
+```
+$ python3.12 -m pytest tests/ -q
+68 passed
+
+$ python3.12 scripts/validate-docs.py
+OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，20 项技能）
+
+$ bash scripts/install-smoke-test.sh
+PASS 19 / FAIL 0
+```
+
+`tests/test_skills_layout.py` 由 27 项增至 31 项，新增与改写的断言：
+
+| 检查 | 结果 |
+|---|---|
+| 8 个入口 frontmatter 均含 `disable-model-invocation: true`，且不带其他宿主调用字段 | 通过 |
+| 12 个按需方法仍只用标准字段，不含任何宿主调用开关 | 通过 |
+| 8 个入口各有一份 `agents/openai.yaml`，内容精确为 `policy.allow_implicit_invocation: false` | 通过 |
+| 12 个方法目录内无 `agents/`、无 `openai.yaml` | 通过 |
+| 技能目录除上述 8 份外无客户端适配残留（反向断言保留） | 通过 |
+| 发布内容中的 `openai.yaml` 只允许落在 8 个入口路径下（反向断言保留） | 通过 |
+
+`scripts/validate-docs.py` 同步把 `disable-model-invocation: true` 从 `RETIRED_COMMANDS` 移除：该字段已恢复为现行契约，防回归职责由 `tests/test_skills_layout.py` 的正向断言承担，不再靠「退役命令」名单兜底。
+
+安装通路实测（官方 `skills` CLI 1.7.0，隔离临时目录，来源标识 `4275de2-dirty`）：`PASS 19 / FAIL 0`。**该脚本的 19 项检查不覆盖 `agents/openai.yaml`**：它的文件遍历只处理 `*.md` / `*.txt`（第 2 节第 3、4 步），全文没有 `agents` / `openai.yaml` 断言，因此这份绿灯不构成对 yaml 安装结果的验证。yaml 的结论来自脚本保留的工作目录内逐目录人工核对（`find <安装根> -mindepth 3 -maxdepth 3 -name openai.yaml | wc -l` = 8）：8 个入口的 `agents/openai.yaml` 出现在安装结果中（核对文件数与路径，未逐字节比对全部内容），12 个方法目录内没有 `agents/`，安装后的 `implement-gamestudio/SKILL.md` 保留 `disable-model-invocation: true`。核对用的临时工作目录在核对后已删除，因此这条结论没有留存证据目录。它也未纳入任何脚本断言——CLI 若停止复制 `agents/` 或停止透传该字段，现有检查不会报警；把它变成自动回归需要另行给 `scripts/install-smoke-test.sh` 补断言（不在本次范围）。安装内容与 3.0.0 的差异是：多出这 8 个文件，外加 8 份入口 `SKILL.md` 各多一行 `disable-model-invocation: true`。第 2 节记录的静默透传只覆盖 frontmatter 的未知字段；`agents/openai.yaml` 的复制行为本次只观察到「原样复制」这一结果，未读 CLI 源码确认它是否解析该文件。
+
+**未运行：六宿主内的实际调用隔离。** 本机没有可自动化的 Claude Code / Codex / Grok Build / DSH / ZCode / Qoder 调用隔离实测入口，且该隔离由各宿主解析器在模型选技能时执行，静态检查与安装测试都不能替代。本轮沿用 #81 记录的设计依据（六宿主官方文档核实结论）：Claude Code / Grok Build / DSH 读 frontmatter 的 `disable-model-invocation`；Codex 不读该字段、只读 `agents/openai.yaml` 的 `policy.allow_implicit_invocation`；ZCode 与 Qoder 未文档化调用控制字段，仍靠 description 匹配。这些结论本轮未重新核实，隔离效果需要在各宿主内单独实测，本记录不声称通过。
 
 ## 2. 原生安装测试 — 通过（19/19）
 
@@ -316,9 +354,9 @@ PR #80 以 merge commit `fd3d894` 合入默认分支后，对本机取得的**�
 
 | 状态 | 实际情况 |
 |---|---|
-| 源码完成 | 是。20 项技能（73 个文件：20 份 `SKILL.md`、20 份 `LICENSE`、28 份参考、5 份模板）、共享参考、文档、静态检查与安装/夹具脚本已合入 `main` |
-| 静态检查 | 通过。`python3.12 -m pytest tests/ -q` 64 项通过（含第六轮之后为「已失效的未验证声明」新增的断言）；`python3.12 scripts/validate-docs.py` 通过（37 个文档、20 项技能） |
-| 本地安装通过 | 是。技能树在第四轮后以官方 CLI 1.7.0 隔离安装，`scripts/install-smoke-test.sh` 19/19 通过。第五轮只改夹具脚本和文档，没有重跑安装测试 |
+| 源码完成 | 是。20 项技能（73 个文件：20 份 `SKILL.md`、20 份 `LICENSE`、28 份参考、5 份模板）、共享参考、文档、静态检查与安装/夹具脚本已合入 `main`。#81 之后为 81 个文件（多出 8 份 `agents/openai.yaml`） |
+| 静态检查 | 通过。`python3.12 -m pytest tests/ -q` 64 项通过（含第六轮之后为「已失效的未验证声明」新增的断言）；`python3.12 scripts/validate-docs.py` 通过（37 个文档、20 项技能）。此为 3.0.0 发布时点的数字；#81 之后为 68 项，见上文「调用控制反转（#81）」 |
+| 本地安装通过 | 是。技能树在第四轮后以官方 CLI 1.7.0 隔离安装，`scripts/install-smoke-test.sh` 19/19 通过。第五轮只改夹具脚本和文档，没有重跑安装测试；#81 之后又跑过一次 19/19，见上文「调用控制反转（#81）」 |
 | 远端安装通过 | 是。合入 `main` 后对全新 SSH 克隆复跑同一测试 19/19 通过（来源标识 `fd3d894-clean`），并用 git 来源直装与 `#<ref>` 各测通过，见第 2 节 |
 | 行为验证 | 9 个场景通过，1 个阻塞（S10 / E11）。逐项证据见第 3 节；未运行的场景不声称通过 |
 | 合并前审查 | 六轮，共 11 项发现，全部经独立复核成立并已修订（见第 6 节）。第二轮复现第一轮修复不完整，第三轮复现第二轮自身引入的回归，第四轮复现一个既存缺陷被前几轮的守卫漏掉，第五轮复现第四轮为了报出场景名而加上的 `\|\|` 关掉了函数内的失败退出；第六轮无新发现，审查结论为通过 |

@@ -2,6 +2,7 @@
 name: handoff-gamestudio
 description: 用户请求把当前未完成工作交给新会话、其他工具或协作者时使用：整理必要上下文、实际资源与版本位置、下一步和访问缺口，写成一份可携带的短交接说明。不自动复制工程、开新会话、改任务状态或搬迁资料；引用不代表已传输。
 license: MIT
+disable-model-invocation: true
 ---
 
 # Handoff GameStudio

@@ -2,6 +2,7 @@
 name: ask-gamestudio
 description: 用户询问现在该做什么时使用的只读导航：根据当前目标和实际环境，推荐一个最值得推进的下一步、承担它的技能、完成标志和可直接发送的指令。只做导航，不调用下游技能、不写入项目、不做全项目盘点，也不输出一长串候选。
 license: MIT
+disable-model-invocation: true
 ---
 
 # Ask GameStudio
