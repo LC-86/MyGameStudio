@@ -545,4 +545,6 @@ PR #84（#81/#82/#83 三票成果 + 实现方合并前两轮评审修正，头�
 
 合并后处置 Standards 发现 H1：发布树检查由精确名匹配恢复为路径子串拦截，`openai.yaml` 变体名（如 `.bak`、`.orig`）不再放行，白名单仍为 8 个用户入口的正式策略文件。
 
-v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 passed；`python3.12 scripts/validate-docs.py` → OK（含 `VERSION`=3.0.1 与 6 个必须提及文件的一致性检查，`tests/test_docs_product.py` 的版本常量同步升版）。远端全新克隆复跑安装测试与 `#v3.0.1` 固定引用安装的结果在发布后补记于本节。六宿主内实际调用隔离仍未运行（见第 4 节）。
+v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 passed；`python3.12 scripts/validate-docs.py` → OK（含 `VERSION`=3.0.1 与 6 个必须提及文件的一致性检查，`tests/test_docs_product.py` 的版本常量同步升版）。六宿主内实际调用隔离仍未运行（见第 4 节）。
+
+发布后远端实测（2026-09-25）：SSH 全新克隆取到 `5ef4481`（VERSION 3.0.1），`scripts/install-smoke-test.sh` → **PASS 19 / FAIL 0**；`npx -y skills@latest add LC-86/MyGameStudio#v3.0.1 --skill '*' --agent universal --copy -y` 固定引用安装 → 20 项技能，抽查 `ask-gamestudio` 与 `implement-gamestudio` 各恰含一行 `disable-model-invocation: true`，12 个按需方法均不含，`ask-gamestudio/agents/openai.yaml` 装到且内容为 `policy:` 与 `  allow_implicit_invocation: false` 两行（本轮补上 #81 轮未留证的 yaml 安装核对；证据目录暂存 `/tmp/mgs-pinned-test`，随系统清理失效）。`v3.0.1` 附注标签已推送，GitHub Release 已发布（非草稿，目标 `main`）。
