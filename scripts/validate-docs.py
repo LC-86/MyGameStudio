@@ -41,12 +41,14 @@ DOCS_INDEX_MUST_LINK = (
     "agents/issue-tracker.md", "agents/triage-labels.md", "agents/domain.md",
 )
 
-# 已退出的旧安装命令，只允许出现在退役说明与历史记录中
+# 已退出的旧安装命令，只允许出现在退役说明与历史记录中。
+# 调用控制字段（frontmatter 的 disable-model-invocation 与 agents/openai.yaml）
+# 已恢复为现行契约，不再属于退役内容；其正向断言由 tests/test_skills_layout.py 承担。
 RETIRED_COMMANDS = (
     "claude --plugin-dir", "codex plugin add", "zcode plugin",
     "shasum -a 256 -c SHA256SUMS", ".claude-plugin/plugin.json",
     ".codex-plugin/plugin.json", ".zcode-plugin/plugin.json",
-    "scripts/build-package.sh", "disable-model-invocation: true",
+    "scripts/build-package.sh",
 )
 HISTORY_ALLOWED = ("docs/migration-v3.md", "CHANGELOG.md")
 HISTORY_PREFIXES = ("provenance/", "docs/design/")

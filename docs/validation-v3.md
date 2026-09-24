@@ -33,18 +33,20 @@ OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，2
 
 第六轮为 63 项，发布往返后为 64 项（新增一项防止「已失效的未验证声明」残留在文档里）。
 
-`tests/test_skills_layout.py` 覆盖 27 项断言：
+上面这段命令输出与本节表格记录的是 **3.0.0 发布时点**的结果；#81 落地后的当前值是 `68 passed` 与 31 项断言，见下文「调用控制反转（#81）」。
+
+`tests/test_skills_layout.py` 覆盖 27 项断言（3.0.0 时点）：
 
 | 检查 | 结果 |
 |---|---|
 | 发现集合恰为 20 项、名称与固定名单一致 | 通过 |
 | 每项技能只有一份 `SKILL.md`，位于目录顶层 | 通过 |
 | 目录名与 frontmatter `name` 一致，小写连字符 | 通过 |
-| frontmatter 只用标准字段；无 `disable-model-invocation`、`allow_implicit_invocation`、`argument-hint`、`allowed-tools` | 通过 |
+| frontmatter 只用标准字段；无 `disable-model-invocation`、`allow_implicit_invocation`、`argument-hint`、`allowed-tools` | 通过（3.0.0 时点；#81 已反转，见下文「调用控制反转（#81）」） |
 | 8 个用户入口的 description 说明由用户请求触发；description 长度合规 | 通过 |
 | 每项技能自带 `LICENSE` 通知，含 MIT 全文与相应版权声明 | 通过 |
 | 包内 102 处相对引用全部可达 | 通过 |
-| 无 `agents/openai.yaml`、无客户端清单残留 | 通过 |
+| 无 `agents/openai.yaml`、无客户端清单残留 | 通过（3.0.0 时点；#81 已允许 8 个入口各带一份，见下文「调用控制反转（#81）」） |
 | 共享参考单一所有者；跨技能只引用 `docs-gamestudio` 与 `tasks-gamestudio` 的共享资料或对方正文 | 通过 |
 | 无以未纳入技能或上游原名作为调用目标的硬引用 | 通过 |
 | Docs 消费者有可追踪的真实写作入口与委派入口，不是仅出现技能名字符串 | 通过 |
@@ -62,6 +64,130 @@ OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，2
 - **Docs 消费者接入**：18 项技能有指向 `docs-gamestudio` 正文或其参考的真实链接，落在实际写作或委派处；两个一句话入口按设计不追加规则；`docs-gamestudio` 自身不递归。
 - **GDD/spec 按条件互调**：只在处理明确差异时衔接，被调用方完成差异即返回，缺口交回当前 Agent，没有无条件反调。该检查不把一切相互引用判为非法循环。
 - **人机责任一致性**：`tasks-gamestudio` 拥有唯一说明，`implement`、`review`、`debug`、`prototype`、`tdd` 引用同一路径，没有第二份可改写正文。
+
+### 调用控制反转（#81）— 静态契约通过，宿主内隔离未运行
+
+8 个用户入口（ask / setup / grill / grill-gamestudio-docs / tasks / implement / wayfinder / handoff）在 2026-09-25 叠加三层调用控制：frontmatter 新增 `disable-model-invocation: true`，技能目录内新增 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`），description 措辞未改；12 个按需方法零改动。上文表格中「无 `disable-model-invocation`」与「无 `agents/openai.yaml`」两行描述的是 3.0.0 时点的契约，已被本次反转取代，原文保留；同节命令输出块里的 `64 passed` 与「覆盖 27 项断言」也是 3.0.0 时点的记录，本轮的对应值是 `68 passed` 与 31 项。
+
+本节结论的可追溯标识：基线提交 `4275de2`（分支 `format/skill-writing`）之上、紧随本记录的这一笔改动（8 份入口 `SKILL.md`、8 份 `agents/openai.yaml`、`tests/test_skills_layout.py`、`scripts/validate-docs.py` 与本文件）。
+
+实际执行的检查与输出：
+
+```
+$ python3.12 -m pytest tests/ -q
+68 passed
+
+$ python3.12 scripts/validate-docs.py
+OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，20 项技能）
+
+$ bash scripts/install-smoke-test.sh
+PASS 19 / FAIL 0
+```
+
+`tests/test_skills_layout.py` 由 27 项增至 31 项，新增与改写的断言：
+
+| 检查 | 结果 |
+|---|---|
+| 8 个入口 frontmatter 均含 `disable-model-invocation: true`，且不带其他宿主调用字段 | 通过 |
+| 12 个按需方法仍只用标准字段，不含任何宿主调用开关 | 通过 |
+| 8 个入口各有一份 `agents/openai.yaml`，内容精确为 `policy.allow_implicit_invocation: false` | 通过 |
+| 12 个方法目录内无 `agents/`、无 `openai.yaml` | 通过 |
+| 技能目录除上述 8 份外无客户端适配残留（反向断言保留） | 通过 |
+| 发布内容中的 `openai.yaml` 只允许落在 8 个入口路径下（反向断言保留） | 通过 |
+
+`scripts/validate-docs.py` 同步把 `disable-model-invocation: true` 从 `RETIRED_COMMANDS` 移除：该字段已恢复为现行契约，防回归职责由 `tests/test_skills_layout.py` 的正向断言承担，不再靠「退役命令」名单兜底。
+
+安装通路实测（官方 `skills` CLI 1.7.0，隔离临时目录，来源标识 `4275de2-dirty`）：`PASS 19 / FAIL 0`。**该脚本的 19 项检查不覆盖 `agents/openai.yaml`**：它的文件遍历只处理 `*.md` / `*.txt`（第 2 节第 3、4 步），全文没有 `agents` / `openai.yaml` 断言，因此这份绿灯不构成对 yaml 安装结果的验证。yaml 的结论来自脚本保留的工作目录内逐目录人工核对（`find <安装根> -mindepth 3 -maxdepth 3 -name openai.yaml | wc -l` = 8）：8 个入口的 `agents/openai.yaml` 出现在安装结果中（核对文件数与路径，未逐字节比对全部内容），12 个方法目录内没有 `agents/`，安装后的 `implement-gamestudio/SKILL.md` 保留 `disable-model-invocation: true`。核对用的临时工作目录在核对后已删除，因此这条结论没有留存证据目录。它也未纳入任何脚本断言——CLI 若停止复制 `agents/` 或停止透传该字段，现有检查不会报警；把它变成自动回归需要另行给 `scripts/install-smoke-test.sh` 补断言（不在本次范围）。安装内容与 3.0.0 的差异是：多出这 8 个文件，外加 8 份入口 `SKILL.md` 各多一行 `disable-model-invocation: true`。第 2 节记录的静默透传只覆盖 frontmatter 的未知字段；`agents/openai.yaml` 的复制行为本次只观察到「原样复制」这一结果，未读 CLI 源码确认它是否解析该文件。
+
+**未运行：六宿主内的实际调用隔离。** 本机没有可自动化的 Claude Code / Codex / Grok Build / DSH / ZCode / Qoder 调用隔离实测入口，且该隔离由各宿主解析器在模型选技能时执行，静态检查与安装测试都不能替代。本轮沿用 #81 记录的设计依据（六宿主官方文档核实结论）：Claude Code / Grok Build / DSH 读 frontmatter 的 `disable-model-invocation`；Codex 不读该字段、只读 `agents/openai.yaml` 的 `policy.allow_implicit_invocation`；ZCode 与 Qoder 未文档化调用控制字段，仍靠 description 匹配。这些结论本轮未重新核实，隔离效果需要在各宿主内单独实测，本记录不声称通过。
+
+### 规则与文档口径对齐（#82）— 静态检查通过，宿主内隔离仍未运行
+
+#81 落地后，仓库对外仍写着「本库不使用宿主调用开关、无法阻止宿主自行选中用户入口」。本节记录按 #82 把口径改为三层机制的实际改动与检查。本轮只改文字，没有改技能行为，也没有新增或修改断言。
+
+改动的文件（19 个）：
+
+- 三层口径写入：根规则中英镜像对（`AGENTS.md` / `AGENTS.zh-CN.md`）、中英 README、术语表 `CONTEXT.md`（用户入口、指令层边界、用户主动调用三个词条）、`CONTRIBUTING.md`、[当前能力与限制](reference/capabilities.md) 的「8/12 的分界由三层调用控制承担」一节、排错指南、上手指南、常用工作流、测试说明的静态检查口径，以及共享编写参考 `skills/docs-gamestudio/references/skill-authoring.md` 的「标准 frontmatter」「用户入口与按需方法是行为边界」「结构决定」三节。
+- 排错指南的旧单节按 #82 拆为两节：「Claude Code、Grok Build、DSH、Codex 内：若发生即异常」与「ZCode、Qoder 内：已披露的指令层限制」。
+- 同类旧口径：`docs/reference/upstream.md` 的「调用开关退出」一条改写为「调用控制分层」；`skills/ask-gamestudio/SKILL.md` 正文里「不是宿主强制的隔离」一句改为按宿主分层表述。
+- 评审后按发现补齐的文件（发现与处置的对应见下文「两轴评审」）：`docs/migration-v3.md` 的「调用边界的变化」把 3.0.0 时点改为过去时并补一段当前状态，不改写历史结论；`README.md` / `README.en.md` 的「不做什么」补上唯一的宿主专属文件 `agents/openai.yaml`，三层控制一段注明 `v3.0.0` 标签不含该层；`.github/PULL_REQUEST_TEMPLATE.md` 的 frontmatter 检查项按现行契约重写；`THIRD_PARTY_NOTICES.md` 与 `provenance/upstream.md` 关于上游 `SKILL-MECHANICS.md` 的那一句补上 #81 之后的现状并写明所指字段。`docs/reference/capabilities.md` 的同类矛盾在同一文件内改述，见下文。
+- 「指令层约定」与「instruction-layer」字样保留：对 ZCode、Qoder 仍为真，也是 `tests/test_docs_product.py` 的锚点；用户入口正文里「不自动串调」的句子未改。
+- 机制表述补上来源限定（「来自各宿主官方文档，本库未在宿主内逐一实测」），并把 `CONTRIBUTING.md` 的验证要求收窄为只约束「写成已验证」的情形，避免正文断言与证据要求互相冲突。
+
+留给 #83 记录链、本票不预写的部分：`provenance/adaptation-log.md` 新增 A2 条目、`docs/design/v3-overrides.md` 追加日期修订段、`CHANGELOG.md` 顶部新增 Unreleased 条目（#83 已把它们定义在自己范围内，并声明旧条目与冻结设计文件不改写）。三处由此仍保留 #81 之前的写法，本票的检索式也不捕捉它们，逐处为：`provenance/adaptation-log.md` A1 的「不靠调用开关实现通用边界」「删除全部 `disable-model-invocation` 与 `agents/openai.yaml`」与「标准技能文本无法阻止某个宿主自行选中一个用户入口」；`docs/design/v3-overrides.md` 覆盖 1 的「frontmatter 只使用标准字段 `name`、`description`、`license`」与「不再宣称纯标准技能文本具有跨宿主的强制调用隔离能力」；`CHANGELOG.md` 3.0.0 段的「不再依赖宿主专属调用开关」（已发布版本的历史记录，按惯例不改写，反转由 #83 的 Unreleased 条目陈述）。本票只在本文件追加本节，不与 #83 计划的「本组汇总」重复。
+
+未纳入本票、建议另票：`tests/test_docs_product.py` 两处断言的失败消息仍是旧口径（「README 应如实披露 8/12 分界不是宿主强制隔离」），且只查子串、不验证三层机制；`scripts/install-smoke-test.sh` 仍未断言 `agents/openai.yaml` 的安装结果（#81 已记录）；`README.md` / `README.en.md` 的验证状态段仍写「静态检查 64 项」，而 #81 之后实跑为 68 项。三者都属于静态契约与验证数字，不影响本票的文档口径结论。
+
+实际执行的检查与输出（改动完成后）：
+
+```
+$ python3.12 -m pytest tests/ -q
+68 passed
+
+$ python3.12 scripts/validate-docs.py
+OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，20 项技能）
+```
+
+两项数字与 #81 落地后相同：本票只改文字，没有增删断言；改动前的基线也是 `68 passed` 与同一份校验输出。
+
+逐条核对旧口径：`git grep -nE "不具备跨宿主|无法阻止宿主|不使用.*宿主|不是宿主强制" -- '*.md'` 共命中 7 行，其中 4 行是本记录自身引述旧措辞、旧断言消息与检索式；另外 3 处为 `CHANGELOG.md`（3.0.0 段的历史记录）、`docs/migration-v3.md`（已限定为「就 3.0.0 本身而言」的过去时叙述）与 `docs/reference/troubleshooting.md`（限定在 ZCode、Qoder 两个宿主，保留的正确用法）。该检索式只覆盖几种固定说法，**不代表残留已经清空**：`provenance/adaptation-log.md` 与 `docs/design/v3-overrides.md` 里措辞不同但同样过期的句子不在命中内，已在上一条逐一列出并归给 #83。`docs/design/unified-design-v1.md`、`docs/design/unified-integration-v1.md`、`provenance/previous-audit/`、`provenance/v2-plugin-provenance/`、`provenance/setup-gamestudio-draft-v2/` 是 [测试说明](development/testing.md) 列出的原样保留历史输入，本轮未改，检索式在其中零命中。pytest 与 `scripts/validate-docs.py` 都不检查这类措辞，以上结论来自逐条人工核对，不是自动断言。
+
+**两轴评审（独立只读子代理，Standards 与 Spec 各一轴，共三轮：15 文件版、修订版与最终版）**：Spec 轴判定 acceptance criteria 各项满足、票面列举清单无遗漏，指出本条记录最初的检索式写法过于乐观、路由项需要处置；Standards 轴报出四处同树矛盾——`docs/migration-v3.md` 与同批其余文档冲突、[当前能力与限制](reference/capabilities.md) 在「本页不代填」之后又自行填了未运行状态、`README.md` / `README.en.md` 的「不做什么」与本批承认的宿主专属文件冲突、PR 模板检查项与新契约反向，并指出机制断言缺少来源限定、`#81` 未发布的过渡状态被写进参考文档。处置对应关系：migration-v3、README 对与 PR 模板见上方文件清单第四项；`capabilities.md` 在同一文件内改述（未运行的披露移入表格前的来源限定，结果条目恢复为「只在验证状态里说明」）；`THIRD_PARTY_NOTICES.md` 与 `provenance/upstream.md` 在清单第四项内补明所指字段；README 对与排错指南的过渡状态改为以 `v3.0.0` 标签为参照的写法；`CONTRIBUTING.md` 的验证要求收窄为只约束「写成已验证」。本条记录的检索式、命中数、归属与 #83 遗留清单也按发现改写。**保留缺口**：`tests/test_docs_product.py` 的断言消息、`scripts/install-smoke-test.sh` 缺少 `agents/openai.yaml` 断言、双 README 的静态检查项数（64 → 68），以及 `provenance/adaptation-log.md` 与 `docs/design/v3-overrides.md` 中 #81 之前的句子（归 #83）。评审者同时确认：新契约描述与 `tests/test_skills_layout.py` 的断言、`skills/` 下真实文件逐条一致；`AGENTS.md` / `AGENTS.zh-CN.md` 标题结构一致，`README.md` / `README.en.md` 是既有的精简镜像关系；未把未运行的验证写成通过；额外修改的文件均属同类旧口径，无无谓扩写。
+
+**未运行：六宿主内的实际调用隔离**（与 #81 同因）。本票只改文档口径，没有在 Claude Code / Codex / Grok Build / DSH / ZCode / Qoder 内实测调用隔离，因此本记录不声称三层机制在宿主内已经生效；静态检查只证明源码与文档的契约一致。
+
+### 记录链闭环（#83）— 静态检查通过，宿主内隔离仍未运行
+
+#83 把 #81、#82 的改动补进记录链。本组只改文档，没有改技能文件、断言或脚本；改动共 4 个文件，且四处改动全部是纯追加（`git diff --numstat` 的删除列均为 0）：
+
+| 文件 | 改动 |
+|---|---|
+| `provenance/adaptation-log.md` | 新增 A7 条目「用户入口调用控制恢复分层（#83 票面记作「A2」；对 A1 的部分反转）」，含原版/要求/改变/损失/核对五要素、六宿主官方文档依据与两项新增损失面（规则复杂度上升、每个用户入口多一个配置文件）；另在「本次执行中的偏离与说明」记录编号偏离 |
+| `docs/design/v3-overrides.md` | 在「覆盖 1」之后追加日期修订段「覆盖 1 修订（2026-09-25）：用户入口调用控制恢复分层」，说明覆盖 1 的两句话只对 12 个按需方法继续成立 |
+| `CHANGELOG.md` | 顶部新增 Unreleased 条目（行为变化 4 条）；`VERSION` 保持 3.0.0 |
+| 本文件 | 新增本节 |
+
+**编号偏离：** #83 票面要求新增「A2」条目，但 `provenance/adaptation-log.md` 的 A1—A6 编号在 3.0.0 已占用（既有 `A2` 是「Docs 从窄写作技能扩大为共同写作方法」）。为不改写历史编号又不产生重号，本次按追加顺序编为 **A7**，并在标题与本文中标注票面叫法；五要素与其余票面要求不变。
+
+历史记录零改写的实际核对（工作树只有上表 4 个文件被改）：
+
+```
+$ git status --short
+ M CHANGELOG.md
+ M docs/design/v3-overrides.md
+ M docs/validation-v3.md
+ M provenance/adaptation-log.md
+?? .cursor/
+?? .zcode/
+
+$ git diff --exit-code --quiet -- docs/migration-v3.md docs/design/unified-design-v1.md \
+    docs/design/unified-integration-v1.md provenance/v2-retirement.md provenance/upstream.md \
+    provenance/previous-audit provenance/v2-plugin-provenance \
+    provenance/setup-gamestudio-draft-v2 VERSION; echo "exit=$?"
+exit=0
+```
+
+即：迁移指南、两份冻结设计文件、旧 provenance 条目（含 A1—A6 与 v2-retirement）、`VERSION` 全部零改动；`CHANGELOG.md` 的 3.0.0 段与其他历史段落也在纯追加之外没有变化。上面与下面两段输出均为改动全部完成后的实际输出；两个未跟踪目录 `.cursor/`、`.zcode/` 是本地客户端配置，不属于本组改动。
+
+实际执行的检查与输出（4 处改动完成后）：
+
+```
+$ python3.12 -m pytest tests/ -q
+68 passed
+
+$ python3.12 scripts/validate-docs.py
+OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，20 项技能）
+```
+
+两项数字与 #81、#82 落地后一致：本组只改文档，没有增删断言，改动前的基线同样是 `68 passed` 与同一份校验输出。`scripts/validate-docs.py` 这一轮的实际作用是覆盖新增文本——它校验全部文档的相对链接可达（本组新增 6 处相对链接，指向 `docs/validation-v3.md`、`provenance/adaptation-log.md`、`CHANGELOG.md` 与 `docs/design/unified-design-v1.md`）与版本口径一致。
+
+**两轴评审（Standards 与 Spec 各一独立只读子代理，材料为冻结补丁 + 票面全文）**：Spec 轴核对 VERSION、纯追加、历史零改动与两份输出均可复现，判定编号偏离的处置可接受，报出半成品 1 项（六宿主依据缺官方文档名与链接）、范围蔓延 2 项（CHANGELOG 写入内部测试计数与退役名单细节；偏离说明多一行）、有误 3 项；Standards 轴报出硬违规 3 项、判断性 4 项。两轴共同指出的三项已全部修正：①本节原先粘贴的 `git status --short` 少列 `docs/validation-v3.md` 一行，与「只有 4 个文件被改」的断言不符，已重新采集改动完成后的真实输出；②`v3-overrides.md` 与 A7 引用的「调用控制反转（#83）」标题不存在，已统一为实际标题「记录链闭环（#83）」；③A7 的 `19/19` 安装测试与 8 份 yaml 人工核对来自 #81 轮，已标注轮次并写明本轮未重跑。另按发现把 CHANGELOG 的静态契约条目改为只陈述契约变化并指向本节，不再复述内部计数。**保留的判断性分歧：** A7 沿用仓库既有口径把「31 项」写作断言（实测为 31 个收集用例）；三层机制在 CHANGELOG、`v3-overrides.md`、A7 与本节四处出现，各有不同读者与用途，本轮以交叉引用而非删减处理。评审者未改任何文件。评审后又补一处并按发现做成：A7 的「六宿主官方文档依据」原先只有逐宿主结论与「依据由 #81 核实」，现由一独立只读研究子代理逐宿主重新核实并补入官方出处与原文摘句——Claude Code（`code.claude.com/docs/en/skills` 的 frontmatter 参考与「Control who invokes a skill」节）、Grok Build（`docs.x.ai` 的 SKILL.md 字段表）、DSH（`deepseek-harness` 官方参考页，另有官方仓库 `packages/skill/skill-filesystem` 源码佐证）、Codex（`developers.openai.com/codex/skills` 的 `allow_implicit_invocation`，配合官方解析器只读 `name` / `description` / `metadata` 的源码结论）、ZCode（官方明确否认存在「只给面板、不给模型」的开关，非白名单字段被忽略）、Qoder（官方文档只文档化 `name` / `description`，属「未找到」而非官方否认）。主流程对其中部分域名解析为非公网地址，未能逐页打开核对，摘录来自该子代理检索。**六宿主内的调用隔离本轮仍未实测**：这一处补充只提高「依据」的出处完整度，不改变未运行项。补充后重跑，仍是 `68 passed` 与同一份校验输出。
+
+**未运行：六宿主内的实际调用隔离**（与 #81、#82 同因）。本机没有可自动化的 Claude Code / Codex / Grok Build / DSH / ZCode / Qoder 调用隔离实测入口，隔离由各宿主解析器在模型选技能时执行，静态检查与安装测试都不能替代。本组只补记录，没有重跑安装测试：`docs/`、`provenance/` 都不随技能安装（见第 2 节「仓库根 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 不随技能安装」），改动也不影响安装内容，因此 #81 的 `PASS 19 / FAIL 0` 继续代表该通路；脚本仍未断言 `agents/openai.yaml`，该边界已在 #81 一节记录，本组不新开通道。
+
+**合并前评审补充（同分支内，未单独开票）：** 本分支开 PR 前的两轴评审又报出四处，已在同一分支修正，因此合入后本节的「4 个文件」只描述 #83 那一笔：`README.md` / `README.en.md` 的静态检查计数由 64 改为 68（与实跑一致）；`docs/reference/troubleshooting.md` 的四宿主强制段补上「机制来自各宿主官方文档，本库未在宿主内逐一实测」的来源限定；`CHANGELOG.md` 的 Unreleased 行为变化首条修正层级映射（此前把仅 Codex 生效的 `agents/openai.yaml` 并入三家 frontmatter 宿主）；`tests/test_docs_product.py` 两处断言的失败消息改为三层口径（只改消息，不改断言逻辑与用例数）。修正后 `python3.12 -m pytest tests/ -q` 仍为 `68 passed`，`python3.12 scripts/validate-docs.py` 仍为同一份 OK 输出。
+
+**已知残留与顺延项（本组不做，留给后续票）：** ①`provenance/adaptation-log.md` 的 A1 与同文件「本次执行中的偏离与说明」里「调用开关映射按 A1 退出」一句未随 A7 更新——票面要求旧 provenance 条目零改动，因此不加前向指针，单读这两处的读者需要一并读 A7；②`tests/test_docs_product.py` 的两处断言仍只查子串，不验证三层机制的实际结构；③`scripts/install-smoke-test.sh` 仍缺 `agents/openai.yaml` 断言，yaml 的安装结论只有 #81 轮的人工核对且未留存证据目录；④三层机制的措辞分散在 15 个以上的文件（#82 票面即要求逐文件改口径），未收敛到 `docs/reference/capabilities.md` 单点持有；⑤`tests/test_skills_layout.py` 有两处同构断言未抽公共函数；⑥README 的静态检查计数与三层口径都没有自动守卫。
 
 ## 2. 原生安装测试 — 通过（19/19）
 
@@ -316,9 +442,9 @@ PR #80 以 merge commit `fd3d894` 合入默认分支后，对本机取得的**�
 
 | 状态 | 实际情况 |
 |---|---|
-| 源码完成 | 是。20 项技能（73 个文件：20 份 `SKILL.md`、20 份 `LICENSE`、28 份参考、5 份模板）、共享参考、文档、静态检查与安装/夹具脚本已合入 `main` |
-| 静态检查 | 通过。`python3.12 -m pytest tests/ -q` 64 项通过（含第六轮之后为「已失效的未验证声明」新增的断言）；`python3.12 scripts/validate-docs.py` 通过（37 个文档、20 项技能） |
-| 本地安装通过 | 是。技能树在第四轮后以官方 CLI 1.7.0 隔离安装，`scripts/install-smoke-test.sh` 19/19 通过。第五轮只改夹具脚本和文档，没有重跑安装测试 |
+| 源码完成 | 是。20 项技能（73 个文件：20 份 `SKILL.md`、20 份 `LICENSE`、28 份参考、5 份模板）、共享参考、文档、静态检查与安装/夹具脚本已合入 `main`。#81 之后为 81 个文件（多出 8 份 `agents/openai.yaml`） |
+| 静态检查 | 通过。`python3.12 -m pytest tests/ -q` 64 项通过（含第六轮之后为「已失效的未验证声明」新增的断言）；`python3.12 scripts/validate-docs.py` 通过（37 个文档、20 项技能）。此为 3.0.0 发布时点的数字；#81 之后为 68 项，见上文「调用控制反转（#81）」 |
+| 本地安装通过 | 是。技能树在第四轮后以官方 CLI 1.7.0 隔离安装，`scripts/install-smoke-test.sh` 19/19 通过。第五轮只改夹具脚本和文档，没有重跑安装测试；#81 之后又跑过一次 19/19，见上文「调用控制反转（#81）」 |
 | 远端安装通过 | 是。合入 `main` 后对全新 SSH 克隆复跑同一测试 19/19 通过（来源标识 `fd3d894-clean`），并用 git 来源直装与 `#<ref>` 各测通过，见第 2 节 |
 | 行为验证 | 9 个场景通过，1 个阻塞（S10 / E11）。逐项证据见第 3 节；未运行的场景不声称通过 |
 | 合并前审查 | 六轮，共 11 项发现，全部经独立复核成立并已修订（见第 6 节）。第二轮复现第一轮修复不完整，第三轮复现第二轮自身引入的回归，第四轮复现一个既存缺陷被前几轮的守卫漏掉，第五轮复现第四轮为了报出场景名而加上的 `\|\|` 关掉了函数内的失败退出；第六轮无新发现，审查结论为通过 |

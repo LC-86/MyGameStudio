@@ -41,7 +41,7 @@ V2（2.0.2）钉住的是同一上游项目的较早提交 `3cca18b368ae95cdbdeb
 | merge-gamestudio | resolving-merge-conflicts | engineering/resolving-merge-conflicts | 改写 |
 | docs-gamestudio | writing-for-agents | productivity/writing-for-agents | 改写并扩大定位 |
 
-上游的 `SKILL-MECHANICS.md`（writing-for-agents 的宿主机制分支）没有对应技能。其中与宿主专属调用开关有关的内容在 V3 退出，通用写作杠杆并入 `docs-gamestudio`，见 [adaptation-log.md](adaptation-log.md)。
+上游的 `SKILL-MECHANICS.md`（writing-for-agents 的宿主机制分支）没有对应技能。通用写作杠杆并入 `docs-gamestudio`；与宿主专属调用开关有关的内容在 V3 退出，此后（#81）本库在 8 个用户入口上重新使用了 frontmatter 的 `disable-model-invocation` 与 `agents/openai.yaml` 的 `policy.allow_implicit_invocation`，见 [adaptation-log.md](adaptation-log.md)。
 
 ## 未纳入的上游技能
 

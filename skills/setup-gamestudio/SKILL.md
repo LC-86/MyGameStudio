@@ -2,6 +2,7 @@
 name: setup-gamestudio
 description: 用户请求为当前游戏项目补齐协作配置时使用：任务来源、分流约定、术语与决策资料入口、游戏资料与资源管理方式，让其余技能沿用项目已有约定工作。只建立约定并做获准的最小文档修改；不执行引擎初始化、资源制作、备份、清理、历史迁移或远端写入。重复运行且约定完整时不改文件。
 license: MIT
+disable-model-invocation: true
 ---
 
 # Setup GameStudio

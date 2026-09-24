@@ -26,7 +26,7 @@ Details: [docs/installation.md](docs/installation.md). Dependency combinations f
 
 **User entries** start only when the user asks for that kind of work. **On-demand methods** are combined by the agent when the current task and authorization apply; the user can also request them directly.
 
-The 8/12 split is an **instruction-layer convention** written into descriptions and bodies. Plain standard skill text has no cross-host enforcement power: this library uses no host-specific switch such as `disable-model-invocation`, so nothing stops a host from selecting a user entry on its own. If you need a harder boundary, restate it in your own project rules.
+The 8/12 split is backed by three layers of invocation control (the mechanism comes from each host's official documentation; this library has not tested it inside every host). Claude Code, Grok Build and DSH enforce it through the frontmatter field `disable-model-invocation: true`, which keeps the skill description out of the model's context and leaves only the explicit user entry. Codex enforces it through the `agents/openai.yaml` inside each user-entry directory (`policy.allow_implicit_invocation: false`), which turns off implicit invocation. ZCode and Qoder document no invocation-control field, so there the split stays an **instruction-layer convention** written into descriptions and bodies, and it is the fallback in every host. If you need a harder boundary, restate it in your own project rules. These two layers appear in the source tree after 3.0.0; the version installed from the `v3.0.0` tag does not contain them.
 
 | Skill | Upstream | Invocation | Responsibility |
 |---|---|---|---|
@@ -61,11 +61,11 @@ Ownership of shared references and the dependency graph: [docs/dependencies.md](
 
 ## What it does not do
 
-No self-built task database, state machine, long-running dispatcher, or per-skill program runtime. No per-client plugin adapters, marketplace manifests, proprietary metadata or release pipeline. Loading a skill grants no permission: writing, uploading, paying, changing global config, committing and pushing all follow your actual request and the host's controls. It does not touch your other game projects' tasks, assets, saves or external storage.
+No self-built task database, state machine, long-running dispatcher, or per-skill program runtime. No per-client plugin adapters, marketplace manifests or release pipeline; the only host-specific file is the `agents/openai.yaml` carried by each of the 8 user entries (a fixed Codex invocation policy). Loading a skill grants no permission: writing, uploading, paying, changing global config, committing and pushing all follow your actual request and the host's controls. It does not touch your other game projects' tasks, assets, saves or external storage.
 
 ## Verification status
 
-Actually run and passing for this release: 64 static checks (including regression assertions for all six pre-merge review rounds), the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. After the merge into the default branch the same checks were re-run against **the actual remote content**: a fresh SSH clone passed the install test 19/19, and both a git-source install and a pinned `#<ref>` install were verified. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
+Actually run and passing for this release: 68 static checks (including regression assertions from all six pre-merge review rounds, plus the switch-contract assertions added by the invocation-control reversal), the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. After the merge into the default branch the same checks were re-run against **the actual remote content**: a fresh SSH clone passed the install test 19/19, and both a git-source install and a pinned `#<ref>` install were verified. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
 
 Discovery and invocation inside real hosts, plus the remaining numbered behaviour scenarios, are **not run**; see section 4 of [docs/validation-v3.md](docs/validation-v3.md) for the list, and the same file for per-item evidence, exact commands and limits.
 

@@ -16,7 +16,8 @@ python3.12 scripts/validate-docs.py
 `tests/test_skills_layout.py` 承担 V3 的发布完整性职责，全部是对源码树的静态断言：
 
 - `skills/` 下正好是预期的 20 项，每项只有一个 `SKILL.md`，目录名与 frontmatter 的 `name` 一致
-- frontmatter 只用标准字段（`name`、`description`、`license`，以及必要时的 `compatibility`、`metadata`），没有宿主专属调用开关残留
+- frontmatter 只用标准字段（`name`、`description`、`license`，以及必要时的 `compatibility`、`metadata`）；`argument-hint`、`allowed-tools` 与 frontmatter 内的 `allow_implicit_invocation` 仍然禁止
+- 8 个用户入口各带 `disable-model-invocation: true` 与一份 `agents/openai.yaml`（内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行，无其他内容）；12 个按需方法不带宿主开关与宿主文件，发布树中的 `openai.yaml` 只允许落在 8 个入口路径下（反向断言）
 - 描述写明了调用边界；用户入口正文不自动串调下一个入口
 - 每项技能带自己的 `LICENSE` 通知；包内相对引用全部可解析
 - 共享参考只有一个所有者，消费者用同级相对路径引用，不各存副本

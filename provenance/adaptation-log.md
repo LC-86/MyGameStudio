@@ -80,6 +80,18 @@
 
 **核对：** 静态检查确认没有残留假定固定工具名的硬调用；场景 E04 与安装测试第 6 项（名称不被误指向旧方法）。
 
+### A7. 用户入口调用控制恢复分层（#83 票面记作「A2」；对 A1 的部分反转）
+
+**原版：** 上游在用户专用技能上写两份声明：frontmatter 的 `disable-model-invocation: true` 与 `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false`，由宿主阻止模型自行触发。A1 让这套做法整体退出，8 个用户入口与 12 个按需方法的边界只留在 `description` 与正文里。
+
+**要求：** 8 个用户入口升级为三层调用控制，使支持的宿主能真正阻止模型自行启动；标准 frontmatter 之外的宿主专属文件重新进入有效安装范围。`agents/openai.yaml` 的内容被限定为 `policy:` 与 `  allow_implicit_invocation: false` 两行；`argument-hint`、`allowed-tools` 与 frontmatter 内的 `allow_implicit_invocation` 仍然禁止。仓库对外口径同步改为三层机制。
+
+**改变：** 8 个用户入口的 `SKILL.md` frontmatter 追加 `disable-model-invocation: true`，目录内各新增一份 `agents/openai.yaml`；description 措辞与 12 个按需方法均未改动。静态契约反转：`tests/test_skills_layout.py` 由 27 项断言增至 31 项，改为正向要求入口携带两层开关且值正确，保留反向断言（方法带开关或宿主文件即失败）；`scripts/validate-docs.py` 把该字段移出 `RETIRED_COMMANDS`。对外措辞按 #82 在同批 19 个改动文件中改为三层口径（含验证记录本身，逐文件清单见 [docs/validation-v3.md](../docs/validation-v3.md) 的「规则与文档口径对齐（#82）」）。
+
+**损失：** A1 的损失对 ZCode、Qoder 仍然成立。新增两项损失面：**规则复杂度上升**——同一个 8/12 分界现在要同时用三层机制与 `description`、正文表述，跨宿主行为不再能用一句话理解，判断某个宿主是否强制还需先查它的解析行为，而这一层依赖宿主实现、本库在宿主之外无法验证；**每个用户入口多一个配置文件**——技能目录不再只由 `SKILL.md` 与按需参考构成，安装内容比 3.0.0 多出 8 个文件，`agents/` 目录本身成为契约的一部分。第一、二层是否生效只能在支持宿主内观察，宿主改变行为时需要重新核对官方文档。
+
+**核对：** 六宿主判定规则与官方文档出处（本轮由独立子代理逐宿主核实，摘句为页面原文）：Claude Code 的 frontmatter 参考与「Control who invokes a skill」节（[code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills)）写「`disable-model-invocation: true`: Only you can invoke the skill」；Grok Build 的 SKILL.md 字段表（[docs.x.ai](https://docs.x.ai/build/features/skills-plugins-marketplaces)）写「`disable-model-invocation` | Slash command only; no automatic invoke. Default `false`」；DSH 的官方技能参考页与源码（[deepseek-harness](https://deepseek-harness.github.io/deepseek-harness/reference/subsystems/skills)）写「The local provider reads the exact kebab-case frontmatter keys `disable-model-invocation` and `user-invocable`」，`packages/skill/skill-filesystem` 据此把它映射为模型不可调用；Codex 的官方 Skills 文档（[developers.openai.com/codex/skills](https://developers.openai.com/codex/skills)）写 `agents/openai.yaml` 用于设置调用策略、「`allow_implicit_invocation` (default: `true`): When `false`, Codex won't implicitly invoke the skill」，而官方解析器只读 `name` / `description` / `metadata`，因此不读 `disable-model-invocation`；ZCode 的官方 Skill 页明确写「`/` 面板与模型看到的是同一份技能清单，不存在『只给面板、不给模型』的开关」，Plugin 页的字段白名单之外的键会被忽略；Qoder 的官方 Skills 文档只文档化 `name` / `description`，未找到调用控制字段（是「未找到」，不是官方否认）。**主流程对其中部分域名解析为非公网地址、未能直接打开页面，上述摘录来自本轮子代理检索；DSH 与 Codex 的结论另有官方仓库源码佐证。** 静态检查逐项确认 8 个入口携带两层开关且值正确、12 个方法目录内无 `agents/`（`tests/test_skills_layout.py` 31 项断言）；`scripts/validate-docs.py` 确认文档导航、链接与版本口径一致。**#81 轮的检查沿用，本轮未重跑：** 隔离安装测试 `19/19` 通过，但该脚本不断言 `agents/openai.yaml`，yaml 的安装结果来自脚本保留工作目录内的逐目录人工核对（8 份），**该核对的临时目录在 #81 轮核对后已删除，这条结论没有留存证据目录**。实际输出与证据边界见 [docs/validation-v3.md](../docs/validation-v3.md) 的「记录链闭环（#83）」。**未运行：六宿主内的实际调用隔离**，缺少可自动化的实测入口，原因见同一节。
+
 ## 逐项游戏化适配
 
 以下适配在 V3 之前已由用户逐项确认，本次沿用并核对，不重新设计。
@@ -109,6 +121,7 @@
 ## 本次执行中的偏离与说明
 
 - 统一设计 v1 的 13.1 节建议 `plugin/skills/` 布局并保留客户端清单，13.3 节要求分别适配宿主。本次执行提示词明确覆盖这两点，按根 `skills/` 与标准 frontmatter 实施。设计文件原样保留在 [docs/design/unified-design-v1.md](../docs/design/unified-design-v1.md)，不改写其历史结论。
+- #83 票面要求新增与 A1 对应的「A2」条目。本文件的 A1—A6 编号在 3.0.0 已占用（`A2` 是「Docs 从窄写作技能扩大为共同写作方法」），为不改写历史编号又不产生重号，本次按追加顺序编为 **A7**，并在标题里标注票面的叫法；五要素与其余票面要求不变。
 - 统一设计 v1 的 5.4 节记录的调用开关映射（Claude 的 `disable-model-invocation`、Codex 的 `allow_implicit_invocation`）按 A1 退出。
 - `tdd-gamestudio` 的 `tests.md` 与 `mocking.md` 在上游是与 `SKILL.md` 同级的扁平文件，V3 移入 `references/` 以统一随包资料布局，正文链接同步更新。
 - `setup-gamestudio` 草案包内的 `SOURCES.md` 与 `UPDATE-NOTES.md` 是维护者资料，移到 [setup-gamestudio-draft-v2/](setup-gamestudio-draft-v2/)，不随技能安装。

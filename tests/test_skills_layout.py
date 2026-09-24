@@ -3,8 +3,8 @@
 运行：python3.12 -m pytest tests/test_skills_layout.py -q
 
 这些检查覆盖发布完整性职责（原 V2 插件包测试承担的部分）：
-唯一名称、标准 frontmatter、包内引用可达、许可通知、旧名硬调用、
-客户端适配残留、游离 SKILL.md、共享资料单一所有者、Docs 消费者真实接入。
+唯一名称、标准 frontmatter、宿主调用控制契约、包内引用可达、许可通知、
+旧名硬调用、客户端适配残留、游离 SKILL.md、共享资料单一所有者、Docs 消费者真实接入。
 静态检查不替代真实模型行为验证，见 docs/validation-v3.md。
 """
 
@@ -34,7 +34,19 @@ USER_ENTRIES = frozenset({
     "handoff-gamestudio",
 })
 
+# 宿主调用控制契约：8 个用户入口必须带开关，12 个按需方法两处都不得出现。
+# Claude Code / Grok Build / DSH 读 frontmatter 的 disable-model-invocation；
+# Codex 不读该字段，只读技能目录内 agents/openai.yaml 的 policy.allow_implicit_invocation；
+# ZCode / Qoder 没有调用控制字段，由 description 措辞与正文约定兜底。
+METHODS = EXPECTED - USER_ENTRIES
+ENTRY_SWITCH = "disable-model-invocation"
+ENTRY_SWITCH_VALUE = "true"
+CODEX_POLICY_PATH = "agents/openai.yaml"
+CODEX_POLICY_TEXT = "policy:\n  allow_implicit_invocation: false\n"
+
 STANDARD_FIELDS = {"name", "description", "license", "compatibility", "metadata"}
+# 宿主专属调用字段：8 个用户入口只允许 ENTRY_SWITCH 一项（下方断言先把它减掉），
+# 12 个按需方法一律禁止；argument-hint / allowed-tools 在任何技能内都禁止。
 FORBIDDEN_FIELDS = {
     "disable-model-invocation", "allow_implicit_invocation", "argument-hint",
     "allowed-tools", "allowed_tools",
@@ -111,15 +123,52 @@ def test_directory_name_matches_frontmatter_name() -> None:
         assert re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", name), f"{name} 不是小写连字符名称"
 
 
-def test_frontmatter_uses_standard_fields_only() -> None:
-    for d in skill_dirs():
-        fields = frontmatter(d / "SKILL.md")
+def test_user_entry_frontmatter_declares_the_host_switch() -> None:
+    """用户入口必须带宿主调用开关，这是 Claude Code / Grok Build / DSH 的强制点。"""
+    for name in sorted(USER_ENTRIES):
+        fields = frontmatter(SKILLS / name / "SKILL.md")
+        assert fields.get(ENTRY_SWITCH) == ENTRY_SWITCH_VALUE, \
+            f"{name}: 用户入口应声明 {ENTRY_SWITCH}: {ENTRY_SWITCH_VALUE}，" \
+            f"实际 {fields.get(ENTRY_SWITCH)!r}"
+        unknown = set(fields) - STANDARD_FIELDS - {ENTRY_SWITCH}
+        assert not unknown, f"{name}: 非标准 frontmatter 字段 {sorted(unknown)}"
+        banned = set(fields) & (FORBIDDEN_FIELDS - {ENTRY_SWITCH})
+        assert not banned, f"{name}: 不得使用其他宿主专属调用字段 {sorted(banned)}"
+
+
+def test_method_frontmatter_uses_standard_fields_only() -> None:
+    """12 个按需方法零改动：不带任何宿主调用开关，仍只用标准字段。"""
+    for name in sorted(METHODS):
+        fields = frontmatter(SKILLS / name / "SKILL.md")
         unknown = set(fields) - STANDARD_FIELDS
-        assert not unknown, f"{d.name}: 非标准 frontmatter 字段 {sorted(unknown)}"
+        assert not unknown, f"{name}: 非标准 frontmatter 字段 {sorted(unknown)}"
         banned = set(fields) & FORBIDDEN_FIELDS
-        assert not banned, f"{d.name}: 不得使用宿主专属调用开关 {sorted(banned)}"
-        assert fields.get("description"), f"{d.name}: 缺少 description"
-        assert fields.get("license") == "MIT", f"{d.name}: license 应为 MIT"
+        assert not banned, f"{name}: 按需方法不得带宿主专属调用开关 {sorted(banned)}"
+
+
+def test_every_skill_has_description_and_license() -> None:
+    for name in sorted(EXPECTED):
+        fields = frontmatter(SKILLS / name / "SKILL.md")
+        assert fields.get("description"), f"{name}: 缺少 description"
+        assert fields.get("license") == "MIT", f"{name}: license 应为 MIT"
+
+
+def test_user_entries_carry_the_codex_policy_file() -> None:
+    """Codex 不读 frontmatter 开关，只读技能目录内 agents/openai.yaml。"""
+    for name in sorted(USER_ENTRIES):
+        agents = SKILLS / name / "agents"
+        assert agents.is_dir(), f"{name}: 缺少 {CODEX_POLICY_PATH} 所在目录"
+        entries = sorted(p.name for p in agents.iterdir())
+        assert entries == ["openai.yaml"], f"{name}: agents/ 下只应有 openai.yaml，实际 {entries}"
+        assert read(agents / "openai.yaml") == CODEX_POLICY_TEXT, \
+            f"{name}: {CODEX_POLICY_PATH} 内容不符（应为 policy.allow_implicit_invocation: false）"
+
+
+def test_methods_carry_no_host_specific_files() -> None:
+    for name in sorted(METHODS):
+        d = SKILLS / name
+        assert not (d / "agents").exists(), f"{name}: 按需方法不得带 agents/ 宿主配置"
+        assert not list(d.rglob("openai.yaml")), f"{name}: 按需方法不得带 Codex 策略文件"
 
 
 def test_descriptions_state_the_invocation_boundary() -> None:
@@ -157,13 +206,19 @@ def test_all_relative_references_resolve() -> None:
 
 
 def test_no_client_adapter_residue() -> None:
+    """除用户入口的 Codex 策略文件外，技能目录不得有其他客户端适配残留。"""
+    allowed = {(name, "openai.yaml") for name in USER_ENTRIES}
     residue = []
-    for path in SKILLS.rglob("*"):
-        if path.name == "openai.yaml" or path.name.startswith(".claude-plugin") \
-                or path.name.startswith(".codex-plugin") or path.name.startswith(".zcode-plugin"):
-            residue.append(str(path.relative_to(REPO)))
-        if path.is_dir() and path.name == "agents":
-            residue.append(str(path.relative_to(REPO)))
+    for path in sorted(SKILLS.rglob("*")):
+        rel = path.relative_to(REPO).as_posix()
+        if path.name.startswith((".claude-plugin", ".codex-plugin", ".zcode-plugin")):
+            residue.append(rel)
+        elif path.name == "openai.yaml":
+            owner = path.parent.parent.name if path.parent.name == "agents" else None
+            if (owner, path.name) not in allowed:
+                residue.append(rel)
+        elif path.is_dir() and path.name == "agents" and path.parent.name not in USER_ENTRIES:
+            residue.append(rel)
     assert not residue, f"技能目录内残留客户端适配：{residue}"
 
 
@@ -338,9 +393,13 @@ def test_no_retired_trees_in_publishable_content() -> None:
                     "docs/installation", "docs/skills")
     present = [d for d in retired_dirs if (REPO / d).exists()]
     assert not present, f"源码树仍含已退役目录：{present}"
-    banned = ("agents/openai.yaml", ".claude-plugin", ".codex-plugin", ".zcode-plugin")
+    banned = (".claude-plugin", ".codex-plugin", ".zcode-plugin")
     hits = [rel for rel in publishable_files() if any(b in rel for b in banned)]
     assert not hits, f"发布内容仍含客户端适配：{hits[:20]}"
+    allowed_policy = {f"skills/{name}/{CODEX_POLICY_PATH}" for name in USER_ENTRIES}
+    stray_policy = [rel for rel in publishable_files()
+                    if rel.endswith("openai.yaml") and rel not in allowed_policy]
+    assert not stray_policy, f"发布内容含未授权的 Codex 策略文件：{stray_policy[:20]}"
 
 
 def test_no_root_level_aggregate_skill_md() -> None:

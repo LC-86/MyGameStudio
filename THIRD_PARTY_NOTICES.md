@@ -24,7 +24,7 @@ MyGameStudio 由 **LC-86** 独立维护，方法改编自 Matt Pocock 的技能�
 | V2 曾钉住的提交 | `3cca18b368ae95cdbdebbff572ccafa662551015`（2.0.2 的分发基线，两个提交的差异未按文件逐一对照） |
 | 纳入范围 | 20 项中的 19 项改编自上游方法；`gdd-gamestudio` 为原创 |
 
-名称映射、逐项适配记录、可能损失与核对方式见 [provenance/upstream.md](provenance/upstream.md) 与 [provenance/adaptation-log.md](provenance/adaptation-log.md)。上游的 `writing-for-agents` 配套文件 `SKILL-MECHANICS.md` 没有对应技能：其中宿主专属调用开关的内容在 V3 退出，通用写作杠杆并入 `docs-gamestudio`。
+名称映射、逐项适配记录、可能损失与核对方式见 [provenance/upstream.md](provenance/upstream.md) 与 [provenance/adaptation-log.md](provenance/adaptation-log.md)。上游的 `writing-for-agents` 配套文件 `SKILL-MECHANICS.md` 没有对应技能：通用写作杠杆并入 `docs-gamestudio`；其中宿主专属调用开关的内容在 V3 退出，此后（#81）本库在 8 个用户入口上重新使用了 frontmatter 的 `disable-model-invocation` 与 `agents/openai.yaml` 的 `policy.allow_implicit_invocation`；该上游文件本身仍无对应技能。
 
 ### 许可随技能分发
 

@@ -2,6 +2,7 @@
 name: tasks-gamestudio
 description: 用户请求把已明确的游戏制作工作拆成任务时使用：按完整小成果拆票，明确真实依赖、Agent 可承担的部分与必要的人工验收，再按项目约定保存或发布。不新建必填任务类型，不自动执行任务；标签变更会触发现有自动化时先核对授权。
 license: MIT
+disable-model-invocation: true
 ---
 
 # Tasks GameStudio

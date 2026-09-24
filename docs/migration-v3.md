@@ -41,7 +41,9 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 2.0.2 用 `disable-model-invocation: true` 与 `policy.allow_implicit_invocation: false` 让宿主阻止模型自行触发用户专用入口。3.0.0 删除了这两个声明。
 
-8 个用户入口与 12 个按需方法仍然是行为边界，但它现在只是写在描述与正文里的指令层约定：**纯标准技能文本不具备跨宿主的强制调用隔离能力**。某个宿主仍可能自行选中一个用户入口。需要额外约束时，在你自己的项目规则（`AGENTS.md` / `CLAUDE.md`）里重申该边界，那是宿主确实会读取的位置。
+就 3.0.0 本身而言，8 个用户入口与 12 个按需方法仍然是行为边界，但当时只写在描述与正文里：标准技能文本不具备跨宿主的强制调用隔离能力，某个宿主仍可能自行选中一个用户入口。需要额外约束时，在你自己的项目规则（`AGENTS.md` / `CLAUDE.md`）里重申该边界，那是宿主确实会读取的位置。
+
+3.0.0 之后（#81）恢复了宿主调用控制，这也是当前源码树的状态：Claude Code、Grok Build、DSH 读 frontmatter 的 `disable-model-invocation: true`；Codex 读技能目录内 `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false`；ZCode 与 Qoder 未文档化任何调用控制字段，仍是指令层约定。这两层宿主强制随 #81 之后的内容生效；用固定引用 `#v3.0.0` 安装得到的是删除声明的那一版。这些机制来自各宿主官方文档，本库未在宿主内逐一实测，状态见 [验证状态](validation-v3.md)。
 
 ## 你的游戏项目需要做什么
 

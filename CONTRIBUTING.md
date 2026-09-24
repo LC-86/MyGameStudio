@@ -49,7 +49,7 @@ python3.12 scripts/validate-docs.py
 
 方法基线固定在 `c55ee46073ed923f86ce59a5eb3b6d895095d1b7`，通过 fork `LC-86/mattpocockskills` 只读读取，上游为 `mattpocock/skills`，MIT。升级基线要先评估再采用，不把未评估的 `latest` 当基线。
 
-适配必须落在 `provenance/`：名称映射在 [upstream.md](provenance/upstream.md)，逐项改动、依据、可能损失与核对方式在 [adaptation-log.md](provenance/adaptation-log.md)。只交付标准 frontmatter 字段，不引入宿主专属调用开关。
+适配必须落在 `provenance/`：名称映射在 [upstream.md](provenance/upstream.md)，逐项改动、依据、可能损失与核对方式在 [adaptation-log.md](provenance/adaptation-log.md)。用户入口交付标准字段，并按现行契约叠加宿主调用控制（frontmatter 的 `disable-model-invocation: true` 与 `agents/openai.yaml` 的 `policy.allow_implicit_invocation: false`）；按需方法只交付标准字段，不带任何宿主调用开关或宿主文件。
 
 ## 宿主行为验证需要的证据
 
@@ -58,6 +58,7 @@ python3.12 scripts/validate-docs.py
 - 宿主名称与版本、`skills` CLI 版本、操作系统、技能库版本、测试日期
 - 安装范围（完整或子集）、技能发现集合、一次真实调用的实际行为
 - 证据位置；做不到的项标为未运行或未验证，不标通过
+- 把某个宿主内的调用隔离写成已验证时，需要该宿主内的实测证据；官方文档、静态契约与安装测试都不能替代
 
 结构检查不能代替真实宿主安装，也不能代替模型行为验证。
 

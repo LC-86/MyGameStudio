@@ -31,12 +31,20 @@ MyGameStudio 3.0.0 是一个原生 Agent Skills 仓库，`skills/` 下正好 20 
 
 上游基线、逐项适配记录见 [与 Matt Pocock skills 的关系](upstream.md) 与 [provenance/upstream.md](../../provenance/upstream.md)。安装时必须一起带上的技能和共享参考见 [技能依赖](../dependencies.md)。
 
-## 8/12 的区分不是硬隔离
+## 8/12 的分界由三层调用控制承担
 
-用户入口与按需方法的区分写在描述和正文里，是**指令层约定**。标准技能文本无法阻止宿主自行选中某个用户入口。因此：
+用户入口与按需方法的区分由三层调用控制承担（机制来自各宿主官方文档，本库未在宿主内实测）：
 
-- 本库不宣称跨宿主的调用隔离已强制生效；
-- 需要更强边界时，在项目自己的 `AGENTS.md` 里重申「用户入口只在我请求时启动」；
+| 层 | 覆盖宿主 | 机制 |
+|---|---|---|
+| 1 | Claude Code、Grok Build、DSH | frontmatter 的 `disable-model-invocation: true`；技能描述不再进入模型上下文，只留用户显式入口 |
+| 2 | Codex | 技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）；关闭隐式调用 |
+| 3 | ZCode、Qoder | 这两个宿主未文档化任何调用控制字段，仍是写在描述与正文里的**指令层约定**，靠 Agent 阅读并遵守 |
+
+因此：
+
+- 前两层的隔离由各宿主解析器执行，本库不重建客户端适配层，也不自建调用运行时；
+- 第三层不宣称强制隔离：在 ZCode、Qoder 里，某个入口仍可能被自行选中，需要更强边界时在项目自己的 `AGENTS.md` 里重申「用户入口只在我请求时启动」；
 - 实际调用行为的检查结果（通过、失败、未运行）只在 [验证状态](../validation-v3.md) 里说明，本页不代填。
 
 ## 已退役能力与明确不覆盖的部分
