@@ -5,7 +5,7 @@
 ## 装完了但技能没被发现
 
 1. 确认官方 CLI 实际写入的目录，是宿主真正读取的技能目录。目标目录由 CLI 与你的选择决定，本库不维护各客户端的目录转换。
-2. 确认技能名是 20 个 `-gamestudio` 名称，目录内有 `SKILL.md`，且 frontmatter 只有 `name`、`description`、`license` 等标准字段。
+2. 确认技能名是 20 个 `-gamestudio` 名称，目录内有 `SKILL.md`，frontmatter 只有 `name`、`description`、`license` 等标准字段（8 个用户入口另有 `disable-model-invocation: true`，目录内另有一份 `agents/openai.yaml`）。
 3. 确认技能目录不是嵌套在多余一层里（例如 `skills/skills/`），也没有游离在 `skills/` 之外的 `SKILL.md`。
 4. 宿主需要时重启会话。重启后仍不出现，说明它不在该宿主的发现范围内，这是宿主行为，不是本库可以修的配置。
 
@@ -19,7 +19,21 @@
 
 ## 宿主没等我开口就选了用户入口
 
-这是已披露的**指令层限制**。用户入口与按需方法的区分写在描述和正文里，标准技能文本无法阻止宿主自行选中某个用户入口，本库不宣称跨宿主强制隔离。
+先分宿主。**Claude Code、Grok Build、DSH、Codex 内这是异常；ZCode、Qoder 内是已披露的指令层限制。**
+
+### Claude Code、Grok Build、DSH、Codex 内：若发生即异常
+
+这四类宿主有强制的调用控制：前三个读 frontmatter 的 `disable-model-invocation: true`，Codex 读技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）。用户入口不该被模型自行选中。真的发生了，先核对三件事：
+
+1. 技能从哪里来：这两项声明随 #81 之后的内容生效，`v3.0.0` 标签对应的树里没有它们。用固定引用 `#v3.0.0` 安装就会缺这一层。
+2. 宿主实际读取的技能目录里，8 个入口的 `SKILL.md` 是否带 `disable-model-invocation: true`，目录内是否有 `agents/openai.yaml`。安装器或手工复制漏掉任一项，强制点就没了。
+3. 宿主版本是否支持该字段。
+
+核对后仍复现，按 [Bug 模板](https://github.com/LC-86/MyGameStudio/issues/new/choose) 报告，写清宿主与版本、技能目录的实际内容。这是异常，不是已披露的限制。
+
+### ZCode、Qoder 内：已披露的指令层限制
+
+这两个宿主没有文档化的调用控制字段。用户入口与按需方法的区分写在描述和正文里，标准技能文本无法阻止宿主自行选中某个用户入口，本库不宣称在这两个宿主上强制隔离。
 
 处理办法：
 

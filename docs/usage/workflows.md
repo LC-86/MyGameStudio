@@ -8,7 +8,7 @@
 - **用户入口不自动串调。**8 项用户入口各自完成即停；12 项按需方法由 Agent 在当前任务与授权适用时组合，你也可以直接点名。
 - **`docs-gamestudio` 是共同写作方法。**GDD、spec、任务票、术语与决策记录、研究/评审/诊断结论、交接说明，以及子代理委派材料，都由产出方按它的方法表达。它不决定写什么，也不是审批岗。
 
-这条区分写在描述与正文里，不是宿主强制的隔离，见 [当前能力与限制](../reference/capabilities.md)。
+这条区分由三层调用控制承担：Claude Code、Grok Build、DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，Codex 由技能目录内的 `agents/openai.yaml` 强制；ZCode、Qoder 没有宿主级开关，仍靠描述与正文里的指令层约定。见 [当前能力与限制](../reference/capabilities.md)。
 
 ## 一次设计讨论
 

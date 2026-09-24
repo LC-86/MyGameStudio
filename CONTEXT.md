@@ -14,13 +14,13 @@
 当前范围内的全部技能，分为 8 项用户入口与 12 项按需方法。集合用于范围核对，不是生产任务类型注册表。
 
 **用户入口**:
-只在开发者请求该类工作时启动的技能，例如 `ask-gamestudio`、`setup-gamestudio`、`grill-gamestudio-docs`。一个入口完成即停，不自动串调下一个用户入口。
+只在开发者请求该类工作时启动的技能，例如 `ask-gamestudio`、`setup-gamestudio`、`grill-gamestudio-docs`。一个入口完成即停，不自动串调下一个用户入口。在 Claude Code、Grok Build、DSH 内由 frontmatter 的 `disable-model-invocation: true` 强制，在 Codex 内由技能目录内的 `agents/openai.yaml` 强制，在 ZCode、Qoder 内由描述与正文里的指令层约定承担。
 
 **按需方法**:
 开发者可以直接点名，但通常由 Agent 在当前任务与授权适用时组合使用的方法技能，例如 `grilling-gamestudio`、`tdd-gamestudio`、`docs-gamestudio`。
 
 **指令层边界**:
-用户入口与按需方法的区分写在技能描述与正文里，不是宿主强制的调用隔离。标准技能文本无法阻止某个宿主自行选中一个用户入口；需要更强边界时由项目自己的规则重申。
+在 ZCode、Qoder 这类没有宿主级调用开关的宿主内，用户入口与按需方法的区分写在技能描述与正文里，靠 Agent 阅读并遵守；需要更强边界时由项目自己的规则重申。它不描述 Claude Code、Grok Build、DSH（frontmatter 的 `disable-model-invocation` 强制）与 Codex（`agents/openai.yaml` 强制）内的调用隔离。
 
 **共享参考所有者**:
 被多项技能引用的随包资料只存一份权威正文，归属明确的所有者技能（`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。
@@ -47,7 +47,7 @@
 由 `setup-gamestudio` 探查、确认并记录的项目实际做法：任务来源、分流约定、术语与决策资料入口、游戏资料与资源管理方式。它是供 Agent 阅读的普通项目配置，不是运行时；已有约定直接沿用，约定完整时重复运行不改文件。
 
 **用户主动调用**（亦称显式调用）:
-由开发者主动选择技能；不因普通对话的内容匹配而自行触发。Agent 在当前任务内组合按需方法不是用户主动调用。
+由开发者主动选择技能；不因普通对话的内容匹配而自行触发。Claude Code、Grok Build、DSH 与 Codex 由宿主开关强制这一点，ZCode、Qoder 靠描述匹配与指令层约定。Agent 在当前任务内组合按需方法不是用户主动调用。
 
 **按需调用**:
 Agent 在当前任务与已有授权内使用按需方法，或在形成正式内容时取得共享参考。这不是用户主动调用，也不因此获得写入、提交、推送、上传或发布授权。

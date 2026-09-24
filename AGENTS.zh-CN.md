@@ -2,7 +2,7 @@
 
 本仓库是原生 Agent Skills 技能库。20 项技能各只有一份权威源码，位于 `skills/<技能名>/SKILL.md`，其 `references/`、`templates/` 与 `LICENSE` 通知都在该技能目录内。不要建立第二份技能正文副本、根目录聚合 `SKILL.md`，或 `skills/` 之外的任何 `SKILL.md`（测试夹具放在临时目录）：官方 `skills` CLI 会发现发布树中的每一个 `SKILL.md`。
 
-frontmatter 只使用标准字段：`name`、`description`、`license`，确有需要时用 `compatibility` 或 `metadata`。不要添加 `disable-model-invocation`、`allow_implicit_invocation`、`argument-hint`、`allowed-tools` 或任何 `agents/<宿主>.yaml`。8 个用户入口与 12 个按需方法是指令层边界，写在描述与正文里，不由宿主强制。
+frontmatter 只使用标准字段：`name`、`description`、`license`，确有需要时用 `compatibility` 或 `metadata`。在此之上，8 个用户入口各追加 `disable-model-invocation: true` 与一份 `agents/openai.yaml`，内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行，无其他内容；`argument-hint`、`allowed-tools` 与 frontmatter 内的 `allow_implicit_invocation` 仍然禁止；12 个按需方法不带任何宿主开关，也不带宿主文件。这套三层控制由 frontmatter 在 Claude Code、Grok Build、DSH 内强制，由 `agents/openai.yaml` 在 Codex 内强制；ZCode 与 Qoder 没有宿主级开关，同一条 8/12 边界在那里仍是写在描述与正文里的指令层约定。
 
 共享参考只有一个所有者：写作方法、文档分流与子代理委派归 `docs-gamestudio`；人机责任与验收交接归 `tasks-gamestudio`。消费者用同级相对路径引用，不保留第二份可独立改写的副本。
 
