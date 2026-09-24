@@ -3,6 +3,17 @@
 面向使用者的版本变化。内部票号只作追踪链接，不代替说明。
 版本权威来源是根目录 [`VERSION`](VERSION)。历史发布安装包见 [GitHub Releases](https://github.com/LC-86/MyGameStudio/releases)。
 
+## Unreleased
+
+用户入口重新叠加三层调用控制，3.0.0 条目里「不再依赖宿主专属调用开关」的说法在**本条目**被部分反转。3.0.0 条目是已发布版本的历史记录，按惯例原样保留。`VERSION` 仍为 3.0.0，升版与发布另行决策。
+
+### 行为变化
+
+- 8 个用户入口（ask、setup、grill、grill-gamestudio-docs、tasks、implement、wayfinder、handoff）的 `SKILL.md` frontmatter 追加 `disable-model-invocation: true`，技能目录内新增 `agents/openai.yaml`，内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行。在 Claude Code、Grok Build、DSH 内，这两层使入口的描述不再进入模型上下文，只保留用户显式调用；在 Codex 内关闭隐式调用。机制依据来自各宿主官方文档，本库未在宿主内实测
+- ZCode、Qoder 未文档化调用控制字段：这两个宿主里 8/12 的分界仍是写在 `description` 与正文里的指令层约定，也是全部宿主的兜底。12 个按需方法零改动，在所有宿主保持可自动调用
+- 仓库因此携带唯一的宿主专属文件：8 个用户入口各一份 `agents/openai.yaml`；安装内容比 3.0.0 多出这 8 个文件，以及 8 份入口 `SKILL.md` 各多一行 frontmatter
+- 静态契约同步反转：用户入口必须携带两层开关且值正确，按需方法带开关或宿主文件即失败；`scripts/validate-docs.py` 不再把 `disable-model-invocation: true` 列为退役字段。实际执行的检查输出见 [docs/validation-v3.md](docs/validation-v3.md)
+
 ## 3.0.0 — 2026-09-22
 
 交付形态变更：从多客户端插件包重构为**原生 Agent Skills 仓库**。这不是 2.0.2 的增量升级，切换步骤与能力差异见 [docs/migration-v3.md](docs/migration-v3.md)。

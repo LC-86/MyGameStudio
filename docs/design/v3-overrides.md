@@ -12,6 +12,18 @@
 
 **影响：** 8 个用户入口与 12 个按需方法保留为**行为边界**，写在 description 与正文里，不再宣称纯标准技能文本具有跨宿主的强制调用隔离能力。宿主无法强制控制时如实披露，不重建专属适配层弥补。损失与核对方式见 [provenance/adaptation-log.md](../../provenance/adaptation-log.md) 的 A1。
 
+## 覆盖 1 修订（2026-09-25）：用户入口调用控制恢复分层
+
+本节是追加的日期修订段，不修改上文「覆盖 1」原文。
+
+**新事实：** 8 个用户入口（ask、setup、grill、grill-gamestudio-docs、tasks、implement、wayfinder、handoff）的 `SKILL.md` frontmatter 追加 `disable-model-invocation: true`，技能目录内新增 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`），description 措辞未改；12 个按需方法零改动。判定规则来自各宿主官方文档：Claude Code、Grok Build、DSH 读 frontmatter 的 `disable-model-invocation`；Codex 不读该字段，只读 `agents/openai.yaml` 的策略；ZCode、Qoder 未文档化调用控制字段。
+
+**因此覆盖 1 的两句话只对按需方法继续成立**：「frontmatter 只使用标准字段 `name`、`description`、`license`」与「不再宣称纯标准技能文本具有跨宿主的强制调用隔离能力」。对 8 个用户入口，前缀是三层调用控制（两层由宿主解析器执行、一层仍是指令层约定），不再只是行为边界说明。
+
+**仍然成立的部分：** 不重建客户端插件清单、市场清单与自建安装器；`agents/openai.yaml` 是 Codex 的策略文件，不是插件清单，也不改变标准布局；[unified-design-v1.md](unified-design-v1.md) 的 5.4、13.3 节按原始身份保留，两者与本节冲突时以本节为准。
+
+**追溯：** 决定、新增损失与核对方式见 [provenance/adaptation-log.md](../../provenance/adaptation-log.md) 的 A7（#83 票面记作「A2」，编号沿用该文件既有的 A1—A6 顺序）；实际执行的检查结果见 [validation-v3.md](../validation-v3.md) 的「记录链闭环（#83）」；对外口径见 [CHANGELOG.md](../../CHANGELOG.md) 的 Unreleased 条目。
+
 ## 覆盖 2：不发布构建产物
 
 **设计 v1：** 13.1 节列出 `dist/` 作为构建产物目录；V2 实际发布 tar 包与可复现构建核验。

@@ -136,6 +136,55 @@ OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，2
 
 **未运行：六宿主内的实际调用隔离**（与 #81 同因）。本票只改文档口径，没有在 Claude Code / Codex / Grok Build / DSH / ZCode / Qoder 内实测调用隔离，因此本记录不声称三层机制在宿主内已经生效；静态检查只证明源码与文档的契约一致。
 
+### 记录链闭环（#83）— 静态检查通过，宿主内隔离仍未运行
+
+#83 把 #81、#82 的改动补进记录链。本组只改文档，没有改技能文件、断言或脚本；改动共 4 个文件，且四处改动全部是纯追加（`git diff --numstat` 的删除列均为 0）：
+
+| 文件 | 改动 |
+|---|---|
+| `provenance/adaptation-log.md` | 新增 A7 条目「用户入口调用控制恢复分层（#83 票面记作「A2」；对 A1 的部分反转）」，含原版/要求/改变/损失/核对五要素、六宿主官方文档依据与两项新增损失面（规则复杂度上升、每个用户入口多一个配置文件）；另在「本次执行中的偏离与说明」记录编号偏离 |
+| `docs/design/v3-overrides.md` | 在「覆盖 1」之后追加日期修订段「覆盖 1 修订（2026-09-25）：用户入口调用控制恢复分层」，说明覆盖 1 的两句话只对 12 个按需方法继续成立 |
+| `CHANGELOG.md` | 顶部新增 Unreleased 条目（行为变化 4 条）；`VERSION` 保持 3.0.0 |
+| 本文件 | 新增本节 |
+
+**编号偏离：** #83 票面要求新增「A2」条目，但 `provenance/adaptation-log.md` 的 A1—A6 编号在 3.0.0 已占用（既有 `A2` 是「Docs 从窄写作技能扩大为共同写作方法」）。为不改写历史编号又不产生重号，本次按追加顺序编为 **A7**，并在标题与本文中标注票面叫法；五要素与其余票面要求不变。
+
+历史记录零改写的实际核对（工作树只有上表 4 个文件被改）：
+
+```
+$ git status --short
+ M CHANGELOG.md
+ M docs/design/v3-overrides.md
+ M docs/validation-v3.md
+ M provenance/adaptation-log.md
+?? .cursor/
+?? .zcode/
+
+$ git diff --exit-code --quiet -- docs/migration-v3.md docs/design/unified-design-v1.md \
+    docs/design/unified-integration-v1.md provenance/v2-retirement.md provenance/upstream.md \
+    provenance/previous-audit provenance/v2-plugin-provenance \
+    provenance/setup-gamestudio-draft-v2 VERSION; echo "exit=$?"
+exit=0
+```
+
+即：迁移指南、两份冻结设计文件、旧 provenance 条目（含 A1—A6 与 v2-retirement）、`VERSION` 全部零改动；`CHANGELOG.md` 的 3.0.0 段与其他历史段落也在纯追加之外没有变化。上面与下面两段输出均为改动全部完成后的实际输出；两个未跟踪目录 `.cursor/`、`.zcode/` 是本地客户端配置，不属于本组改动。
+
+实际执行的检查与输出（4 处改动完成后）：
+
+```
+$ python3.12 -m pytest tests/ -q
+68 passed
+
+$ python3.12 scripts/validate-docs.py
+OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，20 项技能）
+```
+
+两项数字与 #81、#82 落地后一致：本组只改文档，没有增删断言，改动前的基线同样是 `68 passed` 与同一份校验输出。`scripts/validate-docs.py` 这一轮的实际作用是覆盖新增文本——它校验全部文档的相对链接可达（本组新增 6 处相对链接，指向 `docs/validation-v3.md`、`provenance/adaptation-log.md`、`CHANGELOG.md` 与 `docs/design/unified-design-v1.md`）与版本口径一致。
+
+**两轴评审（Standards 与 Spec 各一独立只读子代理，材料为冻结补丁 + 票面全文）**：Spec 轴核对 VERSION、纯追加、历史零改动与两份输出均可复现，判定编号偏离的处置可接受，报出半成品 1 项（六宿主依据缺官方文档名与链接）、范围蔓延 2 项（CHANGELOG 写入内部测试计数与退役名单细节；偏离说明多一行）、有误 3 项；Standards 轴报出硬违规 3 项、判断性 4 项。两轴共同指出的三项已全部修正：①本节原先粘贴的 `git status --short` 少列 `docs/validation-v3.md` 一行，与「只有 4 个文件被改」的断言不符，已重新采集改动完成后的真实输出；②`v3-overrides.md` 与 A7 引用的「调用控制反转（#83）」标题不存在，已统一为实际标题「记录链闭环（#83）」；③A7 的 `19/19` 安装测试与 8 份 yaml 人工核对来自 #81 轮，已标注轮次并写明本轮未重跑。另按发现把 CHANGELOG 的静态契约条目改为只陈述契约变化并指向本节，不再复述内部计数。**保留的判断性分歧：** A7 沿用仓库既有口径把「31 项」写作断言（实测为 31 个收集用例）；三层机制在 CHANGELOG、`v3-overrides.md`、A7 与本节四处出现，各有不同读者与用途，本轮以交叉引用而非删减处理。评审者未改任何文件。评审后又补一处并按发现做成：A7 的「六宿主官方文档依据」原先只有逐宿主结论与「依据由 #81 核实」，现由一独立只读研究子代理逐宿主重新核实并补入官方出处与原文摘句——Claude Code（`code.claude.com/docs/en/skills` 的 frontmatter 参考与「Control who invokes a skill」节）、Grok Build（`docs.x.ai` 的 SKILL.md 字段表）、DSH（`deepseek-harness` 官方参考页，另有官方仓库 `packages/skill/skill-filesystem` 源码佐证）、Codex（`developers.openai.com/codex/skills` 的 `allow_implicit_invocation`，配合官方解析器只读 `name` / `description` / `metadata` 的源码结论）、ZCode（官方明确否认存在「只给面板、不给模型」的开关，非白名单字段被忽略）、Qoder（官方文档只文档化 `name` / `description`，属「未找到」而非官方否认）。主流程对其中部分域名解析为非公网地址，未能逐页打开核对，摘录来自该子代理检索。**六宿主内的调用隔离本轮仍未实测**：这一处补充只提高「依据」的出处完整度，不改变未运行项。补充后重跑，仍是 `68 passed` 与同一份校验输出。
+
+**未运行：六宿主内的实际调用隔离**（与 #81、#82 同因）。本机没有可自动化的 Claude Code / Codex / Grok Build / DSH / ZCode / Qoder 调用隔离实测入口，隔离由各宿主解析器在模型选技能时执行，静态检查与安装测试都不能替代。本组只补记录，没有重跑安装测试：`docs/`、`provenance/` 都不随技能安装（见第 2 节「仓库根 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 不随技能安装」），改动也不影响安装内容，因此 #81 的 `PASS 19 / FAIL 0` 继续代表该通路；脚本仍未断言 `agents/openai.yaml`，该边界已在 #81 一节记录，本组不新开通道。
+
 ## 2. 原生安装测试 — 通过（19/19）
 
 命令：
