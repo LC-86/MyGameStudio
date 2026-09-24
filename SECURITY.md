@@ -12,7 +12,7 @@
 
 ## 报告时请包含
 
-- 技能库版本（`VERSION`，例如 3.0.0）与安装方式（官方 `skills` CLI，完整安装或子集安装）
+- 技能库版本（`VERSION`，例如 3.0.1）与安装方式（官方 `skills` CLI，完整安装或子集安装）
 - `skills` CLI 版本（`npx skills@latest --version`）、宿主或 Agent 名称与版本、操作系统
 - 涉及的技能（20 项之一，例如 `setup-gamestudio`）
 - 去凭据后的复现步骤与影响范围

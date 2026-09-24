@@ -1,6 +1,6 @@
 # 当前能力与限制
 
-MyGameStudio 3.0.0 是一个原生 Agent Skills 仓库，`skills/` 下正好 20 项技能。每项技能的权威说明是它自己的 `SKILL.md`；本页只给整体能力面与边界，不重复正文。
+MyGameStudio 3.0.1 是一个原生 Agent Skills 仓库，`skills/` 下正好 20 项技能。每项技能的权威说明是它自己的 `SKILL.md`；本页只给整体能力面与边界，不重复正文。
 
 ## 20 项技能
 

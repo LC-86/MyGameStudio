@@ -2,7 +2,7 @@
 
 A lightweight, composable Agent Skills library for game development, installed natively through the official `skills` CLI.
 
-**Current version: 3.0.0** (authority: [`VERSION`](VERSION))
+**Current version: 3.0.1** (authority: [`VERSION`](VERSION))
 
 MyGameStudio helps an agent design and build games using the tools already present in its environment, through explicit goals, rules, boundaries, task breakdowns, material references and verification requirements. It does not depend on a self-built workflow runtime to gate every step, and it does not force every game onto the same engine, layout, task platform or design-document template.
 
@@ -26,7 +26,7 @@ Details: [docs/installation.md](docs/installation.md). Dependency combinations f
 
 **User entries** start only when the user asks for that kind of work. **On-demand methods** are combined by the agent when the current task and authorization apply; the user can also request them directly.
 
-The 8/12 split is backed by three layers of invocation control (the mechanism comes from each host's official documentation; this library has not tested it inside every host). Claude Code, Grok Build and DSH enforce it through the frontmatter field `disable-model-invocation: true`, which keeps the skill description out of the model's context and leaves only the explicit user entry. Codex enforces it through the `agents/openai.yaml` inside each user-entry directory (`policy.allow_implicit_invocation: false`), which turns off implicit invocation. ZCode and Qoder document no invocation-control field, so there the split stays an **instruction-layer convention** written into descriptions and bodies, and it is the fallback in every host. If you need a harder boundary, restate it in your own project rules. These two layers appear in the source tree after 3.0.0; the version installed from the `v3.0.0` tag does not contain them.
+The 8/12 split is backed by three layers of invocation control (the mechanism comes from each host's official documentation; this library has not tested it inside every host). Claude Code, Grok Build and DSH enforce it through the frontmatter field `disable-model-invocation: true`, which keeps the skill description out of the model's context and leaves only the explicit user entry. Codex enforces it through the `agents/openai.yaml` inside each user-entry directory (`policy.allow_implicit_invocation: false`), which turns off implicit invocation. ZCode and Qoder document no invocation-control field, so there the split stays an **instruction-layer convention** written into descriptions and bodies, and it is the fallback in every host. If you need a harder boundary, restate it in your own project rules. These two layers ship starting with the `v3.0.1` release; versions installed from the `v3.0.0` tag and earlier do not contain them.
 
 | Skill | Upstream | Invocation | Responsibility |
 |---|---|---|---|
@@ -69,7 +69,7 @@ Actually run and passing for this release: 68 static checks (including regressio
 
 Discovery and invocation inside real hosts, plus the remaining numbered behaviour scenarios, are **not run**; see section 4 of [docs/validation-v3.md](docs/validation-v3.md) for the list, and the same file for per-item evidence, exact commands and limits.
 
-A successful local install is not a successful remote GitHub install, which is why the remote content was re-tested separately. 3.0.0 is merged into `main`, and the `v3.0.0` tag and GitHub Release exist, so `npx skills@latest add LC-86/MyGameStudio` installs these 20 skills. 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
+A successful local install is not a successful remote GitHub install, which is why the remote content was re-tested separately. 3.0.1 is merged into `main`, and the `v3.0.1` tag and GitHub Release exist, so `npx skills@latest add LC-86/MyGameStudio` installs these 20 skills (including the three-layer invocation control for user entries). 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
 
 ## License
 

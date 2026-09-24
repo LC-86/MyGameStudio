@@ -58,7 +58,7 @@ FROZEN_PREFIXES = ("provenance/previous-audit/", "provenance/v2-plugin-provenanc
                    "provenance/setup-gamestudio-draft-v2/")
 FROZEN_FILES = ("docs/design/unified-design-v1.md", "docs/design/unified-integration-v1.md")
 
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 VERSION_MUST_MENTION = ("README.md", "README.en.md", "CHANGELOG.md", "SECURITY.md",
                         "docs/installation.md", "docs/migration-v3.md")
 

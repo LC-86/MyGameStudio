@@ -1,6 +1,6 @@
 # 安装
 
-MyGameStudio 3.0.0 是一个原生 Agent Skills 仓库。安装由官方 `skills` CLI 完成，本仓库不提供安装器、不发布 npm 包、不构建 tar 包，也不维护各 AI 开发工具的目录转换。
+MyGameStudio 3.0.1 是一个原生 Agent Skills 仓库。安装由官方 `skills` CLI 完成，本仓库不提供安装器、不发布 npm 包、不构建 tar 包，也不维护各 AI 开发工具的目录转换。
 
 ## 安装
 
@@ -15,7 +15,7 @@ npx skills@latest add LC-86/MyGameStudio --list
 npx skills@latest add LC-86/MyGameStudio --skill '*'
 ```
 
-具体安装到哪个目录由官方 CLI 与你的选择决定。`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的 `v3.0.0` 标签：远端命令取的是仓库**默认分支**的内容，标签与默认分支是两件事。3.0.0 已合入 `main`，实测该命令安装到的是本版的 20 项技能。
+具体安装到哪个目录由官方 CLI 与你的选择决定。`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的 `v3.0.0` 标签：远端命令取的是仓库**默认分支**的内容，标签与默认分支是两件事。3.0.1 已合入 `main`，实测该命令安装到的是本版的 20 项技能。
 
 推荐完整安装 20 项。这套技能互相引用共享方法，选择安装会缺少依赖，见 [dependencies.md](dependencies.md)。
 

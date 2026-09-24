@@ -2,7 +2,7 @@
 
 面向游戏开发的轻量化、可组合 Agent 技能库，通过官方 `skills` CLI 以原生 Agent Skills 方式安装。
 
-**当前版本：3.0.0**（权威来源：[`VERSION`](VERSION)）
+**当前版本：3.0.1**（权威来源：[`VERSION`](VERSION)）
 
 MyGameStudio 用清楚的目标、规则、边界、任务拆分、资料引用和验证要求，帮助 Agent 使用当前环境已有的工具完成游戏设计与制作。它不依赖自建的工作流运行时来限制每一步操作，也不强制所有游戏使用相同引擎、目录、任务平台或完整策划模板。
 
@@ -29,7 +29,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 **用户入口**由用户明确请求相应工作时启动，Agent 不自行开启该工作流程。**按需方法**在当前任务与授权适用时由 Agent 组合使用，用户也可以直接请求。
 
-这条 8/12 分界由三层调用控制支撑（机制来自各宿主官方文档，本库未在宿主内逐一实测）：Claude Code、Grok Build 与 DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，技能描述不再进入模型上下文，只留用户显式入口；Codex 由技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）强制，关闭隐式调用；ZCode 与 Qoder 未文档化任何调用控制字段，这条边界在那里仍是写在描述与正文里的**指令层约定**，也是全部宿主的兜底。需要更强约束时，在你自己的项目规则里重申该边界。这两层控制出现在 3.0.0 之后的源码树；`v3.0.0` 标签安装到的版本不含它们。
+这条 8/12 分界由三层调用控制支撑（机制来自各宿主官方文档，本库未在宿主内逐一实测）：Claude Code、Grok Build 与 DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，技能描述不再进入模型上下文，只留用户显式入口；Codex 由技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）强制，关闭隐式调用；ZCode 与 Qoder 未文档化任何调用控制字段，这条边界在那里仍是写在描述与正文里的**指令层约定**，也是全部宿主的兜底。需要更强约束时，在你自己的项目规则里重申该边界。这两层控制自 v3.0.1 起进入发布；`v3.0.0` 及更早标签安装到的版本不含它们。
 
 ### 用户入口（8）
 
@@ -104,7 +104,7 @@ English summary: [README.en.md](README.en.md)。
 
 真实宿主内的发现与调用、部分行为场景编号**未运行**，逐项清单见 [docs/validation-v3.md](docs/validation-v3.md) 第 4 节；逐项证据、命令原文与局限同见该文件。
 
-本地安装成功不等于远端安装成功，所以远端内容要单独复跑。3.0.0 已合入 `main`，并已创建 `v3.0.0` 标签与 GitHub Release，因此 `npx skills@latest add LC-86/MyGameStudio` 安装到的就是本版 20 项技能。2.0.2 及更早版本停止维护、不再修缺陷；需要旧内容请按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得，切换步骤见 [docs/migration-v3.md](docs/migration-v3.md)。
+本地安装成功不等于远端安装成功，所以远端内容要单独复跑。3.0.1 已合入 `main`，并已创建 `v3.0.1` 标签与 GitHub Release，因此 `npx skills@latest add LC-86/MyGameStudio` 安装到的就是本版 20 项技能（含用户入口三层调用控制）。2.0.2 及更早版本停止维护、不再修缺陷；需要旧内容请按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得，切换步骤见 [docs/migration-v3.md](docs/migration-v3.md)。
 
 ## 许可
 

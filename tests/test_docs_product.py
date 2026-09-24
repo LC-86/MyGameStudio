@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SKILLS = REPO / "skills"
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 UPSTREAM_COMMIT = "c55ee46073ed923f86ce59a5eb3b6d895095d1b7"
 
 # 允许提到旧版本号的位置：变更历史、迁移说明与来源追溯
