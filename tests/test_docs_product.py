@@ -108,7 +108,7 @@ def test_readme_documents_the_full_set_and_navigation() -> None:
     missing = [n for n in names if f"skills/{n}/SKILL.md" not in readme]
     assert not missing, f"README.md 未链接技能：{missing}"
     assert "npx skills@latest add LC-86/MyGameStudio" in readme, "README 应给出原生安装命令"
-    assert "指令层约定" in readme, "README 应如实披露 8/12 分界不是宿主强制隔离"
+    assert "指令层约定" in readme, "README 应保留 ZCode、Qoder 内指令层约定的表述"
 
 
 def test_no_doc_teaches_old_plugin_install_as_current() -> None:
@@ -154,7 +154,7 @@ def test_readme_mirror_carries_the_same_facts() -> None:
     assert VERSION in en, "README.en.md 缺少当前版本事实"
     assert "npx skills@latest add LC-86/MyGameStudio" in en, "README.en.md 缺少原生安装命令"
     assert "instruction-layer" in en, \
-        "README.en.md 应如实披露 8/12 分界不是宿主强制隔离"
+        "README.en.md 应保留 instruction-layer 的指令层约定表述"
     names = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
     missing = [n for n in names if f"skills/{n}/SKILL.md" not in en]
     assert not missing, f"README.en.md 未链接技能：{missing}"

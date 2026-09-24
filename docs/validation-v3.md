@@ -185,6 +185,10 @@ OK: 文档导航、链接、版本与退役命令检查通过（37 个文件，2
 
 **未运行：六宿主内的实际调用隔离**（与 #81、#82 同因）。本机没有可自动化的 Claude Code / Codex / Grok Build / DSH / ZCode / Qoder 调用隔离实测入口，隔离由各宿主解析器在模型选技能时执行，静态检查与安装测试都不能替代。本组只补记录，没有重跑安装测试：`docs/`、`provenance/` 都不随技能安装（见第 2 节「仓库根 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 不随技能安装」），改动也不影响安装内容，因此 #81 的 `PASS 19 / FAIL 0` 继续代表该通路；脚本仍未断言 `agents/openai.yaml`，该边界已在 #81 一节记录，本组不新开通道。
 
+**合并前评审补充（同分支内，未单独开票）：** 本分支开 PR 前的两轴评审又报出四处，已在同一分支修正，因此合入后本节的「4 个文件」只描述 #83 那一笔：`README.md` / `README.en.md` 的静态检查计数由 64 改为 68（与实跑一致）；`docs/reference/troubleshooting.md` 的四宿主强制段补上「机制来自各宿主官方文档，本库未在宿主内逐一实测」的来源限定；`CHANGELOG.md` 的 Unreleased 行为变化首条修正层级映射（此前把仅 Codex 生效的 `agents/openai.yaml` 并入三家 frontmatter 宿主）；`tests/test_docs_product.py` 两处断言的失败消息改为三层口径（只改消息，不改断言逻辑与用例数）。修正后 `python3.12 -m pytest tests/ -q` 仍为 `68 passed`，`python3.12 scripts/validate-docs.py` 仍为同一份 OK 输出。
+
+**已知残留与顺延项（本组不做，留给后续票）：** ①`provenance/adaptation-log.md` 的 A1 与同文件「本次执行中的偏离与说明」里「调用开关映射按 A1 退出」一句未随 A7 更新——票面要求旧 provenance 条目零改动，因此不加前向指针，单读这两处的读者需要一并读 A7；②`tests/test_docs_product.py` 的两处断言仍只查子串，不验证三层机制的实际结构；③`scripts/install-smoke-test.sh` 仍缺 `agents/openai.yaml` 断言，yaml 的安装结论只有 #81 轮的人工核对且未留存证据目录；④三层机制的措辞分散在 15 个以上的文件（#82 票面即要求逐文件改口径），未收敛到 `docs/reference/capabilities.md` 单点持有；⑤`tests/test_skills_layout.py` 有两处同构断言未抽公共函数；⑥README 的静态检查计数与三层口径都没有自动守卫。
+
 ## 2. 原生安装测试 — 通过（19/19）
 
 命令：

@@ -9,7 +9,7 @@
 
 ### 行为变化
 
-- 8 个用户入口（ask、setup、grill、grill-gamestudio-docs、tasks、implement、wayfinder、handoff）的 `SKILL.md` frontmatter 追加 `disable-model-invocation: true`，技能目录内新增 `agents/openai.yaml`，内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行。在 Claude Code、Grok Build、DSH 内，这两层使入口的描述不再进入模型上下文，只保留用户显式调用；在 Codex 内关闭隐式调用。机制依据来自各宿主官方文档，本库未在宿主内实测
+- 8 个用户入口（ask、setup、grill、grill-gamestudio-docs、tasks、implement、wayfinder、handoff）的 `SKILL.md` frontmatter 追加 `disable-model-invocation: true`，技能目录内新增 `agents/openai.yaml`，内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行。在 Claude Code、Grok Build、DSH 内，由 frontmatter 开关使入口的描述不再进入模型上下文，只保留用户显式调用；在 Codex 内，由 `agents/openai.yaml` 关闭隐式调用。机制依据来自各宿主官方文档，本库未在宿主内实测
 - ZCode、Qoder 未文档化调用控制字段：这两个宿主里 8/12 的分界仍是写在 `description` 与正文里的指令层约定，也是全部宿主的兜底。12 个按需方法零改动，在所有宿主保持可自动调用
 - 仓库因此携带唯一的宿主专属文件：8 个用户入口各一份 `agents/openai.yaml`；安装内容比 3.0.0 多出这 8 个文件，以及 8 份入口 `SKILL.md` 各多一行 frontmatter
 - 静态契约同步反转：用户入口必须携带两层开关且值正确，按需方法带开关或宿主文件即失败；`scripts/validate-docs.py` 不再把 `disable-model-invocation: true` 列为退役字段。实际执行的检查输出见 [docs/validation-v3.md](docs/validation-v3.md)

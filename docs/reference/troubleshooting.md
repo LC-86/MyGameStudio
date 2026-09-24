@@ -23,7 +23,7 @@
 
 ### Claude Code、Grok Build、DSH、Codex 内：若发生即异常
 
-这四类宿主有强制的调用控制：前三个读 frontmatter 的 `disable-model-invocation: true`，Codex 读技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）。用户入口不该被模型自行选中。真的发生了，先核对三件事：
+这四类宿主有强制的调用控制：前三个读 frontmatter 的 `disable-model-invocation: true`，Codex 读技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）。机制来自各宿主官方文档，本库未在宿主内逐一实测。用户入口不该被模型自行选中。真的发生了，先核对三件事：
 
 1. 技能从哪里来：这两项声明随 #81 之后的内容生效，`v3.0.0` 标签对应的树里没有它们。用固定引用 `#v3.0.0` 安装就会缺这一层。
 2. 宿主实际读取的技能目录里，8 个入口的 `SKILL.md` 是否带 `disable-model-invocation: true`，目录内是否有 `agents/openai.yaml`。安装器或手工复制漏掉任一项，强制点就没了。
