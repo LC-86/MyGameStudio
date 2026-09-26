@@ -849,7 +849,7 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 
 父票 #89 由四个子票实施：#90 兼容接缝、#92 游戏设计与文档组、#91 工程交付组、#93 收缩为 20 项，四节记录见上（第 10–13 节）。本节在同一分支 `feat/issue-91-engineering-workflow-migration` 上收口：在 #93 的快照提交 `77d4bf0adf827a642f675542af918414acb57d83` 之上重跑三层检查、补上 #89 要求而此前只有文档兜底的三条断言，更正三处过期的提交与推送状态、把退役口径收窄到被删除的 fork 路径，并按保留下来的运行产物补出 #93 的八维保真对照，最后记录两轴评审的发现与处置。基线 `origin/main` 仍是 `06f8f11`（`VERSION` 3.0.2、21 项）。
 
-**状态（四种分开报告）**：源码收口提交 `a4f81630f88f5e374dc37d6561e5a9ebbba6563c` 已推送到该分支；[PR #94](https://github.com/LC-86/MyGameStudio/pull/94) 已按 `main` 为基线创建。**未合入 `main`、未打标签、未发布 Release、未改动真实用户或项目安装**；本节记录在 PR 创建后补记，评审记录内容除这一行外未因开 PR 而改动。
+**合入状态**：PR #94 已于 2026-09-26 合入默认分支，合并提交为 `580934518e8b6be5d139b89e0e10a9632bfd7d1f`；PR 正文的 `Closes #89` 已关闭父票。以下实施检查与两轴评审记录保留其当时证据；合并后的发布前检查另见文末。
 
 ### 在 #93 快照上重跑
 
@@ -910,3 +910,10 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 - **验证**：定向夹具与预检测试 `3 passed`；本次官方源可达，夹具集成路径实际运行。全量 `python3.12 -m pytest tests/ -q`：`90 passed`。`python3.12 scripts/validate-docs.py`：43 个文件、20 项技能通过。`git diff --check` 通过。
 - **not-run**：本次未重跑 `bash scripts/install-smoke-test.sh`，也未启动宿主会话；这项修复只改变离线时该集成测试的启动条件，不声称额外验证安装或宿主行为。
 
+### v3.0.3 合并后发布前检查（2026-09-27）
+
+- **远端版本**：全新克隆 `main` 得到 `580934518e8b6be5d139b89e0e10a9632bfd7d1f`，根目录 `VERSION` 为 `3.0.3`。
+- **原生安装冒烟**：在该全新克隆运行 `bash scripts/install-smoke-test.sh`（skills CLI 1.7.0），结果 **PASS 33 / FAIL 0**。
+- **默认分支实际来源安装**：在临时消费项目运行 `npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -y`；CLI 报告发现并安装 20 项。独立回读确认 `.agents/skills/` 下 20 个目录、`skills-lock.json` 20 条来源为 `LC-86/MyGameStudio` 的记录，且没有 `writing-for-agents` 副本。
+- **检查与分支**：`python3.12 -m pytest tests/ -q` 为 `90 passed`；`python3.12 scripts/validate-docs.py` 检查 43 个文件、20 项技能通过。发布准备时本地与 `origin` 仅保留 `main` 分支；其余本地/远端分支已删除。PR #94 原工作树保留了独立归档快照；另一个干净旧工作树保留在 detached HEAD `06f8f11`，其文件未删除。
+- **未运行**：Codex、ZCode、Grok Build、Qoder、Claude Code 内的实际技能加载与会话行为未运行。此检查快照记录于 `v3.0.3` 标签与 GitHub Release 创建之前。

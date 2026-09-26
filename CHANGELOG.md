@@ -3,9 +3,9 @@
 面向使用者的版本变化。内部票号只作追踪链接，不代替说明。
 版本权威来源是根目录 [`VERSION`](VERSION)。历史发布安装包见 [GitHub Releases](https://github.com/LC-86/MyGameStudio/releases)。
 
-## 3.0.3 — 未发布
+## 3.0.3 — 2026-09-27
 
-**本版未打标签、未发布 Release，也没有绑定任何标签或发布资产。** 版本权威来源仍是根目录 [`VERSION`](VERSION)。
+版本权威来源是根目录 [`VERSION`](VERSION)。
 
 - 退役随包 `writing-for-agents` 副本：删除 `skills/writing-for-agents/`（含 `SKILL.md`、`SKILL-MECHANICS.md`、`references/subagent-delegation.md`、`SOURCE.md`、`SHA256SUMS`、`LICENSE`），本仓库不再分发、不再镜像、也不再为它保留第二份可编辑权威源。
 - 退役对应的维护路径：`scripts/sync-writing-for-agents.py`（固定源同步与摘要生成）、`scripts/verify-writing-for-agents-install.py`（随包副本的安装核验检查器）与 `scripts/install-source-matrix-test.sh`（来源切换矩阵）随本次退出。本仓库不再提供 fork 来源切换，也不再核验「随包副本是否与固定源一致」；两来源组合安装的检查改由维护脚本 `scripts/two-source-composition-check.py` 承担，它只服务本仓库自己的安装检查，不面向用户，也不检测、补齐或替换任何已安装技能。
@@ -14,6 +14,8 @@
 - 安装说明改为两个来源的完整步骤，用户级排在项目级之前，并提供项目级替代；已有官方共同方法时只跳过第一步。命令与参数行为只在 `skills` CLI 1.7.0 上核实。
 - 同一批更新：`README.md`、`README.en.md`、`AGENTS.md`、`AGENTS.zh-CN.md`、`CONTEXT.md`、`CONTRIBUTING.md`、`THIRD_PARTY_NOTICES.md`、`docs/` 与 `provenance/` 的口径；方案与决定记录随本次纳入版本控制，见 [方案](docs/design/shared-writing-method.md) 与 [ADR 0001](docs/adr/0001-shared-writing-method.md)。
 - 本次实际执行的检查与未运行项见 [验证状态](docs/validation-v3.md)。
+- **发布前实测**：合并后的全新克隆上，`bash scripts/install-smoke-test.sh`（skills CLI 1.7.0）为 **PASS 33 / FAIL 0**；随后从 GitHub 默认分支运行 `npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -y`，发现并安装 20 项，锁文件含 20 条仓库来源记录，不含 `writing-for-agents` 副本。
+- **未验证**：Codex、ZCode、Grok Build、Qoder、Claude Code 中的实际加载与会话行为未运行，详见 [验证状态](docs/validation-v3.md)。
 
 ## 3.0.2 — 2026-09-26
 
