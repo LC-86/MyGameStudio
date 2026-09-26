@@ -200,10 +200,11 @@ def test_all_test_files_are_collected_by_default_entry() -> None:
 def test_fixture_pins_initial_branch_and_builds_real_conflict(tmp_path: Path) -> None:
     """夹具不得假定初始分支只能是 main/master；S08 必须真的建立合并冲突现场。
 
-    需要官方 skills CLI 才能装技能副本，取不到时按未运行处理而不是假装通过。
+    需要官方 skills CLI 和官方共同方法仓库可达才能装技能副本；依赖不可用时
+    按未运行处理，而不是把外部网络故障报告成夹具行为失败。
     """
-    if not _skills_cli_available():
-        pytest.skip("未取得 skills CLI，夹具生成未运行")
+    if not _fixture_dependencies_available():
+        pytest.skip("未取得 skills CLI 或官方共同方法仓库不可达，夹具生成未运行")
     out = tmp_path / "fixtures"
     env = {
         "GIT_CONFIG_COUNT": "1",
@@ -225,14 +226,44 @@ def test_fixture_pins_initial_branch_and_builds_real_conflict(tmp_path: Path) ->
         f"冲突现场不符：{conflicted}"
 
 
-def _skills_cli_available() -> bool:
+def _fixture_dependencies_available() -> bool:
     probe = subprocess.run(
         ["bash", "-c",
          f'. "{SCRIPTS / "resolve-skills-cli.sh"}" && '
          'resolve_skills_cli "${SKILLS_CLI_VERSION:-1.7.0}"'],
         capture_output=True, text=True, check=False,
     )
-    return probe.returncode == 0
+    return probe.returncode == 0 and _official_method_source_available()
+
+
+def _official_method_source_available() -> bool:
+    """确认外部安装依赖可达，避免 CLI 已缓存但官方仓库离线时误报夹具失败。"""
+    try:
+        probe = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "https://github.com/mattpocock/skills.git", "HEAD"],
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return probe.returncode == 0 and bool(probe.stdout.strip())
+
+
+@pytest.mark.parametrize("failure", [
+    "unreachable",
+    "timeout",
+])
+def test_official_method_source_probe_skips_unavailable_repo(monkeypatch, failure: str) -> None:
+    def unavailable(command, **kwargs):
+        assert command == ["git", "ls-remote", "--exit-code",
+                           "https://github.com/mattpocock/skills.git", "HEAD"]
+        assert kwargs["timeout"] == 10
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(cmd=command, timeout=10)
+        return subprocess.CompletedProcess(command, returncode=128, stdout="", stderr="offline")
+
+    monkeypatch.setattr(subprocess, "run", unavailable)
+
+    assert not _official_method_source_available()
 
 
 def test_shell_variables_before_multibyte_text_are_braced() -> None:

@@ -903,4 +903,10 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 - 本节只补文档与静态断言，未新增安装或行为场景：两来源安装与文件形态的实测证据仍是第 13 节的五种范围场景。
 - 按 #89 约定，本次只做提交、推送与开 PR：**合入 `main`、打标签、发布 Release、改动真实用户或项目安装均为 not-run**。
 
+### PR #94 Codex Review 5327301334 修复（2026-09-27）
+
+- **发现**：行为夹具测试只探测 skills CLI；CLI 已缓存但官方 `mattpocock/skills` 仓库不可达时，测试继续运行并把外部网络故障报成夹具失败。
+- **修复**：测试继续使用真实 CLI 和官方源；在运行夹具前以 `git ls-remote` 检查官方仓库 HEAD，最多等待 10 秒。CLI 或官方源不可用、探测超时时，该集成测试标记为 skip；离线与超时分支有独立回归断言。生产安装脚本与用户安装行为未改动。
+- **验证**：定向夹具与预检测试 `3 passed`；本次官方源可达，夹具集成路径实际运行。全量 `python3.12 -m pytest tests/ -q`：`90 passed`。`python3.12 scripts/validate-docs.py`：43 个文件、20 项技能通过。`git diff --check` 通过。
+- **not-run**：本次未重跑 `bash scripts/install-smoke-test.sh`，也未启动宿主会话；这项修复只改变离线时该集成测试的启动条件，不声称额外验证安装或宿主行为。
 
