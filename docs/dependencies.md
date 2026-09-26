@@ -22,12 +22,12 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 | 要安装的技能 | 必需的同源组合（括号内为按需） | 外部共同方法 |
 |---|---|---|
-| `grill-gamestudio` | `grilling-gamestudio`、`docs-gamestudio` | 使用（按技能名称取得） |
-| `grill-gamestudio-docs` | `grilling-gamestudio`、`domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio`、`docs-gamestudio` | 使用（按技能名称取得） |
+| `grill-gamestudio` | `grilling-gamestudio`、`docs-gamestudio` | 不直接取得（纯访谈，不写正式资料） |
+| `grill-gamestudio-docs` | `grilling-gamestudio`、`domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio`、`docs-gamestudio` | 经文档方法取得（访谈本身不写正式资料） |
 | `gdd-gamestudio` | `docs-gamestudio`（`spec-gamestudio`、`grilling-gamestudio` 为按需） | 使用（按技能名称取得） |
 | `spec-gamestudio` | `docs-gamestudio`（`gdd-gamestudio` 为按需） | 使用（按技能名称取得） |
 | `domain-gamestudio` | `docs-gamestudio`（`gdd-gamestudio`、`spec-gamestudio`、`grilling-gamestudio` 为按需） | 使用（按技能名称取得） |
-| `grilling-gamestudio` | `docs-gamestudio`（其余技能为按需） | 使用（按技能名称取得） |
+| `grilling-gamestudio` | `docs-gamestudio`（其余技能为按需） | 不直接取得（落盘交给文档方法） |
 | `tasks-gamestudio` | `docs-gamestudio` | 使用（按技能名称取得） |
 | `implement-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`、`review-gamestudio`（`tdd-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） | 使用（按技能名称取得） |
 | `tdd-gamestudio` | `docs-gamestudio`、`tasks-gamestudio` | 使用（按技能名称取得） |
@@ -45,6 +45,8 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 | `writing-for-agents` | 作为随包副本暂列本套 21 项内的独立技能 | 就是该方法本身 |
 
 `docs-gamestudio` 的委派参考被 grilling、handoff、implement、research、review、tasks、wayfinder 和 ask 按需使用；单纯缺少委派场景时不要求每项任务都调用它。`writing-for-agents` 的目录只在随包副本仍发行时存在；安装 GameStudio 不等于安装了外部共同方法。
+
+访谈类入口自己不写正式资料：`grill-gamestudio`、`grill-gamestudio-docs` 与 `grilling-gamestudio` 的正文不出现外部共同方法名，需要落盘时由它们在协作模式下按需使用的 `domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 按技能名称取得，因此“不直接取得”不等于这条工作流不需要它。
 
 ## 选择安装示例
 

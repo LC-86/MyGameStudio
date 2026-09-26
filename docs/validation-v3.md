@@ -634,3 +634,68 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 - 删除随包副本、把集合收缩为 20 项、更新真实用户安装：**not-run**，属于本票之后的收缩阶段，本票明确不做。
 - 本票新增的检查是安装后静态解析与两次真实子代理行为；没有覆盖模型在真实宿主内自动发现技能的稳定性（同一场景只各跑一次，不以一次命中宣称稳定）。
 - `scripts/sync-writing-for-agents.py` 的上游网络核对未通过本机证书校验；本票没有改源版本或随包内容，重跑条件不成立但限制如实记录。
+
+## 11. Issue #92 游戏设计与文档工作流迁移（2026-09-27，提交前实测）
+
+实现分支 `feat/issue-92-game-doc-migration`，基线为 #90 分支的 `4e1c7ef`（含 #90 接缝；`main` 仍是 v3.0.2 的 `06f8f11`）。本票只迁移游戏设计与文档工作流组：`docs-gamestudio` 与 domain、gdd、spec、grilling、prototype、wayfinder 及两个访谈入口；工程交付组消费者（ask、codebase、debug、handoff、implement、merge、research、review、setup、tasks、tdd）正文未改动。以下结果在本机工作树上实测，随后作为快照提交到该分支；未推送、未发布、未打标签。
+
+改动范围：五个正式写作分支补上缺外部方法时的处理；测试按名称固化本组各流程的返回/停止边界；`install-smoke-test.sh` 增加第 10 节两来源组合安装检查；`behavior-fixtures.sh` 增加 `METHOD_SOURCE=official` 与 `NOMETHOD-` 场景；依赖表更正三个访谈入口的外部方法列；新增行为证据文件与本节记录。本组的分流、保真与委派归属不新增重复断言，继续由 #90 的消费者契约检查覆盖（本组每一项都在那三张名单内）。
+
+### 静态检查
+
+| 检查 | 实际结果 | 证明范围 |
+|---|---|---|
+| `python3.12 -m pytest tests/ -q` | **78 passed**（基线 75，本票新增 2 项本组契约与 1 项夹具参数拒绝） | 21 项目录契约、调用控制、所有者、消费者接入、缺方法处理、保真/委派契约、本组边界与组合安装契约文本 |
+| `python3.12 scripts/validate-docs.py` | 通过：41 个文档文件、21 项技能 | 文档导航、链接、版本一致与退役命令；新增证据文件已进导航 |
+| 新增 `tests/test_skills_layout.py` 两项 | 全部通过：本组各流程保留自身返回/停止边界；五个写作分支自带缺方法处理 | 源码树形状；不证明宿主内行为 |
+| 新增 `tests/test_maintenance_scripts.py::test_fixture_rejects_unknown_method_source_before_writing` | 通过 | `METHOD_SOURCE` 取值错误时在创建任何东西之前失败，不留下产物 |
+
+红灯记录：两项新契约测试在只加测试、未改技能正文时按预期失败（`domain/gdd/spec/prototype/wayfinder 缺少缺外部方法时的处理说明`），改正文后转绿；夹具脚本的 `$VAR` 后紧跟全角标点曾触发 `METHOD_SOURCE\xef: unbound variable`，由既有静态检查抓出并改为 `${VAR}` 后 28 项维护脚本测试全绿。
+
+### 安装检查
+
+| 检查 | 实际结果 | 证明范围 |
+|---|---|---|
+| `bash scripts/install-smoke-test.sh`（CLI 1.7.0，VERSION 3.0.2） | **PASS 29 / FAIL 0**（原 26 项通过，本票并入 3 项） | 21 项完整安装、许可、相对引用、依赖组合、子集缺依赖、链接模式、二次安装、#90 接缝，以及新增的两来源组合 |
+| 第 10 节（Issue #92 组合） | 本票组 9 项 + 两项同源依赖从本仓库安装时**不含**随包 `writing-for-agents`；官方 `mattpocock/skills` 的外部共同方法装入同一项目范围；锁来源 `mattpocock/skills`、`computedHash 95da47fc…`；无 `SOURCE.md`/`SHA256SUMS`；官方正文 `551adca9…` 与随包副本 `5b3f3608…` 不同；安装结果内全部相对引用可达；取得方式为按技能名称 | 随包副本退出集合后的目标形态，在旧发行形态仍存在时先核对 |
+| 第 10 节首次运行的负例（可发现真实错误） | 首次运行报 `prototype-gamestudio 的引用在安装结果里不可达：../tasks-gamestudio/references/task-responsibility.md`、`wayfinder-gamestudio … ../research-gamestudio/SKILL.md`，该次 **PASS 28 / FAIL 1** | 组合缺少本票组真实引用到的同源技能时，检查会失败而不是放行；补入两项同源依赖后转绿 |
+| `bash scripts/install-source-matrix-test.sh` | 全部通过（exit 0）：本仓库与 fork 两个项目范围并存、同范围 local→fork 与 fork→local 双向切换、锁来源与 `computedHash` 正确、已安装副本发现本地修改时报告差异且保留改动 | 随包副本的来源切换与已安装副本检查未被本票改动影响；只用临时项目范围 |
+
+### 行为检查（本机 DSH 干净子代理）
+
+方法与现场、每个接收方的读取路径、产物 diff 与保真逐项核对见 [Issue #92 行为证据](evidence/issue-92-behavior-matrix.md)。三个场景都在 `METHOD_SOURCE=official` 的两来源夹具内运行，项目 `.agents/skills/` 里没有随包副本。
+
+| 场景 | 派发与实际结果 | 能证明什么 |
+|---|---|---|
+| M92-routing（长期规则 + 试验值 + 本次范围） | 接收方读取项目内官方 `writing-for-agents/SKILL.md`、`docs-gamestudio` 的路由与保真参考、gdd/spec/domain/grilling 正文；只改 `docs/design/GDD.md` 与 `docs/specs/2026-09-10-first-level.md`，`CONTEXT.md` 零改动；试验值 `5x`→`7x` 保留未验证身份，候选 A/B 仍「尚未采纳」，「死亡触发条件」列为未决 | 外部方法按名称取得、专属参考实际读取、GDD/spec/术语归属正确、身份不升级 |
+| M92-partial-save（GDD 写成、spec 写入被权限挡住） | GDD 实际新增已采纳规则（主代理 `git diff` 核对 +2/−1）；spec 文件权限位、大小 582 与 SHA-256 前后一致；报告给出实际 `Permission denied (exit=1)`，未 `chmod`、未绕过、未建平行文件；明确列出阻塞、待落盘 diff 与解除条件 | 一份成功一份失败被分别报告，不把部分保存写成原子完成 |
+| NOMETHOD-routing（项目内缺外部共同方法） | 接收方引用 `docs-gamestudio/SKILL.md:22-24` 说明缺口，列出受影响内容（GDD/spec/术语正文写入）与只存在于对话中的待保存内容；`git status` 无任何改动；未安装、未模仿缺失方法、未宣称完成；继续了路由、讨论与下一轮问题 | 缺外部依赖时准确说明缺口并只继续不受影响的部分 |
+| 产物保真逐项核对（数字、单位、条件、例外、排除项、责任、确认状态、原始证据） | 八个维度逐项对照夹具原始输入与真实 diff，结论均为保真；通用方法单独加载未充当本组验收（三个场景都读了 `docs-gamestudio` 专属参考） | 语义保真契约在真实产物上成立 |
+
+### 未运行与限制
+
+- 六个宿主内的技能发现与自动加载、真实宿主按名称选中 `writing-for-agents`、用户级与项目级同名副本冲突时的实际加载版本：**not-run**。本轮只用隔离项目与干净子代理，不外推到其他宿主。
+- 本机用户范围也装有同名 `writing-for-agents`；三个场景的派发说明把范围限定在项目 `.agents/skills/`，因此缺依赖场景验证的是「该组合范围内缺失时」的行为，不是「全机缺失」。
+- 每个场景只运行一次；重复会话与不触发场景（普通简短回答、只读请求）本轮未运行。
+- 工程交付组消费者（#91 范围）的行为未在本票验证；本票只保证没有改动它们的正文，并让它们作为同源依赖进入组合安装。
+- 收缩随包副本、恢复 20 项发行集合、更新安装说明与真实用户安装：**not-run**，属于 #93。
+- 宿主未提供逐次工具调用日志；接收方自述的读取路径由主代理核对到与产物、引用行号一致的程度。
+- 行为产物的原始现场在 `/tmp/mgs-issue92/`，会随系统清理失效；可复核的差异已抄进 [行为证据](evidence/issue-92-behavior-matrix.md) 附录。
+- 运行前提：本机 `PATH` 含 `/usr/local/bin`（`python3.12`）与 `/opt/homebrew/bin`（`node`、`npx`）。已实测把 `node` 从 `PATH` 移除后 `python3.12 -m pytest tests/ -q` 仍是 78 passed；安装类脚本与夹具的 `METHOD_SOURCE=official` 需要网络与 GitHub 可达。
+
+### 验收条件的读法说明（讨论入口）
+
+验收条件第 1 条列举了「讨论」流程。本票按父票 #89 的决定 15「按行为审计消费者」处理：正式资料的书写分支（domain、gdd、spec、prototype、wayfinder）按技能名称取得外部共同方法；三个访谈入口（`grill-gamestudio`、`grill-gamestudio-docs`、`grilling-gamestudio`）本身不写正式资料，落盘由它们在协作模式下按需使用的 domain/gdd/spec 取得，因此它们正文里不出现该方法名。行为证据里的 `NOMETHOD-routing` 场景正是沿这条路径观察缺依赖行为。依赖表已按这一实际行为写明，不把讨论入口写成直接取得。
+
+### 合并前两轴评审发现与处置（2026-09-27）
+
+| 轴 | 发现 | 处置 |
+|---|---|---|
+| Standards（硬） | `behavior-fixtures.sh` 的 `METHOD_SOURCE` 校验排在 `resolve_skills_cli` 之后，拒绝路径依赖外部 CLI，与 `tests/test_maintenance_scripts.py` 里「拒绝路径不依赖网络或缓存」的明文意图冲突；无 node 环境下本票新增的夹具测试失败 | 已把该校验移到第 2 节之前的参数校验段，并把 `METHOD_SOURCE 只支持` 加进既有排序断言。修后实测：从 `PATH` 移除 `node` 仍 78 passed |
+| Standards（硬） | 行为证据缺宿主版本与操作系统，不满足 `CONTRIBUTING.md` 的「声称已验证时提供宿主名称与版本、操作系统」 | 已补 DSH 0.1.7-rc.2、macOS 27.0（Darwin 27.0.0 arm64）、Node v24.19.0 与模型说明 |
+| Standards（判断） | 第 10 节「本票组不含随包副本」在组安装整体失败时也会先印一条 PASS（假绿） | 已加目录数判据：装不齐 11 项时改判 FAIL，不再给出该 PASS |
+| Standards（判断） | 缺方法整句在 5 份技能正文、测试与安装检查里各有一份字面副本；测试按整句断言 | 保留。这句是各流程自足所需的契约文本，测试按固定常量断言它，是有意为之的防漂移；与 #90 已把取得方式逐消费者写明的做法一致。不引入跨文件常量文件（技能正文不能依赖仓库文件） |
+| Standards（判断） | `install-smoke-test.sh` 内 `link_re` 与可达性遍历出现三份同形逻辑 | 保留。三处分别作用于完整安装（第 3 节）、#90 接缝（第 8 节）与两来源组合（第 10 节）三个不同安装结果；本票不重构 #90 已验证过的检查 |
+| Spec（判断） | 「讨论」入口不直接取得外部方法属于解释性收窄 | 已在上一小节写明读法与依据；依赖表同步更正 |
+| Spec（判断） | 本组专属归属断言一度出现在本票测试中，与 #90 的三张名单重复 | 已删除重复断言；核对确认本组每一项都在 #90 的写作者、保真、委派或分流名单内 |
+| Spec（判断） | 启动条件此前没有断言，「各流程保留自己的启动、返回与停止条件」只覆盖了返回/停止 | 已在边界测试里按名称固化每个流程 description 中的启动条件原话与正文中的返回/停止边界 |

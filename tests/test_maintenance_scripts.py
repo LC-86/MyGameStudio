@@ -67,11 +67,13 @@ def test_fixture_script_refuses_non_empty_target_and_checks_cli_first() -> None:
         assert marker in text, f"缺少对非空输出目录的拒绝说明：{marker}"
     mkdir_at = text.find('mkdir -p "$OUT"')
     assert mkdir_at > 0, "夹具脚本应显式创建输出目录"
-    for guard in ("resolve_skills_cli", "已存在且非空", "场景名不合法"):
+    for guard in ("resolve_skills_cli", "已存在且非空", "场景名不合法", "METHOD_SOURCE 只支持"):
         assert 0 <= text.find(guard) < mkdir_at, f"{guard} 必须发生在任何写入之前"
     # 参数校验不应依赖外部工具，也不该在检查阶段创建目录
     assert text.find("场景名不合法") < text.find("resolve_skills_cli"), \
         "场景名校验应先于 CLI 解析，使拒绝路径不依赖网络或缓存"
+    assert text.find("METHOD_SOURCE 只支持") < text.find("resolve_skills_cli"), \
+        "METHOD_SOURCE 校验应先于 CLI 解析，使拒绝路径不依赖网络或缓存"
     assert 'OUT_PARENT="$(mkdir -p' not in text, "路径规范化阶段不得创建目录"
 
 
@@ -137,6 +139,18 @@ def test_fixture_rejects_bad_scenario_names(tmp_path: Path) -> None:
         result = run_fixture(str(out), bad)
         assert result.returncode != 0, f"应拒绝场景名 {bad!r}"
     assert list(out.iterdir()) == [], "拒绝路径不得留下任何产物"
+
+
+def test_fixture_rejects_unknown_method_source_before_writing(tmp_path: Path) -> None:
+    """METHOD_SOURCE 只认 bundled / official；写错时必须在创建任何东西之前失败。"""
+    out = tmp_path / "out"
+    result = run_fixture(str(out), "S01-ask", env={"METHOD_SOURCE": "fork"})
+
+    assert result.returncode != 0, "未知 METHOD_SOURCE 必须被拒绝"
+    assert "bundled" in result.stderr and "official" in result.stderr, \
+        f"应说明允许的取值，实际 stderr：{result.stderr}"
+    assert not out.exists() or list(out.iterdir()) == [], \
+        "拒绝路径不得创建输出目录或任何产物"
 
 
 def test_ci_workflows_run_the_whole_test_suite() -> None:

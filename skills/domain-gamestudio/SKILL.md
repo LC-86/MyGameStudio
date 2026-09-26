@@ -26,7 +26,7 @@ license: MIT
 
 ## 在授权范围内及时保存
 
-概念已确认且文档维护已获授权时，及时更新相关条目，不逐个询问是否保存，也不等会话末尾才回忆。术语与决策记录是供后续工作复用的正式资料，按技能名称取得 `writing-for-agents` 的写作方法，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)表达：定义足够区分概念，规则和数值不塞进词表，已确认决定与已实现、已验证分开。参考 [术语写法](references/CONTEXT-FORMAT.md)，保持短定义，必要时说明关系与易混淆说法。
+概念已确认且文档维护已获授权时，及时更新相关条目，不逐个询问是否保存，也不等会话末尾才回忆。术语与决策记录是供后续工作复用的正式资料，按技能名称取得 `writing-for-agents` 的写作方法，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)表达：定义足够区分概念，规则和数值不塞进词表，已确认决定与已实现、已验证分开。无法取得时说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法。参考 [术语写法](references/CONTEXT-FORMAT.md)，保持短定义，必要时说明关系与易混淆说法。
 
 只有决定难以逆转、缺背景时容易被误解、且存在真实取舍时，才建议独立留档；已有可靠记录就引用。参考 [决策写法](references/ADR-FORMAT.md)。已确认决定不等于已经实现或验证；修订时保留必要历史和替代关系。
 

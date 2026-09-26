@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 找出通向当前游戏目标的路线，而不是把模糊构想提前拆成整套制作任务。地图帮助跨会话保留问题、依赖和依据；它不是关卡地图、项目总控或另一份 GDD。
 
-地图和结论是供后续会话复用的正式资料，按技能名称取得 `writing-for-agents` 的写作方法组织，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)核对：指针带用途，候选、试验、已采纳、已实现、已验证各自保持身份。
+地图和结论是供后续会话复用的正式资料，按技能名称取得 `writing-for-agents` 的写作方法组织，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)核对：指针带用途，候选、试验、已采纳、已实现、已验证各自保持身份；无法取得时说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法。
 
 ## 明确目的与现状
 

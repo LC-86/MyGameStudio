@@ -21,6 +21,16 @@ Issue #90 是 expand 阶段：在保留 v3.0.2 的 21 项发行形态与随包�
 - 随包副本继续按 #87 的固定源生成，内容与摘要未变；`SKILL-MECHANICS.md` 与上游 `references/subagent-delegation.md` 仍随副本分发，但不再是 GameStudio 委派方法的依据。
 - 失去保真或委派依据的写法没有被静默接受：`tests/test_skills_layout.py` 增加所有者、消费者、缺外部方法处理与保真/委派契约的确定性检查，实际结果记入 [验证状态](../docs/validation-v3.md)。
 
+## Issue #92 游戏设计与文档工作流迁移（2026-09-27，尚未发布）
+
+Issue #92 在 #90 的接缝上迁移游戏设计与文档工作流组（`docs-gamestudio` 与 domain、gdd、spec、grilling、prototype、wayfinder 及其两个访谈入口），只改这一组的正文与检查，不动工程交付组消费者。
+
+- 五个正式写作分支（domain、gdd、spec、prototype、wayfinder）在按技能名称取得 `writing-for-agents` 的同一句里补上缺方法处理：说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法。此前只有 `docs-gamestudio` 所有者正文写有该契约，单独调用某一个流程时读不到它。
+- 各流程原有的启动、返回与停止边界逐条保留（访谈收束、回到原讨论、回到原问题集、返回原问答、原型交付为止、目的达到时交接、读完后返回原任务）；测试按名称逐项固化，防止后续迁移把这些边界当作可替换文本删掉。
+- 讨论类入口不直接取得外部共同方法：`grill-gamestudio`、`grill-gamestudio-docs`、`grilling-gamestudio` 的正文不出现该方法名，落盘由它们在协作模式下按需使用的 `domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 取得。依赖表按这一实际行为更正，不再把它们写成直接使用。
+- 组合安装检查在 `scripts/install-smoke-test.sh` 第 10 节：本票组加两项同源依赖从本仓库安装，外部共同方法单独从官方 `mattpocock/skills` 安装，核对锁来源、无随包副本打包文件、引用可达与取得方式。夹具脚本 `scripts/behavior-fixtures.sh` 增加 `METHOD_SOURCE=official`（两来源形态）与 `NOMETHOD-` 场景前缀（故意缺外部方法）。
+- 行为与产物结果见 [Issue #92 验证证据](../docs/evidence/issue-92-behavior-matrix.md)与 [验证状态](../docs/validation-v3.md)。
+
 ## 跨技能的系统性适配
 
 ### A1. 宿主专属调用开关退出

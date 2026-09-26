@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 隔离原生安装验证：用官方 skills CLI 从本仓库安装到临时消费项目，
-# 检查发现集合、随包资料、许可通知与跨技能引用在安装目录内可达。
+# 检查发现集合、随包资料、许可通知与跨技能引用在安装目录内可达；
+# 第 10 节另外从官方 mattpocock/skills 安装外部共同方法，核对两来源组合。
 #
 #   scripts/install-smoke-test.sh [仓库路径]
 #
@@ -331,6 +332,144 @@ elif [ "$FULL_N" = "${PLAIN_N:-0}" ]; then
 else
   bad "--full-depth 发现 $FULL_N 项，多于默认的 ${PLAIN_N:-?} 项，仓库内可能有游离 SKILL.md"
   printf '%s\n' "$FD" | sed -e "$ANSI_RE" | grep -vE -- '-gamestudio|^│|^┌|^└|^├|^\s*$' | head -10 | sed 's/^/      /'
+fi
+
+note "10. Issue #92 组合安装：官方共同方法 + 本票组技能，不含随包副本"
+# 游戏设计与文档工作流组。先把本票组从本仓库安装到临时项目，再从官方
+# mattpocock/skills 单独安装外部共同方法：这正是随包副本退出集合后的形态，
+# 因此在旧发行形态仍存在时就先核对它，避免收缩时才发现引用或取得方式失效。
+GROUP="docs-gamestudio domain-gamestudio gdd-gamestudio spec-gamestudio
+grilling-gamestudio prototype-gamestudio wayfinder-gamestudio
+grill-gamestudio grill-gamestudio-docs"
+# 本票组引用到的同源技能：prototype 的人工责任参考归 tasks-gamestudio，
+# wayfinder 的研究入口归 research-gamestudio。它们由工程交付组拥有，本票不改其
+# 正文，只为组合安装里引用可达而一起装入同一个临时项目。
+COMPANIONS="tasks-gamestudio research-gamestudio"
+MIG="$WORK/consumer-issue92-group"; mkdir -p "$MIG"
+MIG_DEST="$MIG/.agents/skills"
+GROUP_OUT="$(cd "$MIG" && run_cli add "$REPO" --skill $GROUP $COMPANIONS --agent universal --copy -y)"
+printf '%s\n' "$GROUP_OUT" | tail -3 | sed 's/^/      /'
+# 「没有随包副本」只有在组本身装齐时才有意义：组安装失败会让空目录也满足
+# 「目标不存在」，那条 PASS 就成了假绿。
+GROUP_N="$(find "$MIG_DEST" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
+if [ -e "$MIG_DEST/writing-for-agents" ]; then
+  bad "本票组安装带入了随包 writing-for-agents"
+elif [ "$GROUP_N" != "11" ]; then
+  bad "本票组安装得到 ${GROUP_N} 个目录（应为 11：9 项本票组 + 2 项同源依赖），无法判定是否带随包副本"
+else
+  ok "本票组（9 项 + 2 项同源依赖）安装不含 MyGameStudio 随包 writing-for-agents"
+fi
+OFFICIAL_OUT="$(cd "$MIG" && run_cli add mattpocock/skills --skill writing-for-agents --agent universal --copy -y)"
+printf '%s\n' "$OFFICIAL_OUT" | tail -3 | sed 's/^/      /'
+if [ -f "$MIG_DEST/writing-for-agents/SKILL.md" ]; then
+  ok "官方 mattpocock/skills 的外部共同方法装入同一项目范围"
+else
+  bad "官方外部共同方法未安装成功（来源不可用或 CLI 行为变化）"
+fi
+COMPOSITION_OUT="$(python3.12 - "$MIG/skills-lock.json" "$MIG_DEST" \
+  "$REPO/skills/writing-for-agents" "$REPO" $GROUP -- $COMPANIONS <<'PY' 2>&1
+import hashlib
+import json
+import os
+import re
+import sys
+from pathlib import Path
+
+
+def norm(path):
+    """只做词法规范化，不解析符号链接：临时目录常经 /var -> /private/var 跳转。"""
+    return Path(os.path.normpath(str(path)))
+
+
+lock_path = Path(sys.argv[1])
+dest = Path(sys.argv[2])
+bundled = Path(sys.argv[3])
+repo = Path(os.path.realpath(sys.argv[4]))
+argv = sys.argv[5:]
+group = argv[:argv.index("--")]
+companions = argv[argv.index("--") + 1:]
+gamestudio = group + companions
+writers = ["docs-gamestudio", "domain-gamestudio", "gdd-gamestudio",
+           "spec-gamestudio", "prototype-gamestudio", "wayfinder-gamestudio"]
+gap = "无法取得时说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法"
+link_re = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+
+problems = []
+installed = sorted(p.name for p in dest.iterdir() if p.is_dir())
+expected = sorted(gamestudio + ["writing-for-agents"])
+if installed != expected:
+    problems.append("组合安装目录不符：%s" % installed)
+
+official = dest / "writing-for-agents"
+if not (official / "SKILL.md").is_file():
+    problems.append("外部共同方法正文缺失")
+for packaging in ("SOURCE.md", "SHA256SUMS"):
+    if (official / packaging).exists():
+        problems.append("外部共同方法带上了 GameStudio 随包副本的 %s" % packaging)
+
+if lock_path.is_file():
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))["skills"]
+    for name in expected:
+        if name not in lock:
+            problems.append("锁文件缺少 %s" % name)
+    record = lock.get("writing-for-agents", {})
+    if record.get("source") != "mattpocock/skills":
+        problems.append("外部共同方法来源为 %r，应为 mattpocock/skills"
+                        % record.get("source"))
+    for name in gamestudio:
+        source = lock.get(name, {}).get("source", "")
+        resolved = Path(os.path.realpath(lock_path.parent / source)) if source else None
+        if resolved != repo:
+            problems.append("%s 的锁来源不是本仓库：%r" % (name, source))
+else:
+    problems.append("组合安装没有生成 skills-lock.json")
+
+if (official / "SKILL.md").is_file():
+    def digest(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    official_hash = digest(official / "SKILL.md")
+    bundled_hash = digest(bundled / "SKILL.md")
+    print("INFO  官方正文 %s；随包副本 %s%s"
+          % (official_hash[:12], bundled_hash[:12],
+             "（内容相同，来源只能由锁记录区分）" if official_hash == bundled_hash else ""))
+    print("INFO  官方副本 %s SKILL-MECHANICS.md"
+          % ("含" if (official / "SKILL-MECHANICS.md").is_file() else "不含"))
+
+for name in gamestudio:
+    skill = dest / name
+    for path in sorted(skill.rglob("*.md")):
+        for raw in link_re.findall(path.read_text(encoding="utf-8")):
+            if raw.startswith(("http://", "https://", "#")):
+                continue
+            if "writing-for-agents/" in raw:
+                problems.append("%s 用相对链接取得外部共同方法：%s" % (name, raw))
+                continue
+            if not norm(path.parent / raw.split("#", 1)[0]).exists():
+                problems.append("%s 的引用在安装结果里不可达：%s" % (name, raw))
+
+for name in writers:
+    body = (dest / name / "SKILL.md").read_text(encoding="utf-8")
+    if "`writing-for-agents`" not in body:
+        problems.append("%s 未按技能名称说明外部共同方法" % name)
+    if name != "docs-gamestudio" and gap not in body:
+        problems.append("%s 缺少缺外部方法时的处理说明" % name)
+for name in ("grill-gamestudio", "grill-gamestudio-docs", "grilling-gamestudio"):
+    body = (dest / name / "SKILL.md").read_text(encoding="utf-8")
+    if "writing-for-agents" in body:
+        problems.append("%s 不直接取得外部共同方法，却提到了它" % name)
+
+if problems:
+    for item in problems:
+        print("FAIL  " + item)
+    sys.exit(1)
+print("PASS  两来源组合：本票组不依赖随包副本，外部共同方法来源正确且引用可达")
+PY
+)"
+printf '%s\n' "$COMPOSITION_OUT" | sed 's/^FAIL/      →/;s/^PASS/      /;s/^INFO/      /'
+if printf '%s' "$COMPOSITION_OUT" | grep -q '^PASS  '; then
+  ok "Issue #92 组合：官方共同方法与本票组各自来源清楚，取得路径与引用真实可用"
+else
+  bad "Issue #92 组合检查未产出 PASS 结论（见上），按未通过处理"
 fi
 
 note "结果"

@@ -347,6 +347,62 @@ def test_no_hard_calls_to_retired_or_unselected_skills() -> None:
     assert not offenders, "旧名硬调用：\n" + "\n".join(sorted(set(offenders)))
 
 
+# Issue #92：游戏设计与文档工作流组。这些流程在正式资料分支按技能名称取得外部
+# 共同方法，同时继续用 GameStudio 的分流、保真与委派参考，并各自保留启动、
+# 返回和停止条件（不因外部依赖串成新的自动工作流）。
+GAME_DOC_FLOWS = {
+    # 名称: (启动/适用条件（取自 description，宿主发现时读到的就是它）, 返回或停止边界)
+    "docs-gamestudio": ("需要组织子代理派发与结果核对时使用",
+                        "有用的参考读完后返回原任务"),
+    "domain-gamestudio": ("只读取既有术语时无需启动",
+                          "完成当前部分后回到原讨论"),
+    "gdd-gamestudio": ("在已授权的讨论文档协作中",
+                       "完成这一轮更新便回到原问题集"),
+    "spec-gamestudio": ("将当前已确认的功能、系统、资源或变更要求整理为具体工作规格",
+                        "完成当前更新即返回原问答"),
+    "grilling-gamestudio": ("用户希望梳理想法、比较取舍",
+                            "在当前目标清楚时收束"),
+    "prototype-gamestudio": ("用于用户明确要求原型或当前任务已包含实验制作",
+                             "到本次原型交付或验证结论为止"),
+    "wayfinder-gamestudio": ("用户请求为一个需要跨会话澄清的大型游戏目标梳理路线时使用",
+                             "在目的达到时交接"),
+}
+# 正式写作分支必须自带缺外部方法的处理：单独调用本流程时只读得到它自己，
+# 不能指望每一个调用都先去读所有者正文。
+GAP_CLAUSE = "无法取得时说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法"
+GAME_DOC_WRITERS = ("docs-gamestudio", "domain-gamestudio", "gdd-gamestudio",
+                    "spec-gamestudio", "prototype-gamestudio", "wayfinder-gamestudio")
+
+
+def test_game_document_flows_keep_their_own_boundaries() -> None:
+    """本组各流程保留自己的启动条件与返回/停止边界，外部方法来源变化不改变它们。
+
+    启动条件取自 description（宿主发现技能时读到的就是它），返回/停止边界在正文里。
+    """
+    missing = []
+    for name, (start_marker, stop_marker) in sorted(GAME_DOC_FLOWS.items()):
+        description = frontmatter(SKILLS / name / "SKILL.md")["description"]
+        if start_marker not in description:
+            missing.append(f"{name}: description 缺少启动/适用条件 {start_marker!r}")
+        if stop_marker not in read(SKILLS / name / "SKILL.md"):
+            missing.append(f"{name}: 缺少返回/停止边界 {stop_marker!r}")
+    assert not missing, "游戏设计与文档流程丢失自身边界：\n" + "\n".join(missing)
+
+
+def test_game_document_writers_declare_the_missing_method_handling() -> None:
+    """本组写作者各自说明缺外部共同方法时的处理，不只依赖所有者正文。"""
+    missing = []
+    for name in GAME_DOC_WRITERS:
+        body = read(SKILLS / name / "SKILL.md")
+        if f"`{EXTERNAL_METHOD}`" not in body:
+            missing.append(f"{name}: 没有按技能名称说明外部共同方法")
+        if name == "docs-gamestudio":
+            continue  # 所有者正文用完整措辞，由 test_external_method_gap_has_a_declared_handling 断言
+        if GAP_CLAUSE not in body:
+            missing.append(f"{name}: 缺少缺外部方法时的处理说明")
+    assert not missing, "游戏文档写作者的缺方法处理缺失：\n" + "\n".join(missing)
+
+
 def test_writing_consumers_resolve_the_method_by_skill_name() -> None:
     """写作者按技能名称取得外部共同方法，并指向真正拥有该内容的资料。"""
     routing_consumers = {
