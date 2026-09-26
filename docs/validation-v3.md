@@ -702,7 +702,7 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 
 ## 12. Issue #91 工程交付与协作工作流迁移（2026-09-27，提交前实测）
 
-实现分支 `feat/issue-91-engineering-workflow-migration`，基线为 #92 分支的 `2c0658c`（含 #90 接缝与 #92 的分组做法；`main` 仍是 v3.0.2 的 `06f8f11`）。本票只迁移工程交付与协作工作流组：ask、codebase、debug、handoff、implement、merge、research、review、setup、tasks、tdd 共 11 项。游戏设计与文档组消费者（`docs-gamestudio` 与 domain、gdd、spec、prototype、wayfinder 及三个访谈入口）正文未改动：`git diff --name-only -- skills/` 恰为这 11 个文件。以下结果在本机工作树上实测，随后作为快照提交到该分支；未推送、未发布、未打标签。
+实现分支 `feat/issue-91-engineering-workflow-migration`，基线为 #92 分支的 `2c0658c`（含 #90 接缝与 #92 的分组做法；`main` 仍是 v3.0.2 的 `06f8f11`）。本票只迁移工程交付与协作工作流组：ask、codebase、debug、handoff、implement、merge、research、review、setup、tasks、tdd 共 11 项。游戏设计与文档组消费者（`docs-gamestudio` 与 domain、gdd、spec、prototype、wayfinder 及三个访谈入口）正文未改动：`git diff --name-only -- skills/` 恰为这 11 个文件。以下结果在本机工作树上实测，随后作为快照提交并推送到该分支（`e4c1dfc`）；未发布、未打标签、未合入 `main`。
 
 改动范围：11 个写作分支补上缺外部方法时的处理；新增本组边界、缺方法处理与身份分离断言；`install-smoke-test.sh` 第 11 节增加本票组的两来源组合检查，并把第 10、11 节共用的组合校验抽成 `scripts/two-source-composition-check.py`；依赖表补充引用闭包与实测口径；新增行为证据文件与本节记录；provenance 与测试说明同步。
 
