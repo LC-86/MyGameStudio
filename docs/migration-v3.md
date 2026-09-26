@@ -78,4 +78,4 @@ Git 历史未被改写，2.0.2 的完整内容在提交 `5e3cfbfa3e217a918269023
 
 ## 版本说明
 
-3.0.0 的变更内容见 [CHANGELOG.md](../CHANGELOG.md)。版本权威来源是根目录 `VERSION`。
+3.0.0 的变更内容见 [CHANGELOG.md](../CHANGELOG.md)。当前版本为 3.0.2，版本权威来源是根目录 `VERSION`；最新安装与依赖组合见[安装说明](installation.md)。

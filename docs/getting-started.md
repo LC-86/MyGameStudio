@@ -10,7 +10,7 @@
 npx skills@latest add LC-86/MyGameStudio
 ```
 
-推荐完整安装 21 项（`--skill '*'`）：20 项游戏专属 `-gamestudio` 技能和一项通用 `writing-for-agents`。此前发布的 `v3.0.1` 标签仍是 20 项；本次整合尚未发布。选择安装可能缺少依赖，组合清单在 [技能依赖](dependencies.md)。
+推荐完整安装 21 项（`--skill '*'`）：20 项游戏专属 `-gamestudio` 技能和一项通用 `writing-for-agents`。当前准备的 v3.0.2 候选包含完整集合；此前发布的 `v3.0.1` 标签仍是 20 项。选择安装可能缺少依赖，组合清单在 [技能依赖](dependencies.md)。
 
 成功标准：整合后的宿主技能目录里能看到 20 个 `-gamestudio` 名称和 `writing-for-agents`，共 21 项；每项都有 `SKILL.md`、所需 `references/` 或 `templates/` 以及独立完整的 `LICENSE`。8 个用户入口另有一份 `agents/openai.yaml`；13 个按需方法不带宿主开关或宿主文件。
 

@@ -8,7 +8,7 @@ MyGameStudio 由 **LC-86** 独立维护，方法改编自 Matt Pocock 的技能�
 |---|---|
 | 维护者 | LC-86 |
 | 许可 | MIT，见 [LICENSE](LICENSE) |
-| 当前版本 | 3.0.1，权威来源 [VERSION](VERSION) |
+| 当前版本 | 3.0.2，权威来源 [VERSION](VERSION) |
 | 交付形态 | 原生 Agent Skills 仓库，根目录 `skills/<技能名>/SKILL.md`，通过官方 `skills` CLI 安装 |
 | 原创范围 | `gdd-gamestudio`、GameStudio 专属文档分流与增量协作、人机责任与验收交接、本仓库文档与检查 |
 

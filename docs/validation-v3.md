@@ -1,10 +1,10 @@
-# V3.0.0 验证记录
+# MyGameStudio V3 验证记录
 
-以下 Issue #87 记录属于 2026-09-26 的未发布源码整合；本文件中原 V3.0.0/V3.0.1 结果保留其历史身份。
+原 V3.0.0/V3.0.1 结果保留其历史身份。Issue #87 小节记录 2026-09-26 首次发布前的验收快照；v3.0.2 合并、标签与远端验证状态见本文件末尾。
 
-## Issue #87：共同写作整合（2026-09-26，未发布）
+## Issue #87：共同写作整合（2026-09-26，初始验收快照）
 
-实现分支：`codex/issue-87-independent-install`，基线 `711dfb6bac107cbf18d039672eacfbc506ced6a7`。共同写作权威源为 `LC-86/mattpocockskills` 提交 `f3c726f275fa1ac59fef33732e527dded6d62479`。`v3.0.1` 仍是旧的 20 项发布版本；本次 21 项集合尚未推送或发布。
+实现分支：`codex/issue-87-independent-install`，基线 `711dfb6bac107cbf18d039672eacfbc506ced6a7`。共同写作权威源为 `LC-86/mattpocockskills` 提交 `f3c726f275fa1ac59fef33732e527dded6d62479`。本节是 PR #88 合并前的 21 项源码验收快照；当时的上一版为 `v3.0.1`（20 项）。
 
 | 检查 | 实际结果 | 证明范围 |
 |---|---|---|
@@ -15,7 +15,7 @@
 | `bash scripts/install-source-matrix-test.sh` | 通过：两项目范围并存、同范围两种切换顺序；两次覆盖安装前均核验旧副本；本地与固定 fork 锁；另用已验证 checkout 夹具覆盖 GitHub 默认分支锁形状；修改发行副本或已安装副本时均报告差异，且不覆盖本地改动 | 只用临时项目范围；GitHub 默认分支用等价 lock 形状夹具，不是本分支的远端发布安装；没有触碰真实用户安装 |
 | Codex 行为矩阵 | 14 个 ephemeral CLI 会话与 2 个 `fork_turns: none` 接收方均完成 | 通用/游戏触发、普通简答与轻微更正、只读与人工验收边界、真实委派及缺依赖响应；详见[行为证据](evidence/issue-87-behavior-matrix.md) |
 
-实际行为证据仅适用于本机 Codex CLI 0.157.0 与 `gpt-6-sol`。缺依赖负例用临时 `AGENTS.md` 明确限制到消费者安装范围，以避免全局方法替代缺失文件；这不证明宿主会自动屏蔽范围外的全局同名技能。其他宿主以及不同范围并存时各宿主的优先级均为 **not-run**。代码、安装与此范围内的行为验证已完成；远端合并、标签与发布未执行。
+实际行为证据仅适用于本机 Codex CLI 0.157.0 与 `gpt-6-sol`。缺依赖负例用临时 `AGENTS.md` 明确限制到消费者安装范围，以避免全局方法替代缺失文件；这不证明宿主会自动屏蔽范围外的全局同名技能。其他宿主以及不同范围并存时各宿主的优先级均为 **not-run**。本节记录时 PR #88 尚未合并；后续合并与 v3.0.2 发布状态见本文件末尾。
 
 本文件记录本轮**实际执行**的检查与结果。没有实际执行的一律标为未运行并说明缺少什么。
 
@@ -565,3 +565,15 @@ PR #84（#81/#82/#83 三票成果 + 实现方合并前两轮评审修正，头�
 v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 passed；`python3.12 scripts/validate-docs.py` → OK（含 `VERSION`=3.0.1 与 6 个必须提及文件的一致性检查，`tests/test_docs_product.py` 的版本常量同步升版）。六宿主内实际调用隔离仍未运行（见第 4 节）。
 
 发布后远端实测（2026-09-25）：SSH 全新克隆取到 `5ef4481`（VERSION 3.0.1），`scripts/install-smoke-test.sh` → **PASS 19 / FAIL 0**；`npx -y skills@latest add LC-86/MyGameStudio#v3.0.1 --skill '*' --agent universal --copy -y` 固定引用安装 → 20 项技能，抽查 `ask-gamestudio` 与 `implement-gamestudio` 各恰含一行 `disable-model-invocation: true`，12 个按需方法均不含，`ask-gamestudio/agents/openai.yaml` 装到且内容为 `policy:` 与 `  allow_implicit_invocation: false` 两行（本轮补上 #81 轮未留证的 yaml 安装核对；证据目录暂存 `/tmp/mgs-pinned-test`，随系统清理失效）。`v3.0.1` 附注标签已推送，GitHub Release 已发布（非草稿，目标 `main`）。
+
+## 8. v3.0.2 候选准备与远端内容预检（2026-09-26）
+
+候选版本将根目录 `VERSION` 更新为 `3.0.2`，完整集合为 21 项。此次远端预检发生在版本快照尚未推送前，因此 GitHub 默认分支仍为 `VERSION 3.0.1` 的 `6bc0f18e3d9852c6aad8f013741f3785e0626585`；该提交已包含 #87 合入的技能集合与行为修正。以下检查验证真实远端技能内容，不代表 `v3.0.2` 标签或 Release 已创建。
+
+| 检查 | 实际结果 | 证明范围 |
+|---|---|---|
+| 本地 v3.0.2 候选 `pytest`、文档校验、来源同步、安装冒烟 | 71 passed；38 个文档/21 项技能；固定源核验通过；CLI 1.7.0 安装 PASS 23 / FAIL 0 | 版本常量、双语文档、固定分发副本、21 项完整安装及相对引用 |
+| 全新克隆的 `bash scripts/install-smoke-test.sh` | GitHub `main` 快照 `6bc0f18`、VERSION 3.0.1；CLI 1.7.0；PASS 23 / FAIL 0 | 合并后的 21 项内容从真实默认分支克隆后仍能独立安装，许可、依赖组合、宿主链接和重复安装通过 |
+| `skills` CLI 固定提交安装 | `LC-86/MyGameStudio#6bc0f18e3d9852c6aad8f013741f3785e0626585` 安装 21 项；lock 为 `sourceType=github`，ref 与提交一致 | 实际 GitHub 来源路径、固定引用及安装数量；不验证尚未创建的 v3.0.2 标签 |
+
+此记录时，本地 `codex/release-v3.0.2` 候选尚未提交或推送；远端 `main` 仍为 VERSION 3.0.1 的 `6bc0f18`，v3.0.2 标签与 Release 尚未创建。Release workflow 是人工备忘，不会自动发布。

@@ -2,7 +2,7 @@
 
 A lightweight, composable Agent Skills library for game development, installed natively through the official `skills` CLI.
 
-**Current version: 3.0.1** (authority: [`VERSION`](VERSION))
+**Current version: 3.0.2** (authority: [`VERSION`](VERSION))
 
 MyGameStudio helps an agent design and build games using the tools already present in its environment, through explicit goals, rules, boundaries, task breakdowns, material references and verification requirements. It does not depend on a self-built workflow runtime to gate every step, and it does not force every game onto the same engine, layout, task platform or design-document template.
 
@@ -22,9 +22,9 @@ The target directory is decided by the official CLI and by you. This repo ships 
 
 Details: [docs/installation.md](docs/installation.md). Dependency combinations for partial installs: [docs/dependencies.md](docs/dependencies.md). Migrating from the 2.0.2 plugin package: [docs/migration-v3.md](docs/migration-v3.md).
 
-## 21 skills in the updated source tree
+## 21 skills
 
-This integration is not released yet; the published `v3.0.1` tag still contains 20 skills. The updated source set has 8 user entries and 13 on-demand methods.
+The prepared `v3.0.2` version contains all 21 skills (8 user entries and 13 on-demand methods). The previously published `v3.0.1` tag remains fixed at 20 skills.
 
 **User entries** start only when the user asks for that kind of work. **On-demand methods** are combined by the agent when the current task and authorization apply; the user can also request them directly.
 
@@ -68,11 +68,9 @@ No self-built task database, state machine, long-running dispatcher, or per-skil
 
 ## Verification status
 
-Actually run and passing for this release: 68 static checks (including regression assertions from all six pre-merge review rounds, plus the switch-contract assertions added by the invocation-control reversal), the documentation navigation and version-consistency check, 19 isolated native install checks (official `skills` CLI 1.7.0), and 9 real behaviour scenarios. After the merge into the default branch the same checks were re-run against **the actual remote content**: a fresh SSH clone passed the install test 19/19, and both a git-source install and a pinned `#<ref>` install were verified. One behaviour scenario is blocked (the research scenario produced no result under this machine's network restrictions).
+Actually run and passing for this release: 71 pytest checks, documentation validation (38 files, 21 skills), fixed-source sync, 23 native install checks (official `skills` CLI 1.7.0), and the source-switch matrix. Before release, a fresh remote clone also passed 23/23 install checks; a fixed GitHub commit install found 21 skills and recorded the expected source lock. Codex behavior validation covered 14 ephemeral sessions and 2 fresh receiver contexts. See [validation](docs/validation-v3.md) and the [behavior evidence](docs/evidence/issue-87-behavior-matrix.md) for scope and limits. Discovery and invocation inside other real hosts were not run; support is not inferred.
 
-Discovery and invocation inside real hosts, plus the remaining numbered behaviour scenarios, are **not run**; see section 4 of [docs/validation-v3.md](docs/validation-v3.md) for the list, and the same file for per-item evidence, exact commands and limits.
-
-A successful local install is not a successful remote GitHub install, which is why remote content was re-tested separately. The published `v3.0.1` tag contains 20 skills; this updated source tree has 21. `@latest` reads the repository's default branch, not a release tag. 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
+A successful local install is not a successful remote GitHub install, so remote content is checked separately. The prepared v3.0.2 tree contains 21 skills, while the published `v3.0.1` tag remains fixed at 20. `@latest` reads the repository's default branch, not a release tag. 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
 
 ## License
 
