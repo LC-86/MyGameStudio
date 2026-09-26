@@ -5,8 +5,8 @@
 三条贯穿所有组合的事实：
 
 - **推荐与开始是两个动作。**`ask-gamestudio` 与 `handoff-gamestudio` 只给建议和指令文本，不代替你启动下一个入口。
-- **用户入口不自动串调。**8 项用户入口各自完成即停；13 项按需方法由 Agent 在当前任务与授权适用时组合，你也可以直接点名。
-- **`writing-for-agents` 是外部共同写作方法。**正式资料、结论与交接按它的方法表达；它负责通用表达与技能机制，按宿主支持的技能名称取得，不用跨安装范围的相对路径。`docs-gamestudio` 负责语义保真、通用委派与游戏文档归属，不决定内容，也不审批写作；`tasks-gamestudio` 保留人机责任与验收交接。
+- **用户入口不自动串调。**8 项用户入口各自完成即停；12 项按需方法由 Agent 在当前任务与授权适用时组合，你也可以直接点名。
+- **`writing-for-agents` 是外部共同写作方法。**正式资料、结论与交接按它的方法表达；它负责通用表达与技能机制，来自官方 `mattpocock/skills`，按宿主支持的技能名称取得，不用跨安装范围的相对路径。`docs-gamestudio` 负责语义保真、通用委派与游戏文档归属，不决定内容，也不审批写作；`tasks-gamestudio` 保留人机责任与验收交接。
 
 这条区分由三层调用控制承担：Claude Code、Grok Build、DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，Codex 由技能目录内的 `agents/openai.yaml` 强制；ZCode、Qoder 没有宿主级开关，仍靠描述与正文里的指令层约定。见 [当前能力与限制](../reference/capabilities.md)。
 

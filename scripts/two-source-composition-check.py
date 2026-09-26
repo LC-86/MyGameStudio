@@ -3,16 +3,19 @@
 
 install-smoke-test.sh 的第 10 节（Issue #92 游戏设计与文档组）与第 11 节
 （Issue #91 工程交付与协作组）共用这一份检查：两节各装各的组合，再按同一组
-判据核对来源、打包文件、锁记录、引用可达与取得方式。写成共享脚本是因为同一段
-校验复制两份之后已经开始漂移（一处少了来源指纹提示，一处少了反向断言）。
+判据核对来源、锁记录、引用可达与缺方法处理。写成共享脚本是因为同一段校验
+复制两份之后已经开始漂移（一处少了来源提示，一处少了反向断言）。
 
 用法（由 install-smoke-test.sh 调用）：
 
     two-source-composition-check.py --lock <锁文件> --dest <安装目录> \
-        --bundled <随包副本> --repo <仓库> --label <本票组名> \
+        --repo <仓库> --label <本票组名> \
         --group <本票组技能...> [--companions <同源依赖...>] \
         [--writers <正式写作分支...>] [--gap-exempt <缺方法处理的所有者>] \
         [--silent <不得提到外部方法名的技能...>]
+
+外部共同方法由官方 mattpocock/skills 提供，本仓库不分发它的任何副本，
+因此这里没有随包副本的指纹或打包文件可比对。
 
 成功时打印一行以 `PASS  ` 开头；发现问题时逐条打印 `FAIL  ` 并返回非零。
 """
@@ -20,7 +23,6 @@ install-smoke-test.sh 的第 10 节（Issue #92 游戏设计与文档组）与�
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import re
@@ -42,7 +44,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="核对两来源组合安装")
     parser.add_argument("--lock", required=True, help="组合安装生成的 skills-lock.json")
     parser.add_argument("--dest", required=True, help="组合安装的技能目录")
-    parser.add_argument("--bundled", required=True, help="本仓库随包副本目录")
     parser.add_argument("--repo", required=True, help="本仓库路径")
     parser.add_argument("--label", required=True, help="本票组名称，用于成功与失败信息")
     parser.add_argument("--group", required=True, nargs="+", help="本票组技能")
@@ -56,7 +57,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def check(args: argparse.Namespace) -> list[str]:
     lock_path = Path(args.lock)
     dest = Path(args.dest)
-    bundled = Path(args.bundled)
     repo = Path(os.path.realpath(args.repo))
     gamestudio = args.group + args.companions
     problems: list[str] = []
@@ -69,9 +69,6 @@ def check(args: argparse.Namespace) -> list[str]:
     official = dest / EXTERNAL_METHOD
     if not (official / "SKILL.md").is_file():
         problems.append("外部共同方法正文缺失")
-    for packaging in ("SOURCE.md", "SHA256SUMS"):
-        if (official / packaging).exists():
-            problems.append("外部共同方法带上了 GameStudio 随包副本的 %s" % packaging)
 
     if lock_path.is_file():
         lock = json.loads(lock_path.read_text(encoding="utf-8"))["skills"]
@@ -82,6 +79,10 @@ def check(args: argparse.Namespace) -> list[str]:
         if record.get("source") != "mattpocock/skills":
             problems.append("外部共同方法来源为 %r，应为 mattpocock/skills"
                             % record.get("source"))
+        else:
+            print("INFO  %s 来源 %s，computedHash %s"
+                  % (EXTERNAL_METHOD, record["source"],
+                     str(record.get("computedHash"))[:12]))
         for name in gamestudio:
             source = lock.get(name, {}).get("source", "")
             resolved = Path(os.path.realpath(lock_path.parent / source)) if source else None
@@ -89,19 +90,6 @@ def check(args: argparse.Namespace) -> list[str]:
                 problems.append("%s 的锁来源不是本仓库：%r" % (name, source))
     else:
         problems.append("组合安装没有生成 skills-lock.json")
-
-    if (official / "SKILL.md").is_file():
-
-        def digest(path: Path) -> str:
-            return hashlib.sha256(path.read_bytes()).hexdigest()
-
-        official_hash = digest(official / "SKILL.md")
-        bundled_hash = digest(bundled / "SKILL.md")
-        print("INFO  官方正文 %s；随包副本 %s%s"
-              % (official_hash[:12], bundled_hash[:12],
-                 "（内容相同，来源只能由锁记录区分）" if official_hash == bundled_hash else ""))
-        print("INFO  官方副本 %s SKILL-MECHANICS.md"
-              % ("含" if (official / "SKILL-MECHANICS.md").is_file() else "不含"))
 
     for name in gamestudio:
         for path in sorted((dest / name).rglob("*.md")):
@@ -144,7 +132,7 @@ def main(argv: list[str]) -> int:
         for item in problems:
             print("FAIL  " + item)
         return 1
-    print("PASS  两来源组合：%s不依赖随包副本，外部共同方法来源正确且引用可达" % args.label)
+    print("PASS  两来源组合（%s）：外部共同方法来源正确、引用可达且缺方法处理齐备" % args.label)
     return 0
 
 

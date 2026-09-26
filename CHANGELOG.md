@@ -3,6 +3,18 @@
 面向使用者的版本变化。内部票号只作追踪链接，不代替说明。
 版本权威来源是根目录 [`VERSION`](VERSION)。历史发布安装包见 [GitHub Releases](https://github.com/LC-86/MyGameStudio/releases)。
 
+## 3.0.3 — 未发布
+
+**本版未打标签、未发布 Release，也没有绑定任何标签或发布资产。** 版本权威来源仍是根目录 [`VERSION`](VERSION)。
+
+- 退役随包 `writing-for-agents` 副本：删除 `skills/writing-for-agents/`（含 `SKILL.md`、`SKILL-MECHANICS.md`、`references/subagent-delegation.md`、`SOURCE.md`、`SHA256SUMS`、`LICENSE`），本仓库不再分发、不再镜像、也不再为它保留第二份可编辑权威源。
+- 退役对应的维护路径：`scripts/sync-writing-for-agents.py`（固定源同步与摘要生成）、`scripts/verify-writing-for-agents-install.py`（安装核验检查器）与 `scripts/install-source-matrix-test.sh`（来源切换矩阵）随本次退出，本仓库不再提供来源切换或已安装副本核验工具。
+- 可发现技能集合由 21 项收缩为 20 项（8 用户入口、12 按需方法）。`v3.0.2` 标签仍固定包含 21 项，`v3.0.1` 标签仍固定包含 20 项；历史身份不变。
+- 外部共同方法改为从官方 [`mattpocock/skills`](https://github.com/mattpocock/skills) 独立安装：`npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -g -y`。相关技能按宿主支持的技能名称取得它，不再使用跨安装范围的相对路径，也不再把它的目录当成依赖契约。
+- 安装说明改为两个来源的完整步骤，用户级排在项目级之前，并提供项目级替代；已有官方共同方法时只跳过第一步。命令与参数行为只在 `skills` CLI 1.7.0 上核实。
+- 同一批更新：`README.md`、`README.en.md`、`AGENTS.md`、`AGENTS.zh-CN.md`、`CONTEXT.md`、`CONTRIBUTING.md`、`THIRD_PARTY_NOTICES.md`、`docs/` 与 `provenance/` 的口径；方案与决定记录随本次纳入版本控制，见 [方案](docs/design/shared-writing-method.md) 与 [ADR 0001](docs/adr/0001-shared-writing-method.md)。
+- 本次实际执行的检查与未运行项见 [验证状态](docs/validation-v3.md)。
+
 ## 3.0.2 — 2026-09-26
 
 本版已合入默认分支，并以 `v3.0.2` 标签与 GitHub Release 发布。

@@ -6,13 +6,25 @@
 
 ## 1. 安装
 
+完整使用需要两个来源：官方 `mattpocock/skills` 的共同写作方法，以及本仓库的 20 项技能。用户级安装排在前面（推荐）；项目级作为替代，命令在目标项目根目录执行。两个来源都要装，只有「已有官方共同方法」时跳过第一步。
+
 ```bash
-npx skills@latest add LC-86/MyGameStudio
+# 用户级：共同方法（已有时跳过）
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -g -y
+
+# 用户级：MyGameStudio 20 项
+npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -g -y
+
+# 项目级替代：在目标项目根目录执行，去掉 -g
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -y
+npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -y
 ```
 
-推荐完整安装 21 项（`--skill '*'`）：20 项游戏专属 `-gamestudio` 技能和一项通用 `writing-for-agents`。v3.0.2 包含完整集合；此前的 `v3.0.1` 标签仍是 20 项。选择安装可能缺少依赖，组合清单在 [技能依赖](dependencies.md)。
+`-g`、`-y`、`--agent universal`、`--copy` 与项目级、用户级锁文件的当前行为只在 `skills` CLI **1.7.0** 上核实，其它版本以实际输出为准；安装范围、安装后确认与卸载的完整说明见 [安装](installation.md)。
 
-成功标准：整合后的宿主技能目录里能看到 20 个 `-gamestudio` 名称和 `writing-for-agents`，共 21 项；每项都有 `SKILL.md`、所需 `references/` 或 `templates/` 以及独立完整的 `LICENSE`。8 个用户入口另有一份 `agents/openai.yaml`；13 个按需方法不带宿主开关或宿主文件。
+推荐完整安装 20 项（`--skill '*'`）：全部是游戏专属的 `-gamestudio` 技能。`v3.0.2` 标签当时包含 21 项，其中一项是当时随包的 `writing-for-agents` 副本；`v3.0.1` 标签仍固定包含 20 项。选择安装可能缺少依赖，组合清单在 [技能依赖](dependencies.md)；安装范围与项目级命令见 [安装](installation.md)。
+
+成功标准：整合后的宿主技能目录里能看到 20 个 `-gamestudio` 名称；每项都有 `SKILL.md`、所需 `references/` 或 `templates/` 以及独立完整的 `LICENSE`。8 个用户入口另有一份 `agents/openai.yaml`；12 个按需方法不带宿主开关或宿主文件。外部共同方法 `writing-for-agents` 要在它自己的安装范围里单独确认已从官方来源装好。
 
 ## 2. 第一次会话：先问下一步
 
@@ -61,7 +73,7 @@ npx skills@latest add LC-86/MyGameStudio
 
 `tasks-gamestudio` 把已明确的工作拆成票，`implement-gamestudio` 完成一次实现，`wayfinder-gamestudio` 梳理需要跨会话澄清的大目标，`handoff-gamestudio` 写交接说明。
 
-其余 13 项是**按需方法**：`grilling`、`domain`、`gdd`、`spec`、`tdd`、`review`、`debug`、`prototype`、`research`、`codebase`、`merge`、`docs`、`writing-for-agents`。你不需要记住它们，也不需要逐个启动；当前任务和授权适用时由 Agent 组合使用。
+其余 12 项是**按需方法**：`grilling`、`domain`、`gdd`、`spec`、`tdd`、`review`、`debug`、`prototype`、`research`、`codebase`、`merge`、`docs`。你不需要记住它们，也不需要逐个启动；当前任务和授权适用时由 Agent 组合使用。通用写作方法是外部依赖 `writing-for-agents`，从官方 `mattpocock/skills` 安装，不属于本仓库的 20 项。
 
 实际组合方式见 [常用工作流](usage/workflows.md)；每项技能的权威说明是 `skills/<技能名>/SKILL.md`。
 
@@ -70,4 +82,4 @@ npx skills@latest add LC-86/MyGameStudio
 - 用户入口不是自动串起来的：一个入口完成即停，不代替你启动下一个入口。
 - **推荐**下一步和**开始**下一步是两个动作。`ask-gamestudio` 只推荐。
 - 加载技能不等于获得权限：写入、提交、推送、上传、付费和全局配置改动仍各自需要授权，见 [数据、写入与权限](reference/data-and-permissions.md)。
-- 8 项用户入口与 13 项按需方法的区分由三层调用控制承担：Claude Code、Grok Build、DSH 靠 frontmatter 的 `disable-model-invocation: true`，Codex 靠技能目录内的 `agents/openai.yaml`，ZCode、Qoder 靠描述与正文里的指令层约定，见 [当前能力与限制](reference/capabilities.md)。
+- 8 项用户入口与 12 项按需方法的区分由三层调用控制承担：Claude Code、Grok Build、DSH 靠 frontmatter 的 `disable-model-invocation: true`，Codex 靠技能目录内的 `agents/openai.yaml`，ZCode、Qoder 靠描述与正文里的指令层约定，见 [当前能力与限制](reference/capabilities.md)。

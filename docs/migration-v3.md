@@ -78,4 +78,6 @@ Git 历史未被改写，2.0.2 的完整内容在提交 `5e3cfbfa3e217a918269023
 
 ## 版本说明
 
-3.0.0 的变更内容见 [CHANGELOG.md](../CHANGELOG.md)。当前版本为 3.0.2，版本权威来源是根目录 `VERSION`；最新安装与依赖组合见[安装说明](installation.md)。
+3.0.0 的变更内容见 [CHANGELOG.md](../CHANGELOG.md)。当前版本为 3.0.3（**未发布**：未打标签、未发布 Release），版本权威来源是根目录 `VERSION`；最新安装与依赖组合见[安装说明](installation.md)。
+
+3.0.3 把可发现技能集合从 21 项收缩回 20 项（8 项用户入口、12 项按需方法），并退役随包 `writing-for-agents` 副本及其后的同步、摘要与来源切换路径。外部共同写作方法改由用户从官方 `mattpocock/skills` 独立安装，完整使用需要两个来源，见[安装说明](installation.md)与[技能依赖](dependencies.md)。已发布过的 `v3.0.2` 标签当时包含 21 项（其中一项是当时随包的 `writing-for-agents` 副本），`v3.0.1` 标签仍固定包含 20 项，两者的历史身份不受影响。

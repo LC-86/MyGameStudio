@@ -16,7 +16,9 @@ V2（2.0.2）钉住的是同一上游项目的较早提交 `3cca18b368ae95cdbdeb
 
 上游目录采用 bucket 分层（`skills/engineering/`、`skills/productivity/` 等），随包文件是与 `SKILL.md` 同级的扁平 `.md`。V3 改为根目录 `skills/<name>/`，随包资料统一放在 `references/` 与 `templates/` 下。
 
-## 共同写作方法的固定分发
+## 共同写作方法的固定分发（v3.0.2 及更早形态；现行见文末退役记录）
+
+本节记录 `v3.0.2` 及更早的固定分发形态，已随 3.0.3 整体退役；现行来源与用户取得方式见文末「[随包共同方法副本的退役（3.0.3，Issue #93，未发布）](#随包共同方法副本的退役303issue-93未发布)」一节。以下内容保持当时的事实，不代表现行来源。
 
 Issue #86 交付的通用方法单独保留原名，不混入 20 项游戏技能改编：
 
@@ -25,7 +27,7 @@ Issue #86 交付的通用方法单独保留原名，不混入 20 项游戏技能
 | 可编辑权威源 | `LC-86/mattpocockskills` 的 `skills/productivity/writing-for-agents/` |
 | 固定源提交 | `f3c726f275fa1ac59fef33732e527dded6d62479` |
 | 随包目录 | `skills/writing-for-agents/` |
-| 逐文件来源、映射及摘要 | [skills/writing-for-agents/SOURCE.md](../skills/writing-for-agents/SOURCE.md) 与随包 `SHA256SUMS` |
+| 逐文件来源、映射及摘要 | `skills/writing-for-agents/SOURCE.md`（该文件已随副本删除）与随包 `SHA256SUMS` |
 | 包装规则 | `SKILL.md` 只增加标准 `license: MIT` 字段；正文与 mechanics/委派参考由固定源生成；上游 MIT 正文完整保留并附加本发行署名 |
 | 排除项 | 上游 `agents/openai.yaml` 不随包；此项是按需方法，遵循本库 8 个入口/13 个方法边界 |
 
@@ -61,7 +63,7 @@ Issue #86 交付的通用方法单独保留原名，不混入 20 项游戏技能
 
 ## 未纳入的上游技能
 
-按统一设计 v1 第 2.3 节的范围决定，以下六项不进入 21 项集合。消费者不保留对它们的硬调用。
+按统一设计 v1 第 2.3 节的范围决定，以下六项不进入本仓库技能集合（该集合在 3.0.3 收缩后为 20 项，见文末退役记录）。消费者不保留对它们的硬调用。
 
 | 上游技能 | 处理 | 没有被暗中声称已替代的能力 |
 |---|---|---|
@@ -81,3 +83,18 @@ Issue #86 交付的通用方法单独保留原名，不混入 20 项游戏技能
 `gdd-gamestudio` 是 MyGameStudio 原创、没有上游对应技能。
 
 历史版本号、上游原名和许可内容原样保留，不做无差别全库字符串替换。
+
+## 随包共同方法副本的退役（3.0.3，Issue #93，未发布）
+
+本节只追加，不改写以上各节的历史记录。以上「共同写作方法的固定分发」一节描述的是 `v3.0.2` 及更早的分发形态；3.0.3 实施后该形态整体退役：
+
+| 项 | 退役前（3.0.2 及更早） | 现行（3.0.3） |
+|---|---|---|
+| 随包目录 | `skills/writing-for-agents/`，含 `SOURCE.md`、`SHA256SUMS`、`LICENSE` | 已删除；本仓库不再分发该方法 |
+| 可编辑权威源 | LC-86 fork 的 `skills/productivity/writing-for-agents/`，固定源提交 `f3c726f275fa1ac59fef33732e527dded6d62479` | 官方 [mattpocock/skills](https://github.com/mattpocock/skills)；上述固定提交作为上一版的历史事实保留 |
+| 同步生成器 | `scripts/sync-writing-for-agents.py` | 已删除，且不再需要 |
+| 安装核验检查器 | `scripts/verify-writing-for-agents-install.py` | 已删除；实际加载版本只在目标宿主核实 |
+| 来源切换矩阵 | `scripts/install-source-matrix-test.sh` | 已删除；不再有第二个来源可切 |
+| 用户取得方式 | 随本仓库 21 项一起安装（8 用户入口、13 按需方法） | 从官方 `mattpocock/skills` 独立安装，按宿主支持的技能名称取得；本仓库集合为 20 项（8 用户入口、12 按需方法） |
+
+名称映射表中 `writing-for-agents` 一行记录的是 3.0.2 及更早的分发形态，现已不在本仓库集合内；`docs-gamestudio` 仍是语义保真与通用子代理委派的唯一所有者。逐项退役说明见 [adaptation-log.md](adaptation-log.md) 的 Issue #93 一节，实际检查结果见 [验证状态](../docs/validation-v3.md)。

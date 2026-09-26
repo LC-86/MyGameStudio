@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SKILLS = REPO / "skills"
-VERSION = "3.0.2"
+VERSION = "3.0.3"
 UPSTREAM_COMMIT = "c55ee46073ed923f86ce59a5eb3b6d895095d1b7"
 
 # 允许提到旧版本号的位置：变更历史、迁移说明与来源追溯
@@ -104,7 +104,7 @@ def test_root_license_and_third_party_notices() -> None:
 def test_readme_documents_the_full_set_and_navigation() -> None:
     readme = read("README.md")
     names = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
-    assert len(names) == 21
+    assert len(names) == 20, f"可发现集合应为 20 项，实际 {len(names)}：{names}"
     missing = [n for n in names if f"skills/{n}/SKILL.md" not in readme]
     assert not missing, f"README.md 未链接技能：{missing}"
     assert "npx skills@latest add LC-86/MyGameStudio" in readme, "README 应给出原生安装命令"

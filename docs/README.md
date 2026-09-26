@@ -17,15 +17,15 @@
 
 ## 参考
 
-- [当前能力与限制](reference/capabilities.md)：21 项目标技能全表、职责、已退役能力与明确不覆盖的部分
+- [当前能力与限制](reference/capabilities.md)：20 项目标技能全表、职责、已退役能力与明确不覆盖的部分
 - [数据、写入与权限](reference/data-and-permissions.md)：技能读什么、改什么、从不假定哪些授权
 - [排错](reference/troubleshooting.md)：安装后不被发现、共享参考缺失、宿主自行选入口等问题的处理
 - [与 Matt Pocock skills 的关系](reference/upstream.md)：方法基线、继承与适配、许可来源
-- [共同写作方法来源记录](../skills/writing-for-agents/SOURCE.md)：固定 fork 提交、文件映射、摘要与包装规则
+- 外部共同方法 `writing-for-agents` 从官方 [mattpocock/skills](https://github.com/mattpocock/skills) 独立安装；本仓库不分发副本，安装步骤见[安装](installation.md)
 
 ## 版本迁移与验证
 
-- [从 2.0.2 迁移到 3.0.0](migration-v3.md)：旧插件命令已退出，旧入口的能力去向；当前版本 3.0.2
+- [从 2.0.2 迁移到 3.0.0](migration-v3.md)：旧插件命令已退出，旧入口的能力去向；当前版本 3.0.3（未发布，未打标签、未发布 Release）
 - [验证状态](validation-v3.md)：哪些检查已运行、哪些行为场景未运行或未通过
 - [Issue #87 行为矩阵](evidence/issue-87-behavior-matrix.md)：隔离安装后的 Codex 会话、路径轨迹、缺依赖与真实委派结果
 - [Issue #92 行为证据](evidence/issue-92-behavior-matrix.md)：两来源组合（官方共同方法 + 本仓库技能）下的游戏文档任务、缺依赖与产物保真核对
@@ -35,6 +35,8 @@
 
 - [V3 执行覆盖](design/v3-overrides.md)：本次执行对旧设计的明确覆盖条款
 - [统一设计 v1](design/unified-design-v1.md)：20 项技能的设计依据，保留原始身份
+- [共同写作方法方案](design/shared-writing-method.md)：外部依赖的职责边界、两来源安装步骤与实施后的验证条件
+- [ADR 0001：统一写作方法](adr/0001-shared-writing-method.md)：采用官方共同方法、保留 GameStudio 按需参考的决定记录
 
 ## 维护本仓库
 

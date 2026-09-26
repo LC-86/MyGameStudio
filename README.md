@@ -2,7 +2,7 @@
 
 面向游戏开发的轻量化、可组合 Agent 技能库，通过官方 `skills` CLI 以原生 Agent Skills 方式安装。
 
-**当前版本：3.0.2**（权威来源：[`VERSION`](VERSION)）
+**当前版本：3.0.3**（未发布：未打标签、未发布 Release。权威来源：[`VERSION`](VERSION)）
 
 MyGameStudio 用清楚的目标、规则、边界、任务拆分、资料引用和验证要求，帮助 Agent 使用当前环境已有的工具完成游戏设计与制作。它不依赖自建的工作流运行时来限制每一步操作，也不强制所有游戏使用相同引擎、目录、任务平台或完整策划模板。
 
@@ -10,28 +10,34 @@ MyGameStudio 用清楚的目标、规则、边界、任务拆分、资料引用�
 
 ## 安装
 
+完整使用需要**两个独立来源**：官方 `mattpocock/skills` 提供的共同写作方法 `writing-for-agents`，以及本仓库的 20 项技能。用户级命令排在前面，是本库推荐的范围；项目级命令必须在目标项目根目录执行。已经能从官方来源取得共同方法时只跳过第一步。
+
 ```bash
-# 发现并选择技能
-npx skills@latest add LC-86/MyGameStudio
+# 用户级：共同方法（已有时跳过）
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -g -y
+
+# 用户级：MyGameStudio 20 项
+npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -g -y
+
+# 项目级：在目标项目根目录执行
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -y
+npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -y
 
 # 只列出可发现技能，不安装
 npx skills@latest add LC-86/MyGameStudio --list
-
-# 完整安装这套互相协作的技能（推荐）
-npx skills@latest add LC-86/MyGameStudio --skill '*'
 ```
 
-安装到哪个目录由官方 CLI 与你的选择决定。本仓库不提供安装器、不发布 npm 包、不构建 tar 包、不维护各 AI 开发工具的目录转换。
+安装到哪个目录由官方 CLI 与你的选择决定。本仓库不提供安装器、不发布 npm 包、不构建 tar 包、不维护各 AI 开发工具的目录转换，也不分发、不镜像外部共同方法。
 
-细节见 [docs/installation.md](docs/installation.md)。选择安装时的依赖组合见 [docs/dependencies.md](docs/dependencies.md)。从 2.0.2 插件版本切换见 [docs/migration-v3.md](docs/migration-v3.md)。
+细节见 [docs/installation.md](docs/installation.md)：`-g`、`--copy` 等参数与项目级、用户级锁文件的当前行为只在 `skills` CLI 1.7.0 上核实。选择安装时的依赖组合见 [docs/dependencies.md](docs/dependencies.md)。从 2.0.2 插件版本切换见 [docs/migration-v3.md](docs/migration-v3.md)。
 
-## 技能集合：21 项
+## 技能集合：20 项
 
-已发布的 `v3.0.2` 包含完整 21 项技能（8 项用户入口、13 项按需方法）；此前的 `v3.0.1` 标签仍固定包含 20 项。
+本仓库源码树共 20 项技能（8 项用户入口、12 项按需方法）。此前的 `v3.0.2` 标签当时包含 21 项，其中一项是当时随包的 `writing-for-agents` 副本；`v3.0.1` 标签仍固定包含 20 项。历史身份不因本次收缩改写；外部共同方法 `writing-for-agents` 的随包副本已退役，不再由本仓库分发，改从官方 `mattpocock/skills` 独立安装。
 
 **用户入口**由用户明确请求相应工作时启动，Agent 不自行开启该工作流程。**按需方法**在当前任务与授权适用时由 Agent 组合使用，用户也可以直接请求。
 
-这条 8/13 分界由三层调用控制支撑（机制来自各宿主官方文档，本库未在宿主内逐一实测）：Claude Code、Grok Build 与 DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，技能描述不再进入模型上下文，只留用户显式入口；Codex 由技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）强制，关闭隐式调用；ZCode 与 Qoder 未文档化任何调用控制字段，这条边界在那里仍是写在描述与正文里的**指令层约定**，也是全部宿主的兜底。需要更强约束时，在你自己的项目规则里重申该边界。这两层控制自 v3.0.1 起进入发布；`v3.0.0` 及更早标签安装到的版本不含它们。
+这条 8/12 分界由三层调用控制支撑（机制来自各宿主官方文档，本库未在宿主内逐一实测）：Claude Code、Grok Build 与 DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，技能描述不再进入模型上下文，只留用户显式入口；Codex 由技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）强制，关闭隐式调用；ZCode 与 Qoder 未文档化任何调用控制字段，这条边界在那里仍是写在描述与正文里的**指令层约定**，也是全部宿主的兜底。需要更强约束时，在你自己的项目规则里重申该边界。这两层控制自 v3.0.1 起进入发布；`v3.0.0` 及更早标签安装到的版本不含它们。
 
 ### 用户入口（8）
 
@@ -46,7 +52,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 | [wayfinder-gamestudio](skills/wayfinder-gamestudio/SKILL.md) | 梳理跨会话的重要未知与决策关系 |
 | [handoff-gamestudio](skills/handoff-gamestudio/SKILL.md) | 写出可带走的工作接手说明 |
 
-### 按需方法（13）
+### 按需方法（12）
 
 | 技能 | 职责 |
 |---|---|
@@ -62,7 +68,8 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 | [codebase-gamestudio](skills/codebase-gamestudio/SKILL.md) | 设计当前职责、状态归属、接口与测试边界 |
 | [merge-gamestudio](skills/merge-gamestudio/SKILL.md) | 按双方真实意图处理已发生的合并冲突 |
 | [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | 语义保真、通用子代理委派、游戏文档分流与专属资料取得条件 |
-| [writing-for-agents](skills/writing-for-agents/SKILL.md) | 通用正式资料写作与技能机制；外部共同方法，按技能名称取得 |
+
+外部共同方法 [writing-for-agents](https://github.com/mattpocock/skills) 的随包副本已退役，不再由本仓库分发，改从官方 `mattpocock/skills` 独立安装：它负责通用正式资料写作与技能机制，各技能按宿主支持的技能名称取得它。
 
 ## 它们怎样组合
 
@@ -70,7 +77,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 - 设计讨论：`grill-gamestudio-docs` 组合访谈与概念校准，按已确认决定的实际用途分别更新术语、GDD 与本次规格，边讨论边局部落盘。
 - 交付工作：`tasks-gamestudio` 拆出完整小成果，`implement-gamestudio` 实现并按需组合 TDD、结构设计、诊断与评审，人工体验项未完成时不关单。
-- 正式资料与委派：`writing-for-agents` 负责通用表达与技能机制，按技能名称取得，不用跨安装范围的相对路径。`docs-gamestudio` 负责语义保真、通用委派与游戏文档分流，`tasks-gamestudio` 保留人机责任与验收交接。
+- 正式资料与委派：`writing-for-agents` 负责通用表达与技能机制，它来自官方 `mattpocock/skills`、按宿主支持的技能名称取得，不用跨安装范围的相对路径。`docs-gamestudio` 负责语义保真、通用委派与游戏文档分流，`tasks-gamestudio` 保留人机责任与验收交接。
 - 路线不清：`wayfinder-gamestudio` 整理跨会话的关键未知，路线清楚即交接，不继续自动制作。
 
 技能之间的依赖与共享资料归属见 [docs/dependencies.md](docs/dependencies.md)。
@@ -103,9 +110,11 @@ English summary: [README.en.md](README.en.md)。
 
 ## 验证状态
 
-本版实际执行并通过：`python3.12 -m pytest tests/ -q`（71 项）、文档校验（38 个文件、21 项技能）、固定来源同步、官方 `skills` CLI 1.7.0 原生安装（23/23）和双来源切换矩阵。发布后又从 `v3.0.2` 标签全新克隆复跑安装检查（23/23），并从固定标签安装 21 项、核对来源锁。Codex 行为验证包含 14 个 ephemeral 会话与 2 个新接收方上下文；范围和局限见[验证记录](docs/validation-v3.md)及[行为证据](docs/evidence/issue-87-behavior-matrix.md)。实际宿主内的其他发现与调用方式仍未运行，不外推支持。
+`v3.0.2`（上一版）发布时的结果保留为历史记录：`python3.12 -m pytest tests/ -q`（71 项）、文档校验（38 个文件、21 项技能）、固定来源同步、官方 `skills` CLI 1.7.0 原生安装（23/23）和来源切换矩阵；发布后又从 `v3.0.2` 标签全新克隆复跑安装检查（23/23），并从固定标签安装 21 项、核对来源锁。Codex 行为验证包含 14 个 ephemeral 会话与 2 个新接收方上下文。
 
-本地安装成功不等于远端 GitHub 安装成功；v3.0.2 已从远端标签和默认分支复跑安装检查。`v3.0.2` 固定包含 21 项，`v3.0.1` 保留此前的 20 项。`@latest` CLI 命令读取默认分支，不是版本标签。2.0.2 及更早版本停止维护、不再修缺陷；需要旧内容请按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得，切换步骤见 [docs/migration-v3.md](docs/migration-v3.md)。
+3.0.3 **未发布**：未打标签、未发布 Release。本版实际执行的检查与未运行项统一记录在[验证记录](docs/validation-v3.md)，本页不代填。随包副本、固定来源同步与来源切换矩阵随本版退役，本版不再运行它们；20 项集合与两来源安装的静态检查、安装检查与行为验证状态同样以验证记录为准。
+
+本地安装成功不等于远端 GitHub 安装成功。`@latest` CLI 命令读取默认分支，不是版本标签；`v3.0.2` 标签固定包含 21 项，`v3.0.1` 标签固定包含 20 项。2.0.2 及更早版本停止维护、不再修缺陷；需要旧内容请按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得，切换步骤见 [docs/migration-v3.md](docs/migration-v3.md)。
 
 ## 许可
 

@@ -8,7 +8,7 @@
 
 本记录以下 A1–A5 描述原 V3 实施时的要求与结果，保留其历史身份。Issue #87 将当前技能集合扩为 21 项，并重新指定共享资料所有者：
 
-- `writing-for-agents` 作为共同写作方法独立随包，固定源与逐文件摘要见 [`skills/writing-for-agents/SOURCE.md`](../skills/writing-for-agents/SOURCE.md)；它拥有通用表达和技能机制。
+- `writing-for-agents` 作为共同写作方法独立随包，固定源与逐文件摘要见 `skills/writing-for-agents/SOURCE.md`（该文件已随副本删除）；它拥有通用表达和技能机制。
 - `docs-gamestudio` 收窄为游戏文档分流、增量协作和专属资料入口；其旧 `references/skill-authoring.md` 不再发行。A1 中对 `skill-authoring.md` 的引用指向已退役的 V3 材料，其维护契约现由仓库级 `AGENTS.md` 与 `docs/development/testing.md` 承载。
 - 人机责任和指定人工验收交接继续由 `tasks-gamestudio` 拥有。现行消费者映射、安装范围、许可、双语说明和验证状态按本次 Issue #87 分别维护；本节不宣称其已发布。
 
@@ -41,6 +41,17 @@ Issue #91 在 #90 的接缝与 #92 的分组做法上迁移工程交付与协作
 - 组合安装检查在 `scripts/install-smoke-test.sh` 第 11 节：工程交付组加引用闭包内的 7 项同源依赖（`docs-gamestudio` 与它分流参考指向的 domain、gdd、spec、grilling 及两个访谈入口）从本仓库安装，外部共同方法单独从官方 `mattpocock/skills` 安装，核对锁来源、无随包副本打包文件、引用可达与取得方式。只装 11 项不及物：`docs-gamestudio` 的分流参考会指向本组之外的技能。
 - 第 10、11 节共用的组合校验抽成 `scripts/two-source-composition-check.py`：复制第二份时已经出现漂移（少了来源指纹提示与访谈入口反向断言），因此组名、同源依赖、正式写作分支、缺方法处理的所有者例外与反向断言都改为参数，判据只保留一份；`tests/test_maintenance_scripts.py` 守住「两节共用同一脚本」与「装不齐时必须报 FAIL」。
 - 行为与产物结果见 [Issue #91 验证证据](../docs/evidence/issue-91-behavior-matrix.md)与 [验证状态](../docs/validation-v3.md)。缺方法行为在三个限定工程范围的场景里观察：两个报告了缺口并只继续不依赖的部分，一个完成了工作却没有报告缺口，该未达标项如实记录，不写成通过。
+
+## Issue #93 随包共同方法副本退役（2026-09-27，3.0.3 未发布）
+
+Issue #93 执行收缩：把 `writing-for-agents` 还原为纯外部依赖，删掉本仓库为它维护的副本与整条维护路径。以上 #86、#87、#90、#92、#91 的记录描述的是收缩前的形态，保留原身份，不改写。
+
+- 删除随包目录 `skills/writing-for-agents/`（`SKILL.md`、`SKILL-MECHANICS.md`、`references/subagent-delegation.md`、`SOURCE.md`、`SHA256SUMS`、`LICENSE`）。可发现技能集合由 21 项（8 用户入口、13 按需方法）回到 20 项（8 用户入口、12 按需方法）。
+- 删除 `scripts/sync-writing-for-agents.py`（固定源同步与摘要生成）、`scripts/verify-writing-for-agents-install.py`（已安装副本核验检查器）与 `scripts/install-source-matrix-test.sh`（来源切换矩阵）。本仓库不再提供来源切换，也不再为该方法保留第二份可编辑权威源。
+- 用户取得方式改为从官方 `mattpocock/skills` 独立安装，按宿主支持的技能名称取得；安装说明改写为两个来源、用户级优先并提供项目级替代，已有官方共同方法时只跳过第一步。命令用 `skills@latest`，参数与锁文件行为只在 CLI 1.7.0 上核实，这条证据边界保留在安装资料里。
+- 「从 LC-86 fork 切换来源」的整套说法退出：fork 提交 `f3c726f275fa1ac59fef33732e527dded6d62479` 与 #86 的分发记录作为上一版的历史事实保留，不再作为现行来源。旧 fork 只读 checkout 仍是 V3 方法基线 `c55ee46` 的读取路径，同样只作历史记录。
+- 本版未打标签、未发布 Release；`v3.0.2` 标签与其 Release 资产、`v3.0.1` 标签的历史身份均不改写。
+- `v3.0.2` 之前的静态断言的替代由本票改动的检查承担：`install-smoke-test.sh` 第 8 节用负例守住「本仓库不再分发 `writing-for-agents`」，文档检查守住 20 项集合与两来源安装口径。实际输出与未运行项见 [验证状态](../docs/validation-v3.md)。
 
 ## 跨技能的系统性适配
 

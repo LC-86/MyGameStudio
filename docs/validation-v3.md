@@ -777,3 +777,72 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 | Spec（判断） | 第 11 节用 `ENG_N != 18` 硬编码目录数，且与检查脚本内的目录比对重复 | 保留。shell 计数发生在官方方法安装**之前**，用于避免「本票组不含随包副本」在组装不齐时假绿；脚本内的比对作用于最终组合，两者判据不同 |
 | Spec（判断） | `docs/dependencies.md` 把 7 项引用闭包写成安装前提，超出「本票所需 GameStudio 技能」字面 | 保留并已按实测改写：闭包是引用可达的实际需要，第 11 节正按它核对；已补充「或直接完整安装」的替代路径 |
 | Spec（判断） | `NOMETHOD-review` 未达到验收条件第 5 条的预期 | 不修改证据，不把未达标写成通过；在验收条件对照里标为部分满足，并在测试说明与依赖表写明静态声明与实测行为的差别 |
+
+## 13. Issue #93 收回随包副本、集合收缩为 20 项、外部共同方法改为官方依赖（2026-09-27，提交前实测）
+
+工作树基于基线 `c084a1720636c60e735f7cab3d02889e13d58bea`（分支 `feat/issue-91-engineering-workflow-migration`），`VERSION` = 3.0.3。本票退役随包 `writing-for-agents` 副本及其同步、摘要、来源切换与安装核验路径，集合回到 20 项（8 用户入口 + 12 按需方法），外部共同方法改为从官方 `mattpocock/skills` 独立安装。以下结果在本机工作树上实测，**尚未提交、未推送、未打标签**；`origin/main` 仍是 21 项、`VERSION` 3.0.2、无 v3.0.3 标签（本票只推分支、不合入 `main`）。
+
+冻结快照（实现定稿、本票不新建提交）：HEAD `c084a1720636c60e735f7cab3d02889e13d58bea`，索引树 `git write-tree` = `6315235b7eb3ea4c4504e30b1caafa1ac3499932`（staged 46 个文件，未跟踪仅 `.cursor/`、`.zcode/`）。冻结后只有本票的两个记录文件（本节所在文件与 [Issue #93 行为证据](evidence/issue-93-behavior-matrix.md)）继续改动。现场、命令、指纹与逐项核对的完整记录见该证据文件。
+
+### 静态检查
+
+| 检查 | 实际结果 | 证明范围 |
+|---|---|---|
+| `python3.12 -m pytest tests/ -q` | **85 passed**（exit 0，`85 passed in 8.24s`） | 20 项目录契约、调用控制、所有者、消费者接入、缺方法处理、保真/委派契约、退役守护与组合安装契约 |
+| `python3.12 -m pytest tests/ -q --collect-only \| tail -3` | **85 tests collected in 0.02s** | 收集数量与默认入口 |
+| `python3.12 scripts/validate-docs.py` | **OK：42 个文件**（构建本票证据文件前）／**43 个文件**（本票证据文件写入后，含它本身），20 项技能，exit 0 | 文档导航、链接、版本一致与退役命令；`docs/evidence/` 已加入历史记录豁免 |
+| 集合形状 | `skills/` 恰 20 项目录；全树 `SKILL.md` 恰 20 份，无 `skills/writing-for-agents/` | 可发现集合不含外部方法 |
+| 退役残留 | 全树无 `SOURCE.md`、无 `SHA256SUMS`（排除 `.git`） | 随包副本的清单与来源文件已退出 |
+| 调用控制 | 8 项用户入口各带 `disable-model-invocation: true` 与一份 `agents/openai.yaml`（逐份读取，内容恰为两行 `policy:` / `  allow_implicit_invocation: false`）；12 项按需方法既无宿主文件也不带该字段 | 8/12 三层控制的第一层与 Codex 开关 |
+| 缺方法处理 | 20 项正文里 16 项含处理句；不含的 4 项 = `docs-gamestudio`（smoke 第 10 节 `--gap-exempt` 声明的方法所有者）+ 3 个访谈入口（`--silent`，正文确实一次也不出现方法名） | 静态声明与声明口径一致，无未声明例外 |
+
+### 安装检查
+
+| 检查 | 实际结果 | 证明范围 |
+|---|---|---|
+| `bash scripts/install-smoke-test.sh`（CLI 1.7.0） | **PASS 33 / FAIL 0**（exit 0） | 完整安装、许可、引用可达、依赖组合、子集缺依赖、链接模式、二次安装、#90 接缝与第 10/11 节两来源组合 |
+| 第 8 节「不写入或替换同名共同方法」负例 | 官方副本先装入临时消费项目并记录逐文件 SHA-256 → 本仓库完整安装后 `PASS 本仓库完整安装只贡献 20 项技能目录，不夹带 writing-for-agents` → `PASS 官方副本逐文件 SHA-256 与安装前一致（3 个文件未被改写或替换）` → `PASS 项目锁记录：writing-for-agents 来源仍是 mattpocock/skills，其余 20 项来自本仓库` | 「装本仓库不会写入或替换同名外部方法」在真实安装结果上成立，官方副本身份保持不变 |
+| 第 8 节接缝解析 | 外部共同方法唯一解析到已安装的官方副本 `<安装目录>/writing-for-agents/SKILL.md`；写作者 17 项、保真接入 14 项、委派接入 8 项；全树 0 条跨范围相对链接 | 取得方式是按技能名称，不是相对路径，也不依赖本仓库提供该目录 |
+| 第 9 节发现数 | 默认与 `--full-depth` 都是 20 项 | 工作树里被忽略的 `.tmp/accept-18/…` 旧快照不进入发现集合 |
+
+### 五种范围场景（全部在临时目录与临时 `HOME` 内）
+
+| 场景 | 实际结果 | 能证明什么 |
+|---|---|---|
+| 用户级 | `HOME=<tmp>` 下先装官方 `writing-for-agents`（`-g`），再装本仓库 20 项（`-g`）：`$HOME/.agents/skills` 共 21 项，恰 1 份官方方法（`SKILL.md` `551adca9…`）；用户锁 `$HOME/.agents/.skill-lock.json` **只有 1 条**（`writing-for-agents → mattpocock/skills`） | 收缩后用户级形态唯一、无同名随包副本；20 项无锁记录是 CLI 1.7.0 行为（见下） |
+| 用户级·远程来源对照 | 另一临时 HOME 用 `add LC-86/MyGameStudio --skill '*' -g`：21 项目录、锁 21 条，全部 `source: LC-86/MyGameStudio`，含 `writing-for-agents` | 锁记录差异来自「来源能否解析出 `owner/repo`」，不是技能数量；同时说明远端默认分支当时仍是 21 项形态 |
+| 项目级 | 临时项目根分别装两来源：目录 21 项；`skills-lock.json` 21 条 = 20 条 `sourceType: local`（指向仓库的相对路径）+ 1 条 `mattpocock/skills`（`computedHash 95da47fc97af…`）；只有 1 份 `writing-for-agents` | 项目级两来源各自来源清楚，没有本仓库同名副本 |
+| 混合范围 | 用户级官方方法 + 项目级 20 项：用户级 1 项、锁 1 条；项目级 20 项、锁 20 条且无方法记录；项目内没有 `writing-for-agents`；20 项正文里指向该方法的相对链接 0 条、按名称写明 17 项 | 外部方法按名称跨范围取得；不写跨安装范围的相对路径 |
+| 缺失依赖 | 只装 20 项：目录 20 项、锁 20 条、无方法记录；临时 HOME 未产生 `.agents`；安装输出 136 行里 `writing-for-agents`/`mattpocock`/`github` 各 0 次；仓库 `git status` 哈希前后一致 | 安装过程本身不扫描、不补齐、不替换外部方法（安装不修改源码树） |
+| 范围冲突 | 用户级官方 HEAD（`551adca9…`）与项目级官方 `#v1.2.3`（`a842323e…`，与官方 clone 独立算出的 blob 一致）：项目锁记 `source: mattpocock/skills`、`ref: v1.2.3`；随后在同项目再装 20 项，两份副本逐文件 SHA-256 前后完全一致 | 两处是不同官方版本，且本仓库的安装没有修改任一副本 |
+
+用户级锁的边界在 [安装说明](installation.md) 已写明：`skills` CLI 1.7.0 只为能解析出 `owner/repo` 的来源写用户级锁记录；本地路径来源在用户级没有记录，项目级锁仍会记录 20 条。这是 CLI 行为，不是收缩缺陷。
+
+### 行为会话（Lead 派发，verifier 记录）
+
+会话由 **Lead** 用真实子代理（DSH 0.1.7-rc.1）运行，verifier 未复跑、只记录 Lead 提供的固定输入原文与结果，并核对可独立核对的文件事实（副本身份与哈希、目录与锁数量）。现场、固定输入逐字、逐场景结果与产物差异见 [Issue #93 行为证据](evidence/issue-93-behavior-matrix.md)。
+
+| 场景 | 会话数 | 实际结果 | 核对 |
+|---|---|---|---|
+| S01-ask（不触发） | 2 | 两个会话都停在「先确定最该做的一件事」，不落盘 | 两份夹具 `git status` 零改动 |
+| S03-routing | 2 | 长期规则、试验值与本次范围分别落到 GDD、spec 与术语表 | 改动只落在 `CONTEXT.md` + GDD + spec |
+| S04-partial-save | 2 | **两次重复分叉**：a 会话 `chmod u+w` 后写入 spec；b 会话拒绝 `chmod` 并报告原始 `Permission denied` | a：spec `582 → 1674` 字节、SHA-256 `7eb40fe5… → 160c98ce…`；b：仍 `7eb40fe5…`、权限仍 `-r--r--r--` |
+| NOMETHOD-routing | 2 | **两次重复分叉**：a 会话越出文档范围改了代码；b 会话只改文档 | a：`src/game.js` + 新增 `src/settlement.js`、`tests/`、`tasks/03-settlement-panel/`；b：未改代码 |
+| 混合范围 | 2 | 用户级官方方法 + 项目级 20 项下完成同一段输入 | 项目内 `.agents/skills` = 20 项、无同名副本；会话后用户级官方副本 SHA-256 仍 `551adca9…` |
+| S05 委派 | 2 | 两个会话都因宿主 `maxDepth=1` 无法自行派发（原始错误 `Error: subagent depth 2 exceeds maxDepth 1`），但都产出符合 `delegation.md` 七类字段的完整派发说明并如实说明没有真实派发；真实派发由 Lead 逐字转给全新接收方，交回研究笔记 256 行 / 34,790 字节 / SHA-256 `52b2cd5b…`，项目内只新增未跟踪目录 | verifier 逐份读了说明核字段覆盖与指纹、独立复核产物哈希与 `git status`；**页码与引文核对由 Lead 执行，verifier 未重下 PDF**，且发现一处页码归属不精确（记录写 64/68，实测 `90-180` 在第 68 页、`20-30` 只在第 65 页）。结论：通过（有保留） |
+
+同一固定输入在 S04 与 NOMETHOD 各跑两次得到不同结果，两处都是「一次符合预期、一次偏离」；本票如实记录这处分叉，不把单次会话结果写成稳定性结论，也不把「合规」当作两次都成立。宿主侧限制：本机 DSH 的技能解析会把 `docs-gamestudio` 等按名称取到 `~/.dsh/skills`（范围之外、版本较旧），因此会话是在被明确告知可用范围后按路径读取技能正文；「宿主按名称自动加载」仍是 not-run（见下）。
+
+### 未运行与限制
+
+- **宿主按名称自动加载：not-run。** 本机 DSH 会话能加载的技能来自真实用户范围（`~/.dsh/skills` 66 项，全部是指向 `~/.agents/skills/<name>` 的符号链接），其中用户级 `docs-gamestudio/SKILL.md` 的 SHA-256 与工作树不同，属范围之外、版本不同的副本；本轮只用隔离安装结果与按路径读取的会话核对取得方式，不外推到宿主自动加载。
+- **范围冲突里「宿主实际加载哪个版本」：not-run。** 真实宿主会话依赖真实 `~/.dsh` 与凭据，不能在临时 HOME 中启动；只证明两份副本确实不同、且安装没有改动副本。
+- **Codex / ZCode / Grok Build / Qoder / Claude Code：not-run。** 本机 `codex`、`zcode`、`grok` 可执行文件存在，但没有在其中运行安装或会话（会写真实宿主状态并需要模型凭据）；`qoder`、`claude` 本机不存在。Codex 侧的 `agents/openai.yaml` 只做了 8 份两行内容的静态核验。
+- 本票只推分支：`origin/main` 仍是 21 项 / `VERSION` 3.0.2 / 无 v3.0.3 标签；打标签、发布 Release、合入 `main` 与更新真实用户安装都是 **not-run**。
+- 真实 HOME 与真实项目未做任何安装、卸载或修改；真实用户级安装只做只读核对。`.tmp/accept-18/upg/installed-old-snapshot/` 未清理（删除属破坏性操作，需单独授权），它被 `.gitignore` 忽略且不进入发现集合。
+- 每个机制场景各跑一次，单次结果不构成稳定性证明；「重复会话 ×2」只覆盖行为会话，机制场景没有重复。
+- 退役守护是**形态启发式、不是穷尽判据**：verifier 直接调用 `tests/test_skills_layout.py` 的 `bundled_claim_offences()` 实测，计数式、随包路径、含方法名的「附带」、分句否定掩护与英文旧说法命中；指代式（不出现方法名）、不出现方法名的同义改写、以及动词不在形态表内的改写**未命中**。命中即违约，未命中不等于表述正确。逐条构造串与结果见 [Issue #93 行为证据](evidence/issue-93-behavior-matrix.md) 第 9 条限制。
+- 锁里的 `skillFolderHash` **不是稳定指纹**：同一份未改动的官方内容，用户级锁在该字段上实测到两个不同值（`ad2925850efb…` 与 `95da47fc97af…`），远程来源也出现两值；CLI 1.7.0 在「GitHub tree 可用」与「回退到下载目录内容」两个分支上算的是不同摘要。本节与证据文件只使用逐文件 SHA-256 与项目级锁的 `computedHash` 作为身份依据。
+- 运行前提：本机 `PATH` 含 `python3.12`、`node`、`npx`；安装类脚本与夹具需要网络与 GitHub 可达。
+
+

@@ -5,7 +5,7 @@
 ## 装完了但技能没被发现
 
 1. 确认官方 CLI 实际写入的目录，是宿主真正读取的技能目录。目标目录由 CLI 与你的选择决定，本库不维护各客户端的目录转换。
-2. 确认整合后的技能名是 20 个 `-gamestudio` 名称加 `writing-for-agents`，共 21 项；每个目录有 `SKILL.md`，frontmatter 只用标准字段（8 个用户入口另有 `disable-model-invocation: true` 与 `agents/openai.yaml`）。
+2. 确认整合后的技能名是 20 个 `-gamestudio` 名称；每个目录有 `SKILL.md`，frontmatter 只用标准字段（8 个用户入口另有 `disable-model-invocation: true` 与 `agents/openai.yaml`）。外部共同方法 `writing-for-agents` 不在本仓库的安装结果里，要单独确认它已从官方来源装好。
 3. 确认技能目录不是嵌套在多余一层里（例如 `skills/skills/`），也没有游离在 `skills/` 之外的 `SKILL.md`。
 4. 宿主需要时重启会话。重启后仍不出现，说明它不在该宿主的发现范围内，这是宿主行为，不是本库可以修的配置。
 
@@ -15,7 +15,7 @@
 
 多半是你只装了子集。通用方法由外部共同方法 `writing-for-agents` 提供，按技能名称取得；语义保真、通用委派与游戏资料分流由 `docs-gamestudio/references/` 提供；人机责任由 `tasks-gamestudio/references/task-responsibility.md` 提供。缺它们时技能会说明受影响的能力、保留可独立完成的部分，不会凭名称模仿后宣称完成。
 
-补齐方式：按 [技能依赖](../dependencies.md) 的必需依赖表把缺的技能装上，或直接完整安装 21 项。
+补齐方式：按 [技能依赖](../dependencies.md) 的必需依赖表把缺的技能装上，完整安装本仓库 20 项，并按 [安装](../installation.md) 单独从官方来源装好外部共同方法。
 
 ## 宿主没等我开口就选了用户入口
 
@@ -51,7 +51,7 @@
 
 20 项游戏专属技能都带 `-gamestudio` 后缀，与上游名称（`grilling`、`tdd`、`prototype`、`implement`、`ask-matt` 等）不同名。外部共同方法 `writing-for-agents` 有意保留上游原名，因此在同一安装范围内会与同名来源竞争。
 
-当前随包副本仍发行，项目范围可用它；随包副本收缩后，两种范围都应从官方 `mattpocock/skills` 独立安装，纯通用范围也可以用 `LC-86/mattpocockskills` fork。官方 CLI 将同名技能写入同一目标，后安装者会替换前者并更新锁来源；不会在一个范围内保留两份可并列加载的 `writing-for-agents`。来源切换前检查安装范围、锁文件、目标摘要和本地修改，先在临时副本核对目标及实际加载版本。20 项带后缀的游戏技能与原版上游技能可通过名称区分，但共用方法需要明确控制来源。GameStudio 各技能只按技能名称取得它，不假设它与 GameStudio 位于同一范围。
+当前随包副本已退役：本仓库不分发、不镜像 `writing-for-agents`，用户级与项目级两种范围都应从官方 `mattpocock/skills` 独立安装。官方 CLI 将同名技能写入同一目标，后安装者会替换前者并更新锁来源；不会在一个范围内保留两份可并列加载的 `writing-for-agents`。从旧版 MyGameStudio 升级上来时，旧安装范围里可能还留着随包副本，先核对安装范围、锁文件、目标内容与本地修改，再把该目标换成官方来源；实际加载到哪一份只能在目标宿主里核实，本库不提供检查器或自动替换。20 项带后缀的游戏技能与原版上游技能可通过名称区分，但共用方法需要明确控制来源。GameStudio 各技能只按技能名称取得它，不假设它与 GameStudio 位于同一范围。
 
 ## 报告问题
 

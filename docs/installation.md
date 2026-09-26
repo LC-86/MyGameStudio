@@ -1,8 +1,28 @@
 # 安装
 
-MyGameStudio 3.0.2 是一个包含 21 项技能的原生 Agent Skills 仓库。安装由官方 `skills` CLI 完成，本仓库不提供安装器、不发布 npm 包、不构建 tar 包，也不维护各 AI 开发工具的目录转换。
+MyGameStudio 3.0.3（未发布，未打标签、未发布 Release）是一个原生 Agent Skills 仓库，仓库内共 20 项技能：8 项用户入口、12 项按需方法。安装由官方 `skills` CLI 完成，本仓库不提供安装器、不发布 npm 包、不构建 tar 包，也不维护各 AI 开发工具的目录转换。
 
-## 安装
+完整使用需要**两个独立来源**：官方 [`mattpocock/skills`](https://github.com/mattpocock/skills) 提供的共同写作方法 `writing-for-agents`，以及本仓库的 20 项技能。MyGameStudio 不再分发、不再镜像这份共同方法，也不提供来源切换或安装核验工具；两者可以装在同一范围，也可以分处用户级与项目级，由你决定。
+
+## 完整安装：两步
+
+第一步装外部共同方法，第二步装 MyGameStudio 20 项。**已经能从官方来源取得 `writing-for-agents` 时只跳过第一步**，第二步照常执行。共同方法不是可选能力：正式资料、结论与交接按它的方法表达；缺少它时技能会报告缺口，只继续不依赖它的部分，也不会凭名称模仿后声称完成。
+
+用户级命令排在前面，是本库推荐的范围；项目级命令作为替代，必须在**目标项目根目录**执行。
+
+```bash
+# 用户级：共同方法（已有时跳过）
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -g -y
+
+# 用户级：MyGameStudio 20 项
+npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -g -y
+
+# 项目级：在目标项目根目录执行
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -y
+npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -y
+```
+
+只看不装，或先挑选再装：
 
 ```bash
 # 发现并选择技能
@@ -10,24 +30,24 @@ npx skills@latest add LC-86/MyGameStudio
 
 # 只列出可发现技能，不安装
 npx skills@latest add LC-86/MyGameStudio --list
-
-# 完整安装这套互相协作的技能（推荐）
-npx skills@latest add LC-86/MyGameStudio --skill '*'
 ```
 
-具体安装到哪个目录由官方 CLI 与你的选择决定。`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的 `v3.0.0` 标签：远端命令取的是仓库**默认分支**的内容，标签与默认分支是两件事。2026-09-25 对 v3.0.1 的远端验证得到 20 项；v3.0.2 增至 21 项。`#v3.0.1` 仍固定为旧的 20 项，`#v3.0.2` 固定为 21 项。
+`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的某个标签：远端命令取的是仓库**默认分支**的内容，标签与默认分支是两件事。当前源码树是 20 项；`v3.0.2` 标签固定包含 21 项，`v3.0.1` 标签固定包含 20 项，历史身份不因本版收缩而改写。
 
-推荐完整安装 21 项。这套技能互相引用共享方法，选择安装会缺少依赖，见 [dependencies.md](dependencies.md)。`v3.0.1` 标签保留此前的 20 项；`v3.0.2` 固定提供 21 项。
+上述命令面向跟随 CLI 最新版的用户；`-g`、`-y`、`--agent universal`、`--copy`、项目级与用户级锁文件的当前行为只在 `skills` CLI **1.7.0** 上核实，其它 CLI 版本请以实际输出为准。
+
+推荐完整安装 20 项。这套技能互相引用共享方法，选择安装会缺少依赖，见 [dependencies.md](dependencies.md)。
 
 ## 安装目标与文件形态
 
 本仓库在 `skills` CLI **1.7.0** 上实测的行为（完整证据见 [validation-v3.md](validation-v3.md)）：
 
-- `--agent universal` 安装到项目的 `.agents/skills/<技能名>/`。这是本库推荐的目标。
+- `--agent universal` 安装到项目的 `.agents/skills/<技能名>/`。这是本库推荐的项目级目标。
+- `-g` / `--global` 写入用户主目录：技能落在 `$HOME/.agents/skills/<技能名>/`，锁文件在 `$HOME/.agents/.skill-lock.json`。外部共同方法推荐用户级安装，因此 `-g` 是本页的常规用法；本仓库 20 项同样支持用户级与项目级两种范围。
+  - 边界（同样只在 `skills` CLI 1.7.0 上核实）：用户级锁只为**能解析出 `owner/repo` 的来源**写记录。用本地路径安装时（例如 `add /绝对路径/到/checkout`），即使技能确实装进了 `$HOME/.agents/skills/`，这批 20 项在用户级锁里**没有来源记录**；同一批技能的项目级锁仍会正常记录 20 条。所以用户级锁不是「每个用户级技能都有来源记录」的保证，实际来源以安装命令与目标目录内容为准，不要从用户级锁的存在与否反推安装来源。
 - 只指定一个宿主时，CLI 直接把真实文件复制进该宿主目录（例如 `.claude/skills/`），不生成 `.agents/`。
 - 指定两个及以上宿主时，正本落在 `.agents/skills/`，各宿主目录是指向正本的符号链接。加 `--copy` 则在每个宿主目录各生成一份独立真实副本。
-- `-g` / `--global` 写入用户主目录下的宿主技能目录。本项目不使用它，也不建议对真实用户环境使用。
-- 项目级安装会生成 `skills-lock.json`，通常记录 `source`、`sourceType`、`skillPath`、`computedHash`。2026-09-26 用 `skills` CLI 1.7.0 从完整 `#<ref>` 安装 fork 时另观察到 `ref` 字段；默认分支安装的锁记录不包含它，因此无法从那类锁文件还原提交。内容摘要 `computedHash` 可用于比对实际安装内容。
+- 项目级安装会生成 `skills-lock.json`，通常记录 `source`、`sourceType`、`skillPath`、`computedHash`。用 `skills` CLI 1.7.0 从完整 `#<ref>` 安装时会另记录 `ref` 字段；默认分支安装的锁记录不包含它，因此无法从那类锁文件还原提交。内容摘要 `computedHash` 可用于比对实际安装内容。
 - 仓库根的 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` **不会**随技能安装，只有技能目录内的文件会被复制。这是每项技能都自带 `LICENSE` 通知的原因。
 
 ## 选择安装的语法
@@ -37,16 +57,14 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 ```bash
 npx skills@latest add LC-86/MyGameStudio \
   --skill implement-gamestudio review-gamestudio tdd-gamestudio \
-  writing-for-agents docs-gamestudio tasks-gamestudio
+  docs-gamestudio tasks-gamestudio
 ```
 
-纯通用项目可从 LC-86 fork 单独安装 `writing-for-agents`。目前已验证的完整源提交是 `f3c726f275fa1ac59fef33732e527dded6d62479`：
+`--skill writing-for-agents` 对**官方来源**有效，对本仓库无效：本仓库的 20 项里没有这一项，把它写进上面的 MyGameStudio 命令会因匹配不到而失败。共同方法来自另一个来源：
 
 ```bash
-npx skills@latest add LC-86/mattpocockskills#f3c726f275fa1ac59fef33732e527dded6d62479@writing-for-agents
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -g -y
 ```
-
-`skills` CLI 1.7.0 对完整 `#<ref>` 安装会在锁文件记录 `ref`，默认分支安装则不包含该字段；切换来源时一并核对锁中的 `source`、`ref` 和 `computedHash`。后续更新应选择并核验 fork 的新完整提交；不要把移动分支或同一安装范围内的两个同名来源当成固定版本。
 
 CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起安装的集合见 [dependencies.md](dependencies.md)。
 
@@ -77,7 +95,7 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
   | 来源 | 结果 |
   |---|---|
   | `LC-86/MyGameStudio#v2.0.2` | `Found 39 skills` / `Installing all 39 skills`，装到的是旧技能名（`ask-matt`、`to-spec` 等） |
-  | `LC-86/MyGameStudio#release/v3` | `Found 20 skills` / `Installing all 20 skills`，装到的是本版 `-gamestudio` 名称（该分支已在发布后删除，此行是当时的实测记录；要用 `#v3.0.0`） |
+  | `LC-86/MyGameStudio#release/v3` | `Found 20 skills` / `Installing all 20 skills`，装到的是 `-gamestudio` 名称（该分支已在发布后删除，此行是当时的实测记录；之后要用 `#v3.0.0`） |
   | `LC-86/MyGameStudio#v3.0.0` | `Found 20 skills`，含 `gdd-gamestudio/SKILL.md` 与共享参考，无旧名残留 |
 
   三次结果内容各不相同，说明 `#` 之后的引用确实决定了取哪份内容，而不是只看默认分支；标签与分支 ref 走同一条解析路径。
@@ -87,22 +105,25 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
 
 确认三件事，不要只看命令是否退出成功：
 
-1. 技能出现在宿主实际读取的技能目录中。`v3.0.2` 有 20 项 `-gamestudio` 名称与 `writing-for-agents`，共 21 项；`v3.0.1` 仍是 20 项。
+1. 技能出现在宿主实际读取的技能目录中。MyGameStudio 提供 20 项 `-gamestudio` 名称；外部共同方法 `writing-for-agents` 由官方来源单独安装，应在它自己的安装范围里核对，不要期待 `--skill '*'` 把它带进来。`v3.0.2` 标签当时包含 21 项，其中一项是当时随包的 `writing-for-agents` 副本；`v3.0.1` 标签仍固定包含 20 项。
 2. 每项技能目录内有 `SKILL.md`、它引用的 `references/` 或 `templates/`，以及一份 `LICENSE` 通知。
 3. 共享方法可达：`writing-for-agents` 的正文与技能机制可按宿主支持的技能名称取得；语义保真、通用委派与 `docs-gamestudio/references/document-routing.md` 可读；`tasks-gamestudio/references/task-responsibility.md` 可达，且相对引用能解析到所有者。
 
 ## 更新与卸载
 
-更新按固定安装范围的来源执行：GameStudio 项目范围跟随经验证的随包版本，纯通用范围跟随 LC-86 fork。更新前检查同名目标、锁来源和本地修改；目标含 `SHA256SUMS` 时，用只读检查器核对：
+两个来源分别更新，各自只有一个渠道：外部共同方法跟随官方 `mattpocock/skills`，本仓库技能跟随 `LC-86/MyGameStudio`。更新前检查同名目标、锁来源与本地修改。
 
 ```bash
-python3.12 scripts/verify-writing-for-agents-install.py \
-  --installed-dir "/absolute/path/to/writing-for-agents" \
-  --lock-file "/absolute/path/to/skills-lock.json" \
-  --reference-dir "/absolute/path/to/pristine-copy-of-the-same-source" --show-diff
+# 外部共同方法（项目级去掉 -g）
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -g -y
+
+# 本仓库 20 项（项目级去掉 -g）
+npx skills@latest add LC-86/MyGameStudio --skill '*' --agent universal --copy -g -y
 ```
 
-检查器要求 lock 文件与目标属于同一安装范围，并打印锁定来源、ref 与摘要。参考目录必须与锁定来源版本相同；它不是任意版本的对照。摘要不匹配或参考副本本身有改动时，检查器拒绝把差异当作可信对照。检查器属于 MyGameStudio 源仓库的维护脚本，不随技能安装，也不修改安装。如果没有该 checkout、lock、旧来源摘要清单、正确参考副本或检查报告差异，状态就是未验证；先保存副本并人工比较，不要直接切换。迁移先在临时消费者核对锁来源、摘要与宿主实际加载版本，再按授权处理目标范围。卸载就是从宿主技能目录中移除该范围安装的技能目录，没有注册表、后台服务或专用运行层需要清理。
+`skills` CLI 按技能名称写入目录：同一安装范围里两个来源的同名技能不会并列，后安装者会替换同名目标并更新锁文件来源。因此不要用 MyGameStudio 的安装操作去更新或替换外部共同方法，也不要在同一范围内留下两份可并列加载的 `writing-for-agents`。用户级与项目级可能各有一份，宿主实际选择顺序与加载版本必须单独观察——本库不提供自动检测、条件补齐或替换，也不提供自建的安装核验工具；实际加载到哪一份只能在目标宿主里核实。
+
+卸载就是从宿主技能目录中移除该范围安装的技能目录，没有注册表、后台服务或专用运行层需要清理。外部共同方法与本仓库技能分别卸载，互不影响。
 
 V3 不维护自建安装命令，因此也不提供自建的卸载命令。
 
