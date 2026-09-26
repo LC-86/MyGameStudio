@@ -24,7 +24,7 @@ Details: [docs/installation.md](docs/installation.md). Dependency combinations f
 
 ## 21 skills
 
-The prepared `v3.0.2` version contains all 21 skills (8 user entries and 13 on-demand methods). The previously published `v3.0.1` tag remains fixed at 20 skills.
+The published `v3.0.2` release contains all 21 skills (8 user entries and 13 on-demand methods). The `v3.0.1` tag remains fixed at the previous 20-skill set.
 
 **User entries** start only when the user asks for that kind of work. **On-demand methods** are combined by the agent when the current task and authorization apply; the user can also request them directly.
 
@@ -68,9 +68,9 @@ No self-built task database, state machine, long-running dispatcher, or per-skil
 
 ## Verification status
 
-Actually run and passing for this release: 71 pytest checks, documentation validation (38 files, 21 skills), fixed-source sync, 23 native install checks (official `skills` CLI 1.7.0), and the source-switch matrix. Before release, a fresh remote clone also passed 23/23 install checks; a fixed GitHub commit install found 21 skills and recorded the expected source lock. Codex behavior validation covered 14 ephemeral sessions and 2 fresh receiver contexts. See [validation](docs/validation-v3.md) and the [behavior evidence](docs/evidence/issue-87-behavior-matrix.md) for scope and limits. Discovery and invocation inside other real hosts were not run; support is not inferred.
+Actually run and passing for this release: 71 pytest checks, documentation validation (38 files, 21 skills), fixed-source sync, 23 native install checks (official `skills` CLI 1.7.0), and the source-switch matrix. After release, a fresh clone of `v3.0.2` passed 23/23 install checks; a pinned tag install found 21 skills and recorded the expected source lock. Codex behavior validation covered 14 ephemeral sessions and 2 fresh receiver contexts. See [validation](docs/validation-v3.md) and the [behavior evidence](docs/evidence/issue-87-behavior-matrix.md) for scope and limits. Discovery and invocation inside other real hosts were not run; support is not inferred.
 
-A successful local install is not a successful remote GitHub install, so remote content is checked separately. The prepared v3.0.2 tree contains 21 skills, while the published `v3.0.1` tag remains fixed at 20. `@latest` reads the repository's default branch, not a release tag. 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
+A successful local install is not a successful remote GitHub install, so remote content is checked separately. The published `v3.0.2` tag contains 21 skills, while `v3.0.1` remains fixed at 20. `@latest` reads the repository's default branch, not a release tag. 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
 
 ## License
 

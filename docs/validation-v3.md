@@ -577,3 +577,15 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 | `skills` CLI 固定提交安装 | `LC-86/MyGameStudio#6bc0f18e3d9852c6aad8f013741f3785e0626585` 安装 21 项；lock 为 `sourceType=github`，ref 与提交一致 | 实际 GitHub 来源路径、固定引用及安装数量；不验证尚未创建的 v3.0.2 标签 |
 
 此记录时，本地 `codex/release-v3.0.2` 候选尚未提交或推送；远端 `main` 仍为 VERSION 3.0.1 的 `6bc0f18`，v3.0.2 标签与 Release 尚未创建。Release workflow 是人工备忘，不会自动发布。
+
+## 9. v3.0.2 发布往返（2026-09-26）
+
+版本快照提交 `6d4da2ba1cda4156830bc7f40b6536c95d8ed778` 推送到 `main`，将同一提交创建为附注标签 `v3.0.2`；GitHub Release [MyGameStudio 3.0.2](https://github.com/LC-86/MyGameStudio/releases/tag/v3.0.2) 已发布（非草稿，无构建附件，V3 的发布内容是仓库源码）。Issue #85 已关闭；实现 PR #88 的合并提交为 `6bc0f18e3d9852c6aad8f013741f3785e0626585`。
+
+| 检查 | 实际结果 | 证明范围 |
+|---|---|---|
+| `.github/workflows/release.yml` 手动检查（run `36238660699`，输入 `3.0.2`） | 成功：版本一致、pytest 和文档静态校验通过 | 发布前版本与源码静态检查；workflow 不负责创建标签或 Release |
+| `git clone --depth 1 --branch v3.0.2` 后的原生安装检查 | VERSION `3.0.2`；CLI 1.7.0；PASS 23 / FAIL 0 | 标签内容在全新克隆后的完整 21 项安装、许可、引用、依赖组合、宿主链接和重复安装 |
+| `skills` CLI 固定标签安装 | `LC-86/MyGameStudio#v3.0.2` 找到并安装 21 项；21 条 lock 均为 GitHub 来源且 `ref=v3.0.2` | 真实发布标签的官方 CLI 固定引用安装与来源锁 |
+
+标签与 Release 状态已回读。此节在发布后补录于默认分支的文档提交中；它不会改变 `v3.0.2` 标签指向的发布提交。

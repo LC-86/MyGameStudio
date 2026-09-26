@@ -1,6 +1,6 @@
 # 安装
 
-当前本地准备的 MyGameStudio 3.0.2 候选是一个包含 21 项技能的原生 Agent Skills 仓库。安装由官方 `skills` CLI 完成，本仓库不提供安装器、不发布 npm 包、不构建 tar 包，也不维护各 AI 开发工具的目录转换。
+MyGameStudio 3.0.2 是一个包含 21 项技能的原生 Agent Skills 仓库。安装由官方 `skills` CLI 完成，本仓库不提供安装器、不发布 npm 包、不构建 tar 包，也不维护各 AI 开发工具的目录转换。
 
 ## 安装
 
@@ -15,9 +15,9 @@ npx skills@latest add LC-86/MyGameStudio --list
 npx skills@latest add LC-86/MyGameStudio --skill '*'
 ```
 
-具体安装到哪个目录由官方 CLI 与你的选择决定。`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的 `v3.0.0` 标签：远端命令取的是仓库**默认分支**的内容，标签与默认分支是两件事。2026-09-25 对已发布的 v3.0.1 远端验证得到 20 项；本地准备的 v3.0.2 候选为 21 项。`#v3.0.1` 仍固定为旧的 20 项；v3.0.2 标签尚待创建。
+具体安装到哪个目录由官方 CLI 与你的选择决定。`@latest` 指 `skills` CLI 的版本，不代表自动选择 MyGameStudio 的 `v3.0.0` 标签：远端命令取的是仓库**默认分支**的内容，标签与默认分支是两件事。2026-09-25 对 v3.0.1 的远端验证得到 20 项；v3.0.2 增至 21 项。`#v3.0.1` 仍固定为旧的 20 项，`#v3.0.2` 固定为 21 项。
 
-推荐完整安装 21 项。这套技能互相引用共享方法，选择安装会缺少依赖，见 [dependencies.md](dependencies.md)。`v3.0.1` 标签保留此前的 20 项；v3.0.2 候选合入默认分支并打标签后，即固定提供 21 项。
+推荐完整安装 21 项。这套技能互相引用共享方法，选择安装会缺少依赖，见 [dependencies.md](dependencies.md)。`v3.0.1` 标签保留此前的 20 项；`v3.0.2` 固定提供 21 项。
 
 ## 安装目标与文件形态
 
@@ -87,7 +87,7 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
 
 确认三件事，不要只看命令是否退出成功：
 
-1. 技能出现在宿主实际读取的技能目录中。当前 v3.0.2 候选有 20 项 `-gamestudio` 名称与 `writing-for-agents`，共 21 项；`v3.0.1` 仍是 20 项。
+1. 技能出现在宿主实际读取的技能目录中。`v3.0.2` 有 20 项 `-gamestudio` 名称与 `writing-for-agents`，共 21 项；`v3.0.1` 仍是 20 项。
 2. 每项技能目录内有 `SKILL.md`、它引用的 `references/` 或 `templates/`，以及一份 `LICENSE` 通知。
 3. 共享方法可达：`writing-for-agents/` 下的正文、技能机制、通用委派参考与许可可读；`docs-gamestudio/references/document-routing.md` 和 `tasks-gamestudio/references/task-responsibility.md` 可达，且相对引用能解析到所有者。
 
