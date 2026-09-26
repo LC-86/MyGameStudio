@@ -18,29 +18,31 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 ## 必须一起安装的技能
 
-| 要安装的技能 | 必需组合（括号内为按需） |
-|---|---|
-| `grill-gamestudio` | `grilling-gamestudio`、`docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `grill-gamestudio-docs` | `grilling-gamestudio`、`domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio`、`docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `gdd-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；`spec-gamestudio`、`grilling-gamestudio` 为按需） |
-| `spec-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；`gdd-gamestudio` 为按需） |
-| `domain-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；`gdd-gamestudio`、`spec-gamestudio`、`grilling-gamestudio` 为按需） |
-| `grilling-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；其余技能为按需） |
-| `tasks-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `implement-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`、`review-gamestudio`（`writing-for-agents` 为外部方法；`tdd-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） |
-| `tdd-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法） |
-| `review-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法） |
-| `debug-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法；`tdd-gamestudio`、`review-gamestudio` 为按需） |
-| `prototype-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法；`gdd-gamestudio`、`spec-gamestudio` 为按需） |
-| `wayfinder-gamestudio` | `docs-gamestudio`、`grilling-gamestudio`、`domain-gamestudio`（`writing-for-agents` 为外部方法；`research-gamestudio`、`prototype-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） |
-| `research-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `handoff-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `ask-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法）；准确导航还需要它可能推荐的技能已安装 |
-| `setup-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `codebase-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `merge-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
-| `docs-gamestudio` | `writing-for-agents` 为外部方法；本技能自身的保真、委派与分流参考随它一起安装 |
-| `writing-for-agents` | 无（外部方法；作为随包副本暂列本套 21 项，收缩后由用户独立安装） |
+下表列出各技能需要的同源组合；`writing-for-agents` 是外部共同方法，不在同源组合里，单独一列说明它是否被该技能使用。
+
+| 要安装的技能 | 必需的同源组合（括号内为按需） | 外部共同方法 |
+|---|---|---|
+| `grill-gamestudio` | `grilling-gamestudio`、`docs-gamestudio` | 使用（按技能名称取得） |
+| `grill-gamestudio-docs` | `grilling-gamestudio`、`domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio`、`docs-gamestudio` | 使用（按技能名称取得） |
+| `gdd-gamestudio` | `docs-gamestudio`（`spec-gamestudio`、`grilling-gamestudio` 为按需） | 使用（按技能名称取得） |
+| `spec-gamestudio` | `docs-gamestudio`（`gdd-gamestudio` 为按需） | 使用（按技能名称取得） |
+| `domain-gamestudio` | `docs-gamestudio`（`gdd-gamestudio`、`spec-gamestudio`、`grilling-gamestudio` 为按需） | 使用（按技能名称取得） |
+| `grilling-gamestudio` | `docs-gamestudio`（其余技能为按需） | 使用（按技能名称取得） |
+| `tasks-gamestudio` | `docs-gamestudio` | 使用（按技能名称取得） |
+| `implement-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`、`review-gamestudio`（`tdd-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） | 使用（按技能名称取得） |
+| `tdd-gamestudio` | `docs-gamestudio`、`tasks-gamestudio` | 使用（按技能名称取得） |
+| `review-gamestudio` | `docs-gamestudio`、`tasks-gamestudio` | 使用（按技能名称取得） |
+| `debug-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`tdd-gamestudio`、`review-gamestudio` 为按需） | 使用（按技能名称取得） |
+| `prototype-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`gdd-gamestudio`、`spec-gamestudio` 为按需） | 使用（按技能名称取得） |
+| `wayfinder-gamestudio` | `docs-gamestudio`、`grilling-gamestudio`、`domain-gamestudio`（`research-gamestudio`、`prototype-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） | 使用（按技能名称取得） |
+| `research-gamestudio` | `docs-gamestudio` | 使用（按技能名称取得） |
+| `handoff-gamestudio` | `docs-gamestudio` | 使用（按技能名称取得） |
+| `ask-gamestudio` | `docs-gamestudio`；准确导航还需要它可能推荐的技能已安装 | 使用（按技能名称取得） |
+| `setup-gamestudio` | `docs-gamestudio` | 使用（按技能名称取得） |
+| `codebase-gamestudio` | `docs-gamestudio` | 使用（按技能名称取得） |
+| `merge-gamestudio` | `docs-gamestudio` | 使用（按技能名称取得） |
+| `docs-gamestudio` | 保真、委派与分流参考随本技能一起安装 | 使用（按技能名称取得） |
+| `writing-for-agents` | 作为随包副本暂列本套 21 项内的独立技能 | 就是该方法本身 |
 
 `docs-gamestudio` 的委派参考被 grilling、handoff、implement、research、review、tasks、wayfinder 和 ask 按需使用；单纯缺少委派场景时不要求每项任务都调用它。`writing-for-agents` 的目录只在随包副本仍发行时存在；安装 GameStudio 不等于安装了外部共同方法。
 

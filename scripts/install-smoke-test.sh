@@ -133,8 +133,10 @@ done
 
 note "5. 共享参考的实际归属与子集安装负例"
 [ -f "$DEST/docs-gamestudio/references/document-routing.md" ] && ok "document-routing.md 归 docs-gamestudio" || bad "缺少共享参考 document-routing.md"
-[ -f "$DEST/writing-for-agents/SKILL-MECHANICS.md" ] && ok "SKILL-MECHANICS.md 归 writing-for-agents" || bad "缺少共同技能机制参考"
-[ -f "$DEST/writing-for-agents/references/subagent-delegation.md" ] && ok "subagent-delegation.md 归 writing-for-agents" || bad "缺少共同委派参考"
+[ -f "$DEST/docs-gamestudio/references/semantic-fidelity.md" ] && ok "semantic-fidelity.md 归 docs-gamestudio" || bad "缺少语义保真契约"
+[ -f "$DEST/docs-gamestudio/references/delegation.md" ] && ok "delegation.md 归 docs-gamestudio" || bad "缺少通用委派契约"
+[ -f "$DEST/writing-for-agents/SKILL-MECHANICS.md" ] && ok "SKILL-MECHANICS.md 随外部方法副本发行（不归 GameStudio 拥有）" || bad "缺少共同技能机制参考"
+[ -f "$DEST/writing-for-agents/references/subagent-delegation.md" ] && ok "subagent-delegation.md 随外部方法副本发行（不是 GameStudio 委派方法）" || bad "缺少随包副本的委派参考"
 [ -f "$DEST/tasks-gamestudio/references/task-responsibility.md" ] && ok "task-responsibility.md 归 tasks-gamestudio" || bad "缺少共享参考 task-responsibility.md"
 
 GENERIC="$WORK/consumer-generic-minimal"; mkdir -p "$GENERIC"
@@ -153,9 +155,11 @@ GAME_DOCS_OUT="$(cd "$GAME_DOCS" && run_cli add "$REPO" \
   --skill writing-for-agents docs-gamestudio gdd-gamestudio --agent universal --copy -y)"
 GAME_DOCS_DEST="$GAME_DOCS/.agents/skills"
 [ -f "$GAME_DOCS_DEST/writing-for-agents/SKILL.md" ] \
+  && [ -f "$GAME_DOCS_DEST/docs-gamestudio/references/semantic-fidelity.md" ] \
+  && [ -f "$GAME_DOCS_DEST/docs-gamestudio/references/delegation.md" ] \
   && [ -f "$GAME_DOCS_DEST/docs-gamestudio/references/document-routing.md" ] \
   && [ -f "$GAME_DOCS_DEST/gdd-gamestudio/references/gdd-writing.md" ] \
-  && ok "游戏设计最小组合：共同写法、游戏分流与 GDD 参考均可达" \
+  && ok "游戏设计最小组合：共同写法、保真、委派、游戏分流与 GDD 参考均可达" \
   || bad "游戏设计最小组合缺少必需正文或参考"
 
 SUB="$WORK/consumer-subset"; mkdir -p "$SUB"
@@ -197,7 +201,123 @@ DUP="$(find "$DEST" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
 OLD="$(find "$FULL" -type d \( -name 'ask-matt' -o -name 'to-spec' -o -name 'to-tickets' -o -name 'game-producer' \) | wc -l | tr -d ' ')"
 [ "$OLD" = "0" ] && ok "无旧别名目录" || bad "出现旧别名目录"
 
-note "8. --full-depth 是否暴露额外 SKILL.md"
+note "8. Issue #90 接缝：外部共同方法按名称解析，消费者不写跨范围相对路径"
+# 只依赖 Python 标准库，逐项对齐 docs-gamestudio 与消费者正文里的声明；
+# 任一项不成立就 FAIL，避免接缝在收缩随包副本时才发现已经失效。
+SEAM_OUT="$(python3.12 - "$DEST" <<'PY' 2>&1
+import os
+import re
+import sys
+from pathlib import Path
+
+
+def norm(path):
+    """只做词法规范化，不解析符号链接：临时目录常经 /var -> /private/var 跳转。"""
+    return Path(os.path.normpath(str(path)))
+
+
+dest = Path(sys.argv[1])
+link_re = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+base = ["ask-gamestudio", "codebase-gamestudio", "debug-gamestudio",
+        "docs-gamestudio", "domain-gamestudio", "gdd-gamestudio",
+        "grill-gamestudio", "grill-gamestudio-docs", "grilling-gamestudio",
+        "handoff-gamestudio", "implement-gamestudio", "merge-gamestudio",
+        "prototype-gamestudio", "research-gamestudio", "review-gamestudio",
+        "setup-gamestudio", "spec-gamestudio", "tasks-gamestudio",
+        "tdd-gamestudio", "wayfinder-gamestudio"]
+required = {"docs-gamestudio": ("references/semantic-fidelity.md",
+                               "references/delegation.md",
+                               "references/document-routing.md")}
+writing_consumers = ["ask-gamestudio", "codebase-gamestudio", "debug-gamestudio",
+                     "docs-gamestudio", "domain-gamestudio", "gdd-gamestudio",
+                     "handoff-gamestudio", "implement-gamestudio", "merge-gamestudio",
+                     "prototype-gamestudio", "research-gamestudio", "review-gamestudio",
+                     "setup-gamestudio", "spec-gamestudio", "tasks-gamestudio",
+                     "tdd-gamestudio", "wayfinder-gamestudio"]
+fidelity_consumers = ["codebase-gamestudio", "debug-gamestudio", "domain-gamestudio",
+                      "gdd-gamestudio", "handoff-gamestudio", "implement-gamestudio",
+                      "merge-gamestudio", "prototype-gamestudio", "research-gamestudio",
+                      "review-gamestudio", "setup-gamestudio", "spec-gamestudio",
+                      "tdd-gamestudio", "wayfinder-gamestudio"]
+delegation_consumers = ["ask-gamestudio", "grilling-gamestudio", "handoff-gamestudio",
+                        "implement-gamestudio", "research-gamestudio",
+                        "review-gamestudio", "tasks-gamestudio", "wayfinder-gamestudio"]
+
+problems = []
+for name in base:
+    path = dest / name / "SKILL.md"
+    if not path.is_file():
+        problems.append("缺少 %s/SKILL.md" % name)
+if problems:
+    print("\n".join("FAIL  " + p for p in problems))
+    sys.exit(1)
+
+missing = ["%s/%s" % (owner, rel) for owner, rels in required.items() for rel in rels
+           if not (dest / owner / rel).is_file()]
+if missing:
+    problems.append("缺少共享参考：" + "、".join(missing))
+
+def body(name):
+    return (dest / name / "SKILL.md").read_text(encoding="utf-8")
+
+for name in ["writing-for-agents"] + base:
+    text = body(name)
+    if re.search(r"\[[^\]]*\]\([^)]*writing-for-agents", text):
+        problems.append("%s 用相对链接取得外部共同方法" % name)
+    for raw in link_re.findall(text):
+        if raw.startswith(("http://", "https://", "#")):
+            continue
+        target = norm(dest / name / raw.split("#", 1)[0])
+        try:
+            rel = target.relative_to(norm(dest))
+        except ValueError:
+            problems.append("%s 的引用逃出安装目录：%s" % (name, raw))
+            continue
+        owner = rel.parts[0]
+        # 技能目录内的包内引用（不止 SKILL.md，还包括它自己的 references/）不算跨技能
+        if owner == name or rel.name == "SKILL.md":
+            continue
+        if rel.as_posix() in {"%s/%s" % (o, r) for o, rs in required.items() for r in rs}:
+            continue
+        if owner == "writing-for-agents":
+            problems.append("%s 引用随包副本私有资料：%s" % (name, raw))
+
+for name in writing_consumers:
+    if "`writing-for-agents`" not in body(name):
+        problems.append("%s 未按技能名称说明外部共同方法" % name)
+for name in [n for n in base if n not in writing_consumers]:
+    if "writing-for-agents" in body(name):
+        problems.append("%s 未使用外部共同方法却提到了它" % name)
+for name in fidelity_consumers:
+    if "../docs-gamestudio/references/semantic-fidelity.md" not in body(name):
+        problems.append("%s 的保真要求没有指向语义保真所有者" % name)
+for name in delegation_consumers:
+    if "../docs-gamestudio/references/delegation.md" not in body(name):
+        problems.append("%s 的委派点没有指向 docs-gamestudio" % name)
+
+resolved = dest / "writing-for-agents" / "SKILL.md"
+if not resolved.is_file():
+    problems.append("安装目录内没有可作为外部方法解析目标的 writing-for-agents")
+print("INFO  外部共同方法解析到 %s" % resolved)
+print("INFO  写作者 %d 项；保真接入 %d 项；委派接入 %d 项"
+      % (len(writing_consumers), len(fidelity_consumers), len(delegation_consumers)))
+if problems:
+    for item in problems:
+        print("FAIL  " + item)
+    sys.exit(1)
+print("PASS  外部共同方法有唯一解析目标，且没有消费者写成跨范围相对路径")
+PY
+)"
+printf '%s\n' "$SEAM_OUT" | sed 's/^FAIL/      →/;s/^PASS/      /;s/^INFO/      /'
+# 成功判据是检查器明确输出 PASS：脚本崩溃、解释器缺失或语法错误都只有 stderr，
+# 只看「没有 FAIL」会把没跑成的检查记成通过。
+if printf '%s' "$SEAM_OUT" | grep -q '^PASS  '; then
+  ok "Issue #90 接缝：消费者按技能名称取得外部共同方法，保真与委派指向 docs-gamestudio"
+else
+  bad "Issue #90 接缝检查未产出 PASS 结论（见上），按未通过处理"
+fi
+
+note "9. --full-depth 是否暴露额外 SKILL.md"
 FD="$(cd "$WORK/consumer-list" && run_cli add "$REPO" --list --full-depth 2>&1)"
 PLAIN_N="$(printf '%s' "$LIST_CLEAN" | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
 FULL_N="$(printf '%s' "$FD" | clean | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
