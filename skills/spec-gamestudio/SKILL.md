@@ -8,7 +8,7 @@ license: MIT
 
 把本次工作写到后续执行者无需暗中猜测关键决定即可推进。继承 to-spec 的整理职责，不重新展开需求访谈，不默认扩写整份游戏策划。
 
-先读取 [文档分流与增量协作](../docs-gamestudio/references/document-routing.md)，它决定一段内容归 spec、GDD 还是术语表，以及何时落盘、何时停止。编写或实质修订正文时，取得 [docs-gamestudio](../docs-gamestudio/SKILL.md) 的共同写作方法并读取 [规格写法](references/spec-writing.md)；同一上下文已经取得写作方法就直接沿用。
+先读取 [文档分流与增量协作](../docs-gamestudio/references/document-routing.md)，它决定一段内容归 spec、GDD 还是术语表，以及何时落盘、何时停止。编写或实质修订正文时，取得 [writing-for-agents](../writing-for-agents/SKILL.md) 的共同写作方法并读取 [规格写法](references/spec-writing.md)；同一上下文已经取得写作方法就直接沿用。
 
 ## 1. 使用已知依据
 

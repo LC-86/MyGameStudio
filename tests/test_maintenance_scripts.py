@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import json
+import hashlib
 import os
 import re
 import shutil
@@ -499,16 +501,137 @@ def test_docs_do_not_claim_pinned_ref_still_unverified() -> None:
     assert not offenders, "仍把 #<ref> 写成未端到端验证：\n" + "\n".join(offenders)
 
 
-def test_delegation_states_isolation_is_host_dependent() -> None:
-    """派发是否隔离父历史是宿主属性，不能写成通用事实。"""
-    text = read(SKILLS / "docs-gamestudio" / "references" / "delegation.md")
-    assert "宿主属性" in text, "应说明隔离性是宿主属性而非派发动作本身"
-    assert "fork_turns" in text, "应给出继承父历史的具体反例"
-    assert "核实" in text and "披露" in text, "应要求核实宿主并按需披露限制"
+def test_delegation_reference_requires_context_and_return_evidence() -> None:
+    """委派要求说明接收方可见的上下文、输入和回收证据。"""
+    text = read(SKILLS / "writing-for-agents" / "references" / "subagent-delegation.md")
+    for marker in ("Source version:", "Available inputs:", "Allowed scope:",
+                   "Context inherited or intentionally isolated:", "Completion evidence:",
+                   "If blocked:", "Return check:"):
+        assert marker in text, f"通用委派参考缺少 {marker}"
 
-    skill = read(SKILLS / "docs-gamestudio" / "SKILL.md")
-    assert "派发是否隔离由宿主决定" in skill, \
-        "完成标准一节里「藏后续步骤」的杠杆同样要限定宿主条件"
+    skill = read(SKILLS / "writing-for-agents" / "SKILL.md")
+    assert "real context boundary" in skill and "subagent dispatch" in skill, \
+        "共同方法应区分同上下文与子代理派发的后续步骤边界"
+
+
+def test_installed_copy_inspector_reports_edits_without_overwriting(tmp_path: Path) -> None:
+    """来源切换前可核对锁来源与发行摘要，并保留已安装副本的本地修改。"""
+    installed = tmp_path / "consumer" / ".agents" / "skills" / "writing-for-agents"
+    installed.parent.mkdir(parents=True)
+    shutil.copytree(SKILLS / "writing-for-agents", installed)
+    lock = tmp_path / "consumer" / "skills-lock.json"
+    files = [path for path in installed.rglob("*") if path.is_file()]
+    files.sort(key=lambda path: (path.relative_to(installed).as_posix().casefold(),
+                                 path.relative_to(installed).as_posix()))
+    folder_hash = hashlib.sha256()
+    for path in files:
+        folder_hash.update(path.relative_to(installed).as_posix().encode("utf-8"))
+        folder_hash.update(path.read_bytes())
+    lock.write_text(json.dumps({
+        "skills": {
+            "writing-for-agents": {
+                "source": "LC-86/mattpocockskills",
+                "ref": "f3c726f275fa1ac59fef33732e527dded6d62479",
+                "sourceType": "github",
+                "skillPath": "skills/productivity/writing-for-agents/SKILL.md",
+                "computedHash": folder_hash.hexdigest(),
+            },
+        },
+    }), encoding="utf-8")
+    script = SCRIPTS / "verify-writing-for-agents-install.py"
+    args = [
+        "python3.12", str(script), "--installed-dir", str(installed), "--lock-file", str(lock),
+        "--reference-dir", str(SKILLS / "writing-for-agents"), "--show-diff",
+    ]
+    clean = subprocess.run(args, capture_output=True, text=True, check=False)
+    assert clean.returncode == 0, clean.stderr
+    assert "source=LC-86/mattpocockskills" in clean.stdout
+    assert "ref=f3c726f275fa1ac59fef33732e527dded6d62479" in clean.stdout
+    assert "verified" in clean.stdout
+
+    relative = subprocess.run(
+        ["python3.12", str(script), "--installed-dir", "skills/writing-for-agents",
+         "--lock-file", str(lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
+        cwd=REPO, capture_output=True, text=True, check=False,
+    )
+    assert relative.returncode == 1 and "installed-dir must be absolute" in relative.stderr
+    incorrect_hash_lock = tmp_path / "consumer" / "incorrect-hash-lock.json"
+    bad_hash_lock_data = json.loads(lock.read_text(encoding="utf-8"))
+    bad_hash_lock_data["skills"]["writing-for-agents"]["computedHash"] = "a" * 64
+    incorrect_hash_lock.write_text(json.dumps(bad_hash_lock_data), encoding="utf-8")
+    incorrect_hash = subprocess.run(
+        ["python3.12", str(script), "--installed-dir", str(installed),
+         "--lock-file", str(incorrect_hash_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
+        capture_output=True, text=True, check=False,
+    )
+    assert incorrect_hash.returncode == 1
+    assert "reference source hash does not match the lock computedHash" in incorrect_hash.stderr
+
+    wrong_source_lock = tmp_path / "consumer" / "wrong-source-lock.json"
+    wrong_source_data = json.loads(lock.read_text(encoding="utf-8"))
+    wrong_source_data["skills"]["writing-for-agents"]["source"] = "LC-86/wrong-source"
+    wrong_source_lock.write_text(json.dumps(wrong_source_data), encoding="utf-8")
+    wrong_source = subprocess.run(
+        ["python3.12", str(script), "--installed-dir", str(installed),
+         "--lock-file", str(wrong_source_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
+        capture_output=True, text=True, check=False,
+    )
+    assert wrong_source.returncode == 1
+    assert "lock source identity does not match reference SOURCE.md" in wrong_source.stderr
+
+    github_main_lock = tmp_path / "consumer" / "github-main-lock.json"
+    github_main_data = json.loads(lock.read_text(encoding="utf-8"))
+    github_main_data["skills"]["writing-for-agents"] = {
+        "source": "LC-86/MyGameStudio",
+        "sourceType": "github",
+        "skillPath": "skills/writing-for-agents/SKILL.md",
+        "computedHash": folder_hash.hexdigest(),
+    }
+    github_main_lock.write_text(json.dumps(github_main_data), encoding="utf-8")
+    github_main = subprocess.run(
+        ["python3.12", str(script), "--installed-dir", str(installed),
+         "--lock-file", str(github_main_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
+        capture_output=True, text=True, check=False,
+    )
+    assert github_main.returncode == 0, github_main.stderr
+    assert "source=LC-86/MyGameStudio" in github_main.stdout
+    missing_lock = subprocess.run(
+        ["python3.12", str(script), "--installed-dir", str(installed),
+         "--lock-file", str(tmp_path / "consumer" / "missing-lock.json"),
+         "--reference-dir", str(SKILLS / "writing-for-agents")],
+        capture_output=True, text=True, check=False,
+    )
+    assert missing_lock.returncode == 1 and "lock file is missing" in missing_lock.stderr
+    wrong_scope_lock = tmp_path / "skills-lock.json"
+    wrong_scope_lock.write_text(lock.read_text(encoding="utf-8"), encoding="utf-8")
+    wrong_scope = subprocess.run(
+        ["python3.12", str(script), "--installed-dir", str(installed),
+         "--lock-file", str(wrong_scope_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
+        capture_output=True, text=True, check=False,
+    )
+    assert wrong_scope.returncode == 1 and "same installation scope" in wrong_scope.stderr
+
+    skill_md = installed / "SKILL.md"
+    skill_md.write_text(skill_md.read_text(encoding="utf-8") + "\nLocal consumer edit.\n", encoding="utf-8")
+    unrelated_reference = tmp_path / "unrelated-reference"
+    shutil.copytree(SKILLS / "writing-for-agents", unrelated_reference)
+    unrelated_source = unrelated_reference / "SOURCE.md"
+    unrelated_source.write_text(unrelated_source.read_text(encoding="utf-8") + "\nDifferent source.\n",
+                               encoding="utf-8")
+    mismatched_reference = subprocess.run(
+        ["python3.12", str(script), "--installed-dir", str(installed), "--lock-file", str(lock),
+         "--reference-dir", str(unrelated_reference), "--show-diff"],
+        capture_output=True, text=True, check=False,
+    )
+    assert mismatched_reference.returncode == 1
+    assert "reference source hash does not match the lock computedHash" in mismatched_reference.stderr
+
+    changed = subprocess.run(args, capture_output=True, text=True, check=False)
+    assert changed.returncode == 1
+    assert "modified: SKILL.md" in changed.stdout
+    assert "preservation and review" in changed.stdout
+    assert "+Local consumer edit." in changed.stdout
+    assert "Local consumer edit." in skill_md.read_text(encoding="utf-8")
 
 
 def test_no_other_skill_asserts_isolation_as_universal_fact() -> None:

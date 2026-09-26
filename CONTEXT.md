@@ -1,6 +1,6 @@
 # MyGameStudio
 
-面向个人独立游戏开发者的 AI 游戏开发工作流，以原生 Agent Skills 仓库承载，当前版本 3.0.0。
+面向个人独立游戏开发者的 AI 游戏开发工作流，以原生 Agent Skills 仓库承载，已发布版本为 3.0.1；Issue #87 的 21 项源码集合尚未发布。
 
 ## Language
 
@@ -10,20 +10,20 @@
 **原生 Agent Skills 仓库**:
 本仓库的交付形态：权威技能源码是 `skills/<技能名>/SKILL.md`，通过官方 `skills` CLI 安装，具体目标目录由 CLI 与使用者选择。没有插件清单、tar 包、npm 包或自建安装器；版本权威来源是根目录 `VERSION`。
 
-**20 项技能集合**:
-当前范围内的全部技能，分为 8 项用户入口与 12 项按需方法。集合用于范围核对，不是生产任务类型注册表。
+**21 项技能集合**:
+当前范围内的全部技能，分为 8 项用户入口与 13 项按需方法。集合用于范围核对，不是生产任务类型注册表。
 
 **用户入口**:
 只在开发者请求该类工作时启动的技能，例如 `ask-gamestudio`、`setup-gamestudio`、`grill-gamestudio-docs`。一个入口完成即停，不自动串调下一个用户入口。在 Claude Code、Grok Build、DSH 内由 frontmatter 的 `disable-model-invocation: true` 强制，在 Codex 内由技能目录内的 `agents/openai.yaml` 强制，在 ZCode、Qoder 内由描述与正文里的指令层约定承担。
 
 **按需方法**:
-开发者可以直接点名，但通常由 Agent 在当前任务与授权适用时组合使用的方法技能，例如 `grilling-gamestudio`、`tdd-gamestudio`、`docs-gamestudio`。
+开发者可以直接点名，但通常由 Agent 在当前任务与授权适用时组合使用的方法技能，例如 `grilling-gamestudio`、`tdd-gamestudio`、`docs-gamestudio`、`writing-for-agents`。
 
 **指令层边界**:
 在 ZCode、Qoder 这类没有宿主级调用开关的宿主内，用户入口与按需方法的区分写在技能描述与正文里，靠 Agent 阅读并遵守；需要更强边界时由项目自己的规则重申。它不描述 Claude Code、Grok Build、DSH（frontmatter 的 `disable-model-invocation` 强制）与 Codex（`agents/openai.yaml` 强制）内的调用隔离。
 
 **共享参考所有者**:
-被多项技能引用的随包资料只存一份权威正文，归属明确的所有者技能（`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。
+被多项技能引用的随包资料只存一份权威正文，归属明确的所有者技能（`writing-for-agents`、`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。
 
 **专业角色**:
 按共享的工作上下文、成果责任和写入权限划分的分工单位，可拥有多个专业 Skill；角色不等同于人类岗位，也不等同于一个永久运行的会话。

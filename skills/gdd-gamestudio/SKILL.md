@@ -8,7 +8,7 @@ license: MIT
 
 生成并维护当前游戏设计，使读者理解目标体验、实际玩法及相关系统如何一起成立。可以整理全局，也可以只修订一个章节；不因使用本方法而重新设计整款游戏。
 
-先读取 [文档分流与增量协作](../docs-gamestudio/references/document-routing.md)，它决定一段内容归 GDD、spec 还是术语表，以及何时落盘、何时停止。编写或实质修订正文时，取得 [docs-gamestudio](../docs-gamestudio/SKILL.md) 的共同写作方法并读取 [GDD 写法](references/gdd-writing.md)；同一上下文已经取得写作方法就直接沿用，不为每个章节重复取得。
+先读取 [文档分流与增量协作](../docs-gamestudio/references/document-routing.md)，它决定一段内容归 GDD、spec 还是术语表，以及何时落盘、何时停止。编写或实质修订正文时，取得 [writing-for-agents](../writing-for-agents/SKILL.md) 的共同写作方法并读取 [GDD 写法](references/gdd-writing.md)；同一上下文已经取得写作方法就直接沿用，不为每个章节重复取得。
 
 ## 1. 确定本次输入与范围
 

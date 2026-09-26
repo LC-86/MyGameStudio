@@ -104,7 +104,7 @@ def test_root_license_and_third_party_notices() -> None:
 def test_readme_documents_the_full_set_and_navigation() -> None:
     readme = read("README.md")
     names = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
-    assert len(names) == 20
+    assert len(names) == 21
     missing = [n for n in names if f"skills/{n}/SKILL.md" not in readme]
     assert not missing, f"README.md 未链接技能：{missing}"
     assert "npx skills@latest add LC-86/MyGameStudio" in readme, "README 应给出原生安装命令"

@@ -25,11 +25,13 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 细节见 [docs/installation.md](docs/installation.md)。选择安装时的依赖组合见 [docs/dependencies.md](docs/dependencies.md)。从 2.0.2 插件版本切换见 [docs/migration-v3.md](docs/migration-v3.md)。
 
-## 20 项技能
+## 更新后源码集合：21 项技能
+
+本次整合尚未发布；已发布的 `v3.0.1` 标签仍包含 20 项技能。更新后源码集合由 8 项用户入口和 13 项按需方法组成。
 
 **用户入口**由用户明确请求相应工作时启动，Agent 不自行开启该工作流程。**按需方法**在当前任务与授权适用时由 Agent 组合使用，用户也可以直接请求。
 
-这条 8/12 分界由三层调用控制支撑（机制来自各宿主官方文档，本库未在宿主内逐一实测）：Claude Code、Grok Build 与 DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，技能描述不再进入模型上下文，只留用户显式入口；Codex 由技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）强制，关闭隐式调用；ZCode 与 Qoder 未文档化任何调用控制字段，这条边界在那里仍是写在描述与正文里的**指令层约定**，也是全部宿主的兜底。需要更强约束时，在你自己的项目规则里重申该边界。这两层控制自 v3.0.1 起进入发布；`v3.0.0` 及更早标签安装到的版本不含它们。
+这条 8/13 分界由三层调用控制支撑（机制来自各宿主官方文档，本库未在宿主内逐一实测）：Claude Code、Grok Build 与 DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，技能描述不再进入模型上下文，只留用户显式入口；Codex 由技能目录内的 `agents/openai.yaml`（`policy.allow_implicit_invocation: false`）强制，关闭隐式调用；ZCode 与 Qoder 未文档化任何调用控制字段，这条边界在那里仍是写在描述与正文里的**指令层约定**，也是全部宿主的兜底。需要更强约束时，在你自己的项目规则里重申该边界。这两层控制自 v3.0.1 起进入发布；`v3.0.0` 及更早标签安装到的版本不含它们。
 
 ### 用户入口（8）
 
@@ -44,7 +46,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 | [wayfinder-gamestudio](skills/wayfinder-gamestudio/SKILL.md) | 梳理跨会话的重要未知与决策关系 |
 | [handoff-gamestudio](skills/handoff-gamestudio/SKILL.md) | 写出可带走的工作接手说明 |
 
-### 按需方法（12）
+### 按需方法（13）
 
 | 技能 | 职责 |
 |---|---|
@@ -59,7 +61,8 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 | [research-gamestudio](skills/research-gamestudio/SKILL.md) | 按深度做有来源、有局限说明的研究 |
 | [codebase-gamestudio](skills/codebase-gamestudio/SKILL.md) | 设计当前职责、状态归属、接口与测试边界 |
 | [merge-gamestudio](skills/merge-gamestudio/SKILL.md) | 按双方真实意图处理已发生的合并冲突 |
-| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | 所有正式工作资料与子代理委派的共同写作方法 |
+| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | 游戏文档分流、增量协作与专属资料取得条件 |
+| [writing-for-agents](skills/writing-for-agents/SKILL.md) | 通用正式写作、语义保真、技能机制与子代理委派 |
 
 ## 它们怎样组合
 
@@ -67,7 +70,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 - 设计讨论：`grill-gamestudio-docs` 组合访谈与概念校准，按已确认决定的实际用途分别更新术语、GDD 与本次规格，边讨论边局部落盘。
 - 交付工作：`tasks-gamestudio` 拆出完整小成果，`implement-gamestudio` 实现并按需组合 TDD、结构设计、诊断与评审，人工体验项未完成时不关单。
-- 正式资料与委派：`docs-gamestudio` 是共同写作方法，覆盖 GDD、spec、任务票、术语与决策记录、研究/测试/评审结论、交接说明、技能与项目规则，尤其是子代理派发说明。专业技能决定内容，它负责表达不失真。
+- 正式资料与委派：`writing-for-agents` 负责通用表达、语义保真和通用委派。`docs-gamestudio` 只负责游戏文档分流与增量协作，`tasks-gamestudio` 保留人机责任与验收交接。
 - 路线不清：`wayfinder-gamestudio` 整理跨会话的关键未知，路线清楚即交接，不继续自动制作。
 
 技能之间的依赖与共享资料归属见 [docs/dependencies.md](docs/dependencies.md)。
@@ -104,7 +107,7 @@ English summary: [README.en.md](README.en.md)。
 
 真实宿主内的发现与调用、部分行为场景编号**未运行**，逐项清单见 [docs/validation-v3.md](docs/validation-v3.md) 第 4 节；逐项证据、命令原文与局限同见该文件。
 
-本地安装成功不等于远端安装成功，所以远端内容要单独复跑。3.0.1 已合入 `main`，并已创建 `v3.0.1` 标签与 GitHub Release，因此 `npx skills@latest add LC-86/MyGameStudio` 安装到的就是本版 20 项技能（含用户入口三层调用控制）。2.0.2 及更早版本停止维护、不再修缺陷；需要旧内容请按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得，切换步骤见 [docs/migration-v3.md](docs/migration-v3.md)。
+本地安装成功不等于远端安装成功，所以远端内容要单独复跑。已发布的 `v3.0.1` 标签固定包含 20 项；默认分支会随后续整合变化，本次更新后的源码集合有 21 项。`@latest` CLI 命令读取默认分支，不是版本标签。2.0.2 及更早版本停止维护、不再修缺陷；需要旧内容请按固定引用 `LC-86/MyGameStudio#v2.0.2` 取得，切换步骤见 [docs/migration-v3.md](docs/migration-v3.md)。
 
 ## 许可
 

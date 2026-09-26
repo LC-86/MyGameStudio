@@ -4,6 +4,14 @@
 
 本文件记录适配决定，不重复技能正文。行为验证的实际结果见 [docs/validation-v3.md](../docs/validation-v3.md)。
 
+## Issue #87 后续分发调整（2026-09-26，尚未发布）
+
+本记录以下 A1–A5 描述原 V3 实施时的要求与结果，保留其历史身份。Issue #87 将当前技能集合扩为 21 项，并重新指定共享资料所有者：
+
+- `writing-for-agents` 作为共同写作方法独立随包，固定源与逐文件摘要见 [`skills/writing-for-agents/SOURCE.md`](../skills/writing-for-agents/SOURCE.md)；它拥有通用表达、语义保真和子代理委派。
+- `docs-gamestudio` 收窄为游戏文档分流、增量协作和专属资料入口；其旧 `references/delegation.md` 与 `references/skill-authoring.md` 不再发行。A1 中对 `skill-authoring.md` 的引用指向已退役的 V3 材料，其维护契约现由仓库级 `AGENTS.md` 与 `docs/development/testing.md` 承载。
+- 人机责任和指定人工验收交接继续由 `tasks-gamestudio` 拥有。现行消费者映射、安装范围、许可、双语说明和验证状态按本次 Issue #87 分别维护；本节不宣称其已发布。
+
 ## 跨技能的系统性适配
 
 ### A1. 宿主专属调用开关退出

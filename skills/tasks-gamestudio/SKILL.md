@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 沿用完整小成果的拆分方法。让一个新会话能够看懂任务、找到依据、知道怎样验证，以及自己的完成范围在哪里。
 
-任务票是交给另一个上下文执行的正式内容，接收方没有当前对话。按 [docs-gamestudio](../docs-gamestudio/SKILL.md) 的写作方法组织每张票；需要派发子代理时另读取其[委派参考](../docs-gamestudio/references/delegation.md)。同一上下文已经取得方法就直接沿用，不为每张票重复取得。
+任务票是交给另一个上下文执行的正式内容，接收方没有当前对话。按 [writing-for-agents](../writing-for-agents/SKILL.md) 的写作方法组织每张票；需要派发子代理时另读取其[委派参考](../writing-for-agents/references/subagent-delegation.md)。同一上下文已经取得方法就直接沿用，不为每张票重复取得。
 
 不建立新的必填任务类型。底层逻辑、玩法、UI、美术和音频描述工作涉及的方面，不决定任务必须怎样拆，也不直接决定由谁验收。
 
