@@ -589,3 +589,34 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 | `skills` CLI 固定标签安装 | `LC-86/MyGameStudio#v3.0.2` 找到并安装 21 项；21 条 lock 均为 GitHub 来源且 `ref=v3.0.2` | 真实发布标签的官方 CLI 固定引用安装与来源锁 |
 
 标签与 Release 状态已回读。此节在发布后补录于默认分支的文档提交中；它不会改变 `v3.0.2` 标签指向的发布提交。
+
+## 10. Issue #90 兼容接缝（2026-09-27，尚未提交、未发布）
+
+实现分支 `feat/issue-90-compat-seam`，基线为已发布的 `v3.0.2`（`06f8f1110ff145a00c05915da0206c8880fbe92b`，VERSION 3.0.2，21 项）。本票只建接缝：`docs-gamestudio` 重新拥有语义保真与通用子代理委派；17 项消费者改为按技能名称取得外部共同方法 `writing-for-agents`，不再使用 `../writing-for-agents/...` 跨安装范围相对路径；随包副本、21 项集合与安装说明的现行分发路径不动。以下结果均在本机工作树上实测，尚未提交或推送。
+
+| 检查 | 实际结果 | 证明范围 |
+|---|---|---|
+| `python3.12 -m pytest tests/ -q`（PATH 含 `python3.12`） | 75 passed | 21 项目录契约、调用控制、所有者、消费者、缺外部方法处理与保真/委派契约文本 |
+| `python3.12 scripts/validate-docs.py` | 通过：40 个文档文件、21 项技能 | 文档导航、链接、版本一致与退役命令 |
+| 新增 `tests/test_skills_layout.py` 确定性检查 | 全部通过：外部方法无跨范围相对链接、写作者按技能名称取得、保真契约完整、委派契约覆盖七类与回收核对、缺方法处理有明文 | 接缝的静态形状；不证明宿主内行为 |
+| `bash scripts/install-smoke-test.sh`（`skills` CLI 1.7.0，VERSION 3.0.2） | **PASS 23 / FAIL 0**；21 项完整安装、许可、相对引用、通用单项与游戏最小组合、子集缺依赖、链接模式、二次安装 | 现行 21 项发行形态与消费者改动后仍可独立安装；工作树为 `06f8f11-dirty` |
+| `bash scripts/install-source-matrix-test.sh` | 全部通过：两项目范围并存、同范围两个方向的来源切换、本地与固定 fork 锁、修改副本时报告差异且不覆盖本地改动 | 随包副本的来源切换行为未被本次改动影响；只用临时项目范围 |
+| 隔离夹具安装后的接缝核对 | `/tmp/mgs-issue90/fixture/_seed/.agents/skills/` 含 21 项；`docs-gamestudio/references/` 装到 3 份资料；全树 `grep '\.\./writing-for-agents'` 为 0 命中；安装副本的 `docs-gamestudio/SKILL.md` 与工作树逐字一致 | 接缝随真实安装落地，不依赖开发机相对路径 |
+| 随包副本摘要 | `tests/test_skills_layout.py::test_writing_for_agents_pin_and_package_digests` 通过（SHA256SUMS 覆盖 6 个随包文件） | 本票未改动随包副本内容 |
+| `python3.12 scripts/sync-writing-for-agents.py` 的网络源核对 | **not-run：失败** `certificate verify failed: unable to get local issuer certificate`（本机 Python 3.12 根证书环境），未取得上游源文件比对 | 未变更源版本与发行副本，因此未重跑该项；上游一致性不能据本地摘要宣称已复验 |
+
+### 行为场景（本机 DSH 子代理，非 Codex 矩阵）
+
+| 场景 | 派发与实际结果 | 能证明什么 |
+|---|---|---|
+| 正式资料取得外部方法并核对保真 | 干净子代理读取 `skills/writing-for-agents/SKILL.md` 与 `skills/docs-gamestudio/references/semantic-fidelity.md`，把一份含数值、候选值、建议、例外、未复现观察与待定项的原始记录整理成设计草稿；返回逐项核对表 | 数字、单位、条件、例外、责任、确认状态与原始证据在产物中保持原意；候选、建议、未复现观察与待定项均未被升级或合并；原文含糊处被标为「需要一次决定」而非补写答案 |
+| 真实委派与结果回收 | 派出一个不含父历史的接收方，在隔离安装项目 `/tmp/mgs-issue90/fixture/_seed` 中按技能名称读取 `docs-gamestudio` 的保真与委派参考，独立复核同一整理稿 | 接收方取得必要方法、输入与授权；返回内容含逐项等价判定、无依据新增、派发缺口与结论；主代理随后按派发说明逐项核对了依据、范围、产物与未完成项 |
+| 派发说明缺口（回收核对发现） | 接收方指出派发说明缺「本次结果服务于哪个决定」的判定口径，且「未提交的工作树版本」措辞不可核实（材料实际在 `/tmp`，不在任何 Git 工作树） | 回收核对确实产生了修正项，而不是照抄「已完成」；两项缺口对结论影响已记入本节 |
+| 产物中的引用可达性（回收核对发现） | 整理稿引用写为 `docs-gamestudio/references/semantic-fidelity.md`，对草稿本身不可解析，也不是按技能名的调用形式 | 临时产物瑕疵，不属于仓库交付内容；不改动仓库文件 |
+
+### 未运行与限制
+
+- 六宿主内的实际技能发现与调用、`writing-for-agents` 被真实宿主按名称加载、用户级与项目级同名副本冲突时的实际加载版本：**not-run**。本票只用隔离项目 `.agents/skills/` 与干净子代理核对接缝形状与产物保真，不能外推到 Codex 行为矩阵（该矩阵记录的是收缩前形态）。
+- 官方 `mattpocock/skills` 外部安装后的组合场景：**not-run**。随包副本仍发行，本票不验证两种来源共存时宿主选哪一个。
+- 删除随包副本、把集合收缩为 20 项、更新真实用户安装：**not-run**，属于本票之后的收缩阶段，本票明确不做。
+- `scripts/sync-writing-for-agents.py` 的上游网络核对未通过本机证书校验；本票没有改源版本或随包内容，重跑条件不成立但限制如实记录。

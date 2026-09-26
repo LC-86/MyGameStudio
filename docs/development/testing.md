@@ -20,7 +20,8 @@ python3.12 scripts/validate-docs.py
 - 8 个用户入口各带 `disable-model-invocation: true` 与一份 `agents/openai.yaml`（内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行，无其他内容）；13 个按需方法不带宿主开关与宿主文件，发布树中的 `openai.yaml` 只允许落在 8 个入口路径下（反向断言）
 - 描述写明了调用边界；用户入口正文不自动串调下一个入口
 - 每项技能带自己的 `LICENSE` 通知；包内相对引用全部可解析
-- 共享参考只有一个所有者，消费者用同级相对路径引用，不各存副本
+- 共享参考只有一个所有者，消费者用同级相对路径引用，不各存副本；外部共同方法 `writing-for-agents` 只能按宿主支持的技能名称取得，包内相对链接一律拦截（Issue #90 接缝）
+- `docs-gamestudio` 的语义保真与通用委派契约覆盖工单列出的各项，写作者各自的保真与委派指向真实所有者，缺外部方法时有明文处理
 - 没有对已退役入口或未纳入上游技能的硬调用；没有客户端适配残留、游离 `SKILL.md`、开发机路径或秘密
 
 `tests/test_docs_product.py` 检查文档与发布契约：根 `VERSION` 是唯一版本权威（不存在第二个 `package.json` / `plugin.json` / `marketplace.json`）、非历史文档不残留旧版本号、必需文档提到当前版本、根许可与第三方说明保留上游署名与基线提交、README 列出全部 21 项并给出原生安装命令、中英与双语 AGENTS 镜像结构一致、迁移说明记录了基线提交与能力去向。`writing-for-agents` 的逐文件源副本由 `scripts/sync-writing-for-agents.py` 联网核对固定提交，pytest 单独验证本地摘要与映射。
@@ -70,7 +71,7 @@ bash scripts/behavior-fixtures.sh /tmp/mgs-behavior-$(date +%Y%m%d-%H%M)
 
 它生成一个代表性小游戏项目（含项目约定、现行 GDD、进行中 spec、术语表、源码、本地任务票与真实 git 历史），用官方 CLI 原生安装 21 项技能到该项目的 `.agents/skills/`，并为每个场景准备特定现场（例如 S08 是一次真实进行中的 merge 冲突，带无关的未暂存改动）。
 
-场景由新建的子代理上下文执行：派发说明里不提供本次升级对话，接收方只有用户口吻的请求与夹具路径，必须自行从 `.agents/skills/` 读取方法。注意**新上下文是否真的不含父历史是宿主属性**（见 `skills/writing-for-agents/references/subagent-delegation.md`），所以结论只在核实过隔离性的宿主内成立。产出留在各夹具目录内供核对，执行结果逐项记录在 [验证状态](../validation-v3.md)，本页不填结果。
+场景由新建的子代理上下文执行：派发说明里不提供本次升级对话，接收方只有用户口吻的请求与夹具路径，必须自行从 `.agents/skills/` 读取方法。注意**新上下文是否真的不含父历史是宿主属性**（见 `skills/docs-gamestudio/references/delegation.md`），所以结论只在核实过隔离性的宿主内成立。产出留在各夹具目录内供核对，执行结果逐项记录在 [验证状态](../validation-v3.md)，本页不填结果。
 
 安装路径的目标用法见 [安装](../installation.md)。
 

@@ -23,7 +23,7 @@
 
 不要为用户教程再做一套带技能 frontmatter 的 `SKILL.md`，以免被安装器误发现。
 不要把已退役的旧入口重新写成可执行别名。
-共享参考只有一个所有者（`writing-for-agents`、`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。
+共享参考只有一个所有者（`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。外部共同方法 `writing-for-agents` 按宿主支持的技能名称取得，不写成跨安装范围的相对路径。
 
 ## 本地检查
 

@@ -13,7 +13,7 @@
 
 ## 技能说找不到某份共享参考
 
-多半是你只装了子集。通用方法由 `writing-for-agents/` 提供；游戏资料分流由 `docs-gamestudio/references/document-routing.md` 提供；人机责任由 `tasks-gamestudio/references/task-responsibility.md` 提供。缺它们时技能会说明受影响的能力、保留可独立完成的部分，不会凭名称模仿后宣称完成。
+多半是你只装了子集。通用方法由外部共同方法 `writing-for-agents` 提供，按技能名称取得；语义保真、通用委派与游戏资料分流由 `docs-gamestudio/references/` 提供；人机责任由 `tasks-gamestudio/references/task-responsibility.md` 提供。缺它们时技能会说明受影响的能力、保留可独立完成的部分，不会凭名称模仿后宣称完成。
 
 补齐方式：按 [技能依赖](../dependencies.md) 的必需依赖表把缺的技能装上，或直接完整安装 21 项。
 
@@ -49,9 +49,9 @@
 
 ## 同时装了 Matt 自己的技能库
 
-20 项游戏专属技能都带 `-gamestudio` 后缀，与上游名称（`grilling`、`tdd`、`prototype`、`implement`、`ask-matt` 等）不同名。通用 `writing-for-agents` 有意保留上游原名，因此在同一安装范围内会与 fork 的同名技能竞争。
+20 项游戏专属技能都带 `-gamestudio` 后缀，与上游名称（`grilling`、`tdd`、`prototype`、`implement`、`ask-matt` 等）不同名。外部共同方法 `writing-for-agents` 有意保留上游原名，因此在同一安装范围内会与同名来源竞争。
 
-GameStudio 项目范围应使用 MyGameStudio 已固定的随包副本，纯通用范围使用 `LC-86/mattpocockskills` fork。官方 CLI 将同名来源写入同一目标，后安装者会替换前者并更新锁来源；不会在一个范围内保留两份可并列加载的 `writing-for-agents`。来源切换前检查安装范围、锁文件、目标摘要和本地修改，先在临时副本核对目标及实际加载版本。20 项带后缀的游戏技能与原版上游技能可通过名称区分，但共用方法需要明确控制来源。
+当前随包副本仍发行，项目范围可用它；随包副本收缩后，两种范围都应从官方 `mattpocock/skills` 独立安装，纯通用范围也可以用 `LC-86/mattpocockskills` fork。官方 CLI 将同名技能写入同一目标，后安装者会替换前者并更新锁来源；不会在一个范围内保留两份可并列加载的 `writing-for-agents`。来源切换前检查安装范围、锁文件、目标摘要和本地修改，先在临时副本核对目标及实际加载版本。20 项带后缀的游戏技能与原版上游技能可通过名称区分，但共用方法需要明确控制来源。GameStudio 各技能只按技能名称取得它，不假设它与 GameStudio 位于同一范围。
 
 ## 报告问题
 

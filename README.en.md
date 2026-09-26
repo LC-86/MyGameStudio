@@ -51,14 +51,14 @@ The 8/13 split is backed by three layers of invocation control (the mechanism co
 | [research-gamestudio](skills/research-gamestudio/SKILL.md) | research | on demand | Research at the depth the question needs, with sources and limits |
 | [codebase-gamestudio](skills/codebase-gamestudio/SKILL.md) | codebase-design | on demand | Design responsibility, state ownership, interfaces and test seams |
 | [merge-gamestudio](skills/merge-gamestudio/SKILL.md) | resolving-merge-conflicts | on demand | Resolve conflicts that already happened, by both sides' real intent |
-| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | original | on demand | Game-document routing, incremental collaboration and project reference access |
-| [writing-for-agents](skills/writing-for-agents/SKILL.md) | LC-86 fork | on demand | General writing, semantic fidelity, skill mechanics and subagent delegation |
+| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | original | on demand | Semantic fidelity, general subagent delegation, game-document routing and project reference access |
+| [writing-for-agents](skills/writing-for-agents/SKILL.md) | LC-86 fork | on demand | General writing method and skill mechanics; the external common method, reached by skill name |
 
 ## How they compose
 
 Skills are composable methods, not one pipeline. Four distinct actions: **reading an artifact**, **using a method**, **delegating work**, **recommending a next step**. A skill name appearing in text does not mean it ran.
 
-`writing-for-agents` provides common writing, semantic fidelity and general delegation. `docs-gamestudio` handles only game-document routing and incremental updates; `tasks-gamestudio` retains human responsibility and acceptance handover.
+`writing-for-agents` provides the general writing method and skill mechanics; reach it by its host-supported skill name, never by a cross-scope relative path. `docs-gamestudio` owns semantic fidelity, general delegation and game-document routing; `tasks-gamestudio` retains human responsibility and acceptance handover.
 
 Ownership of shared references and the dependency graph: [docs/dependencies.md](docs/dependencies.md).
 

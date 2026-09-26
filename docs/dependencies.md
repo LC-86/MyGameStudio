@@ -10,48 +10,54 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 | 所有者 | 唯一资料 | 用途 |
 |---|---|---|
-| `writing-for-agents` | `SKILL.md`、`SKILL-MECHANICS.md`、`references/subagent-delegation.md` | 通用正式资料写作、语义保真、技能机制与子代理委派 |
-| `docs-gamestudio` | `references/document-routing.md` | 游戏文档归属、增量协作与停止条件 |
+| `docs-gamestudio` | `references/semantic-fidelity.md`、`references/delegation.md`、`references/document-routing.md` | 语义保真、通用子代理委派、游戏文档归属与增量协作 |
 | `tasks-gamestudio` | `references/task-responsibility.md` | 人机责任、人工验收与交接 |
+| `writing-for-agents`（外部） | 官方 `SKILL.md`、`SKILL-MECHANICS.md` | 通用正式资料写作、信息层级、完成标准与技能机制 |
 
-`writing-for-agents` 是独立的通用方法。纯通用工程范围可只装它；游戏文档分流只在游戏任务需要时加入 `docs-gamestudio`。读取游戏参考后返回原任务。`tasks-gamestudio` 继续拥有人工责任与验收交接，不把该要求复制进通用方法。
+`writing-for-agents` 是**外部共同方法**：它来自权威来源，由用户独立安装，不承诺与 GameStudio 位于同一安装范围。编写正式资料时按技能名称取得它，不使用跨安装范围的相对路径；本仓库随包副本可能在后续收缩中退出集合，因此不把它的目录当成依赖契约。`docs-gamestudio` 只拥有语义保真与通用委派，不复制通用写作方法；`tasks-gamestudio` 继续拥有人工责任与验收交接。
 
 ## 必须一起安装的技能
 
 | 要安装的技能 | 必需组合（括号内为按需） |
 |---|---|
-| `grill-gamestudio` | `grilling-gamestudio`、`writing-for-agents`、`docs-gamestudio` |
-| `grill-gamestudio-docs` | `grilling-gamestudio`、`domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio`、`writing-for-agents`、`docs-gamestudio` |
-| `gdd-gamestudio` | `writing-for-agents`、`docs-gamestudio`（`spec-gamestudio`、`grilling-gamestudio` 为按需） |
-| `spec-gamestudio` | `writing-for-agents`、`docs-gamestudio`（`gdd-gamestudio` 为按需） |
-| `domain-gamestudio` | `writing-for-agents`、`docs-gamestudio`（`gdd-gamestudio`、`spec-gamestudio`、`grilling-gamestudio` 为按需） |
-| `grilling-gamestudio` | `writing-for-agents`、`docs-gamestudio`（其余技能为按需） |
-| `tasks-gamestudio` | `writing-for-agents` |
-| `implement-gamestudio` | `writing-for-agents`、`docs-gamestudio`、`tasks-gamestudio`、`review-gamestudio`（`tdd-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） |
-| `tdd-gamestudio` | `writing-for-agents`、`tasks-gamestudio` |
-| `review-gamestudio` | `writing-for-agents`、`tasks-gamestudio` |
-| `debug-gamestudio` | `writing-for-agents`、`tasks-gamestudio`（`tdd-gamestudio`、`review-gamestudio` 为按需） |
-| `prototype-gamestudio` | `writing-for-agents`、`docs-gamestudio`、`tasks-gamestudio`（`gdd-gamestudio`、`spec-gamestudio` 为按需） |
-| `wayfinder-gamestudio` | `writing-for-agents`、`docs-gamestudio`、`grilling-gamestudio`、`domain-gamestudio`（`research-gamestudio`、`prototype-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） |
-| `research-gamestudio` | `writing-for-agents` |
-| `handoff-gamestudio` | `writing-for-agents` |
-| `ask-gamestudio` | `writing-for-agents`；准确导航还需要它可能推荐的技能已安装 |
-| `setup-gamestudio` | `writing-for-agents` |
-| `codebase-gamestudio` | `writing-for-agents` |
-| `merge-gamestudio` | `writing-for-agents` |
-| `docs-gamestudio` | `writing-for-agents` |
-| `writing-for-agents` | 无 |
+| `grill-gamestudio` | `grilling-gamestudio`、`docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `grill-gamestudio-docs` | `grilling-gamestudio`、`domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio`、`docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `gdd-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；`spec-gamestudio`、`grilling-gamestudio` 为按需） |
+| `spec-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；`gdd-gamestudio` 为按需） |
+| `domain-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；`gdd-gamestudio`、`spec-gamestudio`、`grilling-gamestudio` 为按需） |
+| `grilling-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法；其余技能为按需） |
+| `tasks-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `implement-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`、`review-gamestudio`（`writing-for-agents` 为外部方法；`tdd-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） |
+| `tdd-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法） |
+| `review-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法） |
+| `debug-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法；`tdd-gamestudio`、`review-gamestudio` 为按需） |
+| `prototype-gamestudio` | `docs-gamestudio`、`tasks-gamestudio`（`writing-for-agents` 为外部方法；`gdd-gamestudio`、`spec-gamestudio` 为按需） |
+| `wayfinder-gamestudio` | `docs-gamestudio`、`grilling-gamestudio`、`domain-gamestudio`（`writing-for-agents` 为外部方法；`research-gamestudio`、`prototype-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 为按需） |
+| `research-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `handoff-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `ask-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法）；准确导航还需要它可能推荐的技能已安装 |
+| `setup-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `codebase-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `merge-gamestudio` | `docs-gamestudio`（`writing-for-agents` 为外部方法） |
+| `docs-gamestudio` | `writing-for-agents` 为外部方法；本技能自身的保真、委派与分流参考随它一起安装 |
+| `writing-for-agents` | 无（外部方法；作为随包副本暂列本套 21 项，收缩后由用户独立安装） |
 
-其中 `writing-for-agents` 的委派参考被 grilling、handoff、implement、research、review、tasks、wayfinder 按需使用；单纯缺少委派场景时不要求每项任务都调用它。`docs-gamestudio` 只为游戏文档分流类工作提供专属资料，不承载通用写法。
+`docs-gamestudio` 的委派参考被 grilling、handoff、implement、research、review、tasks、wayfinder 和 ask 按需使用；单纯缺少委派场景时不要求每项任务都调用它。`writing-for-agents` 的目录只在随包副本仍发行时存在；安装 GameStudio 不等于安装了外部共同方法。
 
 ## 选择安装示例
 
-只做通用工程资料时安装 `writing-for-agents` 即可。编写游戏 GDD 或 spec 时，把 `writing-for-agents`、`docs-gamestudio` 和相应专业技能一起安装。实现与评审组合示例：
+只做通用工程资料时先安装官方共同方法。编写游戏 GDD 或 spec 时，把 `writing-for-agents`、`docs-gamestudio` 和相应专业技能一起安装（本套技能尚未收缩前，`writing-for-agents` 也可从本仓库安装；收缩后改用下面的官方命令）。实现与评审组合示例：
 
 ```bash
 npx skills@latest add LC-86/MyGameStudio \
   --skill implement-gamestudio review-gamestudio tdd-gamestudio \
   writing-for-agents docs-gamestudio tasks-gamestudio
+```
+
+外部共同方法的官方安装命令（随包副本退出集合后必须使用）：
+
+```bash
+npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -y
 ```
 
 缺少必需资料时，技能应指出具体缺口并保留可继续部分；CLI 不会补装，也不应凭名称模仿后声称完成。完整安装本套技能最简单：
@@ -62,7 +68,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 ## 来源与更新范围
 
-每个安装范围固定一个更新渠道：MyGameStudio 项目范围使用仓库内已固定并验证的 `writing-for-agents`；纯通用范围从 `LC-86/mattpocockskills` fork 更新。该方法的源提交、文件映射与摘要见随包的 `skills/writing-for-agents/SOURCE.md`。
+每个安装范围固定一个更新渠道：MyGameStudio 项目范围使用仓库内已固定并验证的 `writing-for-agents` 副本；收缩后改用官方 `mattpocock/skills`，纯通用范围则从 `LC-86/mattpocockskills` fork 更新。随包副本的源提交、文件映射与摘要见 `skills/writing-for-agents/SOURCE.md`。
 
 `skills` CLI 按技能名称写入目录，同一安装范围里两个来源的 `writing-for-agents` 不会并列：后安装者会替换同名目标并更新锁文件来源。`skills-lock.json` 总会记录来源和内容摘要；CLI 1.7.0 对显式 `#<ref>` 另记录 `ref`，默认分支安装不记录。实际宿主采用哪个安装范围的副本仍需在目标宿主核实。不同项目/用户范围可以各自保留版本，但不能假设宿主优先级。
 

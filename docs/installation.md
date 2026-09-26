@@ -89,7 +89,7 @@ CLI 不解析技能间依赖，选中的技能各自独立安装。必须一起�
 
 1. 技能出现在宿主实际读取的技能目录中。`v3.0.2` 有 20 项 `-gamestudio` 名称与 `writing-for-agents`，共 21 项；`v3.0.1` 仍是 20 项。
 2. 每项技能目录内有 `SKILL.md`、它引用的 `references/` 或 `templates/`，以及一份 `LICENSE` 通知。
-3. 共享方法可达：`writing-for-agents/` 下的正文、技能机制、通用委派参考与许可可读；`docs-gamestudio/references/document-routing.md` 和 `tasks-gamestudio/references/task-responsibility.md` 可达，且相对引用能解析到所有者。
+3. 共享方法可达：`writing-for-agents` 的正文与技能机制可按宿主支持的技能名称取得；语义保真、通用委派与 `docs-gamestudio/references/document-routing.md` 可读；`tasks-gamestudio/references/task-responsibility.md` 可达，且相对引用能解析到所有者。
 
 ## 更新与卸载
 

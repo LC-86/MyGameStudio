@@ -61,8 +61,8 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 | [research-gamestudio](skills/research-gamestudio/SKILL.md) | 按深度做有来源、有局限说明的研究 |
 | [codebase-gamestudio](skills/codebase-gamestudio/SKILL.md) | 设计当前职责、状态归属、接口与测试边界 |
 | [merge-gamestudio](skills/merge-gamestudio/SKILL.md) | 按双方真实意图处理已发生的合并冲突 |
-| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | 游戏文档分流、增量协作与专属资料取得条件 |
-| [writing-for-agents](skills/writing-for-agents/SKILL.md) | 通用正式写作、语义保真、技能机制与子代理委派 |
+| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | 语义保真、通用子代理委派、游戏文档分流与专属资料取得条件 |
+| [writing-for-agents](skills/writing-for-agents/SKILL.md) | 通用正式资料写作与技能机制；外部共同方法，按技能名称取得 |
 
 ## 它们怎样组合
 
@@ -70,7 +70,7 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 - 设计讨论：`grill-gamestudio-docs` 组合访谈与概念校准，按已确认决定的实际用途分别更新术语、GDD 与本次规格，边讨论边局部落盘。
 - 交付工作：`tasks-gamestudio` 拆出完整小成果，`implement-gamestudio` 实现并按需组合 TDD、结构设计、诊断与评审，人工体验项未完成时不关单。
-- 正式资料与委派：`writing-for-agents` 负责通用表达、语义保真和通用委派。`docs-gamestudio` 只负责游戏文档分流与增量协作，`tasks-gamestudio` 保留人机责任与验收交接。
+- 正式资料与委派：`writing-for-agents` 负责通用表达与技能机制，按技能名称取得，不用跨安装范围的相对路径。`docs-gamestudio` 负责语义保真、通用委派与游戏文档分流，`tasks-gamestudio` 保留人机责任与验收交接。
 - 路线不清：`wayfinder-gamestudio` 整理跨会话的关键未知，路线清楚即交接，不继续自动制作。
 
 技能之间的依赖与共享资料归属见 [docs/dependencies.md](docs/dependencies.md)。

@@ -4,7 +4,7 @@
 
 frontmatter 只使用标准字段：`name`、`description`、`license`，确有需要时用 `compatibility` 或 `metadata`。在此之上，8 个用户入口各追加 `disable-model-invocation: true` 与一份 `agents/openai.yaml`，内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行，无其他内容；`argument-hint`、`allowed-tools` 与 frontmatter 内的 `allow_implicit_invocation` 仍然禁止；13 个按需方法不带任何宿主开关，也不带宿主文件。这套三层控制由 frontmatter 在 Claude Code、Grok Build、DSH 内强制，由 `agents/openai.yaml` 在 Codex 内强制；ZCode 与 Qoder 没有宿主级开关，同一条 8/13 边界在那里仍是写在描述与正文里的指令层约定。
 
-共享参考只有一个所有者：通用写作方法与子代理委派归 `writing-for-agents`；GameStudio 文档分流与增量协作归 `docs-gamestudio`；人机责任与验收交接归 `tasks-gamestudio`。消费者用同级相对路径引用，不保留第二份可独立改写的副本。
+共享参考只有一个所有者：语义保真、通用子代理委派与 GameStudio 文档分流归 `docs-gamestudio`；人机责任与验收交接归 `tasks-gamestudio`。消费者用同级相对路径引用，不保留第二份可独立改写的副本。`writing-for-agents` 是外部共同方法：按宿主支持的技能名称取得，不使用跨安装范围的相对路径，也不保留它的第二份可编辑副本。
 
 改动 `skills/` 或文档后运行 `python3.12 -m pytest tests/ -q` 与 `python3.12 scripts/validate-docs.py`。修改共同方法源版本或发行副本时还要运行 `python3.12 scripts/sync-writing-for-agents.py`。静态检查不替代行为验证；实际结果记录在 `docs/validation-v3.md`，没有运行的一律标为未运行。
 

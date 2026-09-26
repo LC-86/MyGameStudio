@@ -27,8 +27,10 @@
 | `research-gamestudio` | research | 按需方法 | 带来源、适用条件与局限的事实调查 |
 | `codebase-gamestudio` | codebase-design | 按需方法 | 设计当前改动的职责、状态与测试边界 |
 | `merge-gamestudio` | resolving-merge-conflicts | 按需方法 | 解决已发生的 merge/rebase 冲突 |
-| `docs-gamestudio` | 原创 | 按需方法 | 游戏文档分流、增量协作与专属资料取得条件 |
-| `writing-for-agents` | LC-86/mattpocockskills fork | 按需方法 | 通用正式写作、语义保真、技能机制与子代理委派 |
+| `docs-gamestudio` | 原创 | 按需方法 | 语义保真、通用子代理委派、游戏文档分流与专属资料取得条件 |
+| `writing-for-agents` | LC-86/mattpocockskills fork | 按需方法 | 通用正式资料写作与技能机制；外部共同方法，按技能名称取得 |
+
+`writing-for-agents` 的随包副本仍然发行，但它是**外部共同方法**：GameStudio 只按宿主支持的技能名称取得它，不使用跨安装范围的相对路径，也不把它的目录当成依赖契约。语义保真与通用子代理委派由 `docs-gamestudio` 拥有，不随该副本是否发行而改变。收缩随包副本属于后续工作，本版不改变 21 项集合。
 
 上游基线、逐项适配记录见 [与 Matt Pocock skills 的关系](upstream.md) 与 [provenance/upstream.md](../../provenance/upstream.md)。安装时必须一起带上的技能和共享参考见 [技能依赖](../dependencies.md)。
 

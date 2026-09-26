@@ -35,7 +35,7 @@ disable-model-invocation: true
 代码改动收尾时使用 [review-gamestudio](../review-gamestudio/SKILL.md)。
 评审使用本次完整待交付内容，包括相关未提交成果，
 排除不属于当前任务的改动；不为取得版本标识强制提交。
-两轴评审需要派发子代理时，按 [writing-for-agents 的委派参考](../writing-for-agents/references/subagent-delegation.md)
+两轴评审需要派发子代理时，按 [docs-gamestudio 的委派参考](../docs-gamestudio/references/delegation.md)
 组织说明，给两个只读审查者同一份冻结材料和各自依据；
 没有独立上下文能力时顺序自查并披露限制。
 处理影响本次完成要求的发现，修改后复查受影响内容。
@@ -50,7 +50,7 @@ disable-model-invocation: true
 
 对照验收条目记录实际成果、检查与剩余问题。
 这份记录会被下一个执行者或验收人读取，
-按 [writing-for-agents](../writing-for-agents/SKILL.md) 的语义保真要求表达：
+按技能名称取得 `writing-for-agents` 的写作方法，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)表达：
 已实现、已检查、待人工判断分别写明，未运行的检查保持未运行。
 可由 Agent 完成的部分自行完成；需要人判断的部分，
 在输入准备好后按共享责任约定交接，保留未完成的人工条目。

@@ -52,12 +52,41 @@ FORBIDDEN_FIELDS = {
     "allowed-tools", "allowed_tools",
 }
 
-# 共享资料的唯一所有者。消费者只能用同级相对路径引用，不得各存一份副本。
+# 共享资料的唯一所有者。消费者引用所有者技能的随包资料，不各存一份副本。
+# 外部共同方法 `writing-for-agents` 由权威来源独立安装，GameStudio 只按技能名称取得，
+# 不承诺它与 GameStudio 位于同一安装范围，因此不出现在本表。
 SHARED_OWNERS = {
-    "writing-for-agents": {"SKILL-MECHANICS.md", "references/subagent-delegation.md"},
-    "docs-gamestudio": {"references/document-routing.md"},
+    "docs-gamestudio": {
+        "references/document-routing.md",
+        "references/delegation.md",
+        "references/semantic-fidelity.md",
+    },
     "tasks-gamestudio": {"references/task-responsibility.md"},
 }
+# 外部共同方法名：只能按技能名称取得，不能写成本仓库内的相对链接。
+EXTERNAL_METHOD = "writing-for-agents"
+# 按技能名称取得外部共同方法或指向游戏写作所有者的消费者。
+WRITING_CONSUMERS = frozenset({
+    "ask-gamestudio", "setup-gamestudio", "domain-gamestudio",
+    "gdd-gamestudio", "spec-gamestudio", "tasks-gamestudio", "implement-gamestudio",
+    "tdd-gamestudio", "review-gamestudio", "debug-gamestudio", "prototype-gamestudio",
+    "research-gamestudio", "wayfinder-gamestudio", "handoff-gamestudio",
+    "codebase-gamestudio", "merge-gamestudio", "docs-gamestudio",
+})
+# 通用子代理委派由 docs-gamestudio 拥有。
+DELEGATION_CONSUMERS = frozenset({
+    "grilling-gamestudio", "review-gamestudio", "research-gamestudio",
+    "wayfinder-gamestudio", "implement-gamestudio", "tasks-gamestudio",
+    "handoff-gamestudio", "ask-gamestudio", "docs-gamestudio",
+})
+# 按原有措辞显式点出「语义保真」的写作者，必须给出可达的保真所有者。
+FIDELITY_POINTERS = frozenset({
+    "domain-gamestudio", "debug-gamestudio", "prototype-gamestudio",
+    "research-gamestudio", "merge-gamestudio", "codebase-gamestudio",
+    "review-gamestudio", "wayfinder-gamestudio", "setup-gamestudio",
+    "tdd-gamestudio", "implement-gamestudio", "handoff-gamestudio",
+    "gdd-gamestudio", "spec-gamestudio",
+})
 
 # 未纳入集合的上游技能与已退役入口，不得成为消费者的硬调用目标。
 NOT_SELECTED = (
@@ -223,13 +252,13 @@ def test_no_client_adapter_residue() -> None:
 
 
 def test_shared_references_have_a_single_owner() -> None:
-    """共享方法只有一份权威正文，消费者用同级相对路径引用。"""
+    """共享方法只有一份权威正文，消费者引用所有者技能的随包资料。"""
     for owner, rels in SHARED_OWNERS.items():
         for rel in rels:
             assert (SKILLS / owner / rel).is_file(), f"缺少共享资料 {owner}/{rel}"
     duplicates = []
     for rel in ("document-routing.md", "subagent-delegation.md", "SKILL-MECHANICS.md",
-                "task-responsibility.md"):
+                "semantic-fidelity.md", "delegation.md", "task-responsibility.md"):
         hits = sorted(p.relative_to(SKILLS).as_posix() for p in SKILLS.rglob(rel))
         assert len(hits) == 1, f"{rel} 应只有一份权威正文，实际 {hits}"
     for d in skill_dirs():
@@ -257,6 +286,43 @@ def test_shared_references_have_a_single_owner() -> None:
     assert not duplicates, "共享资料归属被破坏：\n" + "\n".join(duplicates)
 
 
+def test_external_method_gap_has_a_declared_handling() -> None:
+    """缺外部共同方法时的处理写进所有者正文，而不是留给读者猜。
+
+    静态检查只能证明契约文本存在；真实缺口场景的宿主行为见验证记录，
+    未运行时标为 not-run，不用本测试代替。
+    """
+    body = read(SKILLS / "docs-gamestudio" / "SKILL.md")
+    assert "按宿主支持的技能名称取得它" in body, \
+        "docs-gamestudio 应按宿主支持的技能名称取得外部方法"
+    assert "说明具体缺口和受影响的工作" in body, \
+        "docs-gamestudio 应说明缺外部方法时指出缺口与受影响工作"
+    assert "只继续不依赖它的部分" in body, \
+        "docs-gamestudio 应说明只继续不依赖该方法的部分"
+    assert "不凭名称模仿缺失的方法" in body, \
+        "docs-gamestudio 应禁止模仿缺失方法后宣称已取得"
+
+
+def test_no_cross_scope_relative_paths_to_the_external_method() -> None:
+    """外部共同方法只能按技能名称取得，不得写成跨安装范围的相对链接。
+
+    随包副本可能在后续收缩中退出发行集合；指向它的相对路径会把安装布局
+    当成依赖契约，因此这里的检查与随包副本是否存在无关。
+    """
+    offenders = []
+    for d in skill_dirs():
+        if d.name == EXTERNAL_METHOD:
+            continue
+        for path in md_files(d):
+            rel = path.relative_to(REPO).as_posix()
+            for raw in LINK.findall(read(path)):
+                if raw.startswith(("http://", "https://", "#")):
+                    continue
+                if f"{EXTERNAL_METHOD}/" in raw:
+                    offenders.append(f"{rel} -> {raw}：把外部共同方法写成了包内相对链接")
+    assert not offenders, "外部方法被写成本范围相对路径：\n" + "\n".join(offenders)
+
+
 def test_no_hard_calls_to_retired_or_unselected_skills() -> None:
     offenders = []
     attribution = ("适配自", "上游", "原版", "Matt")
@@ -281,51 +347,73 @@ def test_no_hard_calls_to_retired_or_unselected_skills() -> None:
     assert not offenders, "旧名硬调用：\n" + "\n".join(sorted(set(offenders)))
 
 
-def test_writing_and_game_routing_consumers_have_real_entry_points() -> None:
-    """共同写法、通用委派和游戏文档分流分别指向自己的资料所有者。"""
-    writing_consumers = {
-        "ask-gamestudio", "setup-gamestudio", "domain-gamestudio",
-        "gdd-gamestudio", "spec-gamestudio", "tasks-gamestudio", "implement-gamestudio",
-        "tdd-gamestudio", "review-gamestudio", "debug-gamestudio", "prototype-gamestudio",
-        "research-gamestudio", "wayfinder-gamestudio", "handoff-gamestudio",
-        "codebase-gamestudio", "merge-gamestudio",
-    }
-    delegation_consumers = {
-        "grilling-gamestudio", "review-gamestudio", "research-gamestudio",
-        "wayfinder-gamestudio", "implement-gamestudio", "tasks-gamestudio",
-        "handoff-gamestudio",
-    }
+def test_writing_consumers_resolve_the_method_by_skill_name() -> None:
+    """写作者按技能名称取得外部共同方法，并指向真正拥有该内容的资料。"""
     routing_consumers = {
         "grilling-gamestudio", "domain-gamestudio", "gdd-gamestudio", "spec-gamestudio",
         "implement-gamestudio", "prototype-gamestudio", "wayfinder-gamestudio",
     }
     missing = []
-    for name in writing_consumers:
+    for name in sorted(WRITING_CONSUMERS):
         body = read(SKILLS / name / "SKILL.md")
-        if not re.search(r"\[[^\]]*\]\(\.\./writing-for-agents/SKILL\.md\)", body):
-            missing.append(f"{name}: 没有指向 writing-for-agents 正文的真实链接")
+        if re.search(rf"\[[^\]]*\]\([^)]*{EXTERNAL_METHOD}", body):
+            missing.append(f"{name}: 用相对链接而不是技能名称取得外部共同方法")
+        if not re.search(rf"`?{EXTERNAL_METHOD}`?", body):
+            missing.append(f"{name}: 没有说明外部共同方法 writing-for-agents")
         if "../docs-gamestudio/SKILL.md" in body:
-            missing.append(f"{name}: 仍把 docs-gamestudio 当成共同写作方法")
-    for name in delegation_consumers:
+            missing.append(f"{name}: 仍把 docs-gamestudio 当成共同写作方法正文")
+    for name in sorted(FIDELITY_POINTERS):
         body = read(SKILLS / name / "SKILL.md")
-        if "../writing-for-agents/references/subagent-delegation.md" not in body:
-            missing.append(f"{name}: 委派点没有链接共同委派参考")
-        if "../docs-gamestudio/references/delegation.md" in body:
-            missing.append(f"{name}: 仍指向旧委派参考")
-    for name in routing_consumers:
+        if "../docs-gamestudio/references/semantic-fidelity.md" not in body:
+            missing.append(f"{name}: 保真要求没有指向语义保真所有者")
+    for name in sorted(DELEGATION_CONSUMERS):
+        body = read(SKILLS / name / "SKILL.md")
+        # 所有者自身用包内相对路径；消费者用技能相对路径
+        if ("../docs-gamestudio/references/delegation.md" not in body
+                and not (name == "docs-gamestudio" and "references/delegation.md" in body)):
+            missing.append(f"{name}: 委派点没有链接 docs-gamestudio 的委派参考")
+    for name in sorted(routing_consumers):
         body = read(SKILLS / name / "SKILL.md")
         if "../docs-gamestudio/references/document-routing.md" not in body:
             missing.append(f"{name}: 文档分流点没有链接 document-routing.md")
-    assert not missing, "Docs 消费者接入缺失：\n" + "\n".join(missing)
+    assert not missing, "写作与委派消费者接入缺失：\n" + "\n".join(missing)
 
 
-def test_docs_does_not_recurse_or_own_content_decisions() -> None:
+def test_docs_owns_fidelity_delegation_and_game_routing() -> None:
+    """docs-gamestudio 重新拥有语义保真与通用委派，且保留游戏文档分流入口。"""
     body = read(SKILLS / "docs-gamestudio" / "SKILL.md")
-    assert "writing-for-agents" in body, "docs-gamestudio 应说明共同写作方法的取得位置"
-    assert "document-routing.md" in body, "docs-gamestudio 应保留游戏文档分流入口"
+    assert EXTERNAL_METHOD in body, "docs-gamestudio 应说明外部共同方法的取得方式"
+    for rel in ("references/semantic-fidelity.md", "references/delegation.md",
+                "references/document-routing.md"):
+        assert rel.split("/")[-1] in body, f"docs-gamestudio 应保留 {rel} 入口"
     assert "递归调用链" in body and "审批" in body, "docs-gamestudio 应说明其非递归、非审批边界"
-    assert not (SKILLS / "docs-gamestudio" / "references/delegation.md").exists()
-    assert not (SKILLS / "docs-gamestudio" / "references/skill-authoring.md").exists()
+    assert "不写跨安装范围的相对路径" in body, "docs-gamestudio 应说明不写跨范围相对路径"
+    assert not (SKILLS / "docs-gamestudio" / "references/skill-authoring.md").exists(), \
+        "技能机制仍由共同方法承担，本票不收回 skill-authoring"
+
+
+def test_semantic_fidelity_contract_is_complete() -> None:
+    """保真契约显式覆盖工单列出的各项，身份不升级也不合并。"""
+    text = read(SKILLS / "docs-gamestudio" / "references" / "semantic-fidelity.md")
+    for marker in ("数字", "单位", "顺序", "条件", "例外", "排除项", "责任",
+                   "确认状态", "原始证据"):
+        assert marker in text, f"semantic-fidelity.md 缺少 {marker}"
+    for marker in ("建议", "试验值", "已采纳设计", "已实现", "已验证"):
+        assert marker in text, f"semantic-fidelity.md 缺少身份标记 {marker}"
+    assert "不因整理而升级或合并" in text, "保真契约应说明身份不升级、不合并"
+    assert "指出这里需要一个决定" in text, "原文含糊时保真契约应要求指出缺口而不是补写答案"
+
+
+def test_delegation_contract_covers_brief_and_return_check() -> None:
+    """通用委派参考覆盖派发说明各项、上下文继承边界与结果回收核对。"""
+    text = read(SKILLS / "docs-gamestudio" / "references" / "delegation.md")
+    for marker in ("目标", "来源版本", "可访问输入", "授权", "自主空间",
+                   "上下文继承", "完成证据", "受阻处理", "结果回收核对"):
+        assert marker in text, f"delegation.md 缺少 {marker}"
+    assert "父代理取得过一份方法不等于子代理拥有它" in text, \
+        "委派参考应说明父代理的方法不自动进入接收方"
+    assert "不递归派发" in text and "收回结果后核对" in text, \
+        "委派参考应说明不递归派发与回收核对"
 
 
 def test_writing_for_agents_pin_and_package_digests() -> None:

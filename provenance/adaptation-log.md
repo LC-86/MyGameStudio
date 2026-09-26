@@ -8,9 +8,18 @@
 
 本记录以下 A1–A5 描述原 V3 实施时的要求与结果，保留其历史身份。Issue #87 将当前技能集合扩为 21 项，并重新指定共享资料所有者：
 
-- `writing-for-agents` 作为共同写作方法独立随包，固定源与逐文件摘要见 [`skills/writing-for-agents/SOURCE.md`](../skills/writing-for-agents/SOURCE.md)；它拥有通用表达、语义保真和子代理委派。
-- `docs-gamestudio` 收窄为游戏文档分流、增量协作和专属资料入口；其旧 `references/delegation.md` 与 `references/skill-authoring.md` 不再发行。A1 中对 `skill-authoring.md` 的引用指向已退役的 V3 材料，其维护契约现由仓库级 `AGENTS.md` 与 `docs/development/testing.md` 承载。
+- `writing-for-agents` 作为共同写作方法独立随包，固定源与逐文件摘要见 [`skills/writing-for-agents/SOURCE.md`](../skills/writing-for-agents/SOURCE.md)；它拥有通用表达和技能机制。
+- `docs-gamestudio` 收窄为游戏文档分流、增量协作和专属资料入口；其旧 `references/skill-authoring.md` 不再发行。A1 中对 `skill-authoring.md` 的引用指向已退役的 V3 材料，其维护契约现由仓库级 `AGENTS.md` 与 `docs/development/testing.md` 承载。
 - 人机责任和指定人工验收交接继续由 `tasks-gamestudio` 拥有。现行消费者映射、安装范围、许可、双语说明和验证状态按本次 Issue #87 分别维护；本节不宣称其已发布。
+
+## Issue #90 兼容接缝（2026-09-27，尚未发布）
+
+Issue #90 是 expand 阶段：在保留 v3.0.2 的 21 项发行形态与随包副本的前提下，先建立稳定接缝，让后续收缩删除随包副本时不需要再改消费者。
+
+- 语义保真与通用子代理委派从随包 `writing-for-agents` 交还 `docs-gamestudio`：新增 [`references/semantic-fidelity.md`](../skills/docs-gamestudio/references/semantic-fidelity.md)，恢复并扩展 [`references/delegation.md`](../skills/docs-gamestudio/references/delegation.md)。
+- 17 项消费者改为按宿主支持的技能名称取得 `writing-for-agents`，不再使用 `../writing-for-agents/...` 跨安装范围相对路径；保真与委派分别指向 `docs-gamestudio` 的所有者资料。
+- 随包副本继续按 #87 的固定源生成，内容与摘要未变；`SKILL-MECHANICS.md` 与上游 `references/subagent-delegation.md` 仍随副本分发，但不再是 GameStudio 委派方法的依据。
+- 失去保真或委派依据的写法没有被静默接受：`tests/test_skills_layout.py` 增加所有者、消费者、缺外部方法处理与保真/委派契约的确定性检查，实际结果记入 [验证状态](../docs/validation-v3.md)。
 
 ## 跨技能的系统性适配
 
