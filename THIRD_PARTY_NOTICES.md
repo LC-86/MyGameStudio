@@ -8,9 +8,9 @@ MyGameStudio 由 **LC-86** 独立维护，方法改编自 Matt Pocock 的技能�
 |---|---|
 | 维护者 | LC-86 |
 | 许可 | MIT，见 [LICENSE](LICENSE) |
-| 当前版本 | 3.0.0，权威来源 [VERSION](VERSION) |
+| 当前版本 | 3.0.1，权威来源 [VERSION](VERSION) |
 | 交付形态 | 原生 Agent Skills 仓库，根目录 `skills/<技能名>/SKILL.md`，通过官方 `skills` CLI 安装 |
-| 原创范围 | `gdd-gamestudio` 技能、全部游戏化适配、共享方法（文档分流与增量协作、子代理委派、人机责任与验收交接）、本仓库文档与检查 |
+| 原创范围 | `gdd-gamestudio`、GameStudio 专属文档分流与增量协作、人机责任与验收交接、本仓库文档与检查 |
 
 ## Matt Pocock skills
 
@@ -22,9 +22,10 @@ MyGameStudio 由 **LC-86** 独立维护，方法改编自 Matt Pocock 的技能�
 | 许可副本 | [provenance/v2-plugin-provenance/licenses/mattpocock-skills-LICENSE.txt](provenance/v2-plugin-provenance/licenses/mattpocock-skills-LICENSE.txt) |
 | V3 方法基线 | 提交 `c55ee46073ed923f86ce59a5eb3b6d895095d1b7`，读取自 fork [LC-86/mattpocockskills](https://github.com/LC-86/mattpocockskills)（其 `upstream` remote 指向 mattpocock/skills），上游插件声明版本 1.2.3 |
 | V2 曾钉住的提交 | `3cca18b368ae95cdbdebbff572ccafa662551015`（2.0.2 的分发基线，两个提交的差异未按文件逐一对照） |
-| 纳入范围 | 20 项中的 19 项改编自上游方法；`gdd-gamestudio` 为原创 |
+| 纳入范围 | 21 项中的 19 项游戏技能改编自上游，`writing-for-agents` 是独立固定分发；`gdd-gamestudio` 为原创 |
+| writing-for-agents 固定源 | fork `LC-86/mattpocockskills`，提交 `f3c726f275fa1ac59fef33732e527dded6d62479`；源与发行文件摘要见 `skills/writing-for-agents/SOURCE.md` |
 
-名称映射、逐项适配记录、可能损失与核对方式见 [provenance/upstream.md](provenance/upstream.md) 与 [provenance/adaptation-log.md](provenance/adaptation-log.md)。上游的 `writing-for-agents` 配套文件 `SKILL-MECHANICS.md` 没有对应技能：通用写作杠杆并入 `docs-gamestudio`；其中宿主专属调用开关的内容在 V3 退出，此后（#81）本库在 8 个用户入口上重新使用了 frontmatter 的 `disable-model-invocation` 与 `agents/openai.yaml` 的 `policy.allow_implicit_invocation`；该上游文件本身仍无对应技能。
+名称映射、逐项适配记录、可能损失与核对方式见 [provenance/upstream.md](provenance/upstream.md) 与 [provenance/adaptation-log.md](provenance/adaptation-log.md)。上游 `writing-for-agents`、其 `SKILL-MECHANICS.md` 与通用委派参考现在以固定源副本独立分发；GameStudio 文档分流、人机责任和验收交接继续由专属技能拥有。其宿主专属开关仍不随包，因该方法属于按需方法；本库 8 个用户入口的三层控制见 [当前能力与限制](docs/reference/capabilities.md)。
 
 ### 许可随技能分发
 

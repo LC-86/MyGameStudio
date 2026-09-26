@@ -72,7 +72,7 @@ git show 5e3cfbf:plugin/records/mgs_records.py
 git checkout 5e3cfbf -- legacy/          # 会写入工作树，按需使用
 ```
 
-Git 历史未被改写，2.0.2 的完整内容在提交 `5e3cfbfa3e217a9182690237955734109b982235`。注意固定引用只按 `computedHash` 记录内容哈希，不记录引用与提交 SHA；`v2.0.2` 标签被移动时同一命令取到的内容也会变，见 [安装](installation.md)。
+Git 历史未被改写，2.0.2 的完整内容在提交 `5e3cfbfa3e217a9182690237955734109b982235`。旧记录只说明当时核对了 `computedHash`，没有保存 CLI 锁文件的 ref 字段；2026-09-26 用 CLI 1.7.0 复测发现，完整 `#<ref>` 安装会记录 ref 字符串，但不会记录解析后的提交 SHA。若 `v2.0.2` 标签被移动，同一命令仍可能取到不同内容，可用 `computedHash` 发现变化，见[安装](installation.md)。
 
 已发布的 GitHub Release 资产不受本次改动影响。被移除内容的完整清单见 [provenance/v2-retirement.md](../provenance/v2-retirement.md)。
 

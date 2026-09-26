@@ -48,7 +48,8 @@ run_cli() { "${CLI[@]}" "$@" 2>&1; }
 EXPECTED="ask-gamestudio codebase-gamestudio debug-gamestudio docs-gamestudio domain-gamestudio
 gdd-gamestudio grill-gamestudio grill-gamestudio-docs grilling-gamestudio handoff-gamestudio
 implement-gamestudio merge-gamestudio prototype-gamestudio research-gamestudio review-gamestudio
-setup-gamestudio spec-gamestudio tasks-gamestudio tdd-gamestudio wayfinder-gamestudio"
+setup-gamestudio spec-gamestudio tasks-gamestudio tdd-gamestudio wayfinder-gamestudio
+writing-for-agents"
 
 resolve_cli
 note "0. 环境"
@@ -58,7 +59,7 @@ info "CLI 调用：${CLI[*]}"
 info "来源标识：$(git -C "$REPO" rev-parse --short HEAD)$( [ -n "$(git -C "$REPO" status --porcelain)" ] && echo '-dirty' || echo '-clean')"
 info "CLI 版本：$(run_cli --version 2>&1 | clean | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)"
 
-note "1. 发现集合恰为 20 项"
+note "1. 发现集合恰为 21 项"
 CONSUMER="$WORK/consumer-list"; mkdir -p "$CONSUMER"
 LIST="$(cd "$CONSUMER" && run_cli add "$REPO" --list 2>&1)"
 LIST_CLEAN="$(printf '%s\n' "$LIST" | clean)"
@@ -66,12 +67,12 @@ printf '%s\n' "$LIST" | sed -e "$ANSI_RE" | grep -E '◇|●|■|✓|⚠' | cut 
 FOUND_N="$(printf '%s' "$LIST_CLEAN" | grep -oE 'Found [0-9]+' | head -1 | grep -oE '[0-9]+')"
 if [ -z "$FOUND_N" ]; then
   info "未能从 --list 文本解析数量（该输出是给人看的表格，会随终端宽度折行）；名称集合由第 2 步的安装结果判定"
-elif [ "$FOUND_N" = "20" ]; then
-  ok "CLI 报告发现 20 项"
+elif [ "$FOUND_N" = "21" ]; then
+  ok "CLI 报告发现 21 项"
 else
-  bad "CLI 报告发现 $FOUND_N 项，应为 20 项"
+  bad "CLI 报告发现 $FOUND_N 项，应为 21 项"
 fi
-printf '%s' "$LIST_CLEAN" | grep -qE 'game-producer|game-init|game-design|ask-matt|to-spec|to-tickets|writing-for-agents|diagnosing-bugs' \
+printf '%s' "$LIST_CLEAN" | grep -qE 'game-producer|game-init|game-design|ask-matt|to-spec|to-tickets|diagnosing-bugs' \
   && bad "发现集合含旧技能名" || ok "发现输出无旧技能名或已退役入口"
 
 note "2. 完整安装（--agent universal --copy）"
@@ -88,7 +89,7 @@ for name in $EXPECTED; do
     bad "未安装 $name"
   fi
 done
-[ "$INSTALLED" = "20" ] && ok "20 项 SKILL.md 齐全"
+[ "$INSTALLED" = "21" ] && ok "21 项 SKILL.md 齐全"
 EXTRA_DIRS="$(find "$DEST" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort)"
 for d in $EXTRA_DIRS; do
   printf '%s\n' $EXPECTED | grep -qx "$d" || bad "安装目录含集合外技能 $d"
@@ -107,7 +108,7 @@ for name in $EXPECTED; do
     done
   done
 done
-[ "$MISSING_LIC" = "0" ] && ok "20 份许可通知齐全且含 MIT 全文"
+[ "$MISSING_LIC" = "0" ] && ok "21 份许可通知齐全且含 MIT 全文"
 [ "$MISSING_REF" = "0" ] && ok "安装目录内全部相对引用可达"
 
 note "4. 安装内容不依赖源码 checkout"
@@ -132,8 +133,31 @@ done
 
 note "5. 共享参考的实际归属与子集安装负例"
 [ -f "$DEST/docs-gamestudio/references/document-routing.md" ] && ok "document-routing.md 归 docs-gamestudio" || bad "缺少共享参考 document-routing.md"
-[ -f "$DEST/docs-gamestudio/references/delegation.md" ] && ok "delegation.md 归 docs-gamestudio" || bad "缺少共享参考 delegation.md"
+[ -f "$DEST/writing-for-agents/SKILL-MECHANICS.md" ] && ok "SKILL-MECHANICS.md 归 writing-for-agents" || bad "缺少共同技能机制参考"
+[ -f "$DEST/writing-for-agents/references/subagent-delegation.md" ] && ok "subagent-delegation.md 归 writing-for-agents" || bad "缺少共同委派参考"
 [ -f "$DEST/tasks-gamestudio/references/task-responsibility.md" ] && ok "task-responsibility.md 归 tasks-gamestudio" || bad "缺少共享参考 task-responsibility.md"
+
+GENERIC="$WORK/consumer-generic-minimal"; mkdir -p "$GENERIC"
+GENERIC_OUT="$(cd "$GENERIC" && run_cli add "$REPO" --skill writing-for-agents --agent universal --copy -y)"
+GENERIC_DEST="$GENERIC/.agents/skills"
+[ -f "$GENERIC_DEST/writing-for-agents/SKILL.md" ] \
+  && [ -f "$GENERIC_DEST/writing-for-agents/references/subagent-delegation.md" ] \
+  && ok "通用最小组合：writing-for-agents 单项安装且所需参考可达" \
+  || bad "通用最小组合缺少 writing-for-agents 正文或参考"
+[ ! -d "$GENERIC_DEST/docs-gamestudio" ] \
+  && ok "通用最小组合不强装 GameStudio 专属分流" \
+  || bad "通用最小组合意外安装 docs-gamestudio"
+
+GAME_DOCS="$WORK/consumer-game-docs-minimal"; mkdir -p "$GAME_DOCS"
+GAME_DOCS_OUT="$(cd "$GAME_DOCS" && run_cli add "$REPO" \
+  --skill writing-for-agents docs-gamestudio gdd-gamestudio --agent universal --copy -y)"
+GAME_DOCS_DEST="$GAME_DOCS/.agents/skills"
+[ -f "$GAME_DOCS_DEST/writing-for-agents/SKILL.md" ] \
+  && [ -f "$GAME_DOCS_DEST/docs-gamestudio/references/document-routing.md" ] \
+  && [ -f "$GAME_DOCS_DEST/gdd-gamestudio/references/gdd-writing.md" ] \
+  && ok "游戏设计最小组合：共同写法、游戏分流与 GDD 参考均可达" \
+  || bad "游戏设计最小组合缺少必需正文或参考"
+
 SUB="$WORK/consumer-subset"; mkdir -p "$SUB"
 SUBOUT="$(cd "$SUB" && run_cli add "$REPO" --skill tdd-gamestudio --agent universal --copy -y)"
 printf '%s\n' "$SUBOUT" | tail -2 | sed 's/^/      /'
@@ -169,7 +193,7 @@ note "7. 二次安装不产生双份有效名称或旧别名"
 AGAIN="$(cd "$FULL" && run_cli add "$REPO" --skill '*' --agent universal --copy -y)"
 printf '%s\n' "$AGAIN" | tail -2 | sed 's/^/      /'
 DUP="$(find "$DEST" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
-[ "$DUP" = "20" ] && ok "二次安装后仍为 20 个技能目录" || bad "二次安装后目录数变为 $DUP"
+[ "$DUP" = "21" ] && ok "二次安装后仍为 21 个技能目录" || bad "二次安装后目录数变为 $DUP"
 OLD="$(find "$FULL" -type d \( -name 'ask-matt' -o -name 'to-spec' -o -name 'to-tickets' -o -name 'game-producer' \) | wc -l | tr -d ' ')"
 [ "$OLD" = "0" ] && ok "无旧别名目录" || bad "出现旧别名目录"
 
@@ -180,7 +204,7 @@ FULL_N="$(printf '%s' "$FD" | clean | grep -oE 'Found [0-9]+' | head -1 | grep -
 info "默认发现 ${PLAIN_N:-未解析} 项，--full-depth 发现 ${FULL_N:-未解析} 项"
 if [ -z "$FULL_N" ]; then
   bad "--full-depth 输出无法解析数量，需检查 CLI 版本或输出格式"
-elif [ "$FULL_N" = "20" ]; then
+elif [ "$FULL_N" = "21" ]; then
   ok "--full-depth 未发现旧技能、样例或夹具入口"
 elif [ "$FULL_N" = "${PLAIN_N:-0}" ]; then
   ok "--full-depth 与默认发现数一致（${FULL_N}），无额外入口"

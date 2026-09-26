@@ -22,11 +22,13 @@ The target directory is decided by the official CLI and by you. This repo ships 
 
 Details: [docs/installation.md](docs/installation.md). Dependency combinations for partial installs: [docs/dependencies.md](docs/dependencies.md). Migrating from the 2.0.2 plugin package: [docs/migration-v3.md](docs/migration-v3.md).
 
-## The 20 skills
+## 21 skills in the updated source tree
+
+This integration is not released yet; the published `v3.0.1` tag still contains 20 skills. The updated source set has 8 user entries and 13 on-demand methods.
 
 **User entries** start only when the user asks for that kind of work. **On-demand methods** are combined by the agent when the current task and authorization apply; the user can also request them directly.
 
-The 8/12 split is backed by three layers of invocation control (the mechanism comes from each host's official documentation; this library has not tested it inside every host). Claude Code, Grok Build and DSH enforce it through the frontmatter field `disable-model-invocation: true`, which keeps the skill description out of the model's context and leaves only the explicit user entry. Codex enforces it through the `agents/openai.yaml` inside each user-entry directory (`policy.allow_implicit_invocation: false`), which turns off implicit invocation. ZCode and Qoder document no invocation-control field, so there the split stays an **instruction-layer convention** written into descriptions and bodies, and it is the fallback in every host. If you need a harder boundary, restate it in your own project rules. These two layers ship starting with the `v3.0.1` release; versions installed from the `v3.0.0` tag and earlier do not contain them.
+The 8/13 split is backed by three layers of invocation control (the mechanism comes from each host's official documentation; this library has not tested it inside every host). Claude Code, Grok Build and DSH enforce it through the frontmatter field `disable-model-invocation: true`, which keeps the skill description out of the model's context and leaves only the explicit user entry. Codex enforces it through the `agents/openai.yaml` inside each user-entry directory (`policy.allow_implicit_invocation: false`), which turns off implicit invocation. ZCode and Qoder document no invocation-control field, so there the split stays an **instruction-layer convention** written into descriptions and bodies, and it is the fallback in every host. If you need a harder boundary, restate it in your own project rules. These two layers ship starting with the `v3.0.1` release; versions installed from the `v3.0.0` tag and earlier do not contain them.
 
 | Skill | Upstream | Invocation | Responsibility |
 |---|---|---|---|
@@ -49,13 +51,14 @@ The 8/12 split is backed by three layers of invocation control (the mechanism co
 | [research-gamestudio](skills/research-gamestudio/SKILL.md) | research | on demand | Research at the depth the question needs, with sources and limits |
 | [codebase-gamestudio](skills/codebase-gamestudio/SKILL.md) | codebase-design | on demand | Design responsibility, state ownership, interfaces and test seams |
 | [merge-gamestudio](skills/merge-gamestudio/SKILL.md) | resolving-merge-conflicts | on demand | Resolve conflicts that already happened, by both sides' real intent |
-| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | writing-for-agents | on demand | Shared writing method for all formal artifacts and subagent dispatch |
+| [docs-gamestudio](skills/docs-gamestudio/SKILL.md) | original | on demand | Game-document routing, incremental collaboration and project reference access |
+| [writing-for-agents](skills/writing-for-agents/SKILL.md) | LC-86 fork | on demand | General writing, semantic fidelity, skill mechanics and subagent delegation |
 
 ## How they compose
 
 Skills are composable methods, not one pipeline. Four distinct actions: **reading an artifact**, **using a method**, **delegating work**, **recommending a next step**. A skill name appearing in text does not mean it ran.
 
-`docs-gamestudio` is the shared writing method behind every formal artifact and every subagent dispatch: GDD, spec, tickets, glossary and decision records, research/test/review conclusions, handover notes, skills and project rules. Specialist skills decide the content; Docs keeps the expression faithful.
+`writing-for-agents` provides common writing, semantic fidelity and general delegation. `docs-gamestudio` handles only game-document routing and incremental updates; `tasks-gamestudio` retains human responsibility and acceptance handover.
 
 Ownership of shared references and the dependency graph: [docs/dependencies.md](docs/dependencies.md).
 
@@ -69,7 +72,7 @@ Actually run and passing for this release: 68 static checks (including regressio
 
 Discovery and invocation inside real hosts, plus the remaining numbered behaviour scenarios, are **not run**; see section 4 of [docs/validation-v3.md](docs/validation-v3.md) for the list, and the same file for per-item evidence, exact commands and limits.
 
-A successful local install is not a successful remote GitHub install, which is why the remote content was re-tested separately. 3.0.1 is merged into `main`, and the `v3.0.1` tag and GitHub Release exist, so `npx skills@latest add LC-86/MyGameStudio` installs these 20 skills (including the three-layer invocation control for user entries). 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
+A successful local install is not a successful remote GitHub install, which is why remote content was re-tested separately. The published `v3.0.1` tag contains 20 skills; this updated source tree has 21. `@latest` reads the repository's default branch, not a release tag. 2.0.2 and earlier are no longer maintained and receive no fixes; pin `LC-86/MyGameStudio#v2.0.2` if you need the old content, and see [docs/migration-v3.md](docs/migration-v3.md) for the switch.
 
 ## License
 

@@ -16,6 +16,21 @@ V2（2.0.2）钉住的是同一上游项目的较早提交 `3cca18b368ae95cdbdeb
 
 上游目录采用 bucket 分层（`skills/engineering/`、`skills/productivity/` 等），随包文件是与 `SKILL.md` 同级的扁平 `.md`。V3 改为根目录 `skills/<name>/`，随包资料统一放在 `references/` 与 `templates/` 下。
 
+## 共同写作方法的固定分发
+
+Issue #86 交付的通用方法单独保留原名，不混入 20 项游戏技能改编：
+
+| 项 | 内容 |
+|---|---|
+| 可编辑权威源 | `LC-86/mattpocockskills` 的 `skills/productivity/writing-for-agents/` |
+| 固定源提交 | `f3c726f275fa1ac59fef33732e527dded6d62479` |
+| 随包目录 | `skills/writing-for-agents/` |
+| 逐文件来源、映射及摘要 | [skills/writing-for-agents/SOURCE.md](../skills/writing-for-agents/SOURCE.md) 与随包 `SHA256SUMS` |
+| 包装规则 | `SKILL.md` 只增加标准 `license: MIT` 字段；正文与 mechanics/委派参考由固定源生成；上游 MIT 正文完整保留并附加本发行署名 |
+| 排除项 | 上游 `agents/openai.yaml` 不随包；此项是按需方法，遵循本库 8 个入口/13 个方法边界 |
+
+分发副本从固定提交生成，不作为第二个可编辑权威源。`scripts/sync-writing-for-agents.py` 从固定源取文件、校验上游与随包摘要；普通安装没有源仓库、网络或脚本依赖。
+
 ## 名称与来源映射
 
 | V3 技能 | 上游原技能 | 上游路径（相对 `skills/`） | 关系 |
@@ -40,12 +55,13 @@ V2（2.0.2）钉住的是同一上游项目的较早提交 `3cca18b368ae95cdbdeb
 | codebase-gamestudio | codebase-design | engineering/codebase-design | 改写 |
 | merge-gamestudio | resolving-merge-conflicts | engineering/resolving-merge-conflicts | 改写 |
 | docs-gamestudio | writing-for-agents | productivity/writing-for-agents | 改写并扩大定位 |
+| writing-for-agents | writing-for-agents | productivity/writing-for-agents | 固定源副本；添加标准许可字段和许可发行署名 |
 
-上游的 `SKILL-MECHANICS.md`（writing-for-agents 的宿主机制分支）没有对应技能。通用写作杠杆并入 `docs-gamestudio`；与宿主专属调用开关有关的内容在 V3 退出，此后（#81）本库在 8 个用户入口上重新使用了 frontmatter 的 `disable-model-invocation` 与 `agents/openai.yaml` 的 `policy.allow_implicit_invocation`，见 [adaptation-log.md](adaptation-log.md)。
+`docs-gamestudio` 保留其 GameStudio 名称，但只拥有游戏文档分流与增量协作；此前重复的通用写作与委派内容改由 `writing-for-agents` 唯一拥有。上游 `SKILL-MECHANICS.md` 与通用委派参考现在随固定副本分发。原 V3 游戏技能的宿主调用开关历史见 [adaptation-log.md](adaptation-log.md)。
 
 ## 未纳入的上游技能
 
-按统一设计 v1 第 2.3 节的范围决定，以下六项不进入 V3 的 20 项集合。消费者不保留对它们的硬调用。
+按统一设计 v1 第 2.3 节的范围决定，以下六项不进入 21 项集合。消费者不保留对它们的硬调用。
 
 | 上游技能 | 处理 | 没有被暗中声称已替代的能力 |
 |---|---|---|
@@ -60,8 +76,8 @@ V2（2.0.2）钉住的是同一上游项目的较早提交 `3cca18b368ae95cdbdeb
 
 ## 许可处理方式
 
-每个技能目录内有一份 `LICENSE`，包含 MIT 许可全文、两条版权声明（LC-86 / MyGameStudio 与 Matt Pocock）以及该技能的上游来源说明。原因是按单项技能安装时，仓库根的 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 不会随之安装，接收方看到的许可信息只有技能目录内的内容。
+每个改编或分发的技能目录内有一份 `LICENSE`，包含完整 MIT 许可、原作者声明、MyGameStudio 发行署名和该技能来源。根 `LICENSE` 与 `THIRD_PARTY_NOTICES.md` 不会随单项技能安装。`writing-for-agents` 的上游许可正文由生成器逐字保留，署名以确定的发行附注追加。
 
-`gdd-gamestudio` 的许可通知标明它是 MyGameStudio 原创、没有上游对应技能。
+`gdd-gamestudio` 是 MyGameStudio 原创、没有上游对应技能。
 
 历史版本号、上游原名和许可内容原样保留，不做无差别全库字符串替换。

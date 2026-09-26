@@ -5,7 +5,7 @@
 ## 装完了但技能没被发现
 
 1. 确认官方 CLI 实际写入的目录，是宿主真正读取的技能目录。目标目录由 CLI 与你的选择决定，本库不维护各客户端的目录转换。
-2. 确认技能名是 20 个 `-gamestudio` 名称，目录内有 `SKILL.md`，frontmatter 只有 `name`、`description`、`license` 等标准字段（8 个用户入口另有 `disable-model-invocation: true`，目录内另有一份 `agents/openai.yaml`）。
+2. 确认整合后的技能名是 20 个 `-gamestudio` 名称加 `writing-for-agents`，共 21 项；每个目录有 `SKILL.md`，frontmatter 只用标准字段（8 个用户入口另有 `disable-model-invocation: true` 与 `agents/openai.yaml`）。
 3. 确认技能目录不是嵌套在多余一层里（例如 `skills/skills/`），也没有游离在 `skills/` 之外的 `SKILL.md`。
 4. 宿主需要时重启会话。重启后仍不出现，说明它不在该宿主的发现范围内，这是宿主行为，不是本库可以修的配置。
 
@@ -13,9 +13,9 @@
 
 ## 技能说找不到某份共享参考
 
-多半是你只装了子集。共享方法各只有一份权威正文：`docs-gamestudio/references/` 下的三份参考与 `tasks-gamestudio/references/task-responsibility.md`。缺它们时技能会说明受影响的能力、保留可独立完成的部分，不会凭名称模仿后宣称完成。
+多半是你只装了子集。通用方法由 `writing-for-agents/` 提供；游戏资料分流由 `docs-gamestudio/references/document-routing.md` 提供；人机责任由 `tasks-gamestudio/references/task-responsibility.md` 提供。缺它们时技能会说明受影响的能力、保留可独立完成的部分，不会凭名称模仿后宣称完成。
 
-补齐方式：按 [技能依赖](../dependencies.md) 的必需依赖表把缺的技能装上，或直接完整安装 20 项。
+补齐方式：按 [技能依赖](../dependencies.md) 的必需依赖表把缺的技能装上，或直接完整安装 21 项。
 
 ## 宿主没等我开口就选了用户入口
 
@@ -49,9 +49,9 @@
 
 ## 同时装了 Matt 自己的技能库
 
-MyGameStudio 的 20 项都带 `-gamestudio` 后缀，与上游名称（`grilling`、`tdd`、`prototype`、`implement`、`ask-matt` 等）不同名，因此明确使用带后缀的名称不会解析到未改编的上游方法。
+20 项游戏专属技能都带 `-gamestudio` 后缀，与上游名称（`grilling`、`tdd`、`prototype`、`implement`、`ask-matt` 等）不同名。通用 `writing-for-agents` 有意保留上游原名，因此在同一安装范围内会与 fork 的同名技能竞争。
 
-如果结果看起来不像本库的方法，检查两点：调用文案里是否漏了后缀；上游同名技能的正文没有游戏适配，也不包含本库的共享参考，两者不能互相顶替。
+GameStudio 项目范围应使用 MyGameStudio 已固定的随包副本，纯通用范围使用 `LC-86/mattpocockskills` fork。官方 CLI 将同名来源写入同一目标，后安装者会替换前者并更新锁来源；不会在一个范围内保留两份可并列加载的 `writing-for-agents`。来源切换前检查安装范围、锁文件、目标摘要和本地修改，先在临时副本核对目标及实际加载版本。20 项带后缀的游戏技能与原版上游技能可通过名称区分，但共用方法需要明确控制来源。
 
 ## 报告问题
 

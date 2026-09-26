@@ -25,7 +25,7 @@ EXPECTED = frozenset({
     "tasks-gamestudio", "implement-gamestudio", "tdd-gamestudio", "review-gamestudio",
     "debug-gamestudio", "prototype-gamestudio", "research-gamestudio",
     "wayfinder-gamestudio", "handoff-gamestudio", "codebase-gamestudio",
-    "merge-gamestudio", "docs-gamestudio",
+    "merge-gamestudio", "docs-gamestudio", "writing-for-agents",
 })
 
 USER_ENTRIES = frozenset({
@@ -34,7 +34,7 @@ USER_ENTRIES = frozenset({
     "handoff-gamestudio",
 })
 
-# 宿主调用控制契约：8 个用户入口必须带开关，12 个按需方法两处都不得出现。
+# 宿主调用控制契约：8 个用户入口必须带开关，13 个按需方法两处都不得出现。
 # Claude Code / Grok Build / DSH 读 frontmatter 的 disable-model-invocation；
 # Codex 不读该字段，只读技能目录内 agents/openai.yaml 的 policy.allow_implicit_invocation；
 # ZCode / Qoder 没有调用控制字段，由 description 措辞与正文约定兜底。
@@ -46,7 +46,7 @@ CODEX_POLICY_TEXT = "policy:\n  allow_implicit_invocation: false\n"
 
 STANDARD_FIELDS = {"name", "description", "license", "compatibility", "metadata"}
 # 宿主专属调用字段：8 个用户入口只允许 ENTRY_SWITCH 一项（下方断言先把它减掉），
-# 12 个按需方法一律禁止；argument-hint / allowed-tools 在任何技能内都禁止。
+# 13 个按需方法一律禁止；argument-hint / allowed-tools 在任何技能内都禁止。
 FORBIDDEN_FIELDS = {
     "disable-model-invocation", "allow_implicit_invocation", "argument-hint",
     "allowed-tools", "allowed_tools",
@@ -54,12 +54,12 @@ FORBIDDEN_FIELDS = {
 
 # 共享资料的唯一所有者。消费者只能用同级相对路径引用，不得各存一份副本。
 SHARED_OWNERS = {
-    "docs-gamestudio": {"references/document-routing.md", "references/delegation.md",
-                        "references/skill-authoring.md"},
+    "writing-for-agents": {"SKILL-MECHANICS.md", "references/subagent-delegation.md"},
+    "docs-gamestudio": {"references/document-routing.md"},
     "tasks-gamestudio": {"references/task-responsibility.md"},
 }
 
-# 未纳入 20 项的上游技能与已退役入口，不得成为消费者的硬调用目标。
+# 未纳入集合的上游技能与已退役入口，不得成为消费者的硬调用目标。
 NOT_SELECTED = (
     "improve-codebase-architecture", "to-questionnaire", "wait-what", "wizard",
     "teach", "triage",
@@ -69,7 +69,7 @@ UPSTREAM_NAMES = (
     "ask-matt", "setup-matt-pocock-skills", "grill-me", "grill-with-docs",
     "grilling", "domain-modeling", "to-spec", "to-tickets", "implement", "tdd",
     "code-review", "diagnosing-bugs", "prototype", "research", "wayfinder",
-    "handoff", "codebase-design", "resolving-merge-conflicts", "writing-for-agents",
+    "handoff", "codebase-design", "resolving-merge-conflicts",
 )
 
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
@@ -104,10 +104,10 @@ def md_files(root: Path) -> list[Path]:
     return sorted(p for p in root.rglob("*.md") if p.is_file())
 
 
-def test_exactly_the_twenty_expected_skills() -> None:
+def test_exactly_the_twenty_one_expected_skills() -> None:
     found = {p.name for p in skill_dirs()}
     assert found == EXPECTED, f"技能集合不符：缺少 {sorted(EXPECTED - found)}，多余 {sorted(found - EXPECTED)}"
-    assert len(skill_dirs()) == 20
+    assert len(skill_dirs()) == 21
 
 
 def test_every_skill_has_exactly_one_skill_md() -> None:
@@ -137,7 +137,7 @@ def test_user_entry_frontmatter_declares_the_host_switch() -> None:
 
 
 def test_method_frontmatter_uses_standard_fields_only() -> None:
-    """12 个按需方法零改动：不带任何宿主调用开关，仍只用标准字段。"""
+    """13 个按需方法不带宿主调用开关，只使用标准字段。"""
     for name in sorted(METHODS):
         fields = frontmatter(SKILLS / name / "SKILL.md")
         unknown = set(fields) - STANDARD_FIELDS
@@ -228,7 +228,7 @@ def test_shared_references_have_a_single_owner() -> None:
         for rel in rels:
             assert (SKILLS / owner / rel).is_file(), f"缺少共享资料 {owner}/{rel}"
     duplicates = []
-    for rel in ("document-routing.md", "delegation.md", "skill-authoring.md",
+    for rel in ("document-routing.md", "subagent-delegation.md", "SKILL-MECHANICS.md",
                 "task-responsibility.md"):
         hits = sorted(p.relative_to(SKILLS).as_posix() for p in SKILLS.rglob(rel))
         assert len(hits) == 1, f"{rel} 应只有一份权威正文，实际 {hits}"
@@ -281,8 +281,8 @@ def test_no_hard_calls_to_retired_or_unselected_skills() -> None:
     assert not offenders, "旧名硬调用：\n" + "\n".join(sorted(set(offenders)))
 
 
-def test_docs_method_has_real_consumer_entry_points() -> None:
-    """Docs 消费者必须能追踪到实际方法与可取得的参考，不是只出现技能名字符串。"""
+def test_writing_and_game_routing_consumers_have_real_entry_points() -> None:
+    """共同写法、通用委派和游戏文档分流分别指向自己的资料所有者。"""
     writing_consumers = {
         "ask-gamestudio", "setup-gamestudio", "domain-gamestudio",
         "gdd-gamestudio", "spec-gamestudio", "tasks-gamestudio", "implement-gamestudio",
@@ -302,12 +302,16 @@ def test_docs_method_has_real_consumer_entry_points() -> None:
     missing = []
     for name in writing_consumers:
         body = read(SKILLS / name / "SKILL.md")
-        if not re.search(r"\[[^\]]*\]\(\.\./docs-gamestudio/SKILL\.md\)", body):
-            missing.append(f"{name}: 没有指向 docs-gamestudio 正文的真实链接")
+        if not re.search(r"\[[^\]]*\]\(\.\./writing-for-agents/SKILL\.md\)", body):
+            missing.append(f"{name}: 没有指向 writing-for-agents 正文的真实链接")
+        if "../docs-gamestudio/SKILL.md" in body:
+            missing.append(f"{name}: 仍把 docs-gamestudio 当成共同写作方法")
     for name in delegation_consumers:
         body = read(SKILLS / name / "SKILL.md")
-        if "../docs-gamestudio/references/delegation.md" not in body:
-            missing.append(f"{name}: 委派点没有链接 delegation.md")
+        if "../writing-for-agents/references/subagent-delegation.md" not in body:
+            missing.append(f"{name}: 委派点没有链接共同委派参考")
+        if "../docs-gamestudio/references/delegation.md" in body:
+            missing.append(f"{name}: 仍指向旧委派参考")
     for name in routing_consumers:
         body = read(SKILLS / name / "SKILL.md")
         if "../docs-gamestudio/references/document-routing.md" not in body:
@@ -317,8 +321,34 @@ def test_docs_method_has_real_consumer_entry_points() -> None:
 
 def test_docs_does_not_recurse_or_own_content_decisions() -> None:
     body = read(SKILLS / "docs-gamestudio" / "SKILL.md")
-    assert "不递归调用自己" in body, "docs-gamestudio 应声明不递归调用自己"
-    assert "审批岗" in body, "docs-gamestudio 应声明不当写作审批岗"
+    assert "writing-for-agents" in body, "docs-gamestudio 应说明共同写作方法的取得位置"
+    assert "document-routing.md" in body, "docs-gamestudio 应保留游戏文档分流入口"
+    assert "递归调用链" in body and "审批" in body, "docs-gamestudio 应说明其非递归、非审批边界"
+    assert not (SKILLS / "docs-gamestudio" / "references/delegation.md").exists()
+    assert not (SKILLS / "docs-gamestudio" / "references/skill-authoring.md").exists()
+
+
+def test_writing_for_agents_pin_and_package_digests() -> None:
+    """随包内容固定到 #86 的源提交，manifest 能校验发行副本。"""
+    skill = SKILLS / "writing-for-agents"
+    source = read(skill / "SOURCE.md")
+    commit = "f3c726f275fa1ac59fef33732e527dded6d62479"
+    assert "LC-86/mattpocockskills" in source
+    assert commit in source
+    assert "agents/openai.yaml" in source and "not included" in source
+
+    sums = {}
+    for line in read(skill / "SHA256SUMS").splitlines():
+        digest, _, rel = line.partition("  ")
+        assert re.fullmatch(r"[0-9a-f]{64}", digest), f"摘要格式错误：{line}"
+        sums[rel] = digest
+    expected = {p.relative_to(skill).as_posix() for p in skill.rglob("*")
+                if p.is_file() and p.name != "SHA256SUMS"}
+    assert set(sums) == expected, "SHA256SUMS 必须覆盖全部随包文件（不含自身）"
+    import hashlib
+    for rel, digest in sums.items():
+        actual = hashlib.sha256((skill / rel).read_bytes()).hexdigest()
+        assert actual == digest, f"随包文件摘要不符：{rel}"
 
 
 def test_responsibility_semantics_are_present() -> None:

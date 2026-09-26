@@ -5,8 +5,8 @@
 三条贯穿所有组合的事实：
 
 - **推荐与开始是两个动作。**`ask-gamestudio` 与 `handoff-gamestudio` 只给建议和指令文本，不代替你启动下一个入口。
-- **用户入口不自动串调。**8 项用户入口各自完成即停；12 项按需方法由 Agent 在当前任务与授权适用时组合，你也可以直接点名。
-- **`docs-gamestudio` 是共同写作方法。**GDD、spec、任务票、术语与决策记录、研究/评审/诊断结论、交接说明，以及子代理委派材料，都由产出方按它的方法表达。它不决定写什么，也不是审批岗。
+- **用户入口不自动串调。**8 项用户入口各自完成即停；13 项按需方法由 Agent 在当前任务与授权适用时组合，你也可以直接点名。
+- **`writing-for-agents` 是共同写作方法。**正式资料、结论、交接和委派说明按它的方法表达；它负责通用表达与语义保真。`docs-gamestudio` 只提供游戏文档归属和增量协作，不决定内容，也不审批写作。
 
 这条区分由三层调用控制承担：Claude Code、Grok Build、DSH 由 frontmatter 的 `disable-model-invocation: true` 强制，Codex 由技能目录内的 `agents/openai.yaml` 强制；ZCode、Qoder 没有宿主级开关，仍靠描述与正文里的指令层约定。见 [当前能力与限制](../reference/capabilities.md)。
 
@@ -30,7 +30,7 @@
 再按项目约定保存。标签变更会触发现有自动化时先问我。
 ```
 
-任务票是交给另一个上下文执行的正式内容，接收方没有当前对话，因此按 `docs-gamestudio` 的方法写。
+任务票是交给另一个上下文执行的正式内容，接收方没有当前对话，因此按 `writing-for-agents` 的方法写。
 
 ## 一次实现
 
@@ -81,7 +81,7 @@
 不要复制工程、开新会话、改任务状态或搬迁资料。
 ```
 
-接收方是子代理时，委派材料按 `docs-gamestudio/references/delegation.md` 组织。引用不代表已传输。
+接收方是子代理时，委派材料按 `writing-for-agents/references/subagent-delegation.md` 组织。引用不代表已传输。
 
 ## 相关文档
 
