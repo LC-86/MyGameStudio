@@ -8,11 +8,11 @@
 
 | 检查 | 实际结果 | 证明范围 |
 |---|---|---|
-| `python3.12 scripts/sync-writing-for-agents.py` | 通过：6 个随包文件与固定提交一致 | 上游源清单、确定包装、发行摘要；不证明模型行为 |
+| `python3.12 scripts/sync-writing-for-agents.py` | 通过：6 个随包文件与固定提交及确定包装规则一致 | 上游源清单、许可、Codex 用户入口策略说明、发行摘要；不证明模型行为 |
 | `python3.12 -m pytest tests/ -q` | 71 passed | 21 项目录契约、单一所有者、消费者、源摘要与本地安装改动保护 |
 | `python3.12 scripts/validate-docs.py` | 通过：38 个文档文件、21 项技能 | 文档导航、链接、版本与退役命令 |
 | `bash scripts/install-smoke-test.sh` | `skills` CLI 1.7.0；PASS 23 / FAIL 0 | 21 项独立副本、许可、相对引用、通用单项与游戏最小组合、子集缺依赖、链接模式、二次安装 |
-| `bash scripts/install-source-matrix-test.sh` | 通过：两项目范围并存、同范围两种切换顺序、本地与固定 fork 锁；另用已验证 checkout 夹具覆盖 GitHub 默认分支锁形状；修改发行副本或已安装副本时均报告差异，已安装副本可对正确源版输出 diff 且不覆盖 | 只用临时项目范围；GitHub 默认分支用等价 lock 形状夹具，不是本分支的远端发布安装；没有触碰真实用户安装 |
+| `bash scripts/install-source-matrix-test.sh` | 通过：两项目范围并存、同范围两种切换顺序；两次覆盖安装前均核验旧副本；本地与固定 fork 锁；另用已验证 checkout 夹具覆盖 GitHub 默认分支锁形状；修改发行副本或已安装副本时均报告差异，且不覆盖本地改动 | 只用临时项目范围；GitHub 默认分支用等价 lock 形状夹具，不是本分支的远端发布安装；没有触碰真实用户安装 |
 | Codex 行为矩阵 | 14 个 ephemeral CLI 会话与 2 个 `fork_turns: none` 接收方均完成 | 通用/游戏触发、普通简答与轻微更正、只读与人工验收边界、真实委派及缺依赖响应；详见[行为证据](evidence/issue-87-behavior-matrix.md) |
 
 实际行为证据仅适用于本机 Codex CLI 0.157.0 与 `gpt-6-sol`。缺依赖负例用临时 `AGENTS.md` 明确限制到消费者安装范围，以避免全局方法替代缺失文件；这不证明宿主会自动屏蔽范围外的全局同名技能。其他宿主以及不同范围并存时各宿主的优先级均为 **not-run**。代码、安装与此范围内的行为验证已完成；远端合并、标签与发布未执行。

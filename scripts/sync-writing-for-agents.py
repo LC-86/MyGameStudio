@@ -25,6 +25,18 @@ SOURCE_FILES = {
 EXPECTED_FILES = {
     *SOURCE_FILES.values(), "SOURCE.md", "SHA256SUMS",
 }
+MECHANICS_NOTE = """## Codex invocation policy
+
+The `disable-model-invocation: true` frontmatter field only controls hosts that document it. Codex uses the skill-local `agents/openai.yaml` policy instead. When authoring a user-invoked skill for Codex, include this file in addition to any frontmatter switch required by other hosts:
+
+```yaml
+policy:
+  allow_implicit_invocation: false
+```
+
+Do not claim the frontmatter field alone prevents Codex from implicitly invoking the skill.
+
+"""
 
 
 def fetch(path: str) -> bytes:
@@ -56,6 +68,14 @@ def with_standard_license_field(skill_md: bytes) -> bytes:
     return f"---\n{packaged_header}\n---\n{text[match.end():]}".encode("utf-8")
 
 
+def with_codex_invocation_policy(mechanics_md: bytes) -> bytes:
+    text = mechanics_md.decode("utf-8")
+    anchor = "## Splitting by invocation\n"
+    if text.count(anchor) != 1 or "## Codex invocation policy\n" in text:
+        raise ValueError("upstream SKILL-MECHANICS.md no longer matches the deterministic packaging rule")
+    return text.replace(anchor, MECHANICS_NOTE + anchor, 1).encode("utf-8")
+
+
 def render() -> dict[str, bytes]:
     checksums = source_manifest()
     source: dict[str, bytes] = {}
@@ -69,7 +89,7 @@ def render() -> dict[str, bytes]:
 
     packaged = {
         "SKILL.md": with_standard_license_field(source["SKILL.md"]),
-        "SKILL-MECHANICS.md": source["SKILL-MECHANICS.md"],
+        "SKILL-MECHANICS.md": with_codex_invocation_policy(source["SKILL-MECHANICS.md"]),
         "references/subagent-delegation.md": source["references/subagent-delegation.md"],
     }
     license_addendum = (
@@ -87,6 +107,8 @@ def render() -> dict[str, bytes]:
         target_hash = hashlib.sha256(packaged[target_path]).hexdigest()
         if source_path == "SKILL.md":
             rule = "adds only the required `license: MIT` field; body is byte-identical"
+        elif source_path == "SKILL-MECHANICS.md":
+            rule = "inserts a fixed Codex invocation-policy note; upstream text is otherwise unchanged"
         elif source_path == "LICENSE":
             rule = "upstream license is byte-identical; appends a distribution attribution notice"
         else:

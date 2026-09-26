@@ -15,6 +15,17 @@ When telling a person how to invoke a skill, use the host's documented user synt
 
 Shared reference that two user-invoked skills both need can live in neither: with no descriptions, neither can fire the other. Push it to a plain file outside the skill system: external reference any skill can point at.
 
+## Codex invocation policy
+
+The `disable-model-invocation: true` frontmatter field only controls hosts that document it. Codex uses the skill-local `agents/openai.yaml` policy instead. When authoring a user-invoked skill for Codex, include this file in addition to any frontmatter switch required by other hosts:
+
+```yaml
+policy:
+  allow_implicit_invocation: false
+```
+
+Do not claim the frontmatter field alone prevents Codex from implicitly invoking the skill.
+
 ## Splitting by invocation
 
 The invocation cut of splitting (the sequence cut lives in `SKILL.md`): split off a model-invoked skill when you have a distinct leading word that should trigger it on its own (a trigger word you actually use in your prompts), or another skill must reach it. You pay context load for the new always-loaded description, so that independent reach has to be worth it.

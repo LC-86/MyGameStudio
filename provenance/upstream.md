@@ -57,7 +57,7 @@ Issue #86 交付的通用方法单独保留原名，不混入 20 项游戏技能
 | docs-gamestudio | writing-for-agents | productivity/writing-for-agents | 改写并扩大定位 |
 | writing-for-agents | writing-for-agents | productivity/writing-for-agents | 固定源副本；添加标准许可字段和许可发行署名 |
 
-`docs-gamestudio` 保留其 GameStudio 名称，但只拥有游戏文档分流与增量协作；此前重复的通用写作与委派内容改由 `writing-for-agents` 唯一拥有。上游 `SKILL-MECHANICS.md` 与通用委派参考现在随固定副本分发。原 V3 游戏技能的宿主调用开关历史见 [adaptation-log.md](adaptation-log.md)。
+`docs-gamestudio` 保留其 GameStudio 名称，但只拥有游戏文档分流与增量协作；此前重复的通用写作与委派内容改由 `writing-for-agents` 唯一拥有。上游 `SKILL-MECHANICS.md` 与通用委派参考现在随固定副本分发；发行时按固定规则在技能机制中补充 Codex 用户入口必须使用 `agents/openai.yaml` 调用策略的说明，其余上游机制文字保持不变。原 V3 游戏技能的宿主调用开关历史见 [adaptation-log.md](adaptation-log.md)。
 
 ## 未纳入的上游技能
 

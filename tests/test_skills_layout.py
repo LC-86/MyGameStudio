@@ -336,6 +336,12 @@ def test_writing_for_agents_pin_and_package_digests() -> None:
     assert "LC-86/mattpocockskills" in source
     assert commit in source
     assert "agents/openai.yaml" in source and "not included" in source
+    mechanics = read(skill / "SKILL-MECHANICS.md")
+    assert "## Codex invocation policy" in mechanics
+    assert "Codex uses the skill-local `agents/openai.yaml` policy instead" in mechanics
+    assert "allow_implicit_invocation: false" in mechanics
+    assert "frontmatter field alone prevents Codex" in mechanics
+    assert "fixed Codex invocation-policy note" in source
 
     sums = {}
     for line in read(skill / "SHA256SUMS").splitlines():

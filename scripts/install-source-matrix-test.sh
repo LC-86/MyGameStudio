@@ -113,6 +113,10 @@ printf 'PASS separate project scopes keep the GameStudio and fork copies\n'
 
 local_then_fork="$WORK/switch-local-to-fork"
 run_install "$local_then_fork" switch-local-first "$REPO" --skill writing-for-agents
+python3.12 "$SCRIPT_DIR/verify-writing-for-agents-install.py" \
+  --installed-dir "$(target_for "$local_then_fork")" \
+  --lock-file "$local_then_fork/skills-lock.json" --reference-dir "$LOCAL_SKILL" >/dev/null
+printf 'PASS local copy checked before switching to the fork source\n'
 run_install "$local_then_fork" switch-fork-second "$FORK_SPEC"
 assert_single_target "$local_then_fork"
 [ "$(hash_file "$(target_for "$local_then_fork")/SKILL.md")" = "$generic_hash" ]
@@ -121,6 +125,11 @@ printf 'PASS same-scope local-to-fork switch replaces one target and updates the
 
 fork_then_local="$WORK/switch-fork-to-local"
 run_install "$fork_then_local" switch-fork-first "$FORK_SPEC"
+python3.12 "$SCRIPT_DIR/verify-writing-for-agents-install.py" \
+  --installed-dir "$(target_for "$fork_then_local")" \
+  --lock-file "$fork_then_local/skills-lock.json" \
+  --reference-dir "$(target_for "$generic_scope")" >/dev/null
+printf 'PASS fork copy checked before switching to the local source\n'
 run_install "$fork_then_local" switch-local-second "$REPO" --skill writing-for-agents
 assert_single_target "$fork_then_local"
 [ "$(hash_file "$(target_for "$fork_then_local")/SKILL.md")" = "$game_hash" ]
