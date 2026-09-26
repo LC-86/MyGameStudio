@@ -637,7 +637,7 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 
 ## 11. Issue #92 游戏设计与文档工作流迁移（2026-09-27，提交前实测）
 
-实现分支 `feat/issue-92-game-doc-migration`，基线为 #90 分支的 `4e1c7ef`（含 #90 接缝；`main` 仍是 v3.0.2 的 `06f8f11`）。本票只迁移游戏设计与文档工作流组：`docs-gamestudio` 与 domain、gdd、spec、grilling、prototype、wayfinder 及两个访谈入口；工程交付组消费者（ask、codebase、debug、handoff、implement、merge、research、review、setup、tasks、tdd）正文未改动。以下结果在本机工作树上实测，随后作为快照提交到该分支；未推送、未发布、未打标签。
+实现分支 `feat/issue-92-game-doc-migration`，基线为 #90 分支的 `4e1c7ef`（含 #90 接缝；`main` 仍是 v3.0.2 的 `06f8f11`）。本票只迁移游戏设计与文档工作流组：`docs-gamestudio` 与 domain、gdd、spec、grilling、prototype、wayfinder 及两个访谈入口；工程交付组消费者（ask、codebase、debug、handoff、implement、merge、research、review、setup、tasks、tdd）正文未改动。以下结果在提交前的本机工作树上实测，随后作为快照提交并推送到该分支（`2c0658c`）；未发布、未打标签、未合入 `main`。
 
 改动范围：五个正式写作分支补上缺外部方法时的处理；测试按名称固化本组各流程的返回/停止边界；`install-smoke-test.sh` 增加第 10 节两来源组合安装检查；`behavior-fixtures.sh` 增加 `METHOD_SOURCE=official` 与 `NOMETHOD-` 场景；依赖表更正三个访谈入口的外部方法列；新增行为证据文件与本节记录。本组的分流、保真与委派归属不新增重复断言，继续由 #90 的消费者契约检查覆盖（本组每一项都在那三张名单内）。
 
@@ -780,7 +780,7 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 
 ## 13. Issue #93 收回随包副本、集合收缩为 20 项、外部共同方法改为官方依赖（2026-09-27，提交前实测）
 
-工作树基于基线 `c084a1720636c60e735f7cab3d02889e13d58bea`（分支 `feat/issue-91-engineering-workflow-migration`），`VERSION` = 3.0.3。本票退役随包 `writing-for-agents` 副本及其同步、摘要、来源切换与安装核验路径，集合回到 20 项（8 用户入口 + 12 按需方法），外部共同方法改为从官方 `mattpocock/skills` 独立安装。以下结果在本机工作树上实测，**尚未提交、未推送、未打标签**；`origin/main` 仍是 21 项、`VERSION` 3.0.2、无 v3.0.3 标签（本票只推分支、不合入 `main`）。
+工作树基于基线 `c084a1720636c60e735f7cab3d02889e13d58bea`（分支 `feat/issue-91-engineering-workflow-migration`），`VERSION` = 3.0.3。本票退役随包 `writing-for-agents` 副本及其同步、摘要、来源切换与安装核验路径，集合回到 20 项（8 用户入口 + 12 按需方法），外部共同方法改为从官方 `mattpocock/skills` 独立安装。以下结果在提交前的本机工作树上实测，随后作为快照提交并推送到该分支（`77d4bf0`）；未打标签、未发布、未合入 `main`；`origin/main` 仍是 21 项、`VERSION` 3.0.2、无 v3.0.3 标签。
 
 冻结快照（实现定稿、本票不新建提交）：HEAD `c084a1720636c60e735f7cab3d02889e13d58bea`，索引树 `git write-tree` = `6315235b7eb3ea4c4504e30b1caafa1ac3499932`（staged 46 个文件，未跟踪仅 `.cursor/`、`.zcode/`）。冻结后只有本票的两个记录文件（本节所在文件与 [Issue #93 行为证据](evidence/issue-93-behavior-matrix.md)）继续改动。现场、命令、指纹与逐项核对的完整记录见该证据文件。
 
@@ -844,5 +844,61 @@ v3.0.1 版本快照提交前实测：`python3.12 -m pytest tests/ -q` → 68 pas
 - 退役守护是**形态启发式、不是穷尽判据**：verifier 直接调用 `tests/test_skills_layout.py` 的 `bundled_claim_offences()` 实测，计数式、随包路径、含方法名的「附带」、分句否定掩护与英文旧说法命中；指代式（不出现方法名）、不出现方法名的同义改写、以及动词不在形态表内的改写**未命中**。命中即违约，未命中不等于表述正确。逐条构造串与结果见 [Issue #93 行为证据](evidence/issue-93-behavior-matrix.md) 第 9 条限制。
 - 锁里的 `skillFolderHash` **不是稳定指纹**：同一份未改动的官方内容，用户级锁在该字段上实测到两个不同值（`ad2925850efb…` 与 `95da47fc97af…`），远程来源也出现两值；CLI 1.7.0 在「GitHub tree 可用」与「回退到下载目录内容」两个分支上算的是不同摘要。本节与证据文件只使用逐文件 SHA-256 与项目级锁的 `computedHash` 作为身份依据。
 - 运行前提：本机 `PATH` 含 `python3.12`、`node`、`npx`；安装类脚本与夹具需要网络与 GitHub 可达。
+
+## 14. Issue #89 收口：官方外部依赖与 20 项集合（2026-09-27）
+
+父票 #89 由四个子票实施：#90 兼容接缝、#92 游戏设计与文档组、#91 工程交付组、#93 收缩为 20 项，四节记录见上（第 10–13 节）。本节在同一分支 `feat/issue-91-engineering-workflow-migration` 上收口：在 #93 的快照提交 `77d4bf0adf827a642f675542af918414acb57d83` 之上重跑三层检查、补上 #89 要求而此前只有文档兜底的三条断言，更正三处过期的提交与推送状态、把退役口径收窄到被删除的 fork 路径，并按保留下来的运行产物补出 #93 的八维保真对照，最后记录两轴评审的发现与处置。基线 `origin/main` 仍是 `06f8f11`（`VERSION` 3.0.2、21 项）。**未合入 `main`、未打标签、未发布。**
+
+### 在 #93 快照上重跑
+
+| 检查 | 实际结果 | 说明 |
+|---|---|---|
+| `python3.12 -m pytest tests/ -q` | `77d4bf0` 上 **85 passed**；本节新增三条断言后 **88 passed**（exit 0） | 与第 13 节记录的 85 项一致 |
+| `python3.12 scripts/validate-docs.py` | **OK：43 个文件、20 项技能**（exit 0） | 与第 13 节一致 |
+| `bash scripts/install-smoke-test.sh`（CLI 1.7.0） | **PASS 33 / FAIL 0**（exit 0） | 与第 13 节一致；第 8 节负例继续证明本仓库安装不写入或替换同名官方副本 |
+| 集合形状复核 | `skills/` 恰 20 项；无 `skills/writing-for-agents/`、无 `SOURCE.md`／`SHA256SUMS`；`sync-writing-for-agents.py`、`verify-writing-for-agents-install.py`、`install-source-matrix-test.sh` 均不存在 | 直接读取工作树，不依赖前述脚本的结论 |
+
+### 本节补齐的三条断言
+
+#89 的 Testing Decision 2、3 要求静态与文档检查各自成立；第 13 节的对应验收只有文档本身与手工场景支撑。本节把「安装说明的实际形态」落成可重复的 pytest 断言：
+
+1. `tests/test_docs_product.py::test_two_source_install_guide_puts_user_scope_first`：解析 `docs/installation.md` 的完整安装命令块，要求恰为四条（两来源 × 两范围）、前两条是用户级（`-g`）、后两条是项目级替代并写明在目标项目根目录执行、第一步是官方来源的 `writing-for-agents` 且注明已有安装时只跳过这一步、第二步完整安装本仓库 20 项。**负例**：互换用户级与项目级两个命令块后该断言 FAIL，恢复原文后 13 passed。
+2. `tests/test_docs_product.py::test_two_source_install_guide_names_the_cli_boundary`：面向用户的命令一律 `skills@latest`、不得出现 `npx skills@1.7.0`、文档写明 1.7.0 是实测边界、明确「共同方法不是可选能力」、官方来源只能是 `mattpocock/skills`。
+3. `tests/test_skills_layout.py::test_doc_history_exemptions_match_the_validator`：`scripts/validate-docs.py` 与布局测试各持一份历史豁免名单，两处注释各自声称与对方一致而此前没有断言；改为用 AST 读取脚本里的字面量并逐项比对。**负例**：从 `HISTORY_PREFIXES` 去掉 `docs/evidence/` 后该断言 FAIL，恢复后 45 passed。
+
+### 两轴评审发现与处置
+
+评审对象为 `git diff origin/main...HEAD`（7 个提交），两轴各由一个独立只读子代理完成，结论由本节记录、不改写评审原文的判断。
+
+**Standards 轴：6 条，全部是判断题、无硬违规。**
+
+| 发现 | 处置 |
+|---|---|
+| `scripts/install-smoke-test.sh` 第 8 节与 `scripts/two-source-composition-check.py` 判据双份实现 | **保留并记录**。两者问句不同：第 8 节验「本仓库安装不写入或替换已存在的同名官方副本」（同一项目先装官方副本，再核逐文件 SHA-256 与锁来源），模块验「两来源组合自身成立」。重叠部分是按名称取得、引用可达与保真/委派归属，这三张消费者名单的单一权威是 `tests/test_skills_layout.py`，模块本身按参数接收组名与写作者、不持有固定名单。收拢需要把第 10/11 节的段级封装再参数化一层，改动面覆盖当前 33 项 PASS 的安装脚本，收益是少一份内联名单；本票不改这条已通过的路径。 |
+| 历史豁免名单在两处各一份、注释互相声称一致却无守护 | **已处置**：新增第 3 条断言（见上）。 |
+| 文案判据（`BUNDLED_METHOD_CLAIM` 中英文正则与反例表）留在 `tests/test_skills_layout.py`，与 `docs/development/testing.md` 的文件分工不符 | **保留并记录**。该判据与同文件的 `publishable_files()`／技能名单／`claim_clauses()` 共用一套分句与豁免机制，拆走会同时移动豁免表与反例表；文件头已声明它承担退役守护。若后续继续扩写文案判据，再按 `testing.md` 的分工整组搬去 `tests/test_docs_product.py`。 |
+| `install-smoke-test.sh` 第 11/18 项期望写成裸数字，加法事实只在中文提示串里 | **保留并记录**。两处是脚本内联的期望值，紧邻的 PASS 文案已写明「9 项本票组 + 2 项同源依赖」；抽常量会把它与同一行的提示串分开，且不改变判据强度。 |
+| 第 10、11 节段级形态逐行重复 | **保留并记录**。前一票（#92、#91）已评估过这一取舍：两节各自声明装什么，判据共用模块；剩余重复是外壳（临时目录、安装调用、`ok`/`bad` 打印），收拢需要引入段生成器，超出本次收口范围。 |
+| `two-source-composition-check.py` 的 `EXTERNAL_METHOD`／`GAP_CLAUSE` 与测试里的同名契约只能靠运行期字符串相等间接守住 | **保留并记录**。模块的 `--gap-exempt`／`--silent` 参数与 `GAP_CLAUSE` 已在 pytest 中有调用与比对，重复定义的是常量而非判据；独立脚本需要能在无 pytest 环境下自足运行。 |
+
+**Spec 轴：两个独立只读子代理分别评审后合并（第二个是补跑，结论与第一个重叠处不重复记录），共 9 条。**
+
+| 发现 | 处置 |
+|---|---|
+| TD 3 要求的两来源安装文档断言只存在于工作树，未随分支交付 | **已处置**：本轮提交把三条断言写入 `tests/test_docs_product.py` 与 `tests/test_skills_layout.py`，结果与负例见上表。 |
+| 第 13 节与 [Issue #93 行为证据](evidence/issue-93-behavior-matrix.md) 仍写「尚未提交、未推送」，第 11 节仍写 #92「未推送」，与实际相反 | **已处置**：三处按实际状态更正（#92 = `2c0658c` 已提交并推送；#93 = `77d4bf0` 已提交并推送）；本节不再出现「未提交」的现行说法。 |
+| #93 的语义保真只有结论，缺 #92 那样的逐维对照表 | **已处置**：用会话结束后保留的运行产物（`/tmp/mgs-issue93/runs/S03-routing-a|b`、`S04-partial-save-a`）补出八维保真表与产物指纹，写进 [Issue #93 行为证据](evidence/issue-93-behavior-matrix.md)；其中一项如实记为**新增未标注的推断**（S03-b、S04-a 把「死亡的一局进入结算」写成规格条目，固定输入没有这一句；S03-a 把同一处列为未决）。 |
+| #92 把「讨论」列进必须按技能名称取得外部方法的要求，实现让三个访谈入口保持静默 | **保留并记录**：#89 ID 15 要求按行为审计消费者——三个访谈入口不写正式资料，落盘由 domain／gdd／spec 承担，正文出现方法名反而会误导；#92 完成评论与 `docs/dependencies.md` 已披露该读法。 |
+| #93 AC 11「宿主实际加载哪个版本」not-run；AC 7 的用户级场景用的是本地 checkout 路径 | **保留并记录**：两项都在第 13 节「未运行与限制」如实登记；本节与 PR 说明同样不声称已验证。合并前远端默认分支仍是 21 项形态，按文档命令从远端来源安装得到的仍是旧形态。 |
+| 新增 `docs/adr/0001-shared-writing-method.md` 与 `docs/design/shared-writing-method.md` 不在 #93 的资料清单内 | **保留并记录**：#89 的 Further Notes 写明需求对齐记录在仓库的术语表、ADR 与设计说明中，两份文件是规格预期的落点，不是额外承诺。 |
+| 新增 `scripts/two-source-composition-check.py` 与「本仓库不再提供来源切换或已安装副本核验工具」的口径冲突 | **已处置**：把退役口径收窄到被删的三条 fork 路径（固定源同步、随包副本源一致性核验、来源切换矩阵），并写明两来源组合检查由维护脚本承担、不面向用户、不改动任何已安装副本；`CHANGELOG.md` 与 `provenance/upstream.md` 同步更正。 |
+| 安装检查是否只在临时 HOME／XDG／项目范围内运行（未核实） | **已核实并记录**：`install-smoke-test.sh` 全程不传 `-g`／`--global`（脚本第 13 行声明，全文 grep 无命中），只装项目范围；`behavior-fixtures.sh` 显式拒绝把输出目录指向真实 HOME；用户级场景在自己的临时 HOME 内运行，见第 13 节。 |
+| 工作区仍存未跟踪的 `.tmp/accept-18/…` 旧副本 | **保留并记录**：被 `.gitignore` 忽略、不进入发现集合；删除属破坏性操作，需单独授权，本轮不做（第 13 节同一限制）。 |
+
+### 未运行与限制（本节不再重复第 13 节的完整清单）
+
+- 宿主按名称自动加载、范围冲突里「宿主实际加载哪个版本」、Codex / ZCode / Grok Build / Qoder / Claude Code：**not-run**，理由与现场见第 13 节。本节不因重跑三层检查而把上述任一项升级为已验证。
+- 本节只补文档与静态断言，未新增安装或行为场景：两来源安装与文件形态的实测证据仍是第 13 节的五种范围场景。
+- 按 #89 约定，本次只做提交、推送与开 PR：**合入 `main`、打标签、发布 Release、改动真实用户或项目安装均为 not-run**。
 
 

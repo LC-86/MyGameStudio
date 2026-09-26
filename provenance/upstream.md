@@ -93,7 +93,7 @@ Issue #86 交付的通用方法单独保留原名，不混入 20 项游戏技能
 | 随包目录 | `skills/writing-for-agents/`，含 `SOURCE.md`、`SHA256SUMS`、`LICENSE` | 已删除；本仓库不再分发该方法 |
 | 可编辑权威源 | LC-86 fork 的 `skills/productivity/writing-for-agents/`，固定源提交 `f3c726f275fa1ac59fef33732e527dded6d62479` | 官方 [mattpocock/skills](https://github.com/mattpocock/skills)；上述固定提交作为上一版的历史事实保留 |
 | 同步生成器 | `scripts/sync-writing-for-agents.py` | 已删除，且不再需要 |
-| 安装核验检查器 | `scripts/verify-writing-for-agents-install.py` | 已删除；实际加载版本只在目标宿主核实 |
+| 安装核验检查器 | `scripts/verify-writing-for-agents-install.py` | 已删除；随包副本的源一致性不再核验，实际加载版本只在目标宿主核实。两来源组合安装的检查由维护脚本 `scripts/two-source-composition-check.py` 承担，它不面向用户、也不改动任何已安装副本 |
 | 来源切换矩阵 | `scripts/install-source-matrix-test.sh` | 已删除；不再有第二个来源可切 |
 | 用户取得方式 | 随本仓库 21 项一起安装（8 用户入口、13 按需方法） | 从官方 `mattpocock/skills` 独立安装，按宿主支持的技能名称取得；本仓库集合为 20 项（8 用户入口、12 按需方法） |
 

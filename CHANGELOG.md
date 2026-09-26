@@ -8,7 +8,7 @@
 **本版未打标签、未发布 Release，也没有绑定任何标签或发布资产。** 版本权威来源仍是根目录 [`VERSION`](VERSION)。
 
 - 退役随包 `writing-for-agents` 副本：删除 `skills/writing-for-agents/`（含 `SKILL.md`、`SKILL-MECHANICS.md`、`references/subagent-delegation.md`、`SOURCE.md`、`SHA256SUMS`、`LICENSE`），本仓库不再分发、不再镜像、也不再为它保留第二份可编辑权威源。
-- 退役对应的维护路径：`scripts/sync-writing-for-agents.py`（固定源同步与摘要生成）、`scripts/verify-writing-for-agents-install.py`（安装核验检查器）与 `scripts/install-source-matrix-test.sh`（来源切换矩阵）随本次退出，本仓库不再提供来源切换或已安装副本核验工具。
+- 退役对应的维护路径：`scripts/sync-writing-for-agents.py`（固定源同步与摘要生成）、`scripts/verify-writing-for-agents-install.py`（随包副本的安装核验检查器）与 `scripts/install-source-matrix-test.sh`（来源切换矩阵）随本次退出。本仓库不再提供 fork 来源切换，也不再核验「随包副本是否与固定源一致」；两来源组合安装的检查改由维护脚本 `scripts/two-source-composition-check.py` 承担，它只服务本仓库自己的安装检查，不面向用户，也不检测、补齐或替换任何已安装技能。
 - 可发现技能集合由 21 项收缩为 20 项（8 用户入口、12 按需方法）。`v3.0.2` 标签仍固定包含 21 项，`v3.0.1` 标签仍固定包含 20 项；历史身份不变。
 - 外部共同方法改为从官方 [`mattpocock/skills`](https://github.com/mattpocock/skills) 独立安装：`npx skills@latest add mattpocock/skills --skill writing-for-agents --agent universal --copy -g -y`。相关技能按宿主支持的技能名称取得它，不再使用跨安装范围的相对路径，也不再把它的目录当成依赖契约。
 - 安装说明改为两个来源的完整步骤，用户级排在项目级之前，并提供项目级替代；已有官方共同方法时只跳过第一步。命令与参数行为只在 `skills` CLI 1.7.0 上核实。

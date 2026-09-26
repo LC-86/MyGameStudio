@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 from pathlib import Path
@@ -913,3 +914,27 @@ def test_user_entries_do_not_auto_chain(entry: str) -> None:
     for other in others:
         assert not re.search(rf"\[[^\]]*\]\(\.\./{other}/SKILL\.md\)", body), \
             f"{entry} 链接了另一个用户入口 {other}，用户入口之间不得自动串调"
+
+
+def test_doc_history_exemptions_match_the_validator() -> None:
+    """两处历史豁免名单各自声称与对方一致，因此必须真的核对一次。
+
+    `scripts/validate-docs.py` 的退役标记与这里的文案判据各持一份豁免名单；
+    名单漂移会让同一份文档在两个检查里得到相反结论，而两边的注释都只
+    声称「保持一致」。名单在脚本里是模块级字面量，因此用 AST 取值，不执行脚本。
+    """
+    source = (REPO / "scripts" / "validate-docs.py").read_text(encoding="utf-8")
+    found = {
+        node.targets[0].id: ast.literal_eval(node.value)
+        for node in ast.parse(source).body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+        and node.targets[0].id in {"HISTORY_ALLOWED", "HISTORY_PREFIXES"}
+    }
+    assert set(found) == {"HISTORY_ALLOWED", "HISTORY_PREFIXES"}, \
+        f"validate-docs.py 的历史豁免常量缺失或改名：{sorted(found)}"
+    assert set(found["HISTORY_ALLOWED"]) == set(HISTORICAL_RECORD_FILES), \
+        "validate-docs.py 的 HISTORY_ALLOWED 与 HISTORICAL_RECORD_FILES 已漂移"
+    assert tuple(found["HISTORY_PREFIXES"]) == HISTORICAL_RECORD_PREFIXES, \
+        "validate-docs.py 的 HISTORY_PREFIXES 与 HISTORICAL_RECORD_PREFIXES 已漂移"
