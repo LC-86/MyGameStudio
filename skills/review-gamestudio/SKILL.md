@@ -10,7 +10,7 @@ license: MIT
 
 这是评审方法，不是全库架构扫描、完整测试执行器或游戏总验收。范围来自当前任务；按照[责任、分流与交接](../tasks-gamestudio/references/task-responsibility.md)判断哪些条件可由 Agent 验证，哪些仍属于指定人的决定。
 
-两轴说明和评审结论都是交给别人使用的正式内容，按技能名称取得 `writing-for-agents` 的写作方法组织，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)核对：结论与证据对应，推测与实际结果分开，未能检查的部分保持缺口身份。
+两轴说明和评审结论都是交给别人使用的正式内容，按技能名称取得 `writing-for-agents` 的写作方法组织，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)核对：结论与证据对应，推测与实际结果分开，未能检查的部分保持缺口身份。无法取得时说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法。
 
 ## 1. 固定评审对象
 

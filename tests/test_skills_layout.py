@@ -403,6 +403,85 @@ def test_game_document_writers_declare_the_missing_method_handling() -> None:
     assert not missing, "游戏文档写作者的缺方法处理缺失：\n" + "\n".join(missing)
 
 
+# Issue #91：工程交付与协作工作流组。这些流程同样在正式资料分支按技能名称取得外部
+# 共同方法，各自保留启动、返回和停止条件，并在单独调用时自带缺方法处理。
+ENGINEERING_FLOWS = {
+    # 名称: (启动/适用条件（取自 description，宿主发现时读到的就是它）, 返回或停止边界)
+    "ask-gamestudio": ("用户询问现在该做什么时使用的只读导航",
+                       "推荐完成后停止，不代替用户执行"),
+    "codebase-gamestudio": ("设计当前改动涉及的代码职责、状态归属、接口和测试接缝",
+                            "被实现或测试方法使用时返回其原流程"),
+    "debug-gamestudio": ("定位游戏或工程中原因尚不明确的具体异常",
+                         "不反向启动实现流程，不自行领取下一票"),
+    "handoff-gamestudio": ("用户请求把当前未完成工作交给新会话",
+                           "到交接说明交付为止"),
+    "implement-gamestudio": ("用户请求实现当前已明确的工作时使用",
+                             "人工确认未完成时，不通过自动关闭关联绕过它"),
+    "merge-gamestudio": ("处理已经进行中的 Git merge 或 rebase 冲突",
+                         "不自行改变任务验收结论或扩大到下一项工作"),
+    "research-gamestudio": ("按当前问题所需深度调查游戏设计或制作的事实",
+                            "完成后把依据交回原讨论或执行流程"),
+    "review-gamestudio": ("评审本次代码或游戏制作成果",
+                          "返回发现与复查范围给调用方"),
+    "setup-gamestudio": ("用户请求为当前游戏项目补齐协作配置时使用",
+                         "本技能不自动调用 ask-gamestudio 或其他用户入口"),
+    "tasks-gamestudio": ("用户请求把已明确的游戏制作工作拆成任务时使用",
+                         "本技能到任务交付为止"),
+    "tdd-gamestudio": ("测试先行地实现或修复已明确的软件行为",
+                       "本技能不自主更改任务标签、关单、提交、推送或开始下一任务"),
+}
+ENGINEERING_WRITERS = tuple(sorted(ENGINEERING_FLOWS))
+# 资料读取、方法使用、实际委派与下一步推荐是四种不同身份：推荐不执行下游工作，
+# 读到方法不等于已经用它，只有真实派发并回收结果才算委派。
+ENGINEERING_IDENTITIES = {
+    "ask-gamestudio": "只做导航，不调用下游技能、不写入项目",
+    "handoff-gamestudio": "引用不代表已传输",
+    "implement-gamestudio": "不自动领取下一项工作",
+    "research-gamestudio": "只有确实启动并能取得结果的委派才报告为已执行",
+    "review-gamestudio": "不启动 implement-gamestudio 或 tdd-gamestudio 去修改成果",
+}
+
+
+def test_engineering_flows_keep_their_own_boundaries() -> None:
+    """本组各流程保留自己的启动条件与返回/停止边界，外部方法来源变化不改变它们。"""
+    missing = []
+    for name, (start_marker, stop_marker) in sorted(ENGINEERING_FLOWS.items()):
+        description = frontmatter(SKILLS / name / "SKILL.md")["description"]
+        if start_marker not in description:
+            missing.append(f"{name}: description 缺少启动/适用条件 {start_marker!r}")
+        if stop_marker not in read(SKILLS / name / "SKILL.md"):
+            missing.append(f"{name}: 缺少返回/停止边界 {stop_marker!r}")
+    assert not missing, "工程交付与协作流程丢失自身边界：\n" + "\n".join(missing)
+
+
+def test_engineering_writers_declare_the_missing_method_handling() -> None:
+    """本组 11 个正式写作分支各自说明缺外部共同方法时的处理。
+
+    两票的写作分支应恰好覆盖全部 17 个消费者：没有分支会因为分组边界而漏掉
+    缺方法处理，也没有分支被两票重复断言。
+    """
+    assert not set(ENGINEERING_WRITERS) & set(GAME_DOC_WRITERS), "两票范围不得重叠"
+    assert set(ENGINEERING_WRITERS) | set(GAME_DOC_WRITERS) == set(WRITING_CONSUMERS), \
+        "两票的写作分支应覆盖全部消费者"
+    missing = []
+    for name in ENGINEERING_WRITERS:
+        body = read(SKILLS / name / "SKILL.md")
+        if f"`{EXTERNAL_METHOD}`" not in body:
+            missing.append(f"{name}: 没有按技能名称说明外部共同方法")
+        if GAP_CLAUSE not in body:
+            missing.append(f"{name}: 缺少缺外部方法时的处理说明")
+    assert not missing, "工程交付写作分支的缺方法处理缺失：\n" + "\n".join(missing)
+
+
+def test_engineering_flows_keep_recommendation_method_and_delegation_apart() -> None:
+    """推荐下一步、使用写作方法与实际派发子代理保持不同身份。"""
+    missing = []
+    for name, marker in sorted(ENGINEERING_IDENTITIES.items()):
+        if marker not in read(SKILLS / name / "SKILL.md"):
+            missing.append(f"{name}: 缺少身份边界 {marker!r}")
+    assert not missing, "工程交付流程的身份边界缺失：\n" + "\n".join(missing)
+
+
 def test_writing_consumers_resolve_the_method_by_skill_name() -> None:
     """写作者按技能名称取得外部共同方法，并指向真正拥有该内容的资料。"""
     routing_consumers = {

@@ -29,6 +29,7 @@
 - [验证状态](validation-v3.md)：哪些检查已运行、哪些行为场景未运行或未通过
 - [Issue #87 行为矩阵](evidence/issue-87-behavior-matrix.md)：隔离安装后的 Codex 会话、路径轨迹、缺依赖与真实委派结果
 - [Issue #92 行为证据](evidence/issue-92-behavior-matrix.md)：两来源组合（官方共同方法 + 本仓库技能）下的游戏文档任务、缺依赖与产物保真核对
+- [Issue #91 行为证据](evidence/issue-91-behavior-matrix.md)：同一两来源组合下的工程交付任务、缺方法处理与一次真实委派的结果回收
 
 ## 设计资料
 

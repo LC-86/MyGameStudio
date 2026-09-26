@@ -463,6 +463,34 @@ def test_both_scripts_share_the_cli_resolver() -> None:
         assert re.search(r"resolve_skills_cli\s+", body), f"{name} 未调用 resolve_skills_cli"
 
 
+def test_two_source_composition_check_rejects_incomplete_installation(tmp_path: Path) -> None:
+    """两来源组合校验由共享脚本提供，且必须自己发现装不齐的组合。
+
+    `install-smoke-test.sh` 的第 10 节（#92 组）与第 11 节（#91 组）共用这一份检查。
+    这里验证两件事：两节确实共用同一个脚本（避免再次各复制一份后漂移），以及该脚本
+    在目录缺项、锁文件缺失时逐条报 FAIL 并非零退出，而不是只要跑起来就算通过。
+    """
+    checker = SCRIPTS / "two-source-composition-check.py"
+    assert checker.is_file(), "两来源组合校验应由 scripts/two-source-composition-check.py 提供"
+    smoke = read(SCRIPTS / "install-smoke-test.sh")
+    assert smoke.count("two-source-composition-check.py") == 2, \
+        "第 10、11 节应共用同一份组合校验，而不是各写一份"
+
+    dest = tmp_path / "skills"
+    (dest / "ask-gamestudio").mkdir(parents=True)
+    result = subprocess.run(
+        ["python3.12", str(checker), "--lock", str(tmp_path / "missing-lock.json"),
+         "--dest", str(dest), "--bundled", str(SKILLS / "writing-for-agents"),
+         "--repo", str(REPO), "--label", "测试组", "--group", "ask-gamestudio"],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode != 0, "装不齐的组合不得判为通过"
+    assert "FAIL" in result.stdout, result.stdout
+    assert "PASS" not in result.stdout, "失败时不得同时给出通过结论"
+    assert "组合安装目录不符" in result.stdout, result.stdout
+    assert "没有生成 skills-lock.json" in result.stdout, result.stdout
+
+
 def test_docs_do_not_claim_at_suffix_is_the_git_ref() -> None:
     """`@` 是技能筛选，`#` 才是 Git 引用；文档不得把它当成引用断言。
 

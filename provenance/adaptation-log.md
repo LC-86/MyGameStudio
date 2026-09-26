@@ -31,6 +31,17 @@ Issue #92 在 #90 的接缝上迁移游戏设计与文档工作流组（`docs-ga
 - 组合安装检查在 `scripts/install-smoke-test.sh` 第 10 节：本票组加两项同源依赖从本仓库安装，外部共同方法单独从官方 `mattpocock/skills` 安装，核对锁来源、无随包副本打包文件、引用可达与取得方式。夹具脚本 `scripts/behavior-fixtures.sh` 增加 `METHOD_SOURCE=official`（两来源形态）与 `NOMETHOD-` 场景前缀（故意缺外部方法）。
 - 行为与产物结果见 [Issue #92 验证证据](../docs/evidence/issue-92-behavior-matrix.md)与 [验证状态](../docs/validation-v3.md)。
 
+## Issue #91 工程交付与协作工作流迁移（2026-09-27，尚未发布）
+
+Issue #91 在 #90 的接缝与 #92 的分组做法上迁移工程交付与协作工作流组（ask、codebase、debug、handoff、implement、merge、research、review、setup、tasks、tdd），只改这一组的正文与检查，不动游戏设计与文档组消费者。
+
+- 11 个正式写作分支在按技能名称取得 `writing-for-agents` 的同一处补上缺方法处理（说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法）。此前该契约只在 `docs-gamestudio` 所有者正文与 #92 组的五个写作者里，单独调用工程交付流程时读不到它。
+- 各流程原有的启动、返回与停止边界逐条保留（推荐完成后停止、返回原流程、返回证据与剩余责任、到交接说明交付为止、人工确认未完成不自动关单、不扩大到下一项工作、回到原讨论、返回发现与复查范围、交付并停止、到任务交付为止、返回使用它的任务）；测试按名称逐项固化，并核对两票的写作分支恰好覆盖全部 17 个消费者，不会因分组边界漏掉某一项。
+- 资料读取、方法使用、实际委派与下一步推荐保持不同身份：推荐不执行下游工作，读到方法不等于已经用它，只有真实派发并回收结果才算委派。该边界连同缺方法处理一起按名称断言。
+- 组合安装检查在 `scripts/install-smoke-test.sh` 第 11 节：工程交付组加引用闭包内的 7 项同源依赖（`docs-gamestudio` 与它分流参考指向的 domain、gdd、spec、grilling 及两个访谈入口）从本仓库安装，外部共同方法单独从官方 `mattpocock/skills` 安装，核对锁来源、无随包副本打包文件、引用可达与取得方式。只装 11 项不及物：`docs-gamestudio` 的分流参考会指向本组之外的技能。
+- 第 10、11 节共用的组合校验抽成 `scripts/two-source-composition-check.py`：复制第二份时已经出现漂移（少了来源指纹提示与访谈入口反向断言），因此组名、同源依赖、正式写作分支、缺方法处理的所有者例外与反向断言都改为参数，判据只保留一份；`tests/test_maintenance_scripts.py` 守住「两节共用同一脚本」与「装不齐时必须报 FAIL」。
+- 行为与产物结果见 [Issue #91 验证证据](../docs/evidence/issue-91-behavior-matrix.md)与 [验证状态](../docs/validation-v3.md)。缺方法行为在三个限定工程范围的场景里观察：两个报告了缺口并只继续不依赖的部分，一个完成了工作却没有报告缺口，该未达标项如实记录，不写成通过。
+
 ## 跨技能的系统性适配
 
 ### A1. 宿主专属调用开关退出

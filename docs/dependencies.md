@@ -48,6 +48,8 @@ npx skills@latest add LC-86/MyGameStudio --skill '*'
 
 访谈类入口自己不写正式资料：`grill-gamestudio`、`grill-gamestudio-docs` 与 `grilling-gamestudio` 的正文不出现外部共同方法名，需要落盘时由它们在协作模式下按需使用的 `domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio` 按技能名称取得，因此“不直接取得”不等于这条工作流不需要它。
 
+工程交付与协作工作流组（`ask-gamestudio`、`codebase-gamestudio`、`debug-gamestudio`、`handoff-gamestudio`、`implement-gamestudio`、`merge-gamestudio`、`research-gamestudio`、`review-gamestudio`、`setup-gamestudio`、`tasks-gamestudio`、`tdd-gamestudio`）的 11 项都在自己的正文里声明了缺外部共同方法时的处理，这一条由静态断言守住。静态断言只保证正文写着该要求，不等于每次会话都会照做：实测里两个缺方法场景报告了缺口并只继续不依赖它的部分，一次评审场景完成了评审却没有报告缺口，见 [Issue #91 行为证据](evidence/issue-91-behavior-matrix.md)。安装时还要注意引用的传递性：`docs-gamestudio` 的分流参考会指向 `domain-gamestudio`、`gdd-gamestudio`、`spec-gamestudio`、`grilling-gamestudio` 与两个访谈入口，只装工程交付组时这些链接在安装结果里不可达；要让引用可用，按这个闭包一并安装，或直接完整安装。`scripts/install-smoke-test.sh` 第 11 节按该闭包核对。
+
 ## 选择安装示例
 
 只做通用工程资料时先安装官方共同方法。编写游戏 GDD 或 spec 时，把 `writing-for-agents`、`docs-gamestudio` 和相应专业技能一起安装（本套技能尚未收缩前，`writing-for-agents` 也可从本仓库安装；收缩后改用下面的官方命令）。实现与评审组合示例：
