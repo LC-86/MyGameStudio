@@ -1,16 +1,14 @@
 ## 技能源码布局
 
-本仓库是原生 Agent Skills 技能库，共有 21 项可发现技能。GameStudio 自有技能各自在 `skills/<技能名>/SKILL.md` 维护一份源码；`skills/writing-for-agents/` 是从 `LC-86/mattpocockskills` 固定权威源生成的发行副本，来源见其 `SOURCE.md`，不得作为第二个可编辑权威源。不要建立其他重复的技能正文、根目录聚合 `SKILL.md`，或 `skills/` 之外的任何 `SKILL.md`（测试夹具放在临时目录）：官方 `skills` CLI 会发现发布树中的每一个 `SKILL.md`。
+本仓库是原生 Agent Skills 技能库，共有 20 项可发现技能。GameStudio 自有技能各自在 `skills/<技能名>/SKILL.md` 维护一份源码。`writing-for-agents` 是外部依赖，由用户从官方 `mattpocock/skills` 独立安装：本仓库不分发、不镜像，也不为它保留第二份可编辑权威源。不要建立其他重复的技能正文、根目录聚合 `SKILL.md`，或 `skills/` 之外的任何 `SKILL.md`（测试夹具放在临时目录）：官方 `skills` CLI 会发现发布树中的每一个 `SKILL.md`。
 
-frontmatter 只使用标准字段：`name`、`description`、`license`，确有需要时用 `compatibility` 或 `metadata`。在此之上，8 个用户入口各追加 `disable-model-invocation: true` 与一份 `agents/openai.yaml`，内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行，无其他内容；`argument-hint`、`allowed-tools` 与 frontmatter 内的 `allow_implicit_invocation` 仍然禁止；13 个按需方法不带任何宿主开关，也不带宿主文件。这套三层控制由 frontmatter 在 Claude Code、Grok Build、DSH 内强制，由 `agents/openai.yaml` 在 Codex 内强制；ZCode 与 Qoder 没有宿主级开关，同一条 8/13 边界在那里仍是写在描述与正文里的指令层约定。
+frontmatter 只使用标准字段：`name`、`description`、`license`，确有需要时用 `compatibility` 或 `metadata`。在此之上，8 个用户入口各追加 `disable-model-invocation: true` 与一份 `agents/openai.yaml`，内容恰好为 `policy:` 与 `  allow_implicit_invocation: false` 两行，无其他内容；`argument-hint`、`allowed-tools` 与 frontmatter 内的 `allow_implicit_invocation` 仍然禁止；12 个按需方法不带任何宿主开关，也不带宿主文件。这套三层控制由 frontmatter 在 Claude Code、Grok Build、DSH 内强制，由 `agents/openai.yaml` 在 Codex 内强制；ZCode 与 Qoder 没有宿主级开关，同一条 8/12 边界在那里仍是写在描述与正文里的指令层约定。
 
-共享参考只有一个所有者：通用写作方法与子代理委派归 `writing-for-agents`；GameStudio 文档分流与增量协作归 `docs-gamestudio`；人机责任与验收交接归 `tasks-gamestudio`。消费者用同级相对路径引用，不保留第二份可独立改写的副本。
+共享参考只有一个所有者：语义保真、通用子代理委派与 GameStudio 文档分流归 `docs-gamestudio`；人机责任与验收交接归 `tasks-gamestudio`。消费者用同级相对路径引用，不保留第二份可独立改写的副本。`writing-for-agents` 是外部共同方法：按宿主支持的技能名称取得，不使用跨安装范围的相对路径，也不保留它的第二份可编辑副本。
 
-改动 `skills/` 或文档后运行 `python3.12 -m pytest tests/ -q` 与 `python3.12 scripts/validate-docs.py`。修改共同方法源版本或发行副本时还要运行 `python3.12 scripts/sync-writing-for-agents.py`。静态检查不替代行为验证；实际结果记录在 `docs/validation-v3.md`，没有运行的一律标为未运行。
+改动 `skills/` 或文档后运行 `python3.12 -m pytest tests/ -q` 与 `python3.12 scripts/validate-docs.py`。`writing-for-agents` 是外部依赖，不是仓库内固定产物：本仓库没有它的同步生成器、没有随包副本，也不提供来源切换。静态检查不替代行为验证；实际结果记录在 `docs/validation-v3.md`，没有运行的一律标为未运行。
 
-调整可发现技能集合、必需依赖或安装来源切换时，还要在各自的临时消费目录运行 `bash scripts/install-smoke-test.sh` 与 `bash scripts/install-source-matrix-test.sh`。
-
-切换已安装副本前，运行 `python3.12 scripts/verify-writing-for-agents-install.py` 并提供同一范围的 lock 文件和同源干净参考副本。lock、摘要或参考缺失以及报告差异都应标为未验证并保留副本。
+调整可发现技能集合或必需依赖时，还要在临时消费目录运行 `bash scripts/install-smoke-test.sh`。本仓库不提供已安装副本核验或来源切换工具，宿主实际加载到哪个范围只能在目标宿主里核实。
 
 ## Agent 技能
 

@@ -49,16 +49,24 @@ RETIRED_COMMANDS = (
     "shasum -a 256 -c SHA256SUMS", ".claude-plugin/plugin.json",
     ".codex-plugin/plugin.json", ".zcode-plugin/plugin.json",
     "scripts/build-package.sh",
+    # 随包副本退役后删除的维护路径：同步生成、已安装副本核验、来源矩阵测试。
+    "scripts/sync-writing-for-agents.py", "scripts/verify-writing-for-agents-install.py",
+    "scripts/install-source-matrix-test.sh",
 )
-HISTORY_ALLOWED = ("docs/migration-v3.md", "CHANGELOG.md")
-HISTORY_PREFIXES = ("provenance/", "docs/design/")
+# 历史记录豁免：验证记录、迁移说明与变更日志要如实保留当时跑过的命令与结论，
+# 退役标记只约束「现行资料不得再教这些路径」。名单与 tests/test_skills_layout.py
+# 的 HISTORICAL_RECORD_FILES 保持一致（其中已含 docs/validation-v3.md）。
+HISTORY_ALLOWED = ("docs/migration-v3.md", "CHANGELOG.md", "docs/validation-v3.md")
+# 历史记录目录同样豁免退役标记：行为矩阵等验证记录要如实写出当时执行的退役路径。
+# 名单与 tests/test_skills_layout.py 的 HISTORICAL_RECORD_PREFIXES 保持一致。
+HISTORY_PREFIXES = ("provenance/", "docs/design/", "docs/evidence/")
 
 # 原样保留的历史输入与旧版追溯材料：不做链接与措辞检查，避免为了绿灯改写原始事实
 FROZEN_PREFIXES = ("provenance/previous-audit/", "provenance/v2-plugin-provenance/",
                    "provenance/setup-gamestudio-draft-v2/")
 FROZEN_FILES = ("docs/design/unified-design-v1.md", "docs/design/unified-integration-v1.md")
 
-VERSION = "3.0.2"
+VERSION = "3.0.3"
 VERSION_MUST_MENTION = ("README.md", "README.en.md", "CHANGELOG.md", "SECURITY.md",
                         "docs/installation.md", "docs/migration-v3.md")
 

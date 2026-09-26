@@ -5,7 +5,7 @@
 ## 先读什么
 
 - [README](README.md)：产品定位与快速开始
-- [能力与限制](docs/reference/capabilities.md)：21 项目标技能全表与明确不覆盖的部分
+- [能力与限制](docs/reference/capabilities.md)：20 项目标技能全表与明确不覆盖的部分
 - [与 Matt 的关系](docs/reference/upstream.md)：方法基线与适配差异
 - [统一设计 v1](docs/design/unified-design-v1.md)：设计依据，保留原始身份
 - 本仓库协作入口：[AGENTS.md](AGENTS.md)（只用于维护本仓库，不要复制到用户游戏项目）
@@ -23,7 +23,7 @@
 
 不要为用户教程再做一套带技能 frontmatter 的 `SKILL.md`，以免被安装器误发现。
 不要把已退役的旧入口重新写成可执行别名。
-共享参考只有一个所有者（`writing-for-agents`、`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。
+共享参考只有一个所有者（`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。外部共同方法 `writing-for-agents` 按宿主支持的技能名称取得，不写成跨安装范围的相对路径。
 
 ## 本地检查
 
@@ -38,18 +38,18 @@ python3.12 scripts/validate-docs.py
 
 ## 新技能准入
 
-当前范围是 `skills/` 下的 21 项。若提案要求新增技能，请说明：
+当前范围是 `skills/` 下的 20 项。若提案要求新增技能，请说明：
 
 1. 解决的游戏开发问题，而不是只给一个技能名字
-2. 为什么现有 21 项不够，以及它属于用户入口还是按需方法
+2. 为什么现有 20 项不够，以及它属于用户入口还是按需方法
 3. 启动条件与不做什么；用户入口如何避免自动串调下一个入口
 4. 读取与写入范围、完成标准、依赖的共享参考、来源与许可
 
 ## 上游适配怎么记
 
-方法基线固定在 `c55ee46073ed923f86ce59a5eb3b6d895095d1b7`，通过 fork `LC-86/mattpocockskills` 只读读取，上游为 `mattpocock/skills`，MIT。升级基线要先评估再采用，不把未评估的 `latest` 当基线。
+方法基线固定在 `c55ee46073ed923f86ce59a5eb3b6d895095d1b7`，当时通过 fork `LC-86/mattpocockskills` 只读读取，上游为 `mattpocock/skills`，MIT。这条读取路径是 V3 基线的历史事实，不是现行的安装或切换来源：外部共同方法现在只从官方 `mattpocock/skills` 安装。升级基线要先评估再采用，不把未评估的 `latest` 当基线。
 
-适配必须落在 `provenance/`：游戏技能映射在 [upstream.md](provenance/upstream.md)，共同方法固定源与文件摘要在 `skills/writing-for-agents/SOURCE.md`，逐项改动、依据、可能损失与核对方式在 [adaptation-log.md](provenance/adaptation-log.md)。用户入口交付标准字段并带两层宿主开关；按需方法只交付标准字段，不带宿主调用开关或宿主文件。更新共同方法时先核对来源范围与本地差异，再运行生成器及完整检查。
+适配必须落在 `provenance/`：游戏技能映射在 [upstream.md](provenance/upstream.md)，逐项改动、依据、可能损失与核对方式在 [adaptation-log.md](provenance/adaptation-log.md)。共同方法 `writing-for-agents` 的随包副本已退役，不再由本仓库分发，因此没有固定源生成器或安装核验检查器需要维护；它的退役与取代关系记在 provenance 的追加记录里。用户入口交付标准字段并带两层宿主开关；按需方法只交付标准字段，不带宿主调用开关或宿主文件。
 
 ## 宿主行为验证需要的证据
 

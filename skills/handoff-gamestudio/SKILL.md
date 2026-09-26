@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 围绕接收方下一步要做的事，写一份短 Markdown 交接说明。利用当前对话和已知项目事实，只补查会改变交接内容的资料；去向或目标已有答案就直接沿用，不重新访谈、盘点全项目或开始制作。
 
-交接说明是供另一个上下文执行的正式内容，接收方没有当前对话。按 [writing-for-agents](../writing-for-agents/SKILL.md) 的写作方法组织，接收方是子代理时另读取其[子代理委派](../writing-for-agents/references/subagent-delegation.md)参考；同一上下文已经取得方法就直接沿用。
+交接说明是供另一个上下文执行的正式内容，接收方没有当前对话。按技能名称取得 `writing-for-agents` 的写作方法组织，并按 [docs-gamestudio 的语义保真要求](../docs-gamestudio/references/semantic-fidelity.md)核对；接收方是子代理时另读取 [docs-gamestudio 的委派参考](../docs-gamestudio/references/delegation.md)；同一上下文已经取得方法就直接沿用；无法取得时说明具体缺口和受影响的工作，只继续不依赖它的部分，不模仿缺失的方法。
 
 保留下一步不可缺少的目标、已确认限制、简短理由、当前进展和未决事项。已有 GDD、spec、任务、地图、决定和证据用准确路径或链接引用，不复制正文；尚只存在于对话的关键规则不能因没有链接而遗漏。区分确认、候选、试验、已实现、已检查及仍待人判断，注明记录所对应的版本或时间，不臆造来源。
 

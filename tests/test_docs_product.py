@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SKILLS = REPO / "skills"
-VERSION = "3.0.2"
+VERSION = "3.0.3"
 UPSTREAM_COMMIT = "c55ee46073ed923f86ce59a5eb3b6d895095d1b7"
 
 # 允许提到旧版本号的位置：变更历史、迁移说明与来源追溯
@@ -104,7 +104,7 @@ def test_root_license_and_third_party_notices() -> None:
 def test_readme_documents_the_full_set_and_navigation() -> None:
     readme = read("README.md")
     names = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
-    assert len(names) == 21
+    assert len(names) == 20, f"可发现集合应为 20 项，实际 {len(names)}：{names}"
     missing = [n for n in names if f"skills/{n}/SKILL.md" not in readme]
     assert not missing, f"README.md 未链接技能：{missing}"
     assert "npx skills@latest add LC-86/MyGameStudio" in readme, "README 应给出原生安装命令"
@@ -180,3 +180,53 @@ def test_validation_record_separates_statuses() -> None:
         assert marker in validation, f"validation-v3.md 应区分 {marker} 状态"
     assert "本地安装" in validation and "远端" in validation, \
         "validation-v3.md 应分别报告本地安装与远端发布状态"
+
+
+def install_steps() -> list[tuple[str, str]]:
+    """完整安装小节里的 (注释, 命令) 步骤，按文档阅读顺序返回。"""
+    guide = read("docs/installation.md")
+    section = guide.split("## 完整安装：两步", 1)[1].split("\n## ", 1)[0]
+    block = re.search(r"```bash\n(.*?)```", section, re.DOTALL)
+    assert block, "完整安装小节应给出可复制的 bash 命令块"
+    steps, comment = [], ""
+    for line in block.group(1).splitlines():
+        line = line.strip()
+        if line.startswith("#"):
+            comment = line.lstrip("#").strip()
+        elif line:
+            steps.append((comment, line))
+    return steps
+
+
+def test_two_source_install_guide_puts_user_scope_first() -> None:
+    """Issue #89 Testing Decision 3：两来源两步、用户级在前、项目级为替代。
+
+    命令顺序是这份指南的实际产品形态：读的人照着从上往下做，因此顺序错了
+    就装错了范围，而不是文案问题。
+    """
+    steps = install_steps()
+    assert len(steps) == 4, f"完整安装应为 4 条命令（两来源 × 两范围），实际 {len(steps)}：{steps}"
+    comments = [comment for comment, _ in steps]
+    assert all("用户级" in c for c in comments[:2]), f"前两条应先是用户级：{comments}"
+    assert all("项目级" in c and "目标项目根目录" in c for c in comments[2:]), \
+        f"后两条应是项目级替代并写明在目标项目根目录执行：{comments}"
+    assert all("-g" in cmd for _, cmd in steps[:2]) and not any("-g" in c for _, c in steps[2:]), \
+        "用户级命令应带 -g，项目级命令不应带 -g"
+    first_comment, first_cmd = steps[0]
+    assert "mattpocock/skills" in first_cmd and "--skill writing-for-agents" in first_cmd, \
+        f"第一步应是官方共同方法：{first_cmd}"
+    assert "跳过" in first_comment, "用户级共同方法步骤应说明已有安装时只跳过这一步"
+    assert "LC-86/MyGameStudio" in steps[1][1] and "--skill '*'" in steps[1][1], \
+        f"第二步应完整安装本仓库 20 项：{steps[1][1]}"
+    for _, cmd in steps:
+        assert cmd.startswith("npx skills@latest add"), \
+            f"面向用户的命令应使用 skills@latest：{cmd}"
+
+
+def test_two_source_install_guide_names_the_cli_boundary() -> None:
+    """命令跟随 latest，但范围、copy 与锁行为只在 CLI 1.7.0 上核实。"""
+    guide = read("docs/installation.md")
+    assert "npx skills@1.7.0" not in guide, "面向用户的命令不得钉住 CLI 版本"
+    assert "1.7.0" in guide, "安装说明应写明实测的 CLI 版本边界"
+    assert "共同方法不是可选能力" in guide, "不得把外部共同方法写成可选能力"
+    assert "mattpocockskills" not in guide, "官方来源只能是 mattpocock/skills"

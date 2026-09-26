@@ -12,11 +12,11 @@
 
 ## 报告时请包含
 
-- 技能库版本（`VERSION`，例如 3.0.2）与安装方式（官方 `skills` CLI，完整安装或子集安装）
+- 技能库版本（`VERSION`，例如 3.0.3）与安装方式（官方 `skills` CLI，完整安装或子集安装）
 - `skills` CLI 版本（`npx skills@latest --version`）、宿主或 Agent 名称与版本、操作系统
-- 涉及的技能（21 项之一，例如 `setup-gamestudio`）
+- 涉及的技能（本仓库 20 项之一，例如 `setup-gamestudio`；外部共同方法 `writing-for-agents` 由官方 `mattpocock/skills` 提供，不属本仓库）
 - 去凭据后的复现步骤与影响范围
-- 是否涉及同名技能多源安装（例如另装了 Matt 原版技能库或旧版 MyGameStudio）
+- 是否涉及同名技能多源安装或跨范围安装（例如另装了 Matt 原版技能库、旧版 MyGameStudio，或用户级与项目级各有一份 `writing-for-agents`）
 
 ## 不要发送
 

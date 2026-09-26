@@ -4,7 +4,7 @@
 
 | 文件 | 内容 |
 |---|---|
-| [upstream.md](upstream.md) | V3 的上游基线、20 项名称与行为适配映射、许可 |
+| [upstream.md](upstream.md) | V3 的上游基线、20 项名称与行为适配映射、许可，以及随包共同方法副本的退役记录 |
 | [adaptation-log.md](adaptation-log.md) | 每项技能从原版到 V3 的实际改动、依据、风险与验证方式 |
 | [v2-retirement.md](v2-retirement.md) | V3 开始前基线、退出有效范围的旧内容、能力去向与恢复方式 |
 | [v3-overrides.md](../docs/design/v3-overrides.md) | 本次执行提示词对旧设计的明确覆盖（位于 docs/design/） |

@@ -4,13 +4,12 @@
 
 这些断言逐条对应合并前审查发现的问题，防止同类缺陷再次进入发布内容：
 不可守卫的递归删除、绑定单机缓存路径、将 CLI 的技能筛选误当作 Git 引用、
-以及把宿主属性写成通用事实。
+以及把宿主属性写成通用事实。第三组守护（Issue #93）反过来断言已删除的维护脚本
+与随包方法副本不再出现，避免这些路径被静默当成仍然可用。
 """
 
 from __future__ import annotations
 
-import json
-import hashlib
 import os
 import re
 import shutil
@@ -67,11 +66,13 @@ def test_fixture_script_refuses_non_empty_target_and_checks_cli_first() -> None:
         assert marker in text, f"缺少对非空输出目录的拒绝说明：{marker}"
     mkdir_at = text.find('mkdir -p "$OUT"')
     assert mkdir_at > 0, "夹具脚本应显式创建输出目录"
-    for guard in ("resolve_skills_cli", "已存在且非空", "场景名不合法"):
+    for guard in ("resolve_skills_cli", "已存在且非空", "场景名不合法", "METHOD_SOURCE 只支持"):
         assert 0 <= text.find(guard) < mkdir_at, f"{guard} 必须发生在任何写入之前"
     # 参数校验不应依赖外部工具，也不该在检查阶段创建目录
     assert text.find("场景名不合法") < text.find("resolve_skills_cli"), \
         "场景名校验应先于 CLI 解析，使拒绝路径不依赖网络或缓存"
+    assert text.find("METHOD_SOURCE 只支持") < text.find("resolve_skills_cli"), \
+        "METHOD_SOURCE 校验应先于 CLI 解析，使拒绝路径不依赖网络或缓存"
     assert 'OUT_PARENT="$(mkdir -p' not in text, "路径规范化阶段不得创建目录"
 
 
@@ -139,6 +140,42 @@ def test_fixture_rejects_bad_scenario_names(tmp_path: Path) -> None:
     assert list(out.iterdir()) == [], "拒绝路径不得留下任何产物"
 
 
+def test_fixture_rejects_unknown_method_source_before_writing(tmp_path: Path) -> None:
+    """METHOD_SOURCE 只认 official；写错时必须在创建任何东西、解析 CLI 之前失败。"""
+    out = tmp_path / "out"
+    result = run_fixture(str(out), "S01-ask",
+                         env={"METHOD_SOURCE": "fork",
+                              "SKILLS_CLI": str(tmp_path / "no-such-cli.mjs")})
+
+    assert result.returncode != 0, "未知 METHOD_SOURCE 必须被拒绝"
+    assert "METHOD_SOURCE" in result.stderr and "official" in result.stderr, \
+        f"应指出 METHOD_SOURCE 只支持 official，实际 stderr：{result.stderr}"
+    assert "SKILLS_CLI" not in result.stderr, \
+        f"参数校验必须发生在 CLI 解析之前，实际 stderr：{result.stderr}"
+    assert not out.exists() or list(out.iterdir()) == [], \
+        "拒绝路径不得创建输出目录或任何产物"
+
+
+def test_fixture_rejects_bundled_method_source(tmp_path: Path) -> None:
+    """随包副本退役后，`METHOD_SOURCE=bundled` 必须在写入与 CLI 解析之前被拒绝。
+
+    这是执行出来的拒绝路径，不是 grep 脚本文本：用一个不存在的 SKILLS_CLI 证明
+    失败发生在依赖解析之前，而不是「bundled 模式跑到后面某步才连带失败」。
+    """
+    out = tmp_path / "out"
+    result = run_fixture(str(out), "S01-ask",
+                         env={"METHOD_SOURCE": "bundled",
+                              "SKILLS_CLI": str(tmp_path / "no-such-cli.mjs")})
+
+    assert result.returncode != 0, "bundled 已随副本退役，必须被拒绝"
+    assert "METHOD_SOURCE" in result.stderr, \
+        f"应由参数校验直接拒绝，实际 stderr：{result.stderr}"
+    assert "SKILLS_CLI" not in result.stderr, \
+        f"拒绝必须发生在 CLI 解析之前，实际 stderr：{result.stderr}"
+    assert not out.exists() or list(out.iterdir()) == [], \
+        "拒绝路径不得创建输出目录或任何产物"
+
+
 def test_ci_workflows_run_the_whole_test_suite() -> None:
     """CI 与发布检查必须收集整个 tests/，否则新增回归文件不会阻止发布。"""
     for rel in (".github/workflows/check.yml", ".github/workflows/release.yml"):
@@ -163,10 +200,11 @@ def test_all_test_files_are_collected_by_default_entry() -> None:
 def test_fixture_pins_initial_branch_and_builds_real_conflict(tmp_path: Path) -> None:
     """夹具不得假定初始分支只能是 main/master；S08 必须真的建立合并冲突现场。
 
-    需要官方 skills CLI 才能装技能副本，取不到时按未运行处理而不是假装通过。
+    需要官方 skills CLI 和官方共同方法仓库可达才能装技能副本；依赖不可用时
+    按未运行处理，而不是把外部网络故障报告成夹具行为失败。
     """
-    if not _skills_cli_available():
-        pytest.skip("未取得 skills CLI，夹具生成未运行")
+    if not _fixture_dependencies_available():
+        pytest.skip("未取得 skills CLI 或官方共同方法仓库不可达，夹具生成未运行")
     out = tmp_path / "fixtures"
     env = {
         "GIT_CONFIG_COUNT": "1",
@@ -188,14 +226,44 @@ def test_fixture_pins_initial_branch_and_builds_real_conflict(tmp_path: Path) ->
         f"冲突现场不符：{conflicted}"
 
 
-def _skills_cli_available() -> bool:
+def _fixture_dependencies_available() -> bool:
     probe = subprocess.run(
         ["bash", "-c",
          f'. "{SCRIPTS / "resolve-skills-cli.sh"}" && '
          'resolve_skills_cli "${SKILLS_CLI_VERSION:-1.7.0}"'],
         capture_output=True, text=True, check=False,
     )
-    return probe.returncode == 0
+    return probe.returncode == 0 and _official_method_source_available()
+
+
+def _official_method_source_available() -> bool:
+    """确认外部安装依赖可达，避免 CLI 已缓存但官方仓库离线时误报夹具失败。"""
+    try:
+        probe = subprocess.run(
+            ["git", "ls-remote", "--exit-code", "https://github.com/mattpocock/skills.git", "HEAD"],
+            capture_output=True, text=True, check=False, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return probe.returncode == 0 and bool(probe.stdout.strip())
+
+
+@pytest.mark.parametrize("failure", [
+    "unreachable",
+    "timeout",
+])
+def test_official_method_source_probe_skips_unavailable_repo(monkeypatch, failure: str) -> None:
+    def unavailable(command, **kwargs):
+        assert command == ["git", "ls-remote", "--exit-code",
+                           "https://github.com/mattpocock/skills.git", "HEAD"]
+        assert kwargs["timeout"] == 10
+        if failure == "timeout":
+            raise subprocess.TimeoutExpired(cmd=command, timeout=10)
+        return subprocess.CompletedProcess(command, returncode=128, stdout="", stderr="offline")
+
+    monkeypatch.setattr(subprocess, "run", unavailable)
+
+    assert not _official_method_source_available()
 
 
 def test_shell_variables_before_multibyte_text_are_braced() -> None:
@@ -300,14 +368,70 @@ exit 0
 """
 
 _FAKE_SKILLS_CLI = """\
+// 夹具脚本现在按两来源安装：本仓库 20 项 + 官方外部共同方法，并核对装到的项数。
+// 桩必须真的造出这两部分，否则夹具会在自己的项数校验处停下，故障注入用例就测不到
+// mkdir / cd 这些目标路径。桩只复制真实技能目录，不联网、不解析夹具的返回值。
 const fs = require('fs');
 const path = require('path');
 const args = process.argv.slice(2);
 if (args.includes('--version')) process.exit(0);
+
+// --skill 后面可以跟多个技能名，直到下一个以 - 开头的参数为止。
+function skillsAfterFlag() {
+  const out = [];
+  let collecting = false;
+  for (const arg of args) {
+    if (collecting) {
+      if (arg.startsWith('-')) break;
+      out.push(arg);
+    } else if (arg === '--skill') {
+      collecting = true;
+    }
+  }
+  return out;
+}
+
+function mergeLock(records) {
+  const lockPath = path.join(process.cwd(), 'skills-lock.json');
+  const lock = fs.existsSync(lockPath)
+    ? JSON.parse(fs.readFileSync(lockPath, 'utf8'))
+    : { skills: {} };
+  for (const [name, record] of Object.entries(records)) {
+    lock.skills[name] = record;
+  }
+  fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\\n');
+}
+
+function samePath(a, b) {
+  try {
+    return fs.realpathSync(a) === fs.realpathSync(b);
+  } catch (error) {
+    return a === b;
+  }
+}
+
 if (args[0] === 'add') {
-  const dest = path.join(process.cwd(), '.agents', 'skills', 'placeholder');
-  fs.mkdirSync(dest, { recursive: true });
-  fs.writeFileSync(path.join(dest, 'SKILL.md'), '# placeholder\\n');
+  const target = args[1];
+  const dest = path.join(process.cwd(), '.agents', 'skills');
+  const names = skillsAfterFlag();
+  const records = {};
+  if (samePath(target, process.env.FAKE_SKILLS_REPO || '')) {
+    for (const name of names) {
+      fs.cpSync(path.join(target, 'skills', name), path.join(dest, name), { recursive: true });
+      records[name] = { source: target, sourceType: 'github', computedHash: '0'.repeat(64) };
+    }
+  } else if (target === 'mattpocock/skills') {
+    for (const name of names) {
+      const dir = path.join(dest, name);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\\nname: ' + name + '\\n---\\n');
+      records[name] = { source: target, sourceType: 'github', computedHash: '1'.repeat(64) };
+    }
+  } else {
+    process.stderr.write('unexpected add target: ' + target + '\\n');
+    process.exit(2);
+  }
+  mergeLock(records);
   process.exit(0);
 }
 process.stderr.write('unexpected args: ' + args.join(' ') + '\\n');
@@ -332,6 +456,7 @@ def _stub_fixture_env(tmp_path: Path, **extra: str) -> tuple[Path, dict[str, str
     env = {
         "PATH": str(bindir) + os.pathsep + os.environ.get("PATH", ""),
         "SKILLS_CLI": str(fake),
+        "FAKE_SKILLS_REPO": str(REPO),
         **extra,
     }
     return caller, env
@@ -449,6 +574,52 @@ def test_both_scripts_share_the_cli_resolver() -> None:
         assert re.search(r"resolve_skills_cli\s+", body), f"{name} 未调用 resolve_skills_cli"
 
 
+def test_two_source_composition_check_rejects_incomplete_installation(tmp_path: Path) -> None:
+    """两来源组合校验由共享脚本提供，且必须自己发现装不齐的组合。
+
+    `install-smoke-test.sh` 的第 10 节（#92 组）与第 11 节（#91 组）共用这一份检查。
+    这里验证两件事：两节确实共用同一个脚本（避免再次各复制一份后漂移），以及该脚本
+    在目录缺项、锁文件缺失时逐条报 FAIL 并非零退出，而不是只要跑起来就算通过。
+    随包副本退役后签名里不再有 `--bundled`：该校验只核对官方来源与锁记录。
+    """
+    checker = SCRIPTS / "two-source-composition-check.py"
+    assert checker.is_file(), "两来源组合校验应由 scripts/two-source-composition-check.py 提供"
+    smoke = read(SCRIPTS / "install-smoke-test.sh")
+    assert smoke.count("two-source-composition-check.py") == 2, \
+        "第 10、11 节应共用同一份组合校验，而不是各写一份"
+
+    dest = tmp_path / "skills"
+    (dest / "ask-gamestudio").mkdir(parents=True)
+    result = subprocess.run(
+        ["python3.12", str(checker), "--lock", str(tmp_path / "missing-lock.json"),
+         "--dest", str(dest),
+         "--repo", str(REPO), "--label", "测试组", "--group", "ask-gamestudio"],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode != 0, "装不齐的组合不得判为通过"
+    assert "FAIL" in result.stdout, result.stdout
+    assert "PASS" not in result.stdout, "失败时不得同时给出通过结论"
+    assert "组合安装目录不符" in result.stdout, result.stdout
+    assert "没有生成 skills-lock.json" in result.stdout, result.stdout
+
+
+def test_two_source_composition_check_no_longer_takes_a_bundled_copy() -> None:
+    """随包副本退役后，组合校验不得再接受 `--bundled` 参数。
+
+    参数还在就意味着校验仍在拿随包副本做对照；真跑一次参数解析能发现这件事，
+    而看文档或看 --help 文本发现不了。
+    """
+    checker = SCRIPTS / "two-source-composition-check.py"
+    result = subprocess.run(
+        ["python3.12", str(checker), "--lock", str(SCRIPTS / "no-such-lock.json"),
+         "--dest", str(SCRIPTS), "--bundled", str(SKILLS / "writing-for-agents"),
+         "--repo", str(REPO), "--label", "测试组", "--group", "ask-gamestudio"],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode != 0, "--bundled 必须被拒绝，不再有随包副本可比对"
+    assert "--bundled" in result.stderr, f"应指出未知参数：{result.stderr}"
+
+
 def test_docs_do_not_claim_at_suffix_is_the_git_ref() -> None:
     """`@` 是技能筛选，`#` 才是 Git 引用；文档不得把它当成引用断言。
 
@@ -501,137 +672,45 @@ def test_docs_do_not_claim_pinned_ref_still_unverified() -> None:
     assert not offenders, "仍把 #<ref> 写成未端到端验证：\n" + "\n".join(offenders)
 
 
-def test_delegation_reference_requires_context_and_return_evidence() -> None:
-    """委派要求说明接收方可见的上下文、输入和回收证据。"""
-    text = read(SKILLS / "writing-for-agents" / "references" / "subagent-delegation.md")
-    for marker in ("Source version:", "Available inputs:", "Allowed scope:",
-                   "Context inherited or intentionally isolated:", "Completion evidence:",
-                   "If blocked:", "Return check:"):
-        assert marker in text, f"通用委派参考缺少 {marker}"
+# 外部共同方法的 subagent-delegation.md 曾按随包副本断言；副本退役后不再从这里读取它，
+# 本仓库自有的委派契约改由 test_skills_layout.py::test_delegation_contract_covers_brief_and_return_check
+# 在 docs-gamestudio/references/delegation.md 上守住。
+#
+# --- Issue #93：已删除维护脚本的退役守护 ---------------------------------
+# 来源矩阵、安装核验与同步生成器随随包副本一起退役。文件名用相邻字符串拼接构造：
+# 直接写出完整名字时，本守卫自己的声明行会被自己的扫描命中，只能靠放宽判据绕过，
+# 而放宽之后真实调用也一并被放过。
+RETIRED_SCRIPTS = (
+    "sync-" "writing-for-agents" ".py",
+    "verify-" "writing-for-agents" "-install.py",
+    "install-source-" "matrix-test.sh",
+)
+# 会真实解析脚本路径的地方：pytest 文件与 CI 工作流。注释行允许保留历史说明，
+# 因为「记录曾经调用过什么」不是调用。
+RETIRED_SCRIPT_CALLERS = ("tests", ".github/workflows")
 
-    skill = read(SKILLS / "writing-for-agents" / "SKILL.md")
-    assert "real context boundary" in skill and "subagent dispatch" in skill, \
-        "共同方法应区分同上下文与子代理派发的后续步骤边界"
 
+def test_retired_maintenance_scripts_are_gone_and_uncalled() -> None:
+    """三个维护脚本不得回到仓库，也不得再被测试或 CI 调用。
 
-def test_installed_copy_inspector_reports_edits_without_overwriting(tmp_path: Path) -> None:
-    """来源切换前可核对锁来源与发行摘要，并保留已安装副本的本地修改。"""
-    installed = tmp_path / "consumer" / ".agents" / "skills" / "writing-for-agents"
-    installed.parent.mkdir(parents=True)
-    shutil.copytree(SKILLS / "writing-for-agents", installed)
-    lock = tmp_path / "consumer" / "skills-lock.json"
-    files = [path for path in installed.rglob("*") if path.is_file()]
-    files.sort(key=lambda path: (path.relative_to(installed).as_posix().casefold(),
-                                 path.relative_to(installed).as_posix()))
-    folder_hash = hashlib.sha256()
-    for path in files:
-        folder_hash.update(path.relative_to(installed).as_posix().encode("utf-8"))
-        folder_hash.update(path.read_bytes())
-    lock.write_text(json.dumps({
-        "skills": {
-            "writing-for-agents": {
-                "source": "LC-86/mattpocockskills",
-                "ref": "f3c726f275fa1ac59fef33732e527dded6d62479",
-                "sourceType": "github",
-                "skillPath": "skills/productivity/writing-for-agents/SKILL.md",
-                "computedHash": folder_hash.hexdigest(),
-            },
-        },
-    }), encoding="utf-8")
-    script = SCRIPTS / "verify-writing-for-agents-install.py"
-    args = [
-        "python3.12", str(script), "--installed-dir", str(installed), "--lock-file", str(lock),
-        "--reference-dir", str(SKILLS / "writing-for-agents"), "--show-diff",
-    ]
-    clean = subprocess.run(args, capture_output=True, text=True, check=False)
-    assert clean.returncode == 0, clean.stderr
-    assert "source=LC-86/mattpocockskills" in clean.stdout
-    assert "ref=f3c726f275fa1ac59fef33732e527dded6d62479" in clean.stdout
-    assert "verified" in clean.stdout
+    它们校验的随包副本已退出发行集合：脚本回来意味着来源固定或安装核验被重新引入，
+    而测试或 CI 仍调用它们则会让整条流水线在文件不存在时崩掉。
+    """
+    present = [name for name in RETIRED_SCRIPTS if (SCRIPTS / name).exists()]
+    assert not present, f"已删除的维护脚本回到仓库：{present}"
 
-    relative = subprocess.run(
-        ["python3.12", str(script), "--installed-dir", "skills/writing-for-agents",
-         "--lock-file", str(lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
-        cwd=REPO, capture_output=True, text=True, check=False,
-    )
-    assert relative.returncode == 1 and "installed-dir must be absolute" in relative.stderr
-    incorrect_hash_lock = tmp_path / "consumer" / "incorrect-hash-lock.json"
-    bad_hash_lock_data = json.loads(lock.read_text(encoding="utf-8"))
-    bad_hash_lock_data["skills"]["writing-for-agents"]["computedHash"] = "a" * 64
-    incorrect_hash_lock.write_text(json.dumps(bad_hash_lock_data), encoding="utf-8")
-    incorrect_hash = subprocess.run(
-        ["python3.12", str(script), "--installed-dir", str(installed),
-         "--lock-file", str(incorrect_hash_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
-        capture_output=True, text=True, check=False,
-    )
-    assert incorrect_hash.returncode == 1
-    assert "reference source hash does not match the lock computedHash" in incorrect_hash.stderr
-
-    wrong_source_lock = tmp_path / "consumer" / "wrong-source-lock.json"
-    wrong_source_data = json.loads(lock.read_text(encoding="utf-8"))
-    wrong_source_data["skills"]["writing-for-agents"]["source"] = "LC-86/wrong-source"
-    wrong_source_lock.write_text(json.dumps(wrong_source_data), encoding="utf-8")
-    wrong_source = subprocess.run(
-        ["python3.12", str(script), "--installed-dir", str(installed),
-         "--lock-file", str(wrong_source_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
-        capture_output=True, text=True, check=False,
-    )
-    assert wrong_source.returncode == 1
-    assert "lock source identity does not match reference SOURCE.md" in wrong_source.stderr
-
-    github_main_lock = tmp_path / "consumer" / "github-main-lock.json"
-    github_main_data = json.loads(lock.read_text(encoding="utf-8"))
-    github_main_data["skills"]["writing-for-agents"] = {
-        "source": "LC-86/MyGameStudio",
-        "sourceType": "github",
-        "skillPath": "skills/writing-for-agents/SKILL.md",
-        "computedHash": folder_hash.hexdigest(),
-    }
-    github_main_lock.write_text(json.dumps(github_main_data), encoding="utf-8")
-    github_main = subprocess.run(
-        ["python3.12", str(script), "--installed-dir", str(installed),
-         "--lock-file", str(github_main_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
-        capture_output=True, text=True, check=False,
-    )
-    assert github_main.returncode == 0, github_main.stderr
-    assert "source=LC-86/MyGameStudio" in github_main.stdout
-    missing_lock = subprocess.run(
-        ["python3.12", str(script), "--installed-dir", str(installed),
-         "--lock-file", str(tmp_path / "consumer" / "missing-lock.json"),
-         "--reference-dir", str(SKILLS / "writing-for-agents")],
-        capture_output=True, text=True, check=False,
-    )
-    assert missing_lock.returncode == 1 and "lock file is missing" in missing_lock.stderr
-    wrong_scope_lock = tmp_path / "skills-lock.json"
-    wrong_scope_lock.write_text(lock.read_text(encoding="utf-8"), encoding="utf-8")
-    wrong_scope = subprocess.run(
-        ["python3.12", str(script), "--installed-dir", str(installed),
-         "--lock-file", str(wrong_scope_lock), "--reference-dir", str(SKILLS / "writing-for-agents")],
-        capture_output=True, text=True, check=False,
-    )
-    assert wrong_scope.returncode == 1 and "same installation scope" in wrong_scope.stderr
-
-    skill_md = installed / "SKILL.md"
-    skill_md.write_text(skill_md.read_text(encoding="utf-8") + "\nLocal consumer edit.\n", encoding="utf-8")
-    unrelated_reference = tmp_path / "unrelated-reference"
-    shutil.copytree(SKILLS / "writing-for-agents", unrelated_reference)
-    unrelated_source = unrelated_reference / "SOURCE.md"
-    unrelated_source.write_text(unrelated_source.read_text(encoding="utf-8") + "\nDifferent source.\n",
-                               encoding="utf-8")
-    mismatched_reference = subprocess.run(
-        ["python3.12", str(script), "--installed-dir", str(installed), "--lock-file", str(lock),
-         "--reference-dir", str(unrelated_reference), "--show-diff"],
-        capture_output=True, text=True, check=False,
-    )
-    assert mismatched_reference.returncode == 1
-    assert "reference source hash does not match the lock computedHash" in mismatched_reference.stderr
-
-    changed = subprocess.run(args, capture_output=True, text=True, check=False)
-    assert changed.returncode == 1
-    assert "modified: SKILL.md" in changed.stdout
-    assert "preservation and review" in changed.stdout
-    assert "+Local consumer edit." in changed.stdout
-    assert "Local consumer edit." in skill_md.read_text(encoding="utf-8")
+    callers = [p for rel in RETIRED_SCRIPT_CALLERS
+               for p in sorted((REPO / rel).rglob("*"))
+               if p.is_file() and p.suffix in {".py", ".yml"}]
+    offenders = []
+    for path in callers:
+        for line_no, line in enumerate(read(path).splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
+            for name in RETIRED_SCRIPTS:
+                if name in line:
+                    offenders.append(f"{path.relative_to(REPO)}:{line_no}: {name}")
+    assert not offenders, "仍在调用已删除的维护脚本：\n" + "\n".join(offenders)
 
 
 def test_no_other_skill_asserts_isolation_as_universal_fact() -> None:

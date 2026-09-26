@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# 为行为验证准备隔离夹具：一个代表性小游戏项目 + 原生安装的 21 项技能。
+# 为行为验证准备隔离夹具：一个代表性小游戏项目 + 本仓库 20 项技能；
+# 外部共同方法 writing-for-agents 另外从官方 mattpocock/skills 安装。
 #   scripts/behavior-fixtures.sh <空的或尚不存在的输出目录> [场景名...]
+#
+# 场景名以 NOMETHOD- 开头时，该项目不放入外部共同方法，用于验证缺依赖时的行为。
 #
 # 输出目录必须是新建的或空的。脚本不会删除任何已存在的内容：要重用旧目录，
 # 请自己确认后删除，或换一个目录。这样误传工程目录时不会丢东西。
@@ -9,6 +12,9 @@
 #   SKILLS_CLI          已缓存的 cli.mjs 路径
 #   SKILLS_CLI_VERSION  固定 CLI 版本，默认 1.7.0
 #   USE_NPX=1           强制走 npx
+#   METHOD_SOURCE       只接受 official（默认）：本仓库 20 项 + 官方
+#                       mattpocock/skills 的外部共同方法。bundled 已随随包副本
+#                       退役，传入即明确报错，不静默降级。
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCRIPT_DIR="$REPO/scripts"
@@ -99,7 +105,28 @@ if [ -e "$OUT_ABS" ] || [ -L "$OUT_ABS" ]; then
   fi
 fi
 
+# 安装来源是参数错误，必须在解析 CLI 之前拒绝：拒绝路径不依赖网络或缓存。
+# 本仓库已不再分发 writing-for-agents，来源只剩官方一种。bundled 明确拒绝而不是
+# 静默降级成 official：静默降级会让调用者以为跑的是随包副本形态，得到错误结论。
+METHOD_SOURCE="${METHOD_SOURCE:-official}"
+case "$METHOD_SOURCE" in
+  official) ;;
+  bundled) echo "METHOD_SOURCE=bundled 已随随包副本退役：本仓库不再分发 writing-for-agents，改用 official（未做任何改动）" >&2
+           exit 1 ;;
+  *) echo "METHOD_SOURCE 只支持 official（bundled 已随随包副本退役），实际为 ${METHOD_SOURCE}（未做任何改动）" >&2
+     exit 1 ;;
+esac
+
 # --- 2. 依赖校验：仍然不写任何东西 --------------------------------------
+EXTERNAL_METHOD="writing-for-agents"
+[ -d "$REPO/skills" ] || { echo "$REPO/skills 不存在，未做任何改动" >&2; exit 1; }
+# 本仓库现在恰有 20 项技能，全部由本仓库安装；外部共同方法不在其中，
+# 它是官方 mattpocock/skills 的依赖，单独安装。
+GAMESTUDIO_SKILLS=()
+for skill_dir in "$REPO"/skills/*/; do
+  GAMESTUDIO_SKILLS+=("$(basename "$skill_dir")")
+done
+[ "${#GAMESTUDIO_SKILLS[@]}" -gt 0 ] || { echo "本仓库没有可安装的游戏技能，未做任何改动" >&2; exit 1; }
 if ! resolve_skills_cli "$VERSION"; then
   echo "未取得 skills CLI，未做任何改动" >&2
   exit 1
@@ -110,7 +137,6 @@ if ! "${CLI[@]}" --version >/dev/null 2>&1; then
   "${CLI[@]}" --version || true
   exit 1
 fi
-[ -d "$REPO/skills" ] || { echo "$REPO/skills 不存在，未做任何改动" >&2; exit 1; }
 
 # --- 3. 到这里才开始写入 ------------------------------------------------
 OUT="$OUT_ABS"
@@ -290,13 +316,43 @@ EOF
   cd - >/dev/null || die $? "无法从夹具目录返回"
 }
 
-echo "准备共享技能安装…"
+echo "准备共享技能安装…（METHOD_SOURCE=${METHOD_SOURCE}）"
 SEED="$OUT/_seed"; mkdir -p "$SEED"
 # 在隔离目录内安装，绝不写入源码仓库；失败时保留原始错误
-( cd "$SEED" && "${CLI[@]}" add "$REPO" --skill '*' --agent universal --copy -y ) >/dev/null \
-  || { echo "技能安装失败，夹具未生成（$SEED 里可能已有部分内容，请检查后换目录）" >&2; exit 1; }
+# 两来源组合：本仓库安装全部 20 项技能，外部共同方法单独从官方源安装。
+( cd "$SEED" && "${CLI[@]}" add "$REPO" --skill "${GAMESTUDIO_SKILLS[@]}" \
+    --agent universal --copy -y ) >/dev/null \
+  || { echo "本仓库技能安装失败，夹具未生成（$SEED 里可能已有部分内容，请检查后换目录）" >&2; exit 1; }
+if [ -e "$SEED/.agents/skills/$EXTERNAL_METHOD" ]; then
+  echo "本仓库安装带入了 ${EXTERNAL_METHOD}：本仓库不应再分发该方法，夹具不可用" >&2
+  exit 1
+fi
+# 装少了会让每个场景都缺技能，却仍能生成「看起来正常」的夹具：数目不符就停。
+SEED_N="$(find "$SEED/.agents/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')"
+if [ "$SEED_N" != "${#GAMESTUDIO_SKILLS[@]}" ]; then
+  echo "本仓库安装得到 ${SEED_N} 个技能目录，应为 ${#GAMESTUDIO_SKILLS[@]} 项，夹具不可用" >&2
+  exit 1
+fi
+( cd "$SEED" && "${CLI[@]}" add mattpocock/skills --skill "$EXTERNAL_METHOD" \
+    --agent universal --copy -y ) >/dev/null \
+  || { echo "官方外部共同方法安装失败（需要网络与 GitHub 可达），夹具未生成" >&2; exit 1; }
 [ -d "$SEED/.agents/skills" ] || { echo "安装后未出现 .agents/skills" >&2; exit 1; }
-echo "已安装 $(find "$SEED/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') 项到 $SEED/.agents/skills"
+# 来源必须能从锁文件读出来：同名替换只更新锁来源，目录名本身不区分来源。
+python3.12 - "$SEED/skills-lock.json" "$EXTERNAL_METHOD" <<'PY' \
+  || { echo "外部共同方法来源不是官方 mattpocock/skills，夹具不可用" >&2; exit 1; }
+import json
+import sys
+from pathlib import Path
+
+lock = Path(sys.argv[1])
+name = sys.argv[2]
+record = json.loads(lock.read_text(encoding="utf-8"))["skills"][name]
+assert record["source"] == "mattpocock/skills", record
+assert not (lock.parent / ".agents" / "skills" / name / "SOURCE.md").exists(), \
+    "官方副本夹带了本仓库随包副本的 SOURCE.md"
+print("      %s 来源 %s hash %s" % (name, record["source"], record["computedHash"][:12]))
+PY
+echo "已安装 $(find "$SEED/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') 项（含官方 ${EXTERNAL_METHOD}）到 $SEED/.agents/skills"
 
 for s in $SCENARIOS; do
   d="$OUT/$s"
@@ -309,9 +365,24 @@ for s in $SCENARIOS; do
   mkdir -p "$d"
   # 必须作为独立命令调用。放在 || 或 if 里会关掉函数内的 set -e。
   make_project "$d/project" "$s"
-  mkdir -p "$d/project/.agents"
-  cp -R "$SEED/.agents/skills" "$d/project/.agents/skills"
-  echo "  夹具就绪 $s"
+  mkdir -p "$d/project/.agents/skills"
+  # NOMETHOD- 场景故意不放入外部共同方法：验证缺依赖时的行为，而不是复制一份残缺现场。
+  case "$s" in
+    NOMETHOD-*) skip_method=1 ;;
+    *)          skip_method=0 ;;
+  esac
+  for skill_dir in "$SEED"/.agents/skills/*/; do
+    skill_name="$(basename "$skill_dir")"
+    if [ "$skip_method" = "1" ] && [ "$skill_name" = "$EXTERNAL_METHOD" ]; then
+      continue
+    fi
+    cp -R "$skill_dir" "$d/project/.agents/skills/$skill_name"
+  done
+  if [ "$skip_method" = "1" ]; then
+    echo "  夹具就绪 ${s}（故意不含 ${EXTERNAL_METHOD}）"
+  else
+    echo "  夹具就绪 $s"
+  fi
 done
 
 # S08：真实的进行中合并冲突 + 与冲突无关的已暂存改动

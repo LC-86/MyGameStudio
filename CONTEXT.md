@@ -1,6 +1,6 @@
 # MyGameStudio
 
-面向个人独立游戏开发者的 AI 游戏开发工作流，以原生 Agent Skills 仓库承载，当前已发布版本为 3.0.2，完整集合为 21 项技能。
+面向个人独立游戏开发者的 AI 游戏开发工作流，以原生 Agent Skills 仓库承载，当前版本 3.0.3（未发布），完整集合为 20 项技能。
 
 ## Language
 
@@ -10,20 +10,32 @@
 **原生 Agent Skills 仓库**:
 本仓库的交付形态：权威技能源码是 `skills/<技能名>/SKILL.md`，通过官方 `skills` CLI 安装，具体目标目录由 CLI 与使用者选择。没有插件清单、tar 包、npm 包或自建安装器；版本权威来源是根目录 `VERSION`。
 
-**21 项技能集合**:
-当前范围内的全部技能，分为 8 项用户入口与 13 项按需方法。集合用于范围核对，不是生产任务类型注册表。
+**20 项技能集合**:
+本仓库当前范围内的全部技能，分为 8 项用户入口与 12 项按需方法。集合用于范围核对，不是生产任务类型注册表；外部共同方法 `writing-for-agents` 不计入本集合。
 
 **用户入口**:
 只在开发者请求该类工作时启动的技能，例如 `ask-gamestudio`、`setup-gamestudio`、`grill-gamestudio-docs`。一个入口完成即停，不自动串调下一个用户入口。在 Claude Code、Grok Build、DSH 内由 frontmatter 的 `disable-model-invocation: true` 强制，在 Codex 内由技能目录内的 `agents/openai.yaml` 强制，在 ZCode、Qoder 内由描述与正文里的指令层约定承担。
 
 **按需方法**:
-开发者可以直接点名，但通常由 Agent 在当前任务与授权适用时组合使用的方法技能，例如 `grilling-gamestudio`、`tdd-gamestudio`、`docs-gamestudio`、`writing-for-agents`。
+开发者可以直接点名，但通常由 Agent 在当前任务与授权适用时组合使用的方法技能，例如 `grilling-gamestudio`、`tdd-gamestudio`、`docs-gamestudio`、`merge-gamestudio`。
 
 **指令层边界**:
 在 ZCode、Qoder 这类没有宿主级调用开关的宿主内，用户入口与按需方法的区分写在技能描述与正文里，靠 Agent 阅读并遵守；需要更强边界时由项目自己的规则重申。它不描述 Claude Code、Grok Build、DSH（frontmatter 的 `disable-model-invocation` 强制）与 Codex（`agents/openai.yaml` 强制）内的调用隔离。
 
 **共享参考所有者**:
-被多项技能引用的随包资料只存一份权威正文，归属明确的所有者技能（`writing-for-agents`、`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。
+被多项技能引用的随包资料只存一份权威正文，归属明确的所有者技能（`docs-gamestudio`、`tasks-gamestudio`），消费者用同级相对路径引用，不各存副本。
+
+**写作方法权威源**:
+官方 `mattpocock/skills` 仓库中的 `writing-for-agents`。本仓库不分发、不镜像它，也不保留第二份可编辑副本或来源切换；它只作为外部依赖，按宿主支持的技能名称取得，不把它当成可与 GameStudio 同目录的前提。
+
+**外部方法依赖**:
+不承诺与 GameStudio 位于同一安装范围、由权威来源独立安装的方法 Skill。GameStudio 在适用任务中按宿主支持的技能名称取得它，不使用跨安装范围的相对路径；无法取得时说明缺口，只继续不依赖该方法的工作。
+
+**语义保真**:
+改写、整理、翻译或摘要正式资料时，数字、单位、顺序、条件、例外、排除项、责任、确认状态和原始证据保持原意，建议、试验、采纳、实现与验证不合并升级。该契约由 `docs-gamestudio` 拥有。
+
+**通用子代理委派**:
+创建独立执行上下文前组织目标、来源版本、可访问输入、授权、自主空间、上下文继承、完成证据与受阻处理，并在收回结果时核对依据、范围、产物和未完成项。该契约由 `docs-gamestudio` 拥有。
 
 **专业角色**:
 按共享的工作上下文、成果责任和写入权限划分的分工单位，可拥有多个专业 Skill；角色不等同于人类岗位，也不等同于一个永久运行的会话。

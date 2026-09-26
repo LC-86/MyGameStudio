@@ -1,8 +1,8 @@
 # 当前能力与限制
 
-已发布的 MyGameStudio 3.0.2 有 21 项技能：20 项游戏专属技能与一项通用写作方法。此前的 `v3.0.1` 标签仍固定包含 20 项。每项技能的权威说明是它自己的 `SKILL.md`；本页只给整体能力面与边界，不重复正文。
+MyGameStudio 3.0.3（未发布）的源码树有 20 项技能，全部是游戏专属的 `-gamestudio` 技能。此前的 `v3.0.2` 标签当时包含 21 项，其中一项是当时随包的 `writing-for-agents` 副本；`v3.0.1` 标签仍固定包含 20 项。历史身份不因本版收缩改写。通用写作方法 `writing-for-agents` 现在不再由本仓库分发，改从官方 `mattpocock/skills` 独立安装。每项技能的权威说明是它自己的 `SKILL.md`；本页只给整体能力面与边界，不重复正文。
 
-## 更新后源码集合：21 项技能
+## 更新后源码集合：20 项技能
 
 **用户入口**：只在你请求这类工作时启动。**按需方法**：你也可以直接调用，但通常由 Agent 在当前任务与授权适用时组合使用。
 
@@ -27,12 +27,13 @@
 | `research-gamestudio` | research | 按需方法 | 带来源、适用条件与局限的事实调查 |
 | `codebase-gamestudio` | codebase-design | 按需方法 | 设计当前改动的职责、状态与测试边界 |
 | `merge-gamestudio` | resolving-merge-conflicts | 按需方法 | 解决已发生的 merge/rebase 冲突 |
-| `docs-gamestudio` | 原创 | 按需方法 | 游戏文档分流、增量协作与专属资料取得条件 |
-| `writing-for-agents` | LC-86/mattpocockskills fork | 按需方法 | 通用正式写作、语义保真、技能机制与子代理委派 |
+| `docs-gamestudio` | 原创 | 按需方法 | 语义保真、通用子代理委派、游戏文档分流与专属资料取得条件 |
 
-上游基线、逐项适配记录见 [与 Matt Pocock skills 的关系](upstream.md) 与 [provenance/upstream.md](../../provenance/upstream.md)。安装时必须一起带上的技能和共享参考见 [技能依赖](../dependencies.md)。
+**外部共同方法不在本表中**：`writing-for-agents` 由官方 [`mattpocock/skills`](https://github.com/mattpocock/skills) 提供，用户独立安装。GameStudio 只按宿主支持的技能名称取得它，不使用跨安装范围的相对路径，也不把它的目录当成依赖契约；语义保真与通用子代理委派由 `docs-gamestudio` 拥有，与该外部方法的安装状态无关。本仓库不分发、不镜像这份方法，也不提供来源切换。
 
-## 8/13 的分界由三层调用控制承担
+上游基线、逐项适配记录见 [与 Matt Pocock skills 的关系](upstream.md) 与 [provenance/upstream.md](../../provenance/upstream.md)。安装时必须一起带上的技能和共享参考见 [技能依赖](../dependencies.md)；外部共同方法的安装步骤见 [安装](../installation.md)。
+
+## 8/12 的分界由三层调用控制承担
 
 用户入口与按需方法的区分由三层调用控制承担（机制来自各宿主官方文档，本库未在宿主内实测）：
 
@@ -62,7 +63,7 @@
 
 ## 明确不宣称
 
-- 不发布 npm 包、不提供自建安装器、不构建 tar 包。共同方法发行副本有独立摘要清单，不能据此宣称整个仓库已有通用校验和流程。
+- 不发布 npm 包、不提供自建安装器、不构建 tar 包。仓库不再携带任何随包副本摘要清单，也不再宣称对安装结果拥有自建校验流程；外部共同方法的来源与版本由官方渠道决定。
 - 不内置完整美术、音频、构建流水线或商店上架自动化。
 - 不提供官方 MCP 服务或引擎适配。
 - 不把本仓库的 `AGENTS.md` 当作用户游戏项目的默认规则。
